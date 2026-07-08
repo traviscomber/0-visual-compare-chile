@@ -1,0 +1,193 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Visual Compare Chile Brand Palette */
+  --background: #0f172a; /* Slate-950 */
+  --foreground: #ffffff; /* White */
+  --card: #1e293b; /* Slate-800 */
+  --card-foreground: #ffffff;
+  --popover: #1e293b;
+  --popover-foreground: #ffffff;
+
+  /* Primary Blue */
+  --primary: #3b82f6; /* Blue-500 */
+  --primary-foreground: #ffffff;
+
+  /* Secondary Purple */
+  --secondary: #a855f7; /* Purple-500 */
+  --secondary-foreground: #ffffff;
+
+  --muted: #64748b; /* Slate-500 */
+  --muted-foreground: #cbd5e1; /* Slate-200 */
+
+  /* Accent Amber */
+  --accent: #f59e0b; /* Amber-500 */
+  --accent-foreground: #ffffff;
+
+  --destructive: #ef4444; /* Red-500 */
+  --destructive-foreground: #ffffff;
+
+  --border: #334155; /* Slate-700 */
+  --input: #1e293b; /* Slate-800 */
+  --ring: #3b82f6; /* Blue-500 */
+
+  --chart-1: #3b82f6; /* Blue */
+  --chart-2: #a855f7; /* Purple */
+  --chart-3: #f59e0b; /* Amber */
+  --chart-4: #06b6d4; /* Cyan */
+  --chart-5: #8b5cf6; /* Violet */
+
+  --radius: 0.875rem;
+
+  --sidebar: #1e293b;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #3b82f6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #a855f7;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #334155;
+  --sidebar-ring: #3b82f6;
+
+  /* Brand Design Tokens */
+  --brand-blue-light: #3b82f6;
+  --brand-blue-dark: #1e40af;
+  --brand-purple: #a855f7;
+  --brand-amber: #f59e0b;
+  --brand-slate: #0f172a;
+  --brand-white: #ffffff;
+}
+
+.dark {
+  --background: #0f172a;
+  --foreground: #ffffff;
+  --card: #1e293b;
+  --card-foreground: #ffffff;
+  --popover: #1e293b;
+  --popover-foreground: #ffffff;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #a855f7;
+  --secondary-foreground: #ffffff;
+  --muted: #64748b;
+  --muted-foreground: #cbd5e1;
+  --accent: #f59e0b;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #334155;
+  --input: #1e293b;
+  --ring: #3b82f6;
+  --chart-1: #3b82f6;
+  --chart-2: #a855f7;
+  --chart-3: #f59e0b;
+  --chart-4: #06b6d4;
+  --chart-5: #8b5cf6;
+  --sidebar: #1e293b;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #3b82f6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #a855f7;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #334155;
+  --sidebar-ring: #3b82f6;
+}
+
+@theme inline {
+  --font-sans: var(--font-montserrat), 'Montserrat Fallback', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-code), 'JetBrains Mono Fallback', ui-monospace, SFMono-Regular, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-brand-blue-light: var(--brand-blue-light);
+  --color-brand-blue-dark: var(--brand-blue-dark);
+  --color-brand-purple: var(--brand-purple);
+  --color-brand-amber: var(--brand-amber);
+  --color-brand-slate: var(--brand-slate);
+  --color-brand-white: var(--brand-white);
+}
+
+/* Glassmorphism utilities */
+.glass {
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 1.5rem;
+}
+
+.glass-sm {
+  background-color: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+}
+
+.glass-dark {
+  background-color: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.5rem;
+}
+
+.glass-hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 1.5rem;
+  transition: all 300ms ease-in-out;
+}
+
+.glass-hover:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

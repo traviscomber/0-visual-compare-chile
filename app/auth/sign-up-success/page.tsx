@@ -1,0 +1,27 @@
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { CheckCircle2 } from "lucide-react"
+
+export default function SignUpSuccessPage() {
+  return (
+    <div className="flex min-h-svh w-full items-center justify-center bg-background p-6">
+      <Card className="w-full max-w-md rounded-2xl">
+        <CardHeader>
+          <div className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+            <CheckCircle2 className="h-5 w-5" />
+          </div>
+          <CardTitle>Revisa tu correo</CardTitle>
+          <CardDescription>
+            Te enviamos un correo de confirmación. Confirma tu cuenta para acceder a Visual Compare Chile.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline" className="w-full bg-transparent">
+            <Link href="/auth/login">Volver al inicio de sesión</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
