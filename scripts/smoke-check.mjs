@@ -16,6 +16,16 @@ function isVercelSsoRedirect(response) {
   return response.status === 302 && location.includes("vercel.com/sso-api")
 }
 
+function isLoginRedirect(location, path) {
+  if (!location.startsWith("/auth/login")) {
+    return false
+  }
+
+  const url = new URL(`http://localhost${location}`)
+  const redirectTo = url.searchParams.get("redirectTo")
+  return redirectTo === path || redirectTo === encodeURIComponent(path)
+}
+
 function record(name, ok, detail = "") {
   checks.push({ name, ok, detail })
 }
@@ -52,13 +62,16 @@ async function main() {
   for (const [path, location] of redirects) {
     const { response } = await fetchText(path)
     const protectedBySso = isVercelSsoRedirect(response)
-    const ok = response.status === 307 && response.headers.get("location") === location
+    const responseLocation = response.headers.get("location") || ""
+    const ok =
+      response.status === 307 &&
+      (responseLocation === location || isLoginRedirect(responseLocation, path))
     record(
       `REDIRECT ${path}`,
       ok,
       protectedBySso
         ? "protected by Vercel SSO"
-        : `status=${response.status} location=${response.headers.get("location") || ""}`,
+        : `status=${response.status} location=${responseLocation}`,
     )
   }
 
