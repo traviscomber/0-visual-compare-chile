@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -27,14 +28,22 @@ export default async function HistoryPage({
   const query = sp.q ?? ""
 
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const result = await supabase.auth.getUser()
+    user = result.data.user
+  } catch {
+    user = null
+  }
+
+  if (!user) {
+    redirect(`/auth/login?redirectTo=${encodeURIComponent("/history")}`)
+  }
 
   let request = supabase
     .from("comparisons")
     .select("id, similarity_score, classification, recommendation, created_at")
-    .eq("user_id", user!.id)
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(200)
 

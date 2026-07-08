@@ -16,9 +16,9 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "Sistema de Marcas Registradas — Comparación de Logos y Consulta",
+  title: "Visual Compare Chile",
   description:
-    "Plataforma para comparación visual de logos, consulta de marcas registradas (INAPI), clasificaciones Niza y Viena. Demo Fase 0.",
+    "MVP para comparacion visual de logos con auth Supabase, historial, consulta de marcas y flujo listo para demo o piloto.",
   generator: "v0.app",
 }
 
@@ -36,13 +36,10 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${montserrat.variable} ${jetbrainsMono.variable}`}>
       <body className="bg-gradient-to-br from-slate-950 via-blue-950 to-purple-950 font-sans text-foreground antialiased">
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <AuthProvider>{children}</AuthProvider>
         <Toaster richColors position="top-right" />
         {process.env.NODE_ENV === "production" && <Analytics />}
       </body>
     </html>
   )
 }
-

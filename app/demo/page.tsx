@@ -1,172 +1,98 @@
-'use client'
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { ArrowRight, BarChart3, GitCompareArrows, History, Home, Settings, Search, Upload } from "lucide-react"
 
-import { useAuth } from '@/lib/auth-context'
-import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { LogOut, Search, Upload, BarChart3, Users, Settings, Home } from 'lucide-react'
-import Link from 'next/link'
+const modules = [
+  {
+    title: "Comparar imágenes",
+    description: "Sube dos imágenes y obtén score, clasificación y señales forenses.",
+    icon: GitCompareArrows,
+    href: "/compare",
+  },
+  {
+    title: "Historial",
+    description: "Revisa comparaciones previas y abre el detalle de cada resultado.",
+    icon: History,
+    href: "/history",
+  },
+  {
+    title: "Consulta",
+    description: "Explora búsquedas y referencias de marcas.",
+    icon: Search,
+    href: "/consulta",
+  },
+]
 
-const ROLE_COLORS: Record<string, { bg: string; text: string; badge: string }> = {
-  admin: { bg: 'bg-purple-500/10', text: 'text-purple-400', badge: 'bg-purple-500' },
-  analista: { bg: 'bg-blue-500/10', text: 'text-blue-400', badge: 'bg-blue-500' },
-  auditor: { bg: 'bg-amber-500/10', text: 'text-amber-400', badge: 'bg-amber-500' }
-}
-
-export default function DemoDashboardPage() {
-  const { user, logout } = useAuth()
-  const router = useRouter()
-  const roleColors = ROLE_COLORS[user?.role || 'analista']
-
-  const handleLogout = () => {
-    logout()
-    router.push('/')
-  }
-
-  // Estadísticas según el rol
-  const stats = [
-    { label: 'Comparaciones realizadas', value: '42', icon: Search },
-    { label: 'Marcas consultadas', value: '128', icon: Users },
-    { label: 'Reportes generados', value: '15', icon: BarChart3 }
-  ]
-
-  // Módulos disponibles según el rol
-  const modules = [
-    {
-      title: 'Comparador de Logos',
-      description: 'Sube un logo y compáralo contra la base de datos',
-      icon: Upload,
-      href: '/comparador',
-      available: ['admin', 'analista']
-    },
-    {
-      title: 'Consulta de Marcas',
-      description: 'Busca marcas registradas por nombre, Niza o Viena',
-      icon: Search,
-      href: '/consulta',
-      available: ['admin', 'analista', 'auditor']
-    },
-    {
-      title: 'Reportes y Auditoría',
-      description: 'Accede al historial completo de búsquedas y comparaciones',
-      icon: BarChart3,
-      href: '/reportes',
-      available: ['admin', 'auditor']
-    },
-    {
-      title: 'Administración',
-      description: 'Gestión de usuarios y configuración del sistema',
-      icon: Settings,
-      href: '/admin',
-      available: ['admin']
-    }
-  ]
-
-  const availableModules = modules.filter(m => m.available.includes(user?.role || 'analista'))
-
+export default function DemoPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Header */}
-      <header className="border-b border-slate-700 bg-slate-800/50 backdrop-blur-sm sticky top-0 z-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      <header className="border-b border-slate-800/80 bg-slate-950/60 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Home className="h-6 w-6 text-blue-400" />
-            <span className="text-xl font-bold text-white">Visual Compare</span>
+            <span className="text-xl font-bold text-white">Visual Compare Chile</span>
           </Link>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-slate-400">
-              {user?.name || 'Demo User'} • <span className={`font-medium ${roleColors.text}`}>{user?.role || 'analista'}</span>
-            </span>
-            <Button
-              onClick={handleLogout}
-              size="sm"
-              variant="outline"
-              className="border-slate-600 text-slate-300 hover:bg-slate-700"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Salir
-            </Button>
-          </div>
+          <Button asChild>
+            <Link href="/auth/login">
+              Entrar
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-12">
-        {/* Welcome Section */}
-        <div className="mb-12">
-          <div className={`rounded-lg border border-slate-700 ${roleColors.bg} p-8 mb-8`}>
-            <div className="flex items-center gap-4 mb-4">
-              <div className={`h-3 w-3 rounded-full ${roleColors.badge}`} />
-              <span className={`text-sm font-medium ${roleColors.text}`}>ROL: {(user?.role || 'analista').toUpperCase()}</span>
-            </div>
-            <h1 className="text-3xl font-bold text-white mb-2">
-              Bienvenido
-            </h1>
-            <p className="text-slate-300">
-              Sistema de Comparación y Consulta de Marcas Registradas — Demo Fase 0
-            </p>
+        <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-8 md:p-10 mb-10">
+          <p className="text-sm font-medium text-blue-400 mb-3">MVP listo para piloto</p>
+          <h1 className="text-3xl md:text-5xl font-bold text-white max-w-3xl">
+            Flujo principal de comparación visual, historial y consulta de marcas.
+          </h1>
+          <p className="text-slate-300 mt-4 max-w-2xl">
+            Esta vista reemplaza la demo vieja y resume el recorrido que ya quedó alineado con auth Supabase,
+            uploads consistentes y navegación protegida.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button asChild>
+              <Link href="/dashboard">Ir al dashboard</Link>
+            </Button>
+            <Button asChild variant="outline" className="border-slate-700 text-slate-200 hover:bg-slate-800">
+              <Link href="/compare">Probar comparación</Link>
+            </Button>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          {stats.map((stat, i) => {
-            const Icon = stat.icon
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {modules.map((module) => {
+            const Icon = module.icon
             return (
-              <Card key={i} className="border-slate-700 bg-slate-800/50 p-6">
-                <div className="flex items-center justify-between mb-3">
-                  <Icon className="h-5 w-5 text-blue-400" />
-                  <span className="text-2xl font-bold text-white">{stat.value}</span>
-                </div>
-                <p className="text-sm text-slate-400">{stat.label}</p>
-              </Card>
+              <Link key={module.href} href={module.href}>
+                <Card className="h-full border-slate-800 bg-slate-900/60 p-6 hover:border-blue-500/50 transition-colors">
+                  <Icon className="h-8 w-8 text-blue-400 mb-4" />
+                  <h2 className="text-lg font-semibold text-white mb-2">{module.title}</h2>
+                  <p className="text-sm text-slate-400">{module.description}</p>
+                </Card>
+              </Link>
             )
           })}
         </div>
 
-        {/* Modules Section */}
-        <div>
-          <h2 className="text-2xl font-bold text-white mb-6">Módulos disponibles</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {availableModules.map((module) => {
-              const Icon = module.icon
-              return (
-                <Link
-                  key={module.href}
-                  href={module.href}
-                  className="group"
-                >
-                  <Card className="border-slate-700 bg-slate-800/50 hover:border-blue-500/50 hover:bg-slate-800 p-6 h-full transition-all cursor-pointer">
-                    <div className="flex items-start justify-between mb-4">
-                      <Icon className="h-8 w-8 text-blue-400 group-hover:text-teal-400 transition-colors" />
-                      <span className="text-xs font-medium text-slate-500 bg-slate-700 px-2 py-1 rounded">
-                        {module.available.length > 1 ? `${module.available.length} roles` : 'Tu rol'}
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-semibold text-white mb-2">{module.title}</h3>
-                    <p className="text-sm text-slate-400 mb-4">{module.description}</p>
-                    <div className="text-sm text-blue-400 group-hover:text-teal-400 transition-colors">
-                      Acceder →
-                    </div>
-                  </Card>
-                </Link>
-              )
-            })}
-          </div>
-
-          {availableModules.length === 0 && (
-            <Card className="border-slate-700 bg-slate-800/50 p-8 text-center">
-              <p className="text-slate-400">No hay módulos disponibles para tu rol.</p>
-            </Card>
-          )}
-        </div>
-
-        {/* Demo Info */}
-        <div className="mt-12 p-6 rounded-lg border border-slate-700 bg-slate-800/30">
-          <p className="text-xs text-slate-500 text-center">
-            Demo Fase 0 — Los módulos enlazados son placeholders. Intenta cambiar de rol en login para ver cómo cambia la interfaz.
-          </p>
+        <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="border-slate-800 bg-slate-900/60 p-6">
+            <BarChart3 className="h-8 w-8 text-teal-400 mb-4" />
+            <h3 className="text-white font-semibold mb-2">Seguimiento</h3>
+            <p className="text-sm text-slate-400">Historial y detalle listos para seguimiento operativo.</p>
+          </Card>
+          <Card className="border-slate-800 bg-slate-900/60 p-6">
+            <Upload className="h-8 w-8 text-teal-400 mb-4" />
+            <h3 className="text-white font-semibold mb-2">Carga</h3>
+            <p className="text-sm text-slate-400">Formatos JPG, PNG, WebP y TIFF hasta 50 MB.</p>
+          </Card>
+          <Card className="border-slate-800 bg-slate-900/60 p-6">
+            <Settings className="h-8 w-8 text-teal-400 mb-4" />
+            <h3 className="text-white font-semibold mb-2">Deploy</h3>
+            <p className="text-sm text-slate-400">Variables de entorno documentadas para Vercel y Supabase.</p>
+          </Card>
         </div>
       </main>
     </div>

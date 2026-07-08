@@ -13,13 +13,13 @@ export function ModulosIntegrales() {
         </div>
 
         <div className="grid gap-8 md:grid-cols-2">
-          {/* LogoCompare */}
+          {/* Visual Compare Chile */}
           <Card className="border-border bg-card p-8 hover:shadow-lg transition-shadow">
             <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
               <Zap className="h-6 w-6" />
             </div>
             
-            <h3 className="text-2xl font-semibold text-foreground mb-3">LogoCompare</h3>
+            <h3 className="text-2xl font-semibold text-foreground mb-3">Visual Compare Chile</h3>
             <p className="text-muted-foreground mb-6">
               Plataforma de similitud y auditoría de marcas registradas
             </p>
@@ -27,11 +27,11 @@ export function ModulosIntegrales() {
             <div className="space-y-3 mb-6 text-sm">
               <div className="flex items-start gap-2">
                 <span className="text-primary font-bold">•</span>
-                <span className="text-muted-foreground">Comparación visual con MobileNetV2 + TensorFlow.js</span>
+                <span className="text-muted-foreground">Comparación visual con SHA-256, pHash y diff visual</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-primary font-bold">•</span>
-                <span className="text-muted-foreground">Similitud de coseno para análisis de características</span>
+                <span className="text-muted-foreground">Score de similitud y recomendación auditada</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-primary font-bold">•</span>
@@ -69,23 +69,23 @@ export function ModulosIntegrales() {
             <div className="space-y-3 mb-6 text-sm">
               <div className="flex items-start gap-2">
                 <span className="text-primary font-bold">•</span>
-                <span className="text-muted-foreground">350,000+ imágenes de marcas registradas</span>
+                <span className="text-muted-foreground">Historial de comparaciones y resultados</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-primary font-bold">•</span>
-                <span className="text-muted-foreground">Histórico desde 2009 a fecha (datos INAPI)</span>
+                <span className="text-muted-foreground">Consulta por nombre, Niza y Viena</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-primary font-bold">•</span>
-                <span className="text-muted-foreground">Búsqueda por nombre, clasificaciones Niza y Viena</span>
+                <span className="text-muted-foreground">Rutas protegidas por sesión Supabase</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-primary font-bold">•</span>
-                <span className="text-muted-foreground">Carga mensual de 5,000 nuevas imágenes</span>
+                <span className="text-muted-foreground">Carga de JPG, PNG, WebP y TIFF hasta 50 MB</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-primary font-bold">•</span>
-                <span className="text-muted-foreground">SQLite local + sincronización Cloud</span>
+                <span className="text-muted-foreground">Supabase Postgres + Storage privado</span>
               </div>
             </div>
 

@@ -264,10 +264,10 @@ export default function ComparadorPage() {
                 <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
                   2
                 </div>
-                <h4 className="font-semibold text-white">Análisis IA</h4>
+                <h4 className="font-semibold text-white">Analisis visual</h4>
               </div>
               <p className="text-sm text-slate-400">
-                Nuestro sistema analiza y compara contra la base de datos
+                El sistema compara la imagen cargada y resume el resultado para revision.
               </p>
             </div>
             <div>

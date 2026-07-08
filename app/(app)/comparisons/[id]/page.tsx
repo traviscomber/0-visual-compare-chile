@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { ComparisonResultView } from "@/components/app/comparison-result-view"
 import { Button } from "@/components/ui/button"
@@ -47,6 +47,17 @@ export default async function ComparisonDetailPage({
 }) {
   const { id } = await params
   const supabase = await createClient()
+  let user = null
+  try {
+    const result = await supabase.auth.getUser()
+    user = result.data.user
+  } catch {
+    user = null
+  }
+
+  if (!user) {
+    redirect(`/auth/login?redirectTo=${encodeURIComponent(`/comparisons/${id}`)}`)
+  }
 
   const { data: comparison, error } = await supabase
     .from("comparisons")

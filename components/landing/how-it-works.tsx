@@ -2,7 +2,7 @@ const steps = [
   {
     n: "01",
     title: "Sube dos imágenes",
-    description: "Formatos JPG, PNG o WEBP, hasta 10 MB. Las imágenes se guardan cifradas en almacenamiento privado.",
+    description: "Formatos JPG, PNG, WEBP o TIFF, hasta 50 MB. Las imágenes se guardan cifradas en almacenamiento privado.",
   },
   {
     n: "02",

@@ -15,25 +15,25 @@ export function BaseDataINAPI() {
         <div className="grid gap-6 md:grid-cols-3 mb-12">
           <Card className="border-border bg-card p-6">
             <Calendar className="h-8 w-8 text-primary mb-4" />
-            <p className="font-semibold text-foreground">Histórico Completo</p>
+            <p className="font-semibold text-foreground">Histórico consultable</p>
             <p className="text-sm text-muted-foreground mt-2">
-              Registros desde 2009 a 2025 extraídos de archivos INAPI
+              Registros organizados para consulta y trazabilidad del flujo MVP
             </p>
           </Card>
 
           <Card className="border-border bg-card p-6">
             <TrendingUp className="h-8 w-8 text-primary mb-4" />
-            <p className="font-semibold text-foreground">Actualización Mensual</p>
+            <p className="font-semibold text-foreground">Fuente oficial</p>
             <p className="text-sm text-muted-foreground mt-2">
-              5,000 nuevas imágenes y registros mensuales desde INAPI
+              Consulta y validación apoyada en información pública de INAPI
             </p>
           </Card>
 
           <Card className="border-border bg-card p-6">
             <FileText className="h-8 w-8 text-primary mb-4" />
-            <p className="font-semibold text-foreground">350,000+ Marcas</p>
+            <p className="font-semibold text-foreground">Marcas consultables</p>
             <p className="text-sm text-muted-foreground mt-2">
-              Cobertura completa de marcas registradas en Chile
+              Cobertura enfocada en el piloto y el flujo de comparación
             </p>
           </Card>
         </div>
@@ -65,7 +65,7 @@ export function BaseDataINAPI() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary font-bold">•</span>
-                  <span className="text-muted-foreground">Imagen del logo/marca registrada</span>
+                  <span className="text-muted-foreground">Imagen de la marca cuando esté disponible</span>
                 </li>
               </ul>
             </div>
@@ -100,7 +100,7 @@ export function BaseDataINAPI() {
         <div className="mt-12 rounded-xl border border-blue-500/30 bg-primary/5 p-8">
           <h3 className="text-lg font-semibold text-foreground mb-2">Acceso a INAPI</h3>
           <p className="text-muted-foreground mb-6">
-            Consulta directa a base de datos oficial en https://www.inapi.cl/ para validación y actualización de registros
+            Consulta directa a la fuente oficial de INAPI para validación y referencia documental
           </p>
           <Button asChild>
             <Link href="https://www.inapi.cl/" target="_blank">

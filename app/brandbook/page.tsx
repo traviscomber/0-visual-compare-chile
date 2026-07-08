@@ -242,24 +242,24 @@ export default function BrandBookPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
-              {
-                title: 'Precisión',
-                description: '3 métodos híbridos de comparación para máxima exactitud',
+            {
+              title: 'Precisión',
+                description: 'Comparación técnica con SHA-256, pHash y diff visual',
                 color: 'blue',
               },
               {
                 title: 'Velocidad',
-                description: 'Respuestas en <100ms (P95) para experiencia fluida',
+                description: 'Flujo ligero para demo y piloto operativo',
                 color: 'purple',
               },
               {
                 title: 'Accesibilidad',
-                description: '350K+ marcas registradas con búsqueda avanzada',
+                description: 'Consulta y trazabilidad del flujo principal',
                 color: 'emerald',
               },
               {
                 title: 'Confiabilidad',
-                description: 'SLA 99.95% con auditoría completa',
+                description: 'Auth Supabase, storage privado y rutas protegidas',
                 color: 'amber',
               },
             ].map((principle) => (

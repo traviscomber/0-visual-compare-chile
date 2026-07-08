@@ -10,8 +10,8 @@ export default function ComparePage() {
       <div>
         <h1 className="font-serif text-3xl text-foreground text-balance">Comparar imágenes</h1>
         <p className="text-foreground mt-1 max-w-2xl leading-relaxed">
-          Sube dos fotografías —por ejemplo, certificados o registros de inspección— y obtén un análisis de
-          similitud con detalle por dimensión visual.
+          Sube dos imágenes de marca y obtén un análisis de similitud con score, clasificación y señales forenses
+          para el flujo de revisión del MVP.
         </p>
       </div>
       <CompareWorkbench />

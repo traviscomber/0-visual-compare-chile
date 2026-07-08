@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { redirect } from "next/navigation"
 import { ProfileForm } from "@/components/app/profile-form"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -6,14 +7,22 @@ export const dynamic = "force-dynamic"
 
 export default async function SettingsPage() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const result = await supabase.auth.getUser()
+    user = result.data.user
+  } catch {
+    user = null
+  }
+
+  if (!user) {
+    redirect(`/auth/login?redirectTo=${encodeURIComponent("/settings")}`)
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
     .select("full_name, company_name")
-    .eq("id", user!.id)
+    .eq("id", user.id)
     .maybeSingle()
 
   return (
@@ -30,7 +39,7 @@ export default async function SettingsPage() {
         </CardHeader>
         <CardContent>
           <ProfileForm
-            email={user!.email ?? ""}
+            email={user.email ?? ""}
             initialFullName={profile?.full_name ?? ""}
             initialCompanyName={profile?.company_name ?? ""}
           />

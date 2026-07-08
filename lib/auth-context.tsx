@@ -1,8 +1,9 @@
-'use client'
+"use client"
 
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import { createClient } from "@/lib/supabase/client"
 
-export type UserRole = 'admin' | 'analista' | 'auditor'
+export type UserRole = "admin" | "analista" | "auditor"
 
 interface User {
   id: string
@@ -20,46 +21,106 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+function roleFromMetadata(value: unknown): UserRole {
+  return value === "admin" || value === "auditor" ? value : "analista"
+}
+
+function buildDisplayName(email: string, fullName?: string | null): string {
+  return fullName || email.split("@")[0] || "Usuario"
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Cargar usuario desde localStorage al montar
   useEffect(() => {
-    const savedUser = localStorage.getItem('auth_user')
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser))
-      } catch (e) {
-        console.log('[Auth] Error loading user from localStorage:', e)
-        localStorage.removeItem('auth_user')
+    let active = true
+    const supabase = createClient()
+
+    const syncSession = async () => {
+      const {
+        data: { user: sessionUser },
+      } = await supabase.auth.getUser()
+
+      if (!active) return
+
+      if (!sessionUser) {
+        setUser(null)
+        setIsLoading(false)
+        return
       }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, company_name")
+        .eq("id", sessionUser.id)
+        .maybeSingle()
+
+      if (!active) return
+
+      const metadata = sessionUser.user_metadata ?? {}
+      const email = sessionUser.email ?? ""
+
+      setUser({
+        id: sessionUser.id,
+        email,
+        name: buildDisplayName(email, profile?.full_name ?? (typeof metadata.full_name === "string" ? metadata.full_name : null)),
+        role: roleFromMetadata(metadata.role),
+      })
+      setIsLoading(false)
     }
-    setIsLoading(false)
+
+    void syncSession()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return
+
+      if (!session?.user) {
+        setUser(null)
+        setIsLoading(false)
+        return
+      }
+
+      const metadata = session.user.user_metadata ?? {}
+      const email = session.user.email ?? ""
+
+      setUser({
+        id: session.user.id,
+        email,
+        name: buildDisplayName(email, typeof metadata.full_name === "string" ? metadata.full_name : null),
+        role: roleFromMetadata(metadata.role),
+      })
+      setIsLoading(false)
+    })
+
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   const login = async (email: string, password: string, role: UserRole) => {
     setIsLoading(true)
-    // Simulamos un login delay
-    await new Promise(resolve => setTimeout(resolve, 800))
-    
-    // Mock validation - aceptamos cualquier email con contraseña no vacía
-    if (email && password) {
-      const newUser: User = {
-        id: Math.random().toString(36).substr(2, 9),
-        email,
-        name: email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1),
-        role
-      }
-      setUser(newUser)
-      localStorage.setItem('auth_user', JSON.stringify(newUser))
+    const supabase = createClient()
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (error) {
+      setIsLoading(false)
+      throw error
     }
+
+    setUser((current) => (current ? { ...current, role } : current))
     setIsLoading(false)
   }
 
   const logout = () => {
     setUser(null)
-    localStorage.removeItem('auth_user')
+    void createClient().auth.signOut()
   }
 
   return (
@@ -72,8 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error('useAuth debe ser usado dentro de AuthProvider')
+    throw new Error("useAuth debe ser usado dentro de AuthProvider")
   }
   return context
 }
-

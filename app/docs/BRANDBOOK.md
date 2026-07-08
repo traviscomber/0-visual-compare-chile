@@ -7,13 +7,13 @@
 
 **Name:** Visual Compare Chile
 **Tagline:** Comparación Visual Inteligente de Marcas
-**Mission:** Proporcionar tecnología IA avanzada para comparación visual de marcas y consulta de registros chilenos
+**Mission:** Proporcionar una plataforma clara para comparación visual de marcas y consulta de registros chilenos
 
 **Core Values:**
-- Precisión: 3 métodos híbridos de comparación (SHA-256, pHash, Embeddings)
-- Velocidad: <100ms respuesta en P95
-- Accesibilidad: 350K+ marcas registradas, búsqueda avanzada
-- Confiabilidad: SLA 99.95%, auditoría completa
+- Precisión: comparación con SHA-256, pHash y diff visual
+- Velocidad: flujo ligero para revisión y piloto
+- Accesibilidad: historial y consulta del flujo principal
+- Confiabilidad: auditoría completa, rutas protegidas y storage privado
 
 ---
 
@@ -311,7 +311,7 @@ className="hover:border-blue-600/70 hover:bg-gradient-to-br hover:from-blue-900/
 - **Professional:** Authority in image comparison technology
 - **Innovative:** Cutting-edge 3-method comparison engine
 - **Accessible:** Clear communication about complex features
-- **Trustworthy:** Transparent about capabilities and SLAs
+- **Trustworthy:** Transparent about capabilities and scope
 
 ### Writing Style:
 - Concise and direct
@@ -325,7 +325,7 @@ className="hover:border-blue-600/70 hover:bg-gradient-to-br hover:from-blue-900/
 **Strong:** "Compara imágenes con precisión < 0.1% usando 3 métodos híbridos"
 
 **Weak:** "Tenemos muchas marcas"
-**Strong:** "350K+ marcas registradas, búsqueda en <200ms"
+**Strong:** "Comparación visual auditada, historial funcional y flujo listo para piloto"
 
 ---
 

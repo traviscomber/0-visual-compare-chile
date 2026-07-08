@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { formatBytes } from "@/lib/format"
+import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE_BYTES } from "@/lib/validations"
 
 type UploadedImage = {
   id: string
@@ -31,13 +32,12 @@ export function ImageDropzone({
 
   const handleFile = useCallback(
     async (file: File) => {
-      const allowed = ["image/jpeg", "image/png", "image/webp"]
-      if (!allowed.includes(file.type)) {
-        toast.error("Formato no soportado. Usa JPG, PNG o WebP.")
+      if (!ALLOWED_MIME_TYPES.includes(file.type as (typeof ALLOWED_MIME_TYPES)[number])) {
+        toast.error("Formato no soportado. Usa JPG, PNG, WebP o TIFF.")
         return
       }
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error("La imagen supera el límite de 10 MB.")
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        toast.error("La imagen supera el límite de 50 MB.")
         return
       }
       setUploading(true)
@@ -133,7 +133,7 @@ export function ImageDropzone({
               </span>
               <span className="text-sm text-foreground">Arrastra o selecciona una imagen</span>
               <span className="text-xs text-foreground">
-                JPG, PNG o WebP · hasta 10 MB
+                JPG, PNG, WebP o TIFF · hasta 50 MB
               </span>
               <div
                 onClick={() => inputRef.current?.click()}
@@ -146,7 +146,7 @@ export function ImageDropzone({
           <input
             ref={inputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,image/tiff"
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0]

@@ -17,6 +17,7 @@ function extensionFromMime(mime: string): string {
   if (mime === "image/jpeg") return "jpg"
   if (mime === "image/png") return "png"
   if (mime === "image/webp") return "webp"
+  if (mime === "image/tiff") return "tiff"
   return "bin"
 }
 
@@ -41,10 +42,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "El archivo está vacío." }, { status: 400 })
     }
     if (!ALLOWED_MIME_TYPES.includes(file.type as (typeof ALLOWED_MIME_TYPES)[number])) {
-      return NextResponse.json({ error: "Formato no permitido. Usa JPG, PNG o WEBP." }, { status: 400 })
+      return NextResponse.json({ error: "Formato no permitido. Usa JPG, PNG, WEBP o TIFF." }, { status: 400 })
     }
     if (file.size > MAX_FILE_SIZE_BYTES) {
-      return NextResponse.json({ error: "El archivo supera el tamaño máximo de 10 MB." }, { status: 400 })
+      return NextResponse.json({ error: "El archivo supera el tamaño máximo de 50 MB." }, { status: 400 })
     }
 
     const arrayBuffer = await file.arrayBuffer()

@@ -4,10 +4,10 @@ const modules = [
   {
     id: 1,
     icon: Zap,
-    title: "Módulo de Comparación IA",
-    subtitle: "LogoCompare",
+    title: "Módulo de Comparación",
+    subtitle: "Visual Compare Chile",
     features: [
-      "Comparación visual con MobileNetV2",
+      "Comparación visual con SHA-256, pHash y diff",
       "Score de similitud 0-100",
       "Hash perceptual y criptográfico",
       "Auditoría en tiempo real",
@@ -63,7 +63,7 @@ export function ModulesSection() {
             Tres módulos integrados para control total.
           </h2>
           <p className="mt-4 text-pretty text-muted-foreground">
-            Desde comparación visual con IA hasta consulta de 350.000+ marcas registradas con clasificación internacional.
+            Desde comparación visual auditada hasta consulta y trazabilidad del flujo principal del MVP.
           </p>
         </div>
 

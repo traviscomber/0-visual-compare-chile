@@ -19,7 +19,7 @@ const features = [
   {
     icon: Zap,
     title: "Rendimiento",
-    description: "Procesamiento instantáneo de imágenes grandes y búsquedas en 350K+ registros."
+    description: "Procesamiento estable para el flujo de comparación y consulta del MVP."
   },
   {
     icon: FileText,

@@ -383,7 +383,7 @@ export default function ClassificationsPage() {
               <div className="space-y-3">
                 <h3 className="font-semibold text-amber-300 text-lg">Motor de Comparación</h3>
                 <p className="text-sm text-amber-50">
-                  Utiliza la Clasificación Viena para analizar elementos visuales de marcas y compararlas con tu base de datos de 350K+ marcas registradas.
+                  Utiliza la Clasificación Viena para analizar elementos visuales de marcas y compararlas con tu historial y flujo de piloto.
                 </p>
                 <div className="p-3 bg-amber-900/30 rounded border border-amber-500/20">
                   <p className="text-xs text-amber-200 font-mono">SHA-256 + pHash + Embeddings Visuales</p>

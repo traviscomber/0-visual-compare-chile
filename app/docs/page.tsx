@@ -472,7 +472,7 @@ export default function APIDocsPage() {
             <section className="glass p-8 text-center">
               <h2 className="text-2xl font-bold text-white mb-3">¿Listo para integrar?</h2>
               <p className="text-blue-100 mb-6">Obtén tu clave API y comienza a comparar imágenes en minutos.</p>
-              <Link href="/auth/signup">
+              <Link href="/auth/sign-up">
                 <Button size="lg" className="bg-blue-900 hover:bg-blue-800 text-white">Obtén tu clave API</Button>
               </Link>
             </section>

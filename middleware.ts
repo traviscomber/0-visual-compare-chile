@@ -3,10 +3,7 @@ import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
 
 export async function middleware(request: NextRequest) {
-  // FASE 0: Middleware deshabilitado para demo funcional
-  // TODO: Re-habilitar para producción
-  return NextResponse.next()
-  // return await updateSession(request)
+  return await updateSession(request)
 }
 
 export const config = {

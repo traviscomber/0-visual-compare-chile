@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "prestart": "pnpm check:env",
+    "lint": "eslint .",
+    "check:env": "node scripts/verify-env.mjs",
+    "smoke": "node scripts/smoke-check.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

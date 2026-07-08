@@ -7,22 +7,22 @@ export function TecnologiaAvanzada() {
     {
       category: "Frontend",
       icon: Zap,
-      items: ["HTML5", "CSS3", "JavaScript ES6+", "TensorFlow.js", "SQL.js"]
+      items: ["Next.js", "React 19", "TypeScript", "Tailwind CSS", "shadcn/ui"]
     },
     {
       category: "Backend & Procesamiento",
       icon: Cloud,
-      items: ["Node.js", "PHP", "MobileNetV2 (IA)", "Similitud de Coseno"]
+      items: ["Supabase Auth", "Supabase Storage", "SHA-256", "pHash", "Diff visual"]
     },
     {
       category: "Base de Datos",
       icon: Cpu,
-      items: ["SQLite (local)", "PostgreSQL (Cloud)", "Sincronización automática"]
+      items: ["PostgreSQL en Supabase", "RLS", "Historial de comparaciones"]
     },
     {
       category: "Seguridad",
       icon: Lock,
-      items: ["Encriptación end-to-end", "Auditoría de accesos", "RLS (Row Level Security)"]
+      items: ["Bucket privado", "Auditoría de accesos", "Rutas protegidas"]
     }
   ]
 
@@ -31,7 +31,7 @@ export function TecnologiaAvanzada() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-16 text-center">
           <h2 className="text-4xl font-bold text-foreground">Arquitectura Técnica</h2>
-          <p className="mt-3 text-lg text-muted-foreground">Stack moderno, escalable y seguro</p>
+          <p className="mt-3 text-lg text-muted-foreground">Stack actual, estable y listo para piloto</p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-12">
@@ -58,19 +58,19 @@ export function TecnologiaAvanzada() {
           
           <div className="grid gap-8 md:grid-cols-2">
             <div>
-              <h4 className="font-semibold text-foreground mb-4">LogoCompare - Procesamiento IA</h4>
+              <h4 className="font-semibold text-foreground mb-4">Visual Compare Chile - Procesamiento técnico</h4>
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <span className="text-primary font-bold">1.</span>
-                  <span>MobileNetV2 extrae características visuales de logos</span>
+                  <span>SHA-256 identifica duplicados exactos</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary font-bold">2.</span>
-                  <span>Similitud de coseno compara embeddings en tiempo real</span>
+                  <span>pHash y diff visual comparan similitud perceptual</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary font-bold">3.</span>
-                  <span>Score de similitud + decisión humana auditada</span>
+                  <span>Score de similitud + recomendación auditada</span>
                 </li>
               </ul>
             </div>
@@ -80,15 +80,15 @@ export function TecnologiaAvanzada() {
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <span className="text-primary font-bold">1.</span>
-                  <span>SQLite embebido para funcionamiento offline</span>
+                  <span>Supabase mantiene sesiones, storage y datos compartidos</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary font-bold">2.</span>
-                  <span>Migración automática: XAMPP → Cloud (CICLO DEV→QA→Producción)</span>
+                  <span>Despliegue directo a Vercel con variables de entorno</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary font-bold">3.</span>
-                  <span>Carga de 5,000 imágenes/mes sin downtime</span>
+                  <span>Carga enfocada en demo y piloto operativo</span>
                 </li>
               </ul>
             </div>
@@ -98,15 +98,15 @@ export function TecnologiaAvanzada() {
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <span className="text-primary font-bold">✓</span>
-                  <span>Registro completo de: usuario, fecha, IP, acción, resultado</span>
+                  <span>Registro de usuario, fecha, acción y resultado</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary font-bold">✓</span>
-                  <span>Firma SHA256 para no-repudio de decisiones</span>
+                  <span>Firma SHA-256 para trazabilidad técnica</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary font-bold">✓</span>
-                  <span>Control de versiones y RFC para cambios</span>
+                  <span>Control de cambios y revisiones del flujo</span>
                 </li>
               </ul>
             </div>
@@ -116,7 +116,7 @@ export function TecnologiaAvanzada() {
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <span className="text-primary font-bold">🔐</span>
-                  <span>Encriptación end-to-end para imágenes y datos</span>
+                  <span>Bucket privado y acceso por sesión</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary font-bold">🔐</span>
@@ -124,7 +124,7 @@ export function TecnologiaAvanzada() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary font-bold">🔐</span>
-                  <span>Cumplimiento regulatorio INAPI y OMPI</span>
+                  <span>Acceso por usuario y protección de datos del piloto</span>
                 </li>
               </ul>
             </div>

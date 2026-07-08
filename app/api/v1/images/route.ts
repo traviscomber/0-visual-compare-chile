@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { authenticateApiKey } from "@/lib/api/auth"
 import { BUCKET } from "@/lib/storage"
+import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE_BYTES } from "@/lib/validations"
+import { calculatePerceptualHash } from "@/lib/image/phash"
 import sharp from "sharp"
 
 export const runtime = "nodejs"
@@ -42,13 +44,12 @@ export async function POST(request: Request) {
     }
 
     // Validate file type
-    const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/tiff"]
-    if (!allowedMimes.includes(file.type)) {
+    if (!ALLOWED_MIME_TYPES.includes(file.type as (typeof ALLOWED_MIME_TYPES)[number])) {
       return NextResponse.json({ error: "Invalid image format" }, { status: 400 })
     }
 
     // Validate file size (max 50MB)
-    if (file.size > 50 * 1024 * 1024) {
+    if (file.size > MAX_FILE_SIZE_BYTES) {
       return NextResponse.json({ error: "File too large (max 50MB)" }, { status: 413 })
     }
 
@@ -65,9 +66,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid image" }, { status: 400 })
     }
 
-    // Calculate pHash (perceptual hash) - simplified for now
-    // In production, use a library like jimp or custom implementation
-    const phash = calculateSimpleHash(buffer).substring(0, 16)
+    // Calculate perceptual hash used by the compare engine.
+    const phash = await calculatePerceptualHash(buffer)
 
     // Upload to Supabase storage
     const filename = file.name || `image-${Date.now()}`
@@ -146,8 +146,3 @@ export async function POST(request: Request) {
   }
 }
 
-// Simple hash for demo - replace with proper pHash implementation
-function calculateSimpleHash(buffer: Buffer): string {
-  const crypto = require("crypto")
-  return crypto.createHash("md5").update(buffer.slice(0, 1000)).digest("hex")
-}
