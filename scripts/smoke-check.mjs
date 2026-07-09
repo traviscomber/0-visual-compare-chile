@@ -32,8 +32,8 @@ function record(name, ok, detail = "") {
 
 async function main() {
   const publicPages = [
-    { path: "/", contains: ["Visual Compare Chile", "Flujo MVP"] },
-    { path: "/auth/login", contains: ["Visual Compare Chile", "Iniciar"] },
+    { path: "/", contains: ["Protege tus marcas", "Nosotros las analizamos"] },
+    { path: "/auth/login", contains: ["Inicia sesión", "Continúa con tu cuenta"] },
     { path: "/demo", contains: ["MVP"] },
     { path: "/roadmap", contains: ["Roadmap", "MVP"] },
   ]
