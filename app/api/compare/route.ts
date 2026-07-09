@@ -69,7 +69,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Selecciona dos imágenes distintas." }, { status: 400 })
     }
 
-    const { data: images, error } = await supabase.from("images").select("*").in("id", [image_a_id, image_b_id])
+    const { data: images, error } = await supabase
+      .from("images")
+      .select("*")
+      .in("id", [image_a_id, image_b_id])
+      .eq("status", "active")
 
     if (error || !images || images.length !== 2) {
       return NextResponse.json({ error: "Imágenes no encontradas." }, { status: 404 })
