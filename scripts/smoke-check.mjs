@@ -51,6 +51,10 @@ async function main() {
 
   const redirects = [
     ["/auth/signup", "/auth/sign-up"],
+    ["/es", "/"],
+    ["/en", "/"],
+    ["/es/compare", "/compare"],
+    ["/en/history", "/history"],
     ["/compare", "/auth/login"],
     ["/dashboard", "/auth/login"],
     ["/history", "/auth/login"],

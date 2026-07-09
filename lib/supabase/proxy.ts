@@ -3,6 +3,19 @@ import { NextResponse, type NextRequest } from "next/server"
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/env"
 
 const PROTECTED_PATHS = ["/dashboard", "/compare", "/comparisons", "/settings", "/history", "/reportes", "/admin"]
+const SUPPORTED_LOCALES = new Set(["es", "en"])
+
+function stripLocalePrefix(pathname: string) {
+  const segments = pathname.split("/")
+  const locale = segments[1]
+
+  if (!locale || !SUPPORTED_LOCALES.has(locale)) {
+    return null
+  }
+
+  const stripped = `/${segments.slice(2).join("/")}`.replace(/\/+$/, "")
+  return stripped === "/" || stripped === "" ? "/" : stripped
+}
 
 export async function updateSession(request: NextRequest) {
   const supabaseUrl = getSupabaseUrl()
@@ -40,6 +53,13 @@ export async function updateSession(request: NextRequest) {
   }
 
   const pathname = request.nextUrl.pathname
+  const canonicalPath = stripLocalePrefix(pathname)
+  if (canonicalPath) {
+    const url = request.nextUrl.clone()
+    url.pathname = canonicalPath
+    return NextResponse.redirect(url)
+  }
+
   const isProtected = PROTECTED_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
 
   if (isProtected && !user) {
