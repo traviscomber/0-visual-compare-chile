@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { formatBytes } from "@/lib/format"
-import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE_BYTES } from "@/lib/validations"
+import { validateImageFile } from "@/lib/validations"
 
 type UploadedImage = {
   id: string
@@ -32,14 +32,12 @@ export function ImageDropzone({
 
   const handleFile = useCallback(
     async (file: File) => {
-      if (!ALLOWED_MIME_TYPES.includes(file.type as (typeof ALLOWED_MIME_TYPES)[number])) {
-        toast.error("Formato no soportado. Usa JPG, PNG, WebP o TIFF.")
+      const validation = validateImageFile(file)
+      if (!validation.ok) {
+        toast.error(validation.error)
         return
       }
-      if (file.size > MAX_FILE_SIZE_BYTES) {
-        toast.error("La imagen supera el límite de 50 MB.")
-        return
-      }
+
       setUploading(true)
       try {
         const formData = new FormData()
@@ -106,7 +104,7 @@ export function ImageDropzone({
           </div>
         </div>
       ) : (
-        <button
+        <Button
           type="button"
           onClick={() => inputRef.current?.click()}
           onDragOver={(e) => {
@@ -115,9 +113,10 @@ export function ImageDropzone({
           }}
           onDragLeave={() => setDragActive(false)}
           onDrop={handleDrop}
+          variant="outline"
           className={cn(
-            "rounded-lg border border-dashed border-border bg-card hover:bg-secondary/40 transition-colors",
-            "aspect-[4/3] flex flex-col items-center justify-center gap-3 px-4 text-center",
+            "rounded-lg border-dashed bg-card hover:bg-secondary/40 transition-colors",
+            "aspect-[4/3] flex flex-col items-center justify-center gap-3 px-4 text-center h-auto py-6",
             dragActive && "border-primary bg-primary/5",
           )}
         >
@@ -132,15 +131,10 @@ export function ImageDropzone({
                 <Upload className="h-5 w-5 text-foreground" />
               </span>
               <span className="text-sm text-foreground">Arrastra o selecciona una imagen</span>
-              <span className="text-xs text-foreground">
-                JPG, PNG, WebP o TIFF · hasta 50 MB
-              </span>
-              <div
-                onClick={() => inputRef.current?.click()}
-                className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground px-3 py-1 cursor-pointer mt-1"
-              >
+              <span className="text-xs text-foreground">JPG, PNG, WebP o TIFF · hasta 50 MB</span>
+              <span className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground px-3 py-1 cursor-pointer mt-1">
                 Elegir archivo
-              </div>
+              </span>
             </>
           )}
           <input
@@ -154,7 +148,7 @@ export function ImageDropzone({
               e.target.value = ""
             }}
           />
-        </button>
+        </Button>
       )}
     </div>
   )

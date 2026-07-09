@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE_BYTES } from "@/lib/validations"
+import { validateImageFile } from "@/lib/validations"
 import { calculateSha256 } from "@/lib/image/hash"
 import { calculatePerceptualHash } from "@/lib/image/phash"
 import { extractMetadata } from "@/lib/image/metadata"
@@ -38,14 +38,10 @@ export async function POST(request: Request) {
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "No se recibió ningún archivo." }, { status: 400 })
     }
-    if (file.size === 0) {
-      return NextResponse.json({ error: "El archivo está vacío." }, { status: 400 })
-    }
-    if (!ALLOWED_MIME_TYPES.includes(file.type as (typeof ALLOWED_MIME_TYPES)[number])) {
-      return NextResponse.json({ error: "Formato no permitido. Usa JPG, PNG, WEBP o TIFF." }, { status: 400 })
-    }
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      return NextResponse.json({ error: "El archivo supera el tamaño máximo de 50 MB." }, { status: 400 })
+
+    const validation = validateImageFile(file)
+    if (!validation.ok) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
 
     const arrayBuffer = await file.arrayBuffer()
