@@ -2,8 +2,15 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle2 } from "lucide-react"
+import { safeInternalRedirect } from "@/lib/redirect"
 
-export default function SignUpSuccessPage() {
+export default function SignUpSuccessPage({
+  searchParams,
+}: {
+  searchParams?: { next?: string }
+}) {
+  const next = safeInternalRedirect(searchParams?.next)
+
   return (
     <div className="flex min-h-svh w-full items-center justify-center bg-background p-6">
       <Card className="w-full max-w-md rounded-2xl">
@@ -18,7 +25,7 @@ export default function SignUpSuccessPage() {
         </CardHeader>
         <CardContent>
           <Button asChild variant="outline" className="w-full bg-transparent">
-            <Link href="/auth/login">Volver al inicio de sesión</Link>
+            <Link href={`/auth/login?redirectTo=${encodeURIComponent(next)}`}>Volver al inicio de sesión</Link>
           </Button>
         </CardContent>
       </Card>

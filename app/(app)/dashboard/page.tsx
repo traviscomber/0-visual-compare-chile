@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { ArrowRight, GitCompareArrows, History, Home, Settings, Upload } from 'lucide-react'
+import { ArrowRight, GitCompareArrows, History, Home, Search, Settings, Upload } from 'lucide-react'
 import Link from 'next/link'
 
 const ROLE_COLORS: Record<string, { bg: string; text: string; badge: string }> = {
