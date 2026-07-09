@@ -65,6 +65,7 @@ export default async function ComparisonDetailPage({
       "id, similarity_score, classification, recommendation, signals, created_at, image_a_id, image_b_id, diff_storage_path, result_json",
     )
     .eq("id", id)
+    .eq("user_id", user.id)
     .maybeSingle()
 
   if (error || !comparison) notFound()
@@ -72,6 +73,7 @@ export default async function ComparisonDetailPage({
   const { data: images } = await supabase
     .from("images")
     .select("id, filename, storage_path")
+    .eq("user_id", user.id)
     .in("id", [comparison.image_a_id, comparison.image_b_id])
 
   const imgA = images?.find((i) => i.id === comparison.image_a_id) ?? null

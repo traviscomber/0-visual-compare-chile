@@ -20,6 +20,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     .from("comparisons")
     .select("*, image_a:images!comparisons_image_a_id_fkey(*), image_b:images!comparisons_image_b_id_fkey(*)")
     .eq("id", id)
+    .eq("user_id", user.id)
     .single()
 
   if (error || !data) {
@@ -45,9 +46,10 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       .from("comparisons")
       .select("id, user_id, diff_storage_path")
       .eq("id", id)
+      .eq("user_id", user.id)
       .single()
 
-    if (fetchError || !comparison || comparison.user_id !== user.id) {
+    if (fetchError || !comparison) {
       return NextResponse.json({ error: "Comparación no encontrada." }, { status: 404 })
     }
 
