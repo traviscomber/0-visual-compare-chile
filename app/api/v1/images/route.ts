@@ -4,6 +4,7 @@ import { authenticateApiKey } from "@/lib/api/auth"
 import { BUCKET } from "@/lib/storage"
 import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE_BYTES } from "@/lib/validations"
 import { calculatePerceptualHash } from "@/lib/image/phash"
+import { createHash, randomUUID } from "node:crypto"
 import sharp from "sharp"
 
 export const runtime = "nodejs"
@@ -22,6 +23,16 @@ interface UploadResponse {
   created_at: string
 }
 
+function sanitizeFilename(filename: string): string {
+  const baseName = filename
+    .trim()
+    .replace(/[\/\\?%*:|"<>[\]#\x00-\x1F]+/g, "-")
+    .replace(/\s+/g, " ")
+    .replace(/\.+$/g, "")
+
+  return baseName || `image-${Date.now()}`
+}
+
 export async function POST(request: Request) {
   try {
     // Extract API key from Authorization header
@@ -38,10 +49,11 @@ export async function POST(request: Request) {
 
     // Parse multipart form data
     const formData = await request.formData()
-    const file = formData.get("image") as File
-    if (!file) {
+    const fileEntry = formData.get("image")
+    if (!(fileEntry instanceof File)) {
       return NextResponse.json({ error: "No image provided" }, { status: 400 })
     }
+    const file = fileEntry
 
     // Validate file type
     if (!ALLOWED_MIME_TYPES.includes(file.type as (typeof ALLOWED_MIME_TYPES)[number])) {
@@ -57,8 +69,7 @@ export async function POST(request: Request) {
     const admin = createAdminClient()
 
     // Calculate SHA-256
-    const crypto = require("crypto")
-    const sha256 = crypto.createHash("sha256").update(buffer).digest("hex")
+    const sha256 = createHash("sha256").update(buffer).digest("hex")
 
     // Extract image metadata using sharp
     const metadata = await sharp(buffer).metadata()
@@ -70,8 +81,8 @@ export async function POST(request: Request) {
     const phash = await calculatePerceptualHash(buffer)
 
     // Upload to Supabase storage
-    const filename = file.name || `image-${Date.now()}`
-    const storagePath = `${context.organization_id}/${crypto.randomUUID()}-${filename}`
+    const filename = sanitizeFilename(file.name || "")
+    const storagePath = `${context.organization_id}/${randomUUID()}-${filename}`
 
     const { error: uploadError } = await admin.storage.from(BUCKET).upload(storagePath, buffer, {
       contentType: file.type,
@@ -97,7 +108,7 @@ export async function POST(request: Request) {
         height: metadata.height,
         sha256,
         phash,
-        status: "ready",
+        status: "active",
         metadata: {
           format: metadata.format,
           hasAlpha: metadata.hasAlpha,

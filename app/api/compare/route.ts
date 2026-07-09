@@ -218,6 +218,7 @@ export async function POST(request: Request) {
 
     await supabase.from("usage_logs").insert({
       user_id: user.id,
+      organization_id: user.id,
       action: "comparison.created",
       metadata: {
         comparison_id: comparison.id,

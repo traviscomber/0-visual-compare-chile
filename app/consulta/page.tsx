@@ -1,220 +1,258 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Shield, Settings } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Marca } from '@/types/marca'
-import {
-  LoadDBModule,
-  SearchModule,
-  VisualizationModule,
-  UtilitiesModule
-} from '@/components/consulta/modules'
+import { Shield, ArrowLeft, Database } from 'lucide-react'
+import { SearchResult, SearchFilters } from '@/types/marca'
 import { useSearch } from '@/hooks/useSearch'
+import { API_PORTAL_MARCAS } from '@/lib/api-portal-data'
+import {
+  ExportDialog,
+  FilterPanel,
+  MarcaCard,
+  ResultsTable,
+  SearchPanel,
+  StatsBar
+} from '@/components/api-portal'
 
-// Demo data
-const MARCAS_DEMO: Marca[] = [
-  {
-    id: '1',
-    nombre: 'VISUAL COMPARE',
-    solicitante: 'Visual Compare Ltd',
-    numeroRegistro: '4020230615001',
-    niza: ['42', '35'],
-    viena: ['26.03.01'],
-    estado: 'Registrada',
-    fecha: '2023-06-15',
-    pais: 'CL',
-    descripcion: 'Plataforma de comparación visual de logos y marcas'
-  },
-  {
-    id: '2',
-    nombre: 'COMPARE PRO',
-    solicitante: 'Software Innovations Inc',
-    numeroRegistro: '4020230322002',
-    niza: ['42', '09'],
-    viena: ['26.01.01'],
-    estado: 'Registrada',
-    fecha: '2023-03-22',
-    pais: 'US',
-    descripcion: 'Software profesional de comparación'
-  },
-  {
-    id: '3',
-    nombre: 'LOGO MATCH',
-    solicitante: 'Design Studio Chile',
-    numeroRegistro: '4020240110003',
-    niza: ['41', '42'],
-    viena: ['26.03.01', '26.03.15'],
-    estado: 'Pendiente',
-    fecha: '2024-01-10',
-    pais: 'CL',
-    descripcion: 'Sistema de emparejamiento de logos'
-  },
-  {
-    id: '4',
-    nombre: 'MARCA SHIELD',
-    solicitante: 'IP Protection Services',
-    numeroRegistro: '4020221105004',
-    niza: ['45'],
-    viena: ['26.04.01'],
-    estado: 'Registrada',
-    fecha: '2022-11-05',
-    pais: 'MX',
-    descripcion: 'Protección de marcas registradas'
-  },
-  {
-    id: '5',
-    nombre: 'VISUAL TECH',
-    solicitante: 'Technology Innovations',
-    numeroRegistro: '4020230820005',
-    niza: ['42', '35', '09'],
-    viena: ['26.03.01'],
-    estado: 'Registrada',
-    fecha: '2023-08-20',
-    pais: 'AR',
-    descripcion: 'Tecnología visual avanzada'
-  }
-]
+const PAGE_SIZE = 8
+
+const DEFAULT_FILTERS: SearchFilters = {}
 
 export default function ConsultaPage() {
-  const [showLoadDB, setShowLoadDB] = useState(true)
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  const [favoritos, setFavoritos] = useState<Set<string>>(new Set())
-  const [searchHistory, setSearchHistory] = useState<Array<{
-    query: string
-    type: string
-    timestamp: Date
-    resultCount: number
-  }>>([])
+  const [query, setQuery] = useState('VISUAL')
+  const [activeQuery, setActiveQuery] = useState('VISUAL')
+  const [searchType, setSearchType] = useState<'nombre' | 'niza' | 'viena'>('nombre')
+  const [filters, setFilters] = useState<SearchFilters>(DEFAULT_FILTERS)
+  const [page, setPage] = useState(1)
+  const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null)
+  const [exportOpen, setExportOpen] = useState(false)
+  const [lastSearchTime, setLastSearchTime] = useState(0)
+  const [totalInDatabase, setTotalInDatabase] = useState(API_PORTAL_MARCAS.length)
+  const [availableNiza, setAvailableNiza] = useState<string[]>(
+    () => Array.from(new Set(API_PORTAL_MARCAS.flatMap((item) => item.niza))).sort()
+  )
+  const [availableViena, setAvailableViena] = useState<string[]>(
+    () => Array.from(new Set(API_PORTAL_MARCAS.flatMap((item) => item.viena))).sort()
+  )
 
-  const { search, resultados, cargando } = useSearch(MARCAS_DEMO)
+  const {
+    search,
+    resultados,
+    cargando,
+    getStats
+  } = useSearch(API_PORTAL_MARCAS)
 
-  // Load favoritos from localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('favoritos_marcas')
-      if (saved) {
-        setFavoritos(new Set(JSON.parse(saved)))
+    const stats = getStats()
+    if (stats) {
+      setTotalInDatabase(stats.totalMarcas)
+    }
+  }, [getStats])
+
+  useEffect(() => {
+    const loadClassifications = async () => {
+      try {
+        const [nizaResponse, vienaResponse] = await Promise.all([
+          fetch('/api/v1/search/niza'),
+          fetch('/api/v1/search/viena'),
+        ])
+
+        if (nizaResponse.ok) {
+          const payload = await nizaResponse.json()
+          setAvailableNiza(
+            Array.isArray(payload.results)
+              ? payload.results.map((item: { codigo: string }) => item.codigo)
+              : []
+          )
+        }
+
+        if (vienaResponse.ok) {
+          const payload = await vienaResponse.json()
+          setAvailableViena(
+            Array.isArray(payload.results)
+              ? payload.results.map((item: { codigo: string }) => item.codigo)
+              : []
+          )
+        }
+      } catch (error) {
+        console.error('[v0] Failed to load portal classifications:', error)
       }
     }
+
+    void loadClassifications()
   }, [])
 
-  const handleSearch = async (query: string, type: 'nombre' | 'niza' | 'viena') => {
-    await search({ query, type })
-
-    // Add to search history
-    setSearchHistory(prev => [
-      {
-        query,
-        type,
-        timestamp: new Date(),
-        resultCount: resultados.length
-      },
-      ...prev.slice(0, 9)
-    ])
-  }
-
-  const handleToggleFavorito = (marcaId: string) => {
-    const nuevos = new Set(favoritos)
-    if (nuevos.has(marcaId)) {
-      nuevos.delete(marcaId)
-    } else {
-      nuevos.add(marcaId)
+  useEffect(() => {
+    const runInitialSearch = async () => {
+      const response = await search({
+        query: activeQuery,
+        type: searchType,
+        filters
+      })
+      setLastSearchTime(response.tiempo_ms)
     }
-    setFavoritos(nuevos)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('favoritos_marcas', JSON.stringify(Array.from(nuevos)))
-    }
+
+    void runInitialSearch()
+    // Only run on mount. Subsequent searches are triggered explicitly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    setPage(1)
+  }, [resultados])
+
+  const filteredResults = useMemo(() => {
+    return resultados.filter((result) => {
+      if (filters.estado && result.marca.estado !== filters.estado) return false
+      if (filters.pais && result.marca.pais !== filters.pais.toUpperCase()) return false
+      if (filters.fechaDesde && new Date(result.marca.fecha) < new Date(filters.fechaDesde)) return false
+      if (filters.fechaHasta && new Date(result.marca.fecha) > new Date(filters.fechaHasta)) return false
+      if (filters.niza?.length && !filters.niza.some((item) => result.marca.niza.includes(item))) return false
+      if (filters.viena?.length && !filters.viena.some((item) => result.marca.viena.includes(item))) return false
+      return true
+    })
+  }, [filters, resultados])
+
+  const currentPageResults = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE
+    return filteredResults.slice(start, start + PAGE_SIZE)
+  }, [filteredResults, page])
+
+  const runSearch = async (
+    nextQuery: string,
+    nextType: 'nombre' | 'niza' | 'viena',
+    nextFilters: SearchFilters = filters
+  ) => {
+    setQuery(nextQuery)
+    setActiveQuery(nextQuery)
+    setSearchType(nextType)
+    const response = await search({
+      query: nextQuery,
+      type: nextType,
+      filters: nextFilters
+    })
+    setLastSearchTime(response.tiempo_ms)
+    setPage(1)
   }
 
-  const handleClearHistory = () => {
-    setSearchHistory([])
+  const runFilters = async (nextFilters: SearchFilters) => {
+    setFilters(nextFilters)
+
+    const response = await search({
+      query: activeQuery.trim(),
+      type: searchType,
+      filters: nextFilters
+    })
+    setLastSearchTime(response.tiempo_ms)
+    setPage(1)
   }
+
+  const activeResultCount = filteredResults.length
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Header */}
-      <header className="border-b border-slate-700/50 bg-slate-800/50 backdrop-blur-sm sticky top-0 z-40 shadow-lg">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/demo" className="flex items-center gap-2 hover:opacity-80 transition">
-            <div className="p-2 rounded-lg bg-blue-600/20">
-              <Shield className="h-5 w-5 text-blue-400" />
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.18),_transparent_35%),linear-gradient(135deg,_#020617_0%,_#0f172a_40%,_#111827_100%)] text-white">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-slate-950/70 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-3">
+              <Shield className="h-5 w-5 text-blue-200" />
             </div>
             <div>
-              <span className="text-lg font-bold text-white block">Consulta de Marcas</span>
-              <span className="text-xs text-slate-400">Portal de búsqueda avanzado</span>
+              <p className="text-sm uppercase tracking-[0.28em] text-slate-400">API Portal</p>
+              <h1 className="text-xl font-semibold">Consulta de Marcas</h1>
             </div>
-          </Link>
+          </div>
+
           <div className="flex items-center gap-3">
-            <Button
-              onClick={() => setShowLoadDB(!showLoadDB)}
-              variant="outline"
-              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+            <Link
+              href="/demo"
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 transition hover:bg-white/10"
             >
-              <Settings className="h-4 w-4 mr-2" />
-              {showLoadDB ? 'Ocultar' : 'Mostrar'} Carga
-            </Button>
-            <Link href="/demo" className="text-sm text-slate-400 hover:text-white transition">
-              ← Volver
+              <ArrowLeft className="h-4 w-4" />
+              Volver
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-12">
-        {/* Hero Section */}
-        <div className="mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
-            Sistema de Consulta de Marcas Registradas
-          </h1>
-          <p className="text-slate-400 text-lg">
-            Búsqueda avanzada con <span className="font-semibold text-blue-400">4 módulos funcionales</span>
-          </p>
-        </div>
+      <main className="mx-auto max-w-7xl space-y-6 px-6 py-8 md:py-10">
+        <section className="grid gap-6 xl:grid-cols-[1.6fr_0.8fr]">
+          <SearchPanel
+            query={query}
+            searchType={searchType}
+            isLoading={cargando}
+            onQueryChange={setQuery}
+            onSearchTypeChange={(type) => {
+              setSearchType(type)
+              void runSearch(query, type, filters)
+            }}
+            onSearch={runSearch}
+          />
 
-        {/* 4 Pilares de Módulos */}
-        <div className="space-y-16">
-          {/* Módulo 1: Carga de BD */}
-          {showLoadDB && (
-            <section className="rounded-xl border border-slate-700/30 p-8 bg-slate-800/20 backdrop-blur-sm">
-              <LoadDBModule />
-            </section>
-          )}
-
-          {/* Módulo 2: Búsqueda */}
-          <section className="rounded-xl border border-slate-700/30 p-8 bg-slate-800/20 backdrop-blur-sm">
-            <SearchModule
-              isLoading={cargando}
-              onSearch={handleSearch}
-              resultCount={resultados.length}
+          <div className="space-y-6">
+            <StatsBar
+              totalResults={activeResultCount}
+              searchTime={lastSearchTime}
+              totalInDatabase={totalInDatabase}
             />
-          </section>
 
-          {/* Módulo 3: Visualización */}
-          {resultados.length > 0 && (
-            <section className="rounded-xl border border-slate-700/30 p-8 bg-slate-800/20 backdrop-blur-sm">
-              <VisualizationModule
-                resultados={resultados}
-                isLoading={cargando}
-                viewMode={viewMode}
-                onViewModeChange={setViewMode}
-                favoritos={favoritos}
-                onToggleFavorito={handleToggleFavorito}
-              />
-            </section>
-          )}
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
+              <div className="flex items-center gap-3">
+                <div className="rounded-full border border-white/10 bg-white/5 p-3 text-blue-200">
+                  <Database className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-300">Base indexada</p>
+                  <p className="text-lg font-semibold text-white">{totalInDatabase} registros</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
-          {/* Módulo 4: Utilidades */}
-          <section className="rounded-xl border border-slate-700/30 p-8 bg-slate-800/20 backdrop-blur-sm">
-            <UtilitiesModule
-              resultados={resultados}
-              searchHistory={searchHistory}
-              onClearHistory={handleClearHistory}
-            />
-          </section>
-        </div>
+        <FilterPanel
+          filters={filters}
+          availableNiza={availableNiza}
+          availableViena={availableViena}
+          onFilterChange={(next) => {
+            void runFilters(next)
+          }}
+          onClearFilters={() => {
+            setFilters(DEFAULT_FILTERS)
+            void runFilters(DEFAULT_FILTERS)
+          }}
+        />
+
+        <ResultsTable
+          results={currentPageResults}
+          isLoading={cargando}
+          pagination={{
+            page,
+            total: filteredResults.length,
+            limit: PAGE_SIZE
+          }}
+          onPageChange={setPage}
+          onSelectMarca={setSelectedResult}
+        />
       </main>
+
+      {selectedResult && (
+        <MarcaCard
+          result={selectedResult}
+          onClose={() => setSelectedResult(null)}
+          onCopyId={async (id) => {
+            await navigator.clipboard.writeText(id)
+          }}
+          onExport={() => setExportOpen(true)}
+        />
+      )}
+
+      <ExportDialog
+        results={filteredResults}
+        isOpen={exportOpen}
+        onClose={() => setExportOpen(false)}
+      />
     </div>
   )
 }

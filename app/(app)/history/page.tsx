@@ -60,6 +60,15 @@ export default async function HistoryPage({
   const rows = comparisons ?? []
   const filtered =
     classification !== "all" || minScore !== "" || maxScore !== "" || query.length > 0
+  const averageScore =
+    rows.length > 0
+      ? Math.round(rows.reduce((sum, row) => sum + Number(row.similarity_score), 0) / rows.length)
+      : 0
+  const highRiskCount = rows.filter((row) =>
+    row.classification === "exact_match" ||
+    row.classification === "near_duplicate" ||
+    Number(row.similarity_score) >= 85,
+  ).length
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 flex flex-col gap-6">
@@ -78,6 +87,27 @@ export default async function HistoryPage({
             Nueva comparación
           </Link>
         </Button>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">Comparaciones visibles</p>
+            <p className="mt-2 text-3xl font-semibold text-foreground">{rows.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">Promedio de similitud</p>
+            <p className="mt-2 text-3xl font-semibold text-foreground">{averageScore}%</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">Casos de alto riesgo</p>
+            <p className="mt-2 text-3xl font-semibold text-foreground">{highRiskCount}</p>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>

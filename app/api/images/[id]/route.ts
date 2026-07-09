@@ -41,6 +41,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
     await supabase.from("usage_logs").insert({
       user_id: user.id,
+      organization_id: user.id,
       action: "image.deleted",
       metadata: { image_id: id },
     })

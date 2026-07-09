@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "prebuild": "pnpm check:env",
     "start": "next start",
     "prestart": "pnpm check:env",
     "lint": "eslint .",

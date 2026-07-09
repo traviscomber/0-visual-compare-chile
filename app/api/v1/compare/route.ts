@@ -1,14 +1,10 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { authenticateApiKey } from "@/lib/api/auth"
+import { compareRequestSchema } from "@/lib/validations"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
-
-interface CompareRequest {
-  image_a_id: string
-  image_b_id: string
-}
 
 interface CompareResponse {
   id: string
@@ -35,12 +31,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid API key" }, { status: 401 })
     }
 
-    const body: CompareRequest = await request.json()
-    const { image_a_id, image_b_id } = body
-
-    if (!image_a_id || !image_b_id) {
-      return NextResponse.json({ error: "Both image_a_id and image_b_id are required" }, { status: 400 })
+    const body = await request.json().catch(() => null)
+    const parsed = compareRequestSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Both image_a_id and image_b_id are required" },
+        { status: 400 }
+      )
     }
+
+    const { image_a_id, image_b_id } = parsed.data
 
     if (image_a_id === image_b_id) {
       return NextResponse.json({ error: "Cannot compare an image with itself" }, { status: 400 })

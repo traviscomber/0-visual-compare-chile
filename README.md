@@ -70,6 +70,7 @@ pnpm check:env
 
 - Sube el branch a GitHub.
 - Configura las variables de entorno en Vercel.
+- En Supabase, permite como redirect URL la ruta exacta `https://<tu-dominio>/auth/callback` para producción y cualquier dominio de preview que uses.
 - Ejecuta `pnpm smoke` contra la URL de despliegue.
 - Asegura que la URL de producción sea pública y no esté bloqueada por Vercel SSO.
 - Verifica login, upload, compare e historial en producción.
@@ -77,5 +78,7 @@ pnpm check:env
 ## Notas
 
 - `app/demo` es una vista comercial de apoyo, no el flujo core.
+- `app/consulta` usa la capa compartida del API Portal (`/api/v1/search`, `/api/v1/search/niza`, `/api/v1/search/viena`).
+- El plan de trabajo activo vive en `ROADMAP.md`.
 - `app/auth/signup` redirige a `/auth/sign-up`.
 - Los documentos de Fase 0 se conservan solo como referencia histórica.

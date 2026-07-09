@@ -1,5 +1,6 @@
 "use client"
 
+import type React from "react"
 import { useCallback, useRef, useState } from "react"
 import { Loader2, Upload, X, ImageIcon } from "lucide-react"
 import { cn } from "@/lib/utils"

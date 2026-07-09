@@ -16,6 +16,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("comparisons")
     .select("*, image_a:images!comparisons_image_a_id_fkey(*), image_b:images!comparisons_image_b_id_fkey(*)")
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false })
 
   if (error) {

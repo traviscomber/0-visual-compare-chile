@@ -18,8 +18,10 @@ export async function GET(request: Request) {
     }
 
     const url = new URL(request.url)
-    const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), 100)
-    const offset = parseInt(url.searchParams.get("offset") || "0")
+    const parsedLimit = Number(url.searchParams.get("limit") || "50")
+    const parsedOffset = Number(url.searchParams.get("offset") || "0")
+    const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 100) : 50
+    const offset = Number.isFinite(parsedOffset) ? Math.max(parsedOffset, 0) : 0
 
     const admin = createAdminClient()
 

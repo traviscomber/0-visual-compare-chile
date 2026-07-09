@@ -58,6 +58,7 @@ async function main() {
     ["/compare", "/auth/login"],
     ["/dashboard", "/auth/login"],
     ["/history", "/auth/login"],
+    ["/comparisons/00000000-0000-0000-0000-000000000000", "/auth/login"],
     ["/settings", "/auth/login"],
     ["/reportes", "/auth/login"],
     ["/admin", "/auth/login"],
@@ -83,6 +84,10 @@ async function main() {
     { path: "/api/comparisons", method: "GET", expectedStatus: 401 },
     { path: "/api/compare", method: "POST", expectedStatus: 401, body: JSON.stringify({ image_a_id: "a", image_b_id: "b" }) },
     { path: "/api/images/upload", method: "POST", expectedStatus: 401, body: new FormData() },
+    { path: "/api/account/api-keys", method: "GET", expectedStatus: 401 },
+    { path: "/api/account/api-keys", method: "POST", expectedStatus: 401, body: JSON.stringify({ name: "smoke" }) },
+    { path: "/api/v1/comparisons", method: "GET", expectedStatus: 401 },
+    { path: "/api/v1/comparisons/00000000-0000-0000-0000-000000000000", method: "GET", expectedStatus: 401 },
   ]
 
   for (const api of protectedApis) {
@@ -98,6 +103,20 @@ async function main() {
       ok,
       protectedBySso ? "protected by Vercel SSO" : `status=${response.status}`,
     )
+  }
+
+  const apiPortalChecks = [
+    { path: "/api/v1/health", contains: ["status", "version", "timestamp"] },
+    { path: "/api/v1/search?q=VISUAL&type=nombre&limit=5", contains: ["results", "total", "tiempo_ms"] },
+    { path: "/api/v1/search/niza", contains: ["results"] },
+    { path: "/api/v1/search/viena", contains: ["results"] },
+    { path: "/api/v1/registros/1", contains: ["result", "VISUAL COMPARE"] },
+  ]
+
+  for (const api of apiPortalChecks) {
+    const { response, text } = await fetchText(api.path)
+    const ok = response.status === 200 && api.contains.every((needle) => text.includes(needle))
+    record(`GET ${api.path}`, ok, `status=${response.status}`)
   }
 
   const failed = checks.filter((check) => !check.ok)

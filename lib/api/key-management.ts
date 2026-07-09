@@ -1,6 +1,15 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { generateApiKey, hashApiKey } from "@/lib/api/auth"
 
+export interface ApiKeyRecord {
+  id: string
+  name: string
+  is_active: boolean
+  created_at: string
+  last_used_at: string | null
+  expires_at: string | null
+}
+
 export async function createApiKey(
   organizationId: string,
   userId: string,
@@ -36,12 +45,18 @@ export async function createApiKey(
   }
 }
 
-export async function revokeApiKey(keyId: string): Promise<boolean> {
+export async function revokeApiKey(keyId: string, organizationId: string): Promise<boolean> {
   try {
     const admin = createAdminClient()
-    const { error } = await admin.from("api_keys").update({ is_active: false }).eq("id", keyId)
+    const { data, error } = await admin
+      .from("api_keys")
+      .update({ is_active: false })
+      .eq("id", keyId)
+      .eq("organization_id", organizationId)
+      .select("id")
+      .single()
 
-    if (error) {
+    if (error || !data) {
       console.error("[v0] Failed to revoke API key:", error)
       return false
     }
@@ -53,7 +68,7 @@ export async function revokeApiKey(keyId: string): Promise<boolean> {
   }
 }
 
-export async function listApiKeys(organizationId: string): Promise<any[] | null> {
+export async function listApiKeys(organizationId: string): Promise<ApiKeyRecord[] | null> {
   try {
     const admin = createAdminClient()
     const { data, error } = await admin
@@ -67,7 +82,7 @@ export async function listApiKeys(organizationId: string): Promise<any[] | null>
       return null
     }
 
-    return data
+    return (data ?? []) as ApiKeyRecord[]
   } catch (error) {
     console.error("[v0] List API keys error:", error)
     return null
