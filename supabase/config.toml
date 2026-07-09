@@ -1,0 +1,22 @@
+# Supabase Configuration
+
+[api]
+# enable the RESTful API for development
+enabled = true
+
+[db]
+# port to use for local postgres database
+port = 54322
+# port to use for local postgres diff command
+shadow_port = 54320
+
+[studio]
+# port to use for Supabase Studio
+port = 54323
+
+[inbucket]
+# port to use for local email testing suite
+port = 54324
+
+[vector]
+enabled = false
