@@ -119,15 +119,16 @@ export async function initializeDatabase(): Promise<SqlJsDatabase> {
 
   try {
     const SQL = await initSqlJsLibrary()
-    
-    // Create new empty database
-    dbInstance = new SQL.Database()
-    
+
+    // Create new empty database and keep a non-null local reference for TS.
+    const db = new SQL.Database()
+    dbInstance = db
+
     // Create schema
-    await createSchema(dbInstance)
-    
+    await createSchema(db)
+
     console.log('[DB] Database initialized successfully')
-    return dbInstance
+    return db
   } catch (error) {
     console.error('[DB] Failed to initialize database:', error)
     throw error
