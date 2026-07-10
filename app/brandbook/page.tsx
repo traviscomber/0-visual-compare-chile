@@ -1,306 +1,371 @@
 'use client'
 
-import { useState } from 'react'
-import { Copy, Check, ExternalLink, ChevronDown } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
+import { Check, Copy, ChevronDown, Orbit, Sparkles, Shield, ScanSearch, Layers3, WandSparkles } from 'lucide-react'
 
-const colors = [
-  { name: 'Primary Blue Light', hex: '#3b82f6', rgb: '59, 130, 246', usage: 'Buttons, highlights, interactive elements' },
-  { name: 'Primary Blue Dark', hex: '#1e40af', rgb: '30, 64, 175', usage: 'Text, dark mode accents, borders' },
-  { name: 'Secondary Purple', hex: '#a855f7', rgb: '168, 85, 247', usage: 'Highlights, decorative elements' },
-  { name: 'Tertiary Amber', hex: '#f59e0b', rgb: '245, 158, 11', usage: 'Warnings, notifications, highlights' },
-  { name: 'Neutral White', hex: '#ffffff', rgb: '255, 255, 255', usage: 'Foreground, text' },
-  { name: 'Neutral Dark', hex: '#0f172a', rgb: '15, 23, 42', usage: 'Background, dark mode' },
+type ToneItem = {
+  label: string
+  value: string
+  helper: string
+}
+
+type PaletteItem = {
+  name: string
+  hex: string
+  rgb: string
+  usage: string
+  swatch: string
+}
+
+type Principle = {
+  title: string
+  description: string
+  icon: ReactNode
+}
+
+const palette: PaletteItem[] = [
+  { name: 'Neural Blue', hex: '#2563EB', rgb: '37, 99, 235', usage: 'Primary actions, trust cues, active states', swatch: 'bg-blue-600' },
+  { name: 'Signal Cyan', hex: '#06B6D4', rgb: '6, 182, 212', usage: 'Data highlights, hover accents, visual links', swatch: 'bg-cyan-500' },
+  { name: 'Pulse Violet', hex: '#8B5CF6', rgb: '139, 92, 246', usage: 'Secondary emphasis, cards, gradient depth', swatch: 'bg-violet-500' },
+  { name: 'Ion Emerald', hex: '#10B981', rgb: '16, 185, 129', usage: 'Success, verified states, positive signals', swatch: 'bg-emerald-500' },
+  { name: 'Alert Amber', hex: '#F59E0B', rgb: '245, 158, 11', usage: 'Warnings, attention states, review prompts', swatch: 'bg-amber-500' },
+  { name: 'Deep Slate', hex: '#020617', rgb: '2, 6, 23', usage: 'Base canvas and structural depth', swatch: 'bg-slate-950' },
 ]
 
-const typography = [
-  { name: 'Heading H1', size: '2.25rem (36px)', weight: '700', lineHeight: '1.2', color: 'Foreground' },
-  { name: 'Heading H2', size: '1.875rem (30px)', weight: '700', lineHeight: '1.2', color: 'Foreground' },
-  { name: 'Heading H3', size: '1.5rem (24px)', weight: '700', lineHeight: '1.2', color: 'Foreground' },
-  { name: 'Body Text', size: '1rem (16px)', weight: '400', lineHeight: '1.5', color: 'Muted Foreground' },
-  { name: 'Small Text', size: '0.875rem (14px)', weight: '400', lineHeight: '1.5', color: 'Muted Foreground' },
-  { name: 'Button Text', size: '1rem (16px)', weight: '600', lineHeight: '1.5', color: 'Foreground' },
+const typography: ToneItem[] = [
+  { label: 'Display', value: 'Montserrat 800', helper: 'Hero titles, section openers, bold statements' },
+  { label: 'Heading', value: 'Montserrat 700', helper: 'Cards, blocks, callouts, navigation states' },
+  { label: 'Body', value: 'Montserrat 400 / 500', helper: 'Readable product copy and dense operational text' },
+  { label: 'Code', value: 'JetBrains Mono 500', helper: 'Metrics, hashes, technical values, API examples' },
 ]
 
-const components = [
+const principles: Principle[] = [
   {
-    name: 'Primary Button',
-    description: 'Call-to-action buttons for main interactions',
-    class: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg',
-    preview: 'Button Primario',
+    title: 'Precise',
+    description: 'Show the signal first. Avoid decoration that hides the actual decision path.',
+    icon: <ScanSearch className="h-5 w-5" />,
   },
   {
-    name: 'Secondary Button',
-    description: 'Alternative actions, less prominent',
-    class: 'border border-blue-700/50 bg-transparent text-blue-300 hover:bg-blue-900/20 px-6 py-3 rounded-lg',
-    preview: 'BotÃƒÂ³n Secundario',
+    title: 'Neural',
+    description: 'Use luminous gradients, layered surfaces, and soft depth instead of flat admin UI.',
+    icon: <Sparkles className="h-5 w-5" />,
   },
   {
-    name: 'Glass Card',
-    description: 'Frosted glass aesthetic for content',
-    class: 'glass p-8 rounded-2xl border border-blue-700/50 bg-gradient-to-br from-blue-900/20 to-slate-900/50 backdrop-blur-xl',
-    preview: 'Glass Card',
+    title: 'Verified',
+    description: 'Every state should imply traceability, auditability, and operational confidence.',
+    icon: <Shield className="h-5 w-5" />,
   },
   {
-    name: 'Badge',
-    description: 'Status labels and tags',
-    class: 'inline-block bg-blue-900/60 text-blue-300 px-4 py-2 rounded-lg text-xs font-bold',
-    preview: 'BADGE',
+    title: 'Composed',
+    description: 'Keep the interface calm. High contrast, clear hierarchy, no visual noise.',
+    icon: <Layers3 className="h-5 w-5" />,
   },
+]
+
+const uiPatterns = [
+  {
+    title: 'Primary CTA',
+    preview: 'Iniciar comparacion',
+    className: 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/20',
+  },
+  {
+    title: 'Secondary CTA',
+    preview: 'Ver panel',
+    className: 'border border-cyan-400/40 bg-slate-950/40 text-cyan-200',
+  },
+  {
+    title: 'Status badge',
+    preview: 'VERIFICADO',
+    className: 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30',
+  },
+  {
+    title: 'Glass card',
+    preview: 'Panel neural',
+    className: 'bg-gradient-to-br from-slate-950/70 via-slate-900/60 to-blue-950/40 border border-white/10',
+  },
+]
+
+const tone = [
+  { label: 'Voice', value: 'Directa', helper: 'No prometer magia, mostrar capacidad real.' },
+  { label: 'Confidence', value: 'Alta', helper: 'Hablar como plataforma seria, no como demo.' },
+  { label: 'Syntax', value: 'Corta', helper: 'Frases claras, verbos activos, poco relleno.' },
+  { label: 'Mood', value: 'Cientifico + ejecutivo', helper: 'Tecnico por dentro, premium por fuera.' },
 ]
 
 export default function BrandBookPage() {
-  const [copiedColor, setCopiedColor] = useState<string | null>(null)
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    colors: true,
-    typography: false,
-    components: false,
+  const [copiedHex, setCopiedHex] = useState<string | null>(null)
+  const [openSections, setOpenSections] = useState({
+    palette: true,
+    typography: true,
+    system: true,
+    voice: false,
   })
 
-  const copyToClipboard = (text: string, type: string) => {
-    navigator.clipboard.writeText(text)
-    setCopiedColor(`${type}-${text}`)
-    setTimeout(() => setCopiedColor(null), 2000)
+  const heroMetrics = useMemo(
+    () => [
+      { value: '3', label: 'capas de señal', helper: 'comparacion, consulta, trazabilidad' },
+      { value: '1', label: 'lenguaje visual', helper: 'naranja y violeta fuera, azul dentro' },
+      { value: '0', label: 'ruido visual', helper: 'sin demo copy, sin sobreactuacion' },
+    ],
+    [],
+  )
+
+  const copyToClipboard = async (text: string) => {
+    await navigator.clipboard.writeText(text)
+    setCopiedHex(text)
+    window.setTimeout(() => setCopiedHex(null), 1800)
   }
 
-  const toggleSection = (section: string) => {
-    setExpandedSections((prev) => ({
-      ...prev,
-      [section]: !prev[section],
-    }))
+  const toggleSection = (key: keyof typeof openSections) => {
+    setOpenSections((current) => ({ ...current, [key]: !current[key] }))
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-blue-900">
-      {/* Header */}
-      <header className="border-b border-blue-700/50 bg-slate-900/50 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold text-white">Visual Compare Chile</h1>
-              <p className="text-blue-300 mt-2">Brand Guidelines & Design System</p>
-            </div>
+    <main className="min-h-screen bg-[#020617] text-white">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-40 -right-28 h-96 w-96 rounded-full bg-cyan-500/20 blur-3xl" />
+        <div className="absolute top-40 -left-28 h-96 w-96 rounded-full bg-violet-500/20 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-blue-500/10 blur-3xl" />
+      </div>
+
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/75 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-cyan-300">N3uralia style</p>
+            <h1 className="mt-2 text-2xl font-bold text-white">Visual Compare Chile Brandbook</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/panel"
+              className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100 transition hover:bg-cyan-400/20"
+            >
+              Ir al panel
+            </Link>
             <Link
               href="/docs/BRANDBOOK.md"
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              className="rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
             >
-              <ExternalLink className="h-4 w-4" />
               Ver PDF
             </Link>
           </div>
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-6 py-12">
-        {/* Color Palette */}
-        <section className="mb-16">
-          <button
-            onClick={() => toggleSection('colors')}
-            className="flex items-center gap-3 w-full mb-6 hover:opacity-80 transition-opacity"
-          >
-            <h2 className="text-3xl font-bold text-white">Paleta de Colores</h2>
-            <ChevronDown
-              className={`h-6 w-6 text-blue-300 transition-transform duration-300 ${
-                expandedSections.colors ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
+      <section className="relative mx-auto max-w-6xl px-6 pb-8 pt-16">
+        <div className="grid gap-8 lg:grid-cols-[1.3fr_0.7fr]">
+          <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-2xl shadow-cyan-500/5 backdrop-blur-xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-cyan-200">
+              <Orbit className="h-4 w-4" />
+              Neural identity system
+            </div>
+            <h2 className="mt-6 max-w-3xl text-5xl font-black leading-[0.95] text-white md:text-7xl">
+              N3uralia style for visual decisions.
+            </h2>
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
+              Este brandbook define una estetica de inteligencia operativa: premium, clara y verificable. La
+              experiencia debe sentirse como un sistema neural serio, no como una demo temporaria.
+            </p>
 
-          {expandedSections.colors && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {colors.map((color) => (
-                <div
-                  key={color.hex}
-                  className="glass p-6 rounded-2xl border border-blue-700/50 bg-gradient-to-br from-blue-900/20 to-slate-900/50 backdrop-blur-xl"
-                >
-                  <div
-                    className="w-full h-24 rounded-xl mb-4 border border-white/10"
-                    style={{ backgroundColor: color.hex }}
-                  />
-                  <h3 className="text-lg font-bold text-white mb-2">{color.name}</h3>
-                  <p className="text-sm text-gray-300 mb-3">{color.usage}</p>
-
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => copyToClipboard(color.hex, 'hex')}
-                      className="flex items-center gap-2 w-full text-left p-2 bg-slate-800/50 hover:bg-slate-700/50 rounded text-sm font-mono text-blue-300 transition-colors"
-                    >
-                      {color.hex}
-                      {copiedColor === `hex-${color.hex}` ? (
-                        <Check className="h-4 w-4 ml-auto text-emerald-400" />
-                      ) : (
-                        <Copy className="h-4 w-4 ml-auto" />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => copyToClipboard(color.rgb, 'rgb')}
-                      className="flex items-center gap-2 w-full text-left p-2 bg-slate-800/50 hover:bg-slate-700/50 rounded text-sm font-mono text-blue-300 transition-colors"
-                    >
-                      rgb({color.rgb})
-                      {copiedColor === `rgb-${color.rgb}` ? (
-                        <Check className="h-4 w-4 ml-auto text-emerald-400" />
-                      ) : (
-                        <Copy className="h-4 w-4 ml-auto" />
-                      )}
-                    </button>
-                  </div>
+            <div className="mt-8 grid gap-4 md:grid-cols-3">
+              {heroMetrics.map((item) => (
+                <div key={item.label} className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+                  <div className="text-3xl font-black text-cyan-300">{item.value}</div>
+                  <div className="mt-1 text-sm font-semibold uppercase tracking-[0.2em] text-slate-100">{item.label}</div>
+                  <div className="mt-2 text-sm text-slate-400">{item.helper}</div>
                 </div>
               ))}
             </div>
-          )}
-        </section>
+          </div>
 
-        {/* Typography */}
-        <section className="mb-16">
-          <button
-            onClick={() => toggleSection('typography')}
-            className="flex items-center gap-3 w-full mb-6 hover:opacity-80 transition-opacity"
-          >
-            <h2 className="text-3xl font-bold text-white">TipografÃƒÂ­a</h2>
-            <ChevronDown
-              className={`h-6 w-6 text-blue-300 transition-transform duration-300 ${
-                expandedSections.typography ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
-
-          {expandedSections.typography && (
-            <div className="glass p-8 rounded-2xl border border-blue-700/50 bg-gradient-to-br from-blue-900/20 to-slate-900/50 backdrop-blur-xl mb-8">
-              <p className="text-lg text-gray-300 mb-6">
-                <strong>Font Primaria:</strong> Montserrat (400, 500, 600, 700, 800)
-              </p>
-
-              <div className="space-y-6">
-                {typography.map((typo) => (
-                  <div key={typo.name} className="border-l-4 border-blue-500 pl-4">
-                    <h4 className="text-lg font-bold text-white mb-2">{typo.name}</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                      <div>
-                        <p className="text-gray-400">TamaÃƒÂ±o</p>
-                        <p className="text-blue-300 font-mono">{typo.size}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-400">Peso</p>
-                        <p className="text-blue-300 font-mono">{typo.weight}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-400">Altura de lÃƒÂ­nea</p>
-                        <p className="text-blue-300 font-mono">{typo.lineHeight}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-400">Color</p>
-                        <p className="text-blue-300 font-mono">{typo.color}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          <div className="rounded-[2rem] border border-white/10 bg-slate-950/70 p-6 backdrop-blur-xl">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-cyan-300">Quick system</p>
+              <WandSparkles className="h-5 w-5 text-cyan-300" />
+            </div>
+            <div className="mt-6 space-y-4">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-xs uppercase tracking-[0.25em] text-slate-400">Brand promise</p>
+                <p className="mt-2 text-lg font-semibold text-white">Detectar, comparar y verificar.</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-xs uppercase tracking-[0.25em] text-slate-400">Visual posture</p>
+                <p className="mt-2 text-lg font-semibold text-white">Cinematic UI with operational restraint.</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-xs uppercase tracking-[0.25em] text-slate-400">Do not use</p>
+                <p className="mt-2 text-lg font-semibold text-white">Generic SaaS blue and demo language.</p>
               </div>
             </div>
-          )}
-        </section>
+          </div>
+        </div>
+      </section>
 
-        {/* Components */}
-        <section className="mb-16">
-          <button
-            onClick={() => toggleSection('components')}
-            className="flex items-center gap-3 w-full mb-6 hover:opacity-80 transition-opacity"
-          >
-            <h2 className="text-3xl font-bold text-white">Componentes</h2>
-            <ChevronDown
-              className={`h-6 w-6 text-blue-300 transition-transform duration-300 ${
-                expandedSections.components ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
+      <section className="mx-auto max-w-6xl px-6 pb-16">
+        <button
+          onClick={() => toggleSection('palette')}
+          className="mb-6 flex w-full items-center gap-3 text-left"
+        >
+          <h3 className="text-2xl font-bold text-white md:text-3xl">Color system</h3>
+          <ChevronDown className={`h-5 w-5 text-cyan-300 transition-transform ${openSections.palette ? 'rotate-180' : ''}`} />
+        </button>
 
-          {expandedSections.components && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {components.map((comp) => (
-                <div
-                  key={comp.name}
-                  className="glass p-8 rounded-2xl border border-blue-700/50 bg-gradient-to-br from-blue-900/20 to-slate-900/50 backdrop-blur-xl"
-                >
-                  <h3 className="text-xl font-bold text-white mb-2">{comp.name}</h3>
-                  <p className="text-sm text-gray-300 mb-4">{comp.description}</p>
-
-                  <div className="bg-slate-800/50 p-4 rounded-lg mb-4 flex items-center justify-center min-h-16">
-                    <button className={comp.class}>{comp.preview}</button>
+        {openSections.palette && (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {palette.map((item) => (
+              <article
+                key={item.hex}
+                className="overflow-hidden rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl transition hover:-translate-y-1 hover:border-cyan-400/30"
+              >
+                <div className={`h-28 ${item.swatch}`} />
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-lg font-semibold text-white">{item.name}</p>
+                      <p className="mt-1 text-sm text-slate-400">{item.usage}</p>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(item.hex)}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/60 px-3 py-2 text-xs font-mono text-cyan-200 transition hover:border-cyan-400/30"
+                    >
+                      {copiedHex === item.hex ? <Check className="h-4 w-4 text-emerald-300" /> : <Copy className="h-4 w-4" />}
+                      {item.hex}
+                    </button>
                   </div>
+                  <p className="mt-4 text-sm font-mono text-slate-300">rgb({item.rgb})</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
-                  <code className="text-xs text-blue-300 block break-words font-mono p-3 bg-slate-900/50 rounded border border-slate-700/50">
-                    {comp.class}
-                  </code>
+      <section className="mx-auto max-w-6xl px-6 pb-16">
+        <button
+          onClick={() => toggleSection('typography')}
+          className="mb-6 flex w-full items-center gap-3 text-left"
+        >
+          <h3 className="text-2xl font-bold text-white md:text-3xl">Typography</h3>
+          <ChevronDown
+            className={`h-5 w-5 text-cyan-300 transition-transform ${openSections.typography ? 'rotate-180' : ''}`}
+          />
+        </button>
+
+        {openSections.typography && (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-slate-950/80 to-blue-950/40 p-6 backdrop-blur-xl">
+              <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">Primary family</p>
+              <p className="mt-3 text-4xl font-black tracking-tight text-white">Montserrat</p>
+              <p className="mt-2 text-slate-300">Use for editorial headlines, UI labels, and confident body copy.</p>
+            </div>
+
+            <div className="grid gap-4">
+              {typography.map((item) => (
+                <div key={item.label} className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm uppercase tracking-[0.2em] text-slate-400">{item.label}</p>
+                      <p className="mt-2 text-xl font-bold text-white">{item.value}</p>
+                    </div>
+                    <div className="rounded-full border border-cyan-400/20 bg-cyan-400/10 p-3">
+                      <span className="font-mono text-sm text-cyan-200">Aa</span>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-sm text-slate-400">{item.helper}</p>
                 </div>
               ))}
             </div>
-          )}
-        </section>
+          </div>
+        )}
+      </section>
 
-        {/* Key Principles */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold text-white mb-6">Principios Clave</h2>
+      <section className="mx-auto max-w-6xl px-6 pb-16">
+        <button
+          onClick={() => toggleSection('system')}
+          className="mb-6 flex w-full items-center gap-3 text-left"
+        >
+          <h3 className="text-2xl font-bold text-white md:text-3xl">UI system</h3>
+          <ChevronDown className={`h-5 w-5 text-cyan-300 transition-transform ${openSections.system ? 'rotate-180' : ''}`} />
+        </button>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[
-            {
-              title: 'Precision',
-                description: 'Comparacion tecnica con SHA-256, pHash y diff visual',
-                color: 'blue',
-              },
-              {
-                title: 'Velocidad',
-                description: 'Flujo ligero para piloto operativo',
-                color: 'purple',
-              },
-              {
-                title: 'Accesibilidad',
-                description: 'Consulta y trazabilidad del flujo principal',
-                color: 'emerald',
-              },
-              {
-                title: 'Confiabilidad',
-                description: 'Auth Supabase, storage privado y rutas protegidas',
-                color: 'amber',
-              },
-            ].map((principle) => (
-              <div
-                key={principle.title}
-                className={`glass p-8 rounded-2xl border border-${principle.color}-700/50 bg-gradient-to-br from-${principle.color}-900/20 to-slate-900/50 backdrop-blur-xl`}
-              >
-                <h3 className="text-xl font-bold text-white mb-2">{principle.title}</h3>
-                <p className="text-gray-300">{principle.description}</p>
+        {openSections.system && (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {uiPatterns.map((item) => (
+              <div key={item.title} className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
+                <p className="text-xs uppercase tracking-[0.25em] text-slate-400">{item.title}</p>
+                <button
+                  className={`mt-4 w-full rounded-2xl px-4 py-4 text-sm font-semibold transition hover:opacity-95 ${item.className}`}
+                >
+                  {item.preview}
+                </button>
               </div>
             ))}
           </div>
-        </section>
+        )}
+      </section>
 
-        {/* Resources */}
-        <section className="text-center py-16">
-          <h2 className="text-3xl font-bold text-white mb-6">Recursos</h2>
+      <section className="mx-auto max-w-6xl px-6 pb-16">
+        <button
+          onClick={() => toggleSection('voice')}
+          className="mb-6 flex w-full items-center gap-3 text-left"
+        >
+          <h3 className="text-2xl font-bold text-white md:text-3xl">Tone of voice</h3>
+          <ChevronDown className={`h-5 w-5 text-cyan-300 transition-transform ${openSections.voice ? 'rotate-180' : ''}`} />
+        </button>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="/docs/BRANDBOOK.md"
-              className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
-            >
-              <ExternalLink className="h-4 w-4" />
-              Ver Brandbook Completo
-            </a>
-            <a
-              href="/comparador"
-              className="flex items-center justify-center gap-2 px-6 py-3 border border-blue-700/50 bg-transparent hover:bg-blue-900/20 text-blue-300 rounded-lg font-semibold transition-colors"
-            >
-              Ir al Comparador
-            </a>
-            <a
-              href="/consulta"
-              className="flex items-center justify-center gap-2 px-6 py-3 border border-purple-700/50 bg-transparent hover:bg-purple-900/20 text-purple-300 rounded-lg font-semibold transition-colors"
-            >
-              Ir al Portal
-            </a>
+        {openSections.voice && (
+          <div className="grid gap-4 md:grid-cols-2">
+            {tone.map((item) => (
+              <div key={item.label} className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+                <p className="text-xs uppercase tracking-[0.25em] text-slate-400">{item.label}</p>
+                <p className="mt-2 text-2xl font-bold text-white">{item.value}</p>
+                <p className="mt-3 text-slate-300">{item.helper}</p>
+              </div>
+            ))}
           </div>
-        </section>
-      </div>
+        )}
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 pb-20">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {principles.map((principle) => (
+            <article
+              key={principle.title}
+              className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/6 to-white/3 p-6 backdrop-blur-xl"
+            >
+              <div className="inline-flex rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3 text-cyan-200">
+                {principle.icon}
+              </div>
+              <h4 className="mt-4 text-xl font-bold text-white">{principle.title}</h4>
+              <p className="mt-2 text-sm leading-6 text-slate-300">{principle.description}</p>
+            </article>
+          ))}
+        </div>
+
+        <div className="mt-8 rounded-[2rem] border border-cyan-400/20 bg-gradient-to-r from-blue-500/15 via-cyan-500/10 to-violet-500/15 p-8 backdrop-blur-xl">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-cyan-200">Operational routes</p>
+              <h3 className="mt-2 text-3xl font-black text-white">Panel, compare, consulta.</h3>
+              <p className="mt-2 max-w-2xl text-slate-300">
+                This brand system should support the actual product flow, not an imaginary pitch deck.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Link href="/panel" className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950">
+                Panel operativo
+              </Link>
+              <Link href="/compare" className="rounded-full border border-white/15 bg-slate-950/50 px-5 py-3 text-sm font-semibold text-white">
+                Comparar
+              </Link>
+              <Link href="/consulta" className="rounded-full border border-white/15 bg-slate-950/50 px-5 py-3 text-sm font-semibold text-white">
+                Consulta
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   )
 }
