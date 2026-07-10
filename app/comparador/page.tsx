@@ -23,7 +23,7 @@ const MOCK_RESULTS: ComparisonResult[] = [
     id: '1',
     similarity: 92,
     marca: 'VISUAL COMPARE',
-    solicitante: 'Visual Compare Ltd',
+    solicitante: 'Visual Compare Chile',
     fecha: '2023-06-15',
     riesgo: 'alto'
   },
@@ -100,10 +100,10 @@ export default function ComparadorPage() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/panel" className="flex items-center gap-2 hover:opacity-80 transition">
             <Zap className="h-6 w-6 text-blue-400" />
-            <span className="text-xl font-bold text-white">Comparador de Logos</span>
+            <span className="text-xl font-bold text-white">Comparador visual</span>
           </Link>
           <Link href="/panel" className="text-sm text-slate-400 hover:text-white transition">
-            Volver al Dashboard
+            Volver al panel
           </Link>
         </div>
       </header>
@@ -112,7 +112,7 @@ export default function ComparadorPage() {
         {/* Hero Section */}
         <div className="mb-12">
           <h1 className="text-4xl font-bold text-white mb-3">
-            Comparador Visual de Logos
+            Comparador visual de marcas
           </h1>
           <p className="text-slate-400 text-lg">
             Sube un logo y compáralo contra la base de datos de marcas registradas

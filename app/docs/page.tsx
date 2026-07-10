@@ -38,8 +38,8 @@ export default function APIDocsPage() {
       {/* Hero */}
       <section className="py-16 border-b border-blue-500/20 relative z-10">
         <div className="max-w-6xl mx-auto px-6">
-          <h1 className="text-5xl font-bold text-white mb-4 font-montserrat">Documentación de API</h1>
-          <p className="text-lg text-blue-200">Referencia completa para integrar Visual Compare en tu aplicación.</p>
+          <h1 className="text-5xl font-bold text-white mb-4 font-montserrat">Documentación del MVP</h1>
+          <p className="text-lg text-blue-200">Referencia práctica de los flujos activos de Visual Compare Chile.</p>
         </div>
       </section>
 

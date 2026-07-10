@@ -529,20 +529,20 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* LIVE DEMO - FRONTEND GLASSMORPHISM */}
+      {/* PANEL OPERATIVO - FRONTEND GLASSMORPHISM */}
       <section id="panel" className="py-24 relative z-10 border-t border-blue-500/20">
         <div className="max-w-6xl mx-auto px-6">
           <div className="mb-16">
             <div className="inline-block mb-6">
-              <span className="text-xs font-bold text-blue-300 bg-blue-500/50 px-4 py-2 rounded-lg">DEMOSTRACIÓN EN VIVO</span>
+              <span className="text-xs font-bold text-blue-300 bg-blue-500/50 px-4 py-2 rounded-lg">PANEL OPERATIVO</span>
             </div>
-            <h2 className="text-5xl font-bold text-white mb-4">Frontend interactivo</h2>
-            <p className="text-xl text-blue-200 max-w-2xl leading-relaxed">Accede ahora a los módulos en vivo. Motor de Comparación e visualizador de marcas con interfaz glassmorphism.</p>
+            <h2 className="text-5xl font-bold text-white mb-4">Panel interactivo</h2>
+            <p className="text-xl text-blue-200 max-w-2xl leading-relaxed">Accede a los modulos activos del MVP. Motor de comparacion y visualizador de marcas con interfaz glassmorphism.</p>
           </div>
 
-          {/* Demo Cards Grid */}
+          {/* Panel Cards Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Comparador Demo Card */}
+            {/* Comparador Card */}
             <div className="group relative">
               <div className="absolute -inset-1 bg-gradient-to-r from-blue-900/40 via-transparent to-transparent rounded-2xl blur-xl -z-10 group-hover:blur-2xl transition-all duration-300"></div>
               <div className="glass p-8 rounded-2xl border border-blue-700/50 bg-gradient-to-br from-blue-900/20 to-slate-900/50 backdrop-blur-xl hover:border-blue-500/50/70 transition-all duration-300 h-full flex flex-col">
@@ -582,7 +582,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Consulta Demo Card */}
+            {/* Consulta Card */}
             <div className="group relative">
               <div className="absolute -inset-1 bg-gradient-to-r from-blue-900/40 via-transparent to-transparent rounded-2xl blur-xl -z-10 group-hover:blur-2xl transition-all duration-300"></div>
               <div className="glass p-8 rounded-2xl border border-blue-700/50 bg-gradient-to-br from-blue-900/20 to-slate-900/50 backdrop-blur-xl hover:border-blue-600/70 transition-all duration-300 h-full flex flex-col">
