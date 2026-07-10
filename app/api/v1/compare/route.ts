@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { authenticateApiKey } from "@/lib/api/auth"
 import { compareRequestSchema } from "@/lib/validations"
+import { calculateHammingDistance } from "@/lib/image/hash"
+import { phashSimilarityFromDistance } from "@/lib/image/phash"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -66,7 +68,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Images not found" }, { status: 404 })
     }
 
-    // Calculate similarity score
+    // Calculate similarity score using the shared pHash implementation.
     const similarityScore = calculateSimilarity(imageA, imageB)
 
     // Classify result
@@ -169,10 +171,12 @@ function calculateSimilarity(imageA: any, imageB: any): number {
   // Exact SHA-256 match = 100%
   if (imageA.sha256 === imageB.sha256) return 100
 
-  // pHash distance (Hamming distance)
-  const hammingDistance = calculateHammingDistance(imageA.phash, imageB.phash)
-  const maxDistance = 64
-  const phashSimilarity = Math.max(0, 100 - (hammingDistance / maxDistance) * 100)
+  // pHash distance is measured in bits, not hex digits, so reuse the shared helper.
+  let phashSimilarity = 0
+  if (imageA.phash && imageB.phash && imageA.phash.length === imageB.phash.length) {
+    const hammingDistance = calculateHammingDistance(imageA.phash, imageB.phash)
+    phashSimilarity = phashSimilarityFromDistance(hammingDistance, imageA.phash.length * 4)
+  }
 
   // Weighted scoring
   const weights = {
@@ -189,14 +193,4 @@ function calculateSimilarity(imageA: any, imageB: any): number {
   if (Math.abs(imageA.size_bytes - imageB.size_bytes) < imageA.size_bytes * 0.1) score += 100 * weights.size
 
   return Math.round(score * 10) / 10
-}
-
-function calculateHammingDistance(hash1: string, hash2: string): number {
-  if (!hash1 || !hash2 || hash1.length !== hash2.length) return 64
-
-  let distance = 0
-  for (let i = 0; i < hash1.length; i++) {
-    if (hash1[i] !== hash2[i]) distance++
-  }
-  return distance
 }
