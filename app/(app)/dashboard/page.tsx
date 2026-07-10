@@ -1,80 +1,75 @@
-'use client'
-
-import { useAuth } from '@/lib/auth-context'
-import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { ArrowRight, GitCompareArrows, History, Home, Search, Settings, Upload } from 'lucide-react'
-import Link from 'next/link'
+"use client"
+import { useAuth } from "@/lib/auth-context"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { ArrowRight, GitCompareArrows, History, Home, Search, Settings, Upload } from "lucide-react"
+import Link from "next/link"
 
 const ROLE_COLORS: Record<string, { bg: string; text: string; badge: string }> = {
-  admin: { bg: 'bg-purple-500/10', text: 'text-purple-400', badge: 'bg-purple-500' },
-  analista: { bg: 'bg-blue-500/10', text: 'text-blue-400', badge: 'bg-blue-500' },
-  auditor: { bg: 'bg-amber-500/10', text: 'text-amber-400', badge: 'bg-amber-500' },
+  admin: { bg: "bg-purple-500/10", text: "text-purple-400", badge: "bg-purple-500" },
+  analista: { bg: "bg-blue-500/10", text: "text-blue-400", badge: "bg-blue-500" },
+  auditor: { bg: "bg-amber-500/10", text: "text-amber-400", badge: "bg-amber-500" },
 }
 
 const modules = [
   {
-    title: 'Comparar imágenes',
-    description: 'Sube dos archivos y obtén score, clasificación y señales forenses.',
+    title: "Comparar imagenes",
+    description: "Sube dos archivos y obten score, clasificacion y señales forenses.",
     icon: GitCompareArrows,
-    href: '/compare',
-    available: ['admin', 'analista'],
+    href: "/compare",
+    available: ["admin", "analista"],
   },
   {
-    title: 'Historial',
-    description: 'Revisa comparaciones previas con filtros y detalle por resultado.',
+    title: "Historial",
+    description: "Revisa comparaciones previas con filtros y detalle por resultado.",
     icon: History,
-    href: '/history',
-    available: ['admin', 'analista', 'auditor'],
+    href: "/history",
+    available: ["admin", "analista", "auditor"],
   },
   {
-    title: 'Consulta',
-    description: 'Explora la base de referencias y búsquedas relacionadas.',
+    title: "Consulta",
+    description: "Explora la base de referencias y busquedas relacionadas.",
     icon: Search,
-    href: '/consulta',
-    available: ['admin', 'analista', 'auditor'],
+    href: "/consulta",
+    available: ["admin", "analista", "auditor"],
   },
   {
-    title: 'Configuración',
-    description: 'Gestiona perfil, sesión y datos de cuenta.',
+    title: "Configuracion",
+    description: "Gestiona perfil, sesion y datos de cuenta.",
     icon: Settings,
-    href: '/settings',
-    available: ['admin', 'analista', 'auditor'],
+    href: "/settings",
+    available: ["admin", "analista", "auditor"],
   },
 ]
 
 export default function DashboardPage() {
   const { user, logout, isLoading } = useAuth()
   const router = useRouter()
-  const role = user?.role || 'analista'
+  const role = user?.role || "analista"
   const roleColors = ROLE_COLORS[role]
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push('/auth/login')
+      router.push("/auth/login")
     }
   }, [user, isLoading, router])
 
-  if (isLoading) {
-    return null
-  }
-
-  if (!user) {
+  if (isLoading || !user) {
     return null
   }
 
   const handleLogout = () => {
     logout()
-    router.push('/')
+    router.push("/")
   }
 
-  const availableModules = modules.filter((m) => m.available.includes(role))
+  const availableModules = modules.filter((module) => module.available.includes(role))
   const summaryCards = [
-    { label: 'Comparaciones listas', value: '42', icon: GitCompareArrows },
-    { label: 'Historial consultable', value: 'Sí', icon: History },
-    { label: 'Carga soportada', value: 'JPG, PNG, WebP, TIFF', icon: Upload },
+    { label: "Comparaciones listas", value: "42", icon: GitCompareArrows },
+    { label: "Historial consultable", value: "Si", icon: History },
+    { label: "Carga soportada", value: "JPG, PNG, WebP, TIFF", icon: Upload },
   ]
 
   return (
@@ -109,15 +104,15 @@ export default function DashboardPage() {
               <span className={`text-sm font-medium ${roleColors.text}`}>MVP operativo</span>
             </div>
             <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">
-              Bienvenido, {user.name.split('@')[0]}
+              Bienvenido, {user.name.split("@")[0]}
             </h1>
             <p className="text-slate-300 max-w-2xl">
-              Desde aquí accedes al flujo principal del MVP: comparar imágenes, revisar historial y ajustar tu cuenta.
+              Desde aqui accedes al flujo principal del MVP: comparar imagenes, revisar historial y ajustar tu cuenta.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button asChild>
                 <Link href="/compare">
-                  Nueva comparación
+                  Nueva comparacion
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -144,7 +139,7 @@ export default function DashboardPage() {
         </div>
 
         <div>
-          <h2 className="text-2xl font-bold text-white mb-6">Módulos disponibles</h2>
+          <h2 className="text-2xl font-bold text-white mb-6">Modulos disponibles</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {availableModules.map((module) => {
               const Icon = module.icon
@@ -154,13 +149,13 @@ export default function DashboardPage() {
                     <div className="flex items-start justify-between mb-4">
                       <Icon className="h-8 w-8 text-blue-400 group-hover:text-cyan-400 transition-colors" />
                       <span className="text-xs font-medium text-slate-500 bg-slate-800 px-2 py-1 rounded">
-                        {module.available.length > 1 ? `${module.available.length} roles` : 'Tu rol'}
+                        {module.available.length > 1 ? `${module.available.length} roles` : "Tu rol"}
                       </span>
                     </div>
                     <h3 className="text-lg font-semibold text-white mb-2">{module.title}</h3>
                     <p className="text-sm text-slate-400 mb-4">{module.description}</p>
                     <div className="text-sm text-blue-400 group-hover:text-cyan-400 transition-colors">
-                      Acceder →
+                      Acceder &rarr;
                     </div>
                   </Card>
                 </Link>

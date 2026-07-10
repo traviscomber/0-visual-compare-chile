@@ -17,9 +17,9 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "Sistema de Marcas Registradas — Comparación de Logos y Consulta",
+  title: "Sistema de Marcas Registradas - Comparacion de Logos y Consulta",
   description:
-    "Plataforma para comparación visual de logos, consulta de marcas registradas (INAPI), clasificaciones Niza y Viena. Demo Fase 0.",
+    "Plataforma para comparacion visual de logos, consulta de marcas registradas (INAPI), clasificaciones Niza y Viena. MVP operativo.",
   generator: "v0.app",
 }
 

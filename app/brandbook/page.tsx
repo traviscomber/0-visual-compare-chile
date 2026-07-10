@@ -33,7 +33,7 @@ const components = [
     name: 'Secondary Button',
     description: 'Alternative actions, less prominent',
     class: 'border border-blue-700/50 bg-transparent text-blue-300 hover:bg-blue-900/20 px-6 py-3 rounded-lg',
-    preview: 'Botón Secundario',
+    preview: 'BotÃƒÂ³n Secundario',
   },
   {
     name: 'Glass Card',
@@ -156,7 +156,7 @@ export default function BrandBookPage() {
             onClick={() => toggleSection('typography')}
             className="flex items-center gap-3 w-full mb-6 hover:opacity-80 transition-opacity"
           >
-            <h2 className="text-3xl font-bold text-white">Tipografía</h2>
+            <h2 className="text-3xl font-bold text-white">TipografÃƒÂ­a</h2>
             <ChevronDown
               className={`h-6 w-6 text-blue-300 transition-transform duration-300 ${
                 expandedSections.typography ? 'rotate-180' : ''
@@ -176,7 +176,7 @@ export default function BrandBookPage() {
                     <h4 className="text-lg font-bold text-white mb-2">{typo.name}</h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                       <div>
-                        <p className="text-gray-400">Tamaño</p>
+                        <p className="text-gray-400">TamaÃƒÂ±o</p>
                         <p className="text-blue-300 font-mono">{typo.size}</p>
                       </div>
                       <div>
@@ -184,7 +184,7 @@ export default function BrandBookPage() {
                         <p className="text-blue-300 font-mono">{typo.weight}</p>
                       </div>
                       <div>
-                        <p className="text-gray-400">Altura de línea</p>
+                        <p className="text-gray-400">Altura de lÃƒÂ­nea</p>
                         <p className="text-blue-300 font-mono">{typo.lineHeight}</p>
                       </div>
                       <div>
@@ -243,13 +243,13 @@ export default function BrandBookPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
             {
-              title: 'Precisión',
-                description: 'Comparación técnica con SHA-256, pHash y diff visual',
+              title: 'Precision',
+                description: 'Comparacion tecnica con SHA-256, pHash y diff visual',
                 color: 'blue',
               },
               {
                 title: 'Velocidad',
-                description: 'Flujo ligero para demo y piloto operativo',
+                description: 'Flujo ligero para piloto operativo',
                 color: 'purple',
               },
               {
