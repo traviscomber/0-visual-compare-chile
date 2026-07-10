@@ -1,7 +1,10 @@
 "use client"
 
+import { useEffect, useState, useTransition } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useTransition } from "react"
+import { Loader2, Search, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -9,9 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Loader2, Search, X } from "lucide-react"
 
 export function HistoryFilters({
   defaultClassification,
@@ -27,6 +27,13 @@ export function HistoryFilters({
   const router = useRouter()
   const params = useSearchParams()
   const [pending, startTransition] = useTransition()
+  const [query, setQuery] = useState(defaultQuery)
+  const [minScore, setMinScore] = useState(defaultMinScore)
+  const [maxScore, setMaxScore] = useState(defaultMaxScore)
+
+  useEffect(() => setQuery(defaultQuery), [defaultQuery])
+  useEffect(() => setMinScore(defaultMinScore), [defaultMinScore])
+  useEffect(() => setMaxScore(defaultMaxScore), [defaultMaxScore])
 
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params)
@@ -37,7 +44,25 @@ export function HistoryFilters({
     })
   }
 
+  useEffect(() => {
+    const timer = setTimeout(() => update("q", query.trim()), 250)
+    return () => clearTimeout(timer)
+  }, [query])
+
+  useEffect(() => {
+    const timer = setTimeout(() => update("min", minScore.trim()), 250)
+    return () => clearTimeout(timer)
+  }, [minScore])
+
+  useEffect(() => {
+    const timer = setTimeout(() => update("max", maxScore.trim()), 250)
+    return () => clearTimeout(timer)
+  }, [maxScore])
+
   const reset = () => {
+    setQuery("")
+    setMinScore("")
+    setMaxScore("")
     startTransition(() => router.replace("/history"))
   }
 
@@ -52,10 +77,10 @@ export function HistoryFilters({
         <div className="relative mt-1">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            defaultValue={defaultQuery}
+            value={query}
             placeholder="ej: idéntica, modificada"
             className="pl-8"
-            onChange={(e) => update("q", e.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
           />
         </div>
       </div>
@@ -85,10 +110,10 @@ export function HistoryFilters({
             inputMode="numeric"
             min={0}
             max={100}
-            defaultValue={defaultMinScore}
+            value={minScore}
             placeholder="0"
             className="mt-1"
-            onChange={(e) => update("min", e.target.value)}
+            onChange={(e) => setMinScore(e.target.value)}
           />
         </div>
         <div className="flex-1">
@@ -98,10 +123,10 @@ export function HistoryFilters({
             inputMode="numeric"
             min={0}
             max={100}
-            defaultValue={defaultMaxScore}
+            value={maxScore}
             placeholder="100"
             className="mt-1"
-            onChange={(e) => update("max", e.target.value)}
+            onChange={(e) => setMaxScore(e.target.value)}
           />
         </div>
       </div>
