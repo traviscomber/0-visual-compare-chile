@@ -27,7 +27,7 @@ export default function APIDocsPage() {
             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
               <Eye className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-white font-montserrat">Visual Compare</span>
+            <span className="text-xl font-bold text-white font-montserrat">Visual Compare Chile</span>
           </Link>
           <Link href="/">
             <Button variant="outline" size="sm" className="border-blue-500/50 text-blue-300 hover:bg-blue-900/30">Volver al inicio</Button>
@@ -40,6 +40,27 @@ export default function APIDocsPage() {
         <div className="max-w-6xl mx-auto px-6">
           <h1 className="text-5xl font-bold text-white mb-4 font-montserrat">Documentación de API</h1>
           <p className="text-lg text-blue-200">Referencia completa para integrar Visual Compare en tu aplicación.</p>
+        </div>
+      </section>
+
+      <section className="relative z-10">
+        <div className="max-w-6xl mx-auto px-6 pb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { label: "Panel operativo", href: "/panel" },
+              { label: "Comparar", href: "/compare" },
+              { label: "Consulta", href: "/consulta" },
+            ].map((route) => (
+              <a
+                key={route.href}
+                href={route.href}
+                className="rounded-2xl border border-blue-500/20 bg-slate-900/40 px-5 py-4 text-blue-100 transition hover:border-blue-400/50 hover:bg-slate-900/60"
+              >
+                <div className="text-xs uppercase tracking-[0.3em] text-blue-300 mb-1">Ruta MVP</div>
+                <div className="text-lg font-semibold">{route.label}</div>
+              </a>
+            ))}
+          </div>
         </div>
       </section>
 

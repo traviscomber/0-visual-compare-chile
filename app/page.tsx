@@ -530,7 +530,7 @@ export default function LandingPage() {
       </section>
 
       {/* LIVE DEMO - FRONTEND GLASSMORPHISM */}
-      <section id="demo" className="py-24 relative z-10 border-t border-blue-500/20">
+      <section id="panel" className="py-24 relative z-10 border-t border-blue-500/20">
         <div className="max-w-6xl mx-auto px-6">
           <div className="mb-16">
             <div className="inline-block mb-6">
