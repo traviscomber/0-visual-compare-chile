@@ -132,12 +132,12 @@ export default function ComparadorPage() {
                     <p className="mb-2 text-sm text-slate-400">
                       <span className="font-semibold">Haz clic para cargar</span> o arrastra y suelta
                     </p>
-                    <p className="text-xs text-slate-500">PNG, JPG, GIF hasta 10MB</p>
+                    <p className="text-xs text-slate-500">JPG, PNG, WebP o TIFF hasta 50 MB</p>
                   </div>
                   <input
                     type="file"
                     className="hidden"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp,image/tiff"
                     onChange={handleImageUpload}
                   />
                 </label>
@@ -257,7 +257,7 @@ export default function ComparadorPage() {
                 <h4 className="font-semibold text-white">Carga tu logo</h4>
               </div>
               <p className="text-sm text-slate-400">
-                Sube una imagen de tu logo en PNG, JPG o GIF
+                Sube una imagen de tu logo en JPG, PNG, WebP o TIFF
               </p>
             </div>
             <div>

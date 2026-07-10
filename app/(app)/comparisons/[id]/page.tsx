@@ -3,9 +3,11 @@ import { notFound, redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { ComparisonResultView } from "@/components/app/comparison-result-view"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft } from "lucide-react"
 import { createSignedImageUrl } from "@/lib/storage"
-import { formatDateLong } from "@/lib/format"
+import { classificationLabel, classificationTone, formatDateLong } from "@/lib/format"
 import { DeleteComparisonButton } from "@/components/app/delete-comparison-button"
 import type {
   ComparisonResultPayload,
@@ -17,8 +19,22 @@ export const dynamic = "force-dynamic"
 
 interface ResultJson {
   exif?: {
-    a?: { camera_make?: string | null; camera_model?: string | null; software?: string | null; taken_at?: string | null; gps?: { lat: number; lng: number } | null; was_edited?: boolean }
-    b?: { camera_make?: string | null; camera_model?: string | null; software?: string | null; taken_at?: string | null; gps?: { lat: number; lng: number } | null; was_edited?: boolean }
+    a?: {
+      camera_make?: string | null
+      camera_model?: string | null
+      software?: string | null
+      taken_at?: string | null
+      gps?: { lat: number; lng: number } | null
+      was_edited?: boolean
+    }
+    b?: {
+      camera_make?: string | null
+      camera_model?: string | null
+      software?: string | null
+      taken_at?: string | null
+      gps?: { lat: number; lng: number } | null
+      was_edited?: boolean
+    }
   }
   ela?: {
     a?: { storage_path?: string | null; score?: number | null }
@@ -107,6 +123,24 @@ export default async function ComparisonDetailPage({
     created_at: comparison.created_at,
   }
 
+  const score = Math.round(Number(result.similarity_score))
+  const tone = classificationTone(result.classification)
+  const phashDistance = result.signals.phash_distance
+  const phashSimilarity = Math.round(result.signals.phash_similarity)
+  const pixelSimilarity =
+    result.signals.pixel_similarity != null ? Math.round(result.signals.pixel_similarity) : null
+  const forensicsState = result.signals.forensics.ela_alert
+    ? "Alerta ELA"
+    : result.signals.forensics.any_edited
+      ? "Editada"
+      : "Sin alertas"
+  const operationalRisk =
+    result.signals.forensics.ela_alert || score >= 85 || result.classification === "exact_match"
+      ? "Revisión prioritaria"
+      : score >= 60 || result.classification === "visually_similar"
+        ? "Revisión media"
+        : "Bajo"
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 flex flex-col gap-6">
       <div className="flex items-center justify-between gap-4">
@@ -124,14 +158,77 @@ export default async function ComparisonDetailPage({
 
       <div>
         <h1 className="font-serif text-3xl text-foreground">Detalle de comparación</h1>
-        <p className="text-muted-foreground mt-1">Análisis completo y señales utilizadas para la clasificación.</p>
+        <p className="text-muted-foreground mt-1">
+          Análisis completo y señales utilizadas para la clasificación.
+        </p>
       </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="font-serif text-xl">Resumen operativo</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-4">
+          <SummaryStat
+            label="Veredicto"
+            value={classificationLabel(result.classification)}
+            helper={`${score}% de similitud`}
+            tone={tone}
+          />
+          <SummaryStat label="Riesgo" value={operationalRisk} helper={forensicsState} tone={tone} />
+          <SummaryStat
+            label="pHash"
+            value={`${phashSimilarity}%`}
+            helper={phashDistance != null ? `Distancia ${phashDistance} bits` : "Sin dato"}
+            tone="neutral"
+          />
+          <SummaryStat
+            label="Diff visual"
+            value={pixelSimilarity != null ? `${pixelSimilarity}%` : "No disponible"}
+            helper={pixelSimilarity != null ? "Señal principal del motor" : "Fallback pHash + metadatos"}
+            tone="neutral"
+          />
+        </CardContent>
+      </Card>
 
       <ComparisonResultView
         result={result}
         imageA={imgA && urlA ? { url: urlA, filename: imgA.filename } : null}
         imageB={imgB && urlB ? { url: urlB, filename: imgB.filename } : null}
       />
+    </div>
+  )
+}
+
+function SummaryStat({
+  label,
+  value,
+  helper,
+  tone,
+}: {
+  label: string
+  value: string
+  helper: string
+  tone: ReturnType<typeof classificationTone> | "neutral"
+}) {
+  const toneStyles =
+    tone === "danger"
+      ? "border-destructive bg-destructive/5 text-destructive"
+      : tone === "warn"
+        ? "border-warning bg-warning/5 text-warning"
+        : tone === "ok"
+          ? "border-success bg-success/5 text-success"
+          : "border-border bg-card text-foreground"
+
+  return (
+    <div className={`rounded-lg border p-4 ${toneStyles}`}>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
+        <Badge variant="outline" className="text-[10px]">
+          Operativo
+        </Badge>
+      </div>
+      <div className="mt-2 text-2xl font-serif font-semibold">{value}</div>
+      <p className="mt-1 text-xs text-muted-foreground">{helper}</p>
     </div>
   )
 }
