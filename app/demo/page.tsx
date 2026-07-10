@@ -46,18 +46,18 @@ export default function DemoPage() {
         <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-8 md:p-10 mb-10">
           <p className="text-sm font-medium text-blue-400 mb-3">MVP listo para piloto</p>
           <h1 className="text-3xl md:text-5xl font-bold text-white max-w-3xl">
-            Flujo principal de comparación visual, historial y consulta de marcas.
+            Panel operativo de comparación visual, historial y consulta de marcas.
           </h1>
           <p className="text-slate-300 mt-4 max-w-2xl">
-            Esta vista reemplaza la demo vieja y resume el recorrido que ya quedó alineado con auth Supabase,
-            uploads consistentes y navegación protegida.
+            Esta vista resume el recorrido que ya quedó alineado con auth Supabase, uploads consistentes y
+            navegación protegida.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Button asChild>
               <Link href="/dashboard">Ir al dashboard</Link>
             </Button>
             <Button asChild variant="outline" className="border-slate-700 text-slate-200 hover:bg-slate-800">
-              <Link href="/compare">Probar comparación</Link>
+              <Link href="/compare">Abrir comparador</Link>
             </Button>
           </div>
         </div>
