@@ -86,6 +86,7 @@ async function main() {
     { path: "/api/images/upload", method: "POST", expectedStatus: 401, body: new FormData() },
     { path: "/api/account/api-keys", method: "GET", expectedStatus: 401 },
     { path: "/api/account/api-keys", method: "POST", expectedStatus: 401, body: JSON.stringify({ name: "smoke" }) },
+    { path: "/api/account/api-keys/00000000-0000-0000-0000-000000000000", method: "DELETE", expectedStatus: 401 },
     { path: "/api/v1/comparisons", method: "GET", expectedStatus: 401 },
     { path: "/api/v1/comparisons/00000000-0000-0000-0000-000000000000", method: "GET", expectedStatus: 401 },
   ]
