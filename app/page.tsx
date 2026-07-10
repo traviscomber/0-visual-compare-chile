@@ -625,9 +625,9 @@ export default function LandingPage() {
 
           {/* Dashboard Link */}
           <div className="mt-12 text-center">
-            <p className="text-blue-200 mb-4">¿Necesitas acceso administrativo?</p>
-            <Button asChild variant="outline" className="border-blue-700/50 hover:bg-blue-500/20">
-              <Link href="/demo" className="flex items-center gap-2">
+              <p className="text-blue-200 mb-4">¿Necesitas acceso administrativo?</p>
+              <Button asChild variant="outline" className="border-blue-700/50 hover:bg-blue-500/20">
+              <Link href="/panel" className="flex items-center gap-2">
                 Ver panel de piloto
                 <ArrowRight className="h-4 w-4" />
               </Link>

@@ -34,7 +34,7 @@ async function main() {
   const publicPages = [
     { path: "/", contains: ["Protege tus marcas", "Nosotros las analizamos"] },
     { path: "/auth/login", contains: ["Inicia sesión", "Continúa con tu cuenta"] },
-    { path: "/demo", contains: ["MVP"] },
+    { path: "/panel", contains: ["MVP", "Panel operativo"] },
     { path: "/roadmap", contains: ["Roadmap", "MVP"] },
   ]
 
@@ -51,6 +51,7 @@ async function main() {
 
   const redirects = [
     ["/auth/signup", "/auth/sign-up"],
+    ["/demo", "/panel"],
     ["/es", "/"],
     ["/en", "/"],
     ["/es/compare", "/compare"],
