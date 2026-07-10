@@ -1,505 +1,251 @@
 'use client'
 
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Copy, Check, Eye } from 'lucide-react'
 import { useState } from 'react'
+import { Check, Copy, Eye, ArrowRight, Orbit, Sparkles, Shield, ScanSearch } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+
+const routes = [
+  {
+    title: 'Panel operativo',
+    href: '/panel',
+    summary: 'Vista principal para comparar, revisar historial y moverse entre módulos del MVP.',
+  },
+  {
+    title: 'Comparar',
+    href: '/compare',
+    summary: 'Workbench de comparación visual con señales forenses y clasificacion operativa.',
+  },
+  {
+    title: 'Consulta',
+    href: '/consulta',
+    summary: 'Exploracion de marcas y registros con filtros y contexto de búsqueda.',
+  },
+]
+
+const apiSections = [
+  {
+    method: 'GET',
+    path: '/api/v1/health',
+    description: 'Verifica estado del servicio y disponibilidad del backend.',
+    example: 'curl https://api.visualcompare.cl/api/v1/health',
+  },
+  {
+    method: 'POST',
+    path: '/api/v1/images',
+    description: 'Carga una imagen para su análisis y generación de identificadores.',
+    example: 'curl -X POST https://api.visualcompare.cl/api/v1/images -H "Authorization: Bearer YOUR_API_KEY" -F "image=@logo.jpg"',
+  },
+  {
+    method: 'POST',
+    path: '/api/v1/compare',
+    description: 'Compara dos imágenes y devuelve score, clasificacion y trazas operativas.',
+    example: 'curl -X POST https://api.visualcompare.cl/api/v1/compare -H "Authorization: Bearer YOUR_API_KEY" -d \'{"image_a_id":"uuid-1","image_b_id":"uuid-2"}\'',
+  },
+]
+
+const designTokens = [
+  { label: 'Canvas', value: 'slate-950 + blue/violet glows', helper: 'Fondo oscuro con profundidad neural' },
+  { label: 'Primary', value: 'blue-500 / cyan-500', helper: 'Accion principal y confianza' },
+  { label: 'Accent', value: 'violet-500 / emerald-500', helper: 'Energía visual y estados verificados' },
+  { label: 'Type', value: 'Montserrat + JetBrains Mono', helper: 'Editorial para interfaz, mono para datos' },
+]
+
+const principles = [
+  {
+    title: 'Directo',
+    icon: <ScanSearch className="h-5 w-5" />,
+    text: 'Cada pagina debe explicar el flujo en una frase corta y concreta.',
+  },
+  {
+    title: 'Neural',
+    icon: <Sparkles className="h-5 w-5" />,
+    text: 'Usar capas, glow controlado y contraste alto sin caer en ruido visual.',
+  },
+  {
+    title: 'Verificable',
+    icon: <Shield className="h-5 w-5" />,
+    text: 'Todo lo visible debe sugerir trazabilidad, control y evidencia.',
+  },
+  {
+    title: 'Operativo',
+    icon: <Orbit className="h-5 w-5" />,
+    text: 'La estética debe servir al trabajo real, no a una demo temporal.',
+  },
+]
 
 export default function APIDocsPage() {
-  const [copiedCode, setCopiedCode] = useState<string | null>(null)
+  const [copied, setCopied] = useState<string | null>(null)
 
-  const copyToClipboard = (code: string) => {
-    navigator.clipboard.writeText(code)
-    setCopiedCode(code)
-    setTimeout(() => setCopiedCode(null), 2000)
+  const copyToClipboard = async (value: string) => {
+    await navigator.clipboard.writeText(value)
+    setCopied(value)
+    window.setTimeout(() => setCopied(null), 1600)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-purple-950 relative overflow-hidden">
-      {/* Background gradient accents */}
-      <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500 rounded-full blur-3xl opacity-20"></div>
-      <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-500 rounded-full blur-3xl opacity-20"></div>
+    <main className="min-h-screen bg-[#020617] text-white">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-40 -right-32 h-96 w-96 rounded-full bg-cyan-500/20 blur-3xl" />
+        <div className="absolute top-44 -left-32 h-96 w-96 rounded-full bg-violet-500/20 blur-3xl" />
+      </div>
 
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 glass-sm border-b border-blue-500/20">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400">
               <Eye className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-white font-montserrat">Visual Compare Chile</span>
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">N3uralia docs</p>
+              <p className="text-lg font-semibold text-white">Visual Compare Chile</p>
+            </div>
           </Link>
-          <Link href="/">
-            <Button variant="outline" size="sm" className="border-blue-500/50 text-blue-300 hover:bg-blue-900/30">Volver al inicio</Button>
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/brandbook"
+              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100 transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
+            >
+              Brandbook
+            </Link>
+            <Link href="/panel">
+              <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">Ir al panel</Button>
+            </Link>
+          </div>
         </div>
-      </nav>
+      </header>
 
-      {/* Hero */}
-      <section className="py-16 border-b border-blue-500/20 relative z-10">
-        <div className="max-w-6xl mx-auto px-6">
-          <h1 className="text-5xl font-bold text-white mb-4 font-montserrat">Documentación del MVP</h1>
-          <p className="text-lg text-blue-200">Referencia práctica de los flujos activos de Visual Compare Chile.</p>
+      <section className="relative mx-auto max-w-6xl px-6 pb-10 pt-16">
+        <div className="grid gap-8 lg:grid-cols-[1.25fr_0.75fr]">
+          <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur-xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-cyan-200">
+              <Sparkles className="h-4 w-4" />
+              Product docs
+            </div>
+            <h1 className="mt-6 max-w-3xl text-5xl font-black leading-[0.95] text-white md:text-7xl">
+              Documentacion del MVP con estilo N3uralia.
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
+              Esta pagina resume el sistema visual, las rutas activas y la superficie tecnica del producto. Sirve como
+              guia para continuar el desarrollo sin volver al lenguaje de demo.
+            </p>
+
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                href="/panel"
+                className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950"
+              >
+                Abrir panel
+              </Link>
+              <Link
+                href="/compare"
+                className="rounded-full border border-white/15 bg-slate-950/50 px-5 py-3 text-sm font-semibold text-white"
+              >
+                Ver comparador
+              </Link>
+              <Link
+                href="/consulta"
+                className="rounded-full border border-white/15 bg-slate-950/50 px-5 py-3 text-sm font-semibold text-white"
+              >
+                Ver consulta
+              </Link>
+            </div>
+          </div>
+
+          <div className="rounded-[2rem] border border-white/10 bg-slate-950/70 p-6 backdrop-blur-xl">
+            <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">Quick map</p>
+            <div className="mt-5 space-y-4">
+              {routes.map((route) => (
+                <a
+                  key={route.href}
+                  href={route.href}
+                  className="block rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm uppercase tracking-[0.25em] text-cyan-200">Ruta MVP</p>
+                      <p className="mt-1 text-xl font-semibold text-white">{route.title}</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-cyan-300" />
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-slate-300">{route.summary}</p>
+                </a>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="relative z-10">
-        <div className="max-w-6xl mx-auto px-6 pb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              { label: "Panel operativo", href: "/panel" },
-              { label: "Comparar", href: "/compare" },
-              { label: "Consulta", href: "/consulta" },
-            ].map((route) => (
-              <a
-                key={route.href}
-                href={route.href}
-                className="rounded-2xl border border-blue-500/20 bg-slate-900/40 px-5 py-4 text-blue-100 transition hover:border-blue-400/50 hover:bg-slate-900/60"
-              >
-                <div className="text-xs uppercase tracking-[0.3em] text-blue-300 mb-1">Ruta MVP</div>
-                <div className="text-lg font-semibold">{route.label}</div>
-              </a>
+      <section className="mx-auto grid max-w-6xl gap-4 px-6 pb-14 md:grid-cols-2 xl:grid-cols-4">
+        {designTokens.map((token) => (
+          <article
+            key={token.label}
+            className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl"
+          >
+            <p className="text-xs uppercase tracking-[0.25em] text-slate-400">{token.label}</p>
+            <p className="mt-2 text-lg font-semibold text-white">{token.value}</p>
+            <p className="mt-3 text-sm leading-6 text-slate-300">{token.helper}</p>
+          </article>
+        ))}
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 pb-16">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {principles.map((item) => (
+            <article key={item.title} className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+              <div className="inline-flex rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3 text-cyan-200">
+                {item.icon}
+              </div>
+              <h2 className="mt-4 text-xl font-bold text-white">{item.title}</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-300">{item.text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 pb-20">
+        <div className="rounded-[2rem] border border-cyan-400/20 bg-gradient-to-r from-blue-500/15 via-cyan-500/10 to-violet-500/15 p-8 backdrop-blur-xl">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-cyan-200">API surface</p>
+              <h2 className="mt-2 text-3xl font-black text-white">Endpoints activos y contratados.</h2>
+              <p className="mt-3 max-w-2xl text-slate-300">
+                Los ejemplos estan escritos para el stack real del MVP. Si cambia el contrato, esta pagina debe cambiar
+                junto con el codigo.
+              </p>
+            </div>
+            <div className="text-sm text-slate-300">
+              Base public docs, brandbook y routes primarias para desarrollo continuo.
+            </div>
+          </div>
+
+          <div className="mt-8 grid gap-4">
+            {apiSections.map((section) => (
+              <article key={section.path} className="rounded-3xl border border-white/10 bg-slate-950/60 p-5">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <div className="inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-mono font-semibold text-cyan-200">
+                      {section.method}
+                    </div>
+                    <p className="mt-3 text-2xl font-bold text-white">{section.path}</p>
+                    <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">{section.description}</p>
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(section.example)}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
+                  >
+                    {copied === section.example ? <Check className="h-4 w-4 text-emerald-300" /> : <Copy className="h-4 w-4" />}
+                    Copiar ejemplo
+                  </button>
+                </div>
+                <pre className="mt-4 overflow-x-auto rounded-2xl border border-white/10 bg-slate-950/80 p-4 text-sm text-cyan-100">
+                  {section.example}
+                </pre>
+              </article>
             ))}
           </div>
         </div>
       </section>
-
-      {/* Content */}
-      <div className="max-w-6xl mx-auto px-6 py-16 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Sidebar */}
-          <div className="md:col-span-1">
-            <div className="sticky top-20 space-y-8">
-              <div>
-                <h3 className="font-semibold text-white mb-4 font-montserrat">API Endpoints</h3>
-                <ul className="space-y-2 text-sm">
-                  {[
-                    { name: 'Salud', id: 'health' },
-                    { name: 'Cargar imágenes', id: 'upload' },
-                    { name: 'Comparar', id: 'compare' },
-                    { name: 'Listar', id: 'list' },
-                    { name: 'Obtener detalles', id: 'details' },
-                    { name: 'Uso', id: 'usage' },
-                  ].map(item => (
-                    <li key={item.id}>
-                      <a href={`#${item.id}`} className="text-blue-300 hover:text-blue-200 transition font-medium">
-                        {item.name}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="pt-4 border-t border-blue-500/20">
-                <h3 className="font-semibold text-white mb-4 font-montserrat">Documentación</h3>
-                <ul className="space-y-2 text-sm">
-                  <li>
-                    <a href="/docs/clasificaciones" className="text-purple-300 hover:text-purple-200 transition font-medium flex items-center gap-2">
-                      📚 Clasificaciones Niza & Viena
-                    </a>
-                  </li>
-                  <li>
-                    <a href="/brandbook" className="text-amber-300 hover:text-amber-200 transition font-medium flex items-center gap-2">
-                      🎨 Brandbook
-                    </a>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          {/* Main content */}
-          <div className="md:col-span-3 space-y-12">
-            {/* Authentication */}
-            <section>
-              <h2 className="text-2xl font-bold text-white mb-4 font-montserrat">Autenticación</h2>
-              <div className="glass p-6 border border-blue-500/30">
-                <p className="text-blue-100 mb-4">
-                  Todos los endpoints protegidos requieren autenticación Bearer. Incluye tu clave API en el header de Autorización:
-                </p>
-                <div className="bg-slate-900/40 border border-blue-500/20 rounded p-4 relative">
-                  <pre className="text-sm font-mono text-blue-300 overflow-x-auto">
-{`Authorization: Bearer YOUR_API_KEY`}
-                  </pre>
-                  <button
-                    onClick={() => copyToClipboard("Authorization: Bearer YOUR_API_KEY")}
-                    className="absolute top-3 right-3 p-2 hover:bg-blue-500/20 rounded text-blue-400 hover:text-blue-300 transition"
-                  >
-                    {copiedCode === "Authorization: Bearer YOUR_API_KEY" ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-            </section>
-
-            {/* Health */}
-            <section id="health">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="px-3 py-1 bg-blue-900/60 text-blue-300 text-xs font-mono rounded font-semibold">GET</span>
-                <h2 className="text-2xl font-bold text-white font-montserrat">/api/v1/health</h2>
-              </div>
-              <p className="text-blue-100 mb-6">Verifica el estado de la API. No requiere autenticación.</p>
-
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-semibold text-white mb-2 font-montserrat">Ejemplo de solicitud:</h3>
-                  <div className="bg-slate-900/40 border border-blue-500/20 rounded p-4 relative">
-                    <pre className="text-sm font-mono text-blue-300 overflow-x-auto">
-{`curl https://api.visualcompare.cl/api/v1/health`}
-                    </pre>
-                    <button
-                      onClick={() => copyToClipboard("curl https://api.visualcompare.cl/api/v1/health")}
-                      className="absolute top-3 right-3 p-2 hover:bg-blue-500/20 rounded text-blue-400 hover:text-blue-300 transition"
-                    >
-                      {copiedCode === "curl https://api.visualcompare.cl/api/v1/health" ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-white mb-2 font-montserrat">Respuesta (200 OK):</h3>
-                  <div className="bg-slate-900/40 border border-blue-500/20 rounded p-4">
-                    <pre className="text-sm font-mono text-blue-300 overflow-x-auto">
-{`{
-  "status": "ok",
-  "version": "1.0.0",
-  "timestamp": "2026-05-11T12:34:56Z"
-}`}
-                    </pre>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Upload */}
-            <section id="upload">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="px-3 py-1 bg-blue-900 text-blue-300 text-xs font-mono rounded">POST</span>
-                <h2 className="text-2xl font-bold text-white font-montserrat">/api/v1/images</h2>
-              </div>
-              <p className="text-blue-100 mb-6">Carga una imagen para comparar. Retorna metadatos e ID de imagen.</p>
-
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-semibold text-white mb-2">Parámetros:</h3>
-                  <ul className="space-y-2 text-sm text-blue-100">
-                    <li><strong>image</strong> (requerido): Archivo de imagen (JPEG, PNG, WebP, TIFF, máx 50MB)</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-white mb-2">Ejemplo de solicitud:</h3>
-                  <div className="bg-slate-900/40 border border-blue-500/20 rounded p-4 relative">
-                    <pre className="text-sm font-mono text-blue-300 overflow-x-auto">
-{`curl -X POST https://api.visualcompare.cl/api/v1/images \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  -F "image=@logo.jpg"`}
-                    </pre>
-                    <button
-                      onClick={() => copyToClipboard(`curl -X POST https://api.visualcompare.cl/api/v1/images \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  -F "image=@logo.jpg"`)}
-                      className="absolute top-3 right-3 p-2 hover:bg-blue-500/20 rounded text-blue-300 hover:text-blue-300 transition"
-                    >
-                      {copiedCode?.includes('images') ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-white mb-2">Respuesta (201 Creado):</h3>
-                  <div className="bg-slate-900/40 border border-blue-500/20 rounded p-4">
-                    <pre className="text-sm font-mono text-blue-300 overflow-x-auto">
-{`{
-  "success": true,
-  "data": {
-    "id": "uuid-1234",
-    "filename": "logo.jpg",
-    "size_bytes": 25600,
-    "width": 512,
-    "height": 512,
-    "mime_type": "image/jpeg",
-    "sha256": "abc123def456...",
-    "phash": "8f5c3a1b9d7e2f4c"
-  }
-}`}
-                    </pre>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Compare */}
-            <section id="compare">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="px-3 py-1 bg-blue-900 text-blue-300 text-xs font-mono rounded">POST</span>
-                <h2 className="text-2xl font-bold text-white font-montserrat">/api/v1/compare</h2>
-              </div>
-              <p className="text-blue-100 mb-6">Compara dos imágenes y obtén puntuación de similitud. Retorna puntuación 0-100% con clasificación.</p>
-
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-semibold text-white mb-2">Body de la solicitud:</h3>
-                  <div className="bg-slate-900/40 border border-blue-500/20 rounded p-4">
-                    <pre className="text-sm font-mono text-blue-300">
-{`{
-  "image_a_id": "uuid-1234",
-  "image_b_id": "uuid-5678"
-}`}
-                    </pre>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-white mb-2">Ejemplo de solicitud:</h3>
-                  <div className="bg-slate-900/40 border border-blue-500/20 rounded p-4 relative">
-                    <pre className="text-sm font-mono text-blue-300 overflow-x-auto">
-{`curl -X POST https://api.visualcompare.cl/api/v1/compare \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"image_a_id":"uuid-1234","image_b_id":"uuid-5678"}'`}
-                    </pre>
-                    <button
-                      onClick={() => copyToClipboard(`curl -X POST https://api.visualcompare.cl/api/v1/compare \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"image_a_id":"uuid-1234","image_b_id":"uuid-5678"}'`)}
-                      className="absolute top-3 right-3 p-2 hover:bg-blue-500/20 rounded text-blue-300 hover:text-blue-300 transition"
-                    >
-                      {copiedCode?.includes('compare') ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-white mb-2">Respuesta (200 OK):</h3>
-                  <div className="bg-slate-900/40 border border-blue-500/20 rounded p-4">
-                    <pre className="text-sm font-mono text-blue-300 overflow-x-auto">
-{`{
-  "success": true,
-  "data": {
-    "id": "comp-uuid-9999",
-    "similarity_score": 94.2,
-    "classification": "near_duplicate",
-    "recommendation": "REVIEW"
-  }
-}`}
-                    </pre>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-white mb-2">Niveles de clasificación:</h3>
-                  <ul className="space-y-2 text-sm text-blue-100">
-                    <li><strong className="text-blue-300">exact_match</strong> (95-100%): Imágenes idénticas</li>
-                    <li><strong className="text-blue-300">near_duplicate</strong> (85-94%): Casi idénticas</li>
-                    <li><strong className="text-blue-300">visually_similar</strong> (60-84%): Similitud significativa</li>
-                    <li><strong className="text-blue-300">partially_similar</strong> (20-59%): Cierta similitud</li>
-                    <li><strong className="text-blue-300">different</strong> (&lt;20%): Sin relación</li>
-                  </ul>
-                </div>
-              </div>
-            </section>
-
-            {/* List */}
-            <section id="list">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="px-3 py-1 bg-blue-900/60 text-blue-300 text-xs font-mono rounded">GET</span>
-                <h2 className="text-2xl font-bold text-white font-montserrat">/api/v1/comparisons</h2>
-              </div>
-              <p className="text-blue-100 mb-6">Lista todas las comparaciones con soporte de paginación.</p>
-
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-semibold text-white mb-2">Parámetros de query:</h3>
-                  <ul className="space-y-2 text-sm text-blue-100">
-                    <li><strong>limit</strong> (opcional): Resultados por página (default: 50, máx: 100)</li>
-                    <li><strong>offset</strong> (opcional): Offset de paginación (default: 0)</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-white mb-2">Ejemplo de solicitud:</h3>
-                  <div className="bg-slate-900/40 border border-blue-500/20 rounded p-4 relative">
-                    <pre className="text-sm font-mono text-blue-300 overflow-x-auto">
-{`curl https://api.visualcompare.cl/api/v1/comparisons?limit=20 \\
-  -H "Authorization: Bearer YOUR_API_KEY"`}
-                    </pre>
-                    <button
-                      onClick={() => copyToClipboard(`curl https://api.visualcompare.cl/api/v1/comparisons?limit=20 \\
-  -H "Authorization: Bearer YOUR_API_KEY"`)}
-                      className="absolute top-3 right-3 p-2 hover:bg-blue-500/20 rounded text-blue-300 hover:text-blue-300 transition"
-                    >
-                      {copiedCode?.includes('comparisons') && copiedCode?.includes('limit') ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-white mb-2">Respuesta (200 OK):</h3>
-                  <div className="bg-slate-900/40 border border-blue-500/20 rounded p-4">
-                    <pre className="text-sm font-mono text-blue-300 overflow-x-auto">
-{`{
-  "data": [{"id": "comp-1", "similarity_score": 94.2}],
-  "limit": 20,
-  "offset": 0,
-  "count": 1
-}`}
-                    </pre>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Get Details */}
-            <section id="details">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="px-3 py-1 bg-blue-900/60 text-blue-300 text-xs font-mono rounded">GET</span>
-                <h2 className="text-2xl font-bold text-white font-montserrat">/api/v1/comparisons/:id</h2>
-              </div>
-              <p className="text-blue-100 mb-6">Obtén detalles completos de una comparación específica.</p>
-
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-semibold text-white mb-2">Ejemplo de solicitud:</h3>
-                  <div className="bg-slate-900/40 border border-blue-500/20 rounded p-4 relative">
-                    <pre className="text-sm font-mono text-blue-300 overflow-x-auto">
-{`curl https://api.visualcompare.cl/api/v1/comparisons/comp-uuid-1 \\
-  -H "Authorization: Bearer YOUR_API_KEY"`}
-                    </pre>
-                    <button
-                      onClick={() => copyToClipboard(`curl https://api.visualcompare.cl/api/v1/comparisons/comp-uuid-1 \\
-  -H "Authorization: Bearer YOUR_API_KEY"`)}
-                      className="absolute top-3 right-3 p-2 hover:bg-blue-500/20 rounded text-blue-300 hover:text-blue-300 transition"
-                    >
-                      {copiedCode?.includes('comp-uuid-1') ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-white mb-2">Respuesta (200 OK):</h3>
-                  <div className="bg-slate-900/40 border border-blue-500/20 rounded p-4">
-                    <pre className="text-sm font-mono text-blue-300 overflow-x-auto">
-{`{
-  "success": true,
-  "data": {
-    "id": "comp-uuid-1",
-    "similarity_score": 94.2,
-    "classification": "near_duplicate"
-  }
-}`}
-                    </pre>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Usage */}
-            <section id="usage">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="px-3 py-1 bg-blue-900/60 text-blue-300 text-xs font-mono rounded">GET</span>
-                <h2 className="text-2xl font-bold text-white font-montserrat">/api/v1/usage</h2>
-              </div>
-              <p className="text-blue-100 mb-6">Obtén estadísticas de uso de tu cuenta API.</p>
-
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-semibold text-white mb-2">Ejemplo de solicitud:</h3>
-                  <div className="bg-slate-900/40 border border-blue-500/20 rounded p-4 relative">
-                    <pre className="text-sm font-mono text-blue-300 overflow-x-auto">
-{`curl https://api.visualcompare.cl/api/v1/usage \\
-  -H "Authorization: Bearer YOUR_API_KEY"`}
-                    </pre>
-                    <button
-                      onClick={() => copyToClipboard(`curl https://api.visualcompare.cl/api/v1/usage \\
-  -H "Authorization: Bearer YOUR_API_KEY"`)}
-                      className="absolute top-3 right-3 p-2 hover:bg-blue-500/20 rounded text-blue-300 hover:text-blue-300 transition"
-                    >
-                      {copiedCode?.includes('/usage') ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-white mb-2">Respuesta (200 OK):</h3>
-                  <div className="bg-slate-900/40 border border-blue-500/20 rounded p-4">
-                    <pre className="text-sm font-mono text-blue-300 overflow-x-auto">
-{`{
-  "uploads_today": 42,
-  "comparisons_today": 89,
-  "storage_gb": 12.5,
-  "api_calls_today": 250
-}`}
-                    </pre>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Error handling */}
-            <section>
-              <h2 className="text-2xl font-bold text-white mb-4">Manejo de errores</h2>
-              <div className="space-y-3">
-                <div className="glass p-4">
-                  <p className="font-mono text-sm text-blue-300 mb-2">401 No autorizado</p>
-                  <pre className="text-xs text-blue-300">
-{`{"error": "Invalid API key"}`}
-                  </pre>
-                </div>
-                <div className="glass p-4">
-                  <p className="font-mono text-sm text-amber-300 mb-2">400 Solicitud inválida</p>
-                  <pre className="text-xs text-blue-300">
-{`{"error": "Missing or invalid image_a_id"}`}
-                  </pre>
-                </div>
-                <div className="glass p-4">
-                  <p className="font-mono text-sm text-orange-300 mb-2">404 No encontrado</p>
-                  <pre className="text-xs text-blue-300">
-{`{"error": "Image not found"}`}
-                  </pre>
-                </div>
-              </div>
-            </section>
-
-            {/* CTA */}
-            <section className="glass p-8 text-center">
-              <h2 className="text-2xl font-bold text-white mb-3">¿Listo para integrar?</h2>
-              <p className="text-blue-100 mb-6">Obtén tu clave API y comienza a comparar imágenes en minutos.</p>
-              <Link href="/auth/sign-up">
-                <Button size="lg" className="bg-blue-900 hover:bg-blue-800 text-white">Obtén tu clave API</Button>
-              </Link>
-            </section>
-          </div>
-        </div>
-      </div>
-    </div>
+    </main>
   )
 }
