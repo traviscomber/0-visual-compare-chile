@@ -15,9 +15,10 @@ import {
   Clock,
   PenSquare,
   Fingerprint,
+  Sparkles,
 } from "lucide-react"
 import { classificationLabel, classificationTone, formatDate } from "@/lib/format"
-import type { ComparisonResultPayload, ExifSummary, ForensicSignals } from "@/types/comparison"
+import type { AiAnalysis, ComparisonResultPayload, ExifSummary, ForensicSignals } from "@/types/comparison"
 
 type ImageInfo = { url: string; filename: string } | null
 
@@ -85,6 +86,8 @@ export function ComparisonResultView({
         elaUrlA={result.ela_url_a}
         elaUrlB={result.ela_url_b}
       />
+
+      {result.ai_analysis && <AiAnalysisCard analysis={result.ai_analysis} />}
 
       <ForensicsCard exifA={result.exif_a} exifB={result.exif_b} forensics={forensics} />
 
@@ -486,4 +489,120 @@ function toneBackground(tone: ReturnType<typeof classificationTone>) {
   if (tone === "warn") return "bg-warning/15 text-warning"
   if (tone === "ok") return "bg-success/15 text-success"
   return "bg-secondary text-foreground"
+}
+
+function AiAnalysisCard({ analysis }: { analysis: AiAnalysis }) {
+  const riskColor =
+    analysis.confusion_risk === "high"
+      ? "text-destructive"
+      : analysis.confusion_risk === "medium"
+        ? "text-warning"
+        : "text-success"
+
+  const riskBorder =
+    analysis.confusion_risk === "high"
+      ? "border-destructive/40"
+      : analysis.confusion_risk === "medium"
+        ? "border-warning/40"
+        : "border-success/40"
+
+  return (
+    <Card className={cn("border-2", riskBorder)}>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <CardTitle className="font-serif text-xl flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            Análisis GPT-4o mini
+          </CardTitle>
+          <div className="flex items-center gap-3">
+            <Badge variant="outline" className={cn("gap-1.5 text-xs", riskColor, riskBorder)}>
+              Riesgo de confusión: {analysis.confusion_risk === "high" ? "Alto" : analysis.confusion_risk === "medium" ? "Medio" : "Bajo"}
+            </Badge>
+            <span className={cn("font-serif text-2xl font-bold", riskColor)}>
+              {analysis.ai_score}
+              <span className="text-sm font-normal text-muted-foreground ml-0.5">/ 100</span>
+            </span>
+          </div>
+        </div>
+        {analysis.summary && (
+          <CardDescription className="mt-1 leading-relaxed">{analysis.summary}</CardDescription>
+        )}
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {analysis.similarities.length > 0 && (
+            <div className="rounded-md border border-border p-4">
+              <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Similitudes detectadas</p>
+              <ul className="flex flex-col gap-1.5">
+                {analysis.similarities.map((s, i) => (
+                  <li key={i} className="text-sm flex items-start gap-2">
+                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {analysis.differences.length > 0 && (
+            <div className="rounded-md border border-border p-4">
+              <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Diferencias detectadas</p>
+              <ul className="flex flex-col gap-1.5">
+                {analysis.differences.map((d, i) => (
+                  <li key={i} className="text-sm flex items-start gap-2">
+                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-muted-foreground shrink-0" />
+                    {d}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {(analysis.colors_a.length > 0 || analysis.colors_b.length > 0) && (
+          <div className="grid grid-cols-2 gap-4">
+            {analysis.colors_a.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Colores imagen A</p>
+                <div className="flex gap-2 flex-wrap">
+                  {analysis.colors_a.map((hex, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <span
+                        className="h-5 w-5 rounded-full border border-border shrink-0"
+                        style={{ backgroundColor: hex }}
+                        aria-label={hex}
+                      />
+                      <span className="text-xs text-muted-foreground font-mono">{hex}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {analysis.colors_b.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Colores imagen B</p>
+                <div className="flex gap-2 flex-wrap">
+                  {analysis.colors_b.map((hex, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <span
+                        className="h-5 w-5 rounded-full border border-border shrink-0"
+                        style={{ backgroundColor: hex }}
+                        aria-label={hex}
+                      />
+                      <span className="text-xs text-muted-foreground font-mono">{hex}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {analysis.tokens_used > 0 && (
+          <p className="text-xs text-muted-foreground text-right">
+            {analysis.tokens_used} tokens — ~${((analysis.tokens_used * 0.00000015)).toFixed(5)} USD
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  )
 }

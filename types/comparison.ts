@@ -76,6 +76,24 @@ export interface ExifSummary {
   was_edited: boolean
 }
 
+export interface AiAnalysis {
+  /** Short GPT-4o mini narrative describing both brands and their relationship. */
+  summary: string
+  /** Key visual similarities the model detected. */
+  similarities: string[]
+  /** Key visual differences the model detected. */
+  differences: string[]
+  /** 0-100 AI-only similarity score. */
+  ai_score: number
+  /** low | medium | high — risk of brand confusion per the model. */
+  confusion_risk: "low" | "medium" | "high"
+  /** Dominant hex colors extracted from each image. */
+  colors_a: string[]
+  colors_b: string[]
+  /** Number of tokens used for cost tracking. */
+  tokens_used: number
+}
+
 export interface ComparisonResultPayload {
   id: string
   similarity_score: number
@@ -88,4 +106,6 @@ export interface ComparisonResultPayload {
   exif_a: ExifSummary | null
   exif_b: ExifSummary | null
   created_at: string
+  /** Optional GPT-4o mini enrichment — present when OPENAI_API_KEY is set. */
+  ai_analysis?: AiAnalysis | null
 }

@@ -2,8 +2,13 @@ import OpenAI from 'openai'
 import type { ComparisonResult, BrandAnalysis, VisionConfig } from './types'
 
 export interface VisionRequest {
-  image1: string | Buffer
-  image2: string | Buffer
+  /** base64 string or Buffer of image A */
+  imageA?: string | Buffer
+  /** base64 string or Buffer of image B */
+  imageB?: string | Buffer
+  /** Legacy aliases */
+  image1?: string | Buffer
+  image2?: string | Buffer
   brandName1?: string
   brandName2?: string
 }
@@ -87,10 +92,11 @@ Respond in JSON format:
    * Compare two brand logos/images
    */
   async compareBrands(request: VisionRequest): Promise<ComparisonResult> {
-    const base64Image1 =
-      typeof request.image1 === 'string' ? request.image1 : request.image1.toString('base64')
-    const base64Image2 =
-      typeof request.image2 === 'string' ? request.image2 : request.image2.toString('base64')
+    const rawA = request.imageA ?? request.image1
+    const rawB = request.imageB ?? request.image2
+    if (!rawA || !rawB) throw new Error('compareBrands requires two images')
+    const base64Image1 = typeof rawA === 'string' ? rawA : rawA.toString('base64')
+    const base64Image2 = typeof rawB === 'string' ? rawB : rawB.toString('base64')
 
     const response = await this.client.chat.completions.create({
       model: this.config.model,
@@ -110,28 +116,20 @@ Respond in JSON format:
             },
             {
               type: 'text',
-              text: `Compare these two brand logos/images ${request.brandName1 ? `(${request.brandName1}` : ''}${request.brandName2 ? ` vs ${request.brandName2})` : ')'}.
+              text: `Compare these two brand logos/images ${request.brandName1 ? `("${request.brandName1}"` : ''}${request.brandName2 ? ` vs "${request.brandName2}")` : ')'}.
 
-Analyze:
-1. Color similarity (0-100)
-2. Logo type similarity (0-100)
-3. Visual style similarity (0-100)
-4. Key similarities (list 3-5)
-5. Key differences (list 3-5)
-6. Confusion risk assessment (low/medium/high)
-7. Overall similarity score (0-100)
-8. Brief recommendation
-
-Respond in JSON:
+Analyze and respond ONLY with valid JSON (no markdown, no extra text):
 {
-  "colorSimilarity": 85,
-  "typesSimilarity": 75,
-  "styleSimilarity": 80,
-  "similarities": ["both use blue", "similar proportions"],
-  "differences": ["different fonts", "different symbols"],
-  "confusionRisk": "medium",
-  "overallScore": 80,
-  "recommendation": "..."
+  "colorSimilarity": 0-100,
+  "typesSimilarity": 0-100,
+  "styleSimilarity": 0-100,
+  "similarities": ["up to 4 key visual similarities"],
+  "differences": ["up to 4 key visual differences"],
+  "confusionRisk": "low|medium|high",
+  "overallScore": 0-100,
+  "recommendation": "one sentence brand confusion risk summary",
+  "colorsA": ["top 3 hex colors from image 1, e.g. #3B82F6"],
+  "colorsB": ["top 3 hex colors from image 2, e.g. #EF4444"]
 }`,
             },
           ],
@@ -157,16 +155,17 @@ Respond in JSON:
       colorSimilarity: comparisonData.colorSimilarity,
       stylesSimilarity: comparisonData.styleSimilarity,
       typeSimilarity: comparisonData.typesSimilarity,
-      similarities: comparisonData.similarities,
-      differences: comparisonData.differences,
-      confusionRisk: comparisonData.confusionRisk,
-      recommendation: comparisonData.recommendation,
+      similarities: comparisonData.similarities ?? [],
+      differences: comparisonData.differences ?? [],
+      confusionRisk: comparisonData.confusionRisk ?? 'low',
+      overallScore: comparisonData.overallScore ?? 0,
+      recommendation: comparisonData.recommendation ?? '',
+      colorsA: comparisonData.colorsA ?? [],
+      colorsB: comparisonData.colorsB ?? [],
+      tokensUsed: response.usage?.total_tokens ?? 0,
       analysisDetails: {
         timestamp: new Date().toISOString(),
-        imageSizes: {
-          image1: 'analyzed',
-          image2: 'analyzed',
-        },
+        imageSizes: { image1: 'analyzed', image2: 'analyzed' },
       },
     }
   }
