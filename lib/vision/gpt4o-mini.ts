@@ -1,10 +1,6 @@
 import OpenAI from 'openai'
 import type { ComparisonResult, BrandAnalysis, VisionConfig } from './types'
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
-
 export interface VisionRequest {
   image1: string | Buffer
   image2: string | Buffer
@@ -14,6 +10,14 @@ export interface VisionRequest {
 
 export class GPT4oMiniVisionService {
   private config: VisionConfig
+  private _client: OpenAI | null = null
+
+  private get client(): OpenAI {
+    if (!this._client) {
+      this._client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    }
+    return this._client
+  }
 
   constructor(config?: Partial<VisionConfig>) {
     this.config = {
@@ -32,7 +36,7 @@ export class GPT4oMiniVisionService {
   async analyzeBrand(imageData: string | Buffer, brandName?: string): Promise<BrandAnalysis> {
     const base64Image = typeof imageData === 'string' ? imageData : imageData.toString('base64')
 
-    const response = await client.messages.create({
+    const response = await this.client.chat.completions.create({
       model: this.config.model,
       max_tokens: this.config.maxTokens,
       messages: [
@@ -40,12 +44,8 @@ export class GPT4oMiniVisionService {
           role: 'user',
           content: [
             {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/jpeg',
-                data: base64Image,
-              },
+              type: 'image_url',
+              image_url: { url: `data:image/jpeg;base64,${base64Image}` },
             },
             {
               type: 'text',
@@ -70,12 +70,12 @@ Respond in JSON format:
       ],
     })
 
-    const content = response.content[0]
-    if (content.type !== 'text') {
+    const content = response.choices[0]?.message?.content
+    if (!content) {
       throw new Error('Unexpected response type from OpenAI')
     }
 
-    const jsonMatch = content.text.match(/\{[\s\S]*\}/)
+    const jsonMatch = content.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
       throw new Error('Could not parse JSON from response')
     }
@@ -92,7 +92,7 @@ Respond in JSON format:
     const base64Image2 =
       typeof request.image2 === 'string' ? request.image2 : request.image2.toString('base64')
 
-    const response = await client.messages.create({
+    const response = await this.client.chat.completions.create({
       model: this.config.model,
       max_tokens: this.config.maxTokens,
       temperature: this.config.temperature,
@@ -101,20 +101,12 @@ Respond in JSON format:
           role: 'user',
           content: [
             {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/jpeg',
-                data: base64Image1,
-              },
+              type: 'image_url',
+              image_url: { url: `data:image/jpeg;base64,${base64Image1}` },
             },
             {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/jpeg',
-                data: base64Image2,
-              },
+              type: 'image_url',
+              image_url: { url: `data:image/jpeg;base64,${base64Image2}` },
             },
             {
               type: 'text',
@@ -147,12 +139,12 @@ Respond in JSON:
       ],
     })
 
-    const content = response.content[0]
-    if (content.type !== 'text') {
+    const content = response.choices[0]?.message?.content
+    if (!content) {
       throw new Error('Unexpected response type from OpenAI')
     }
 
-    const jsonMatch = content.text.match(/\{[\s\S]*\}/)
+    const jsonMatch = content.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
       throw new Error('Could not parse JSON from response')
     }
@@ -208,7 +200,7 @@ Respond in JSON:
   async extractText(imageData: string | Buffer): Promise<string[]> {
     const base64Image = typeof imageData === 'string' ? imageData : imageData.toString('base64')
 
-    const response = await client.messages.create({
+    const response = await this.client.chat.completions.create({
       model: this.config.model,
       max_tokens: 200,
       messages: [
@@ -216,12 +208,8 @@ Respond in JSON:
           role: 'user',
           content: [
             {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/jpeg',
-                data: base64Image,
-              },
+              type: 'image_url',
+              image_url: { url: `data:image/jpeg;base64,${base64Image}` },
             },
             {
               type: 'text',
@@ -232,12 +220,12 @@ Respond in JSON:
       ],
     })
 
-    const content = response.content[0]
-    if (content.type !== 'text') {
+    const content = response.choices[0]?.message?.content
+    if (!content) {
       return []
     }
 
-    const jsonMatch = content.text.match(/\[[\s\S]*\]/)
+    const jsonMatch = content.match(/\[[\s\S]*\]/)
     if (!jsonMatch) {
       return []
     }
