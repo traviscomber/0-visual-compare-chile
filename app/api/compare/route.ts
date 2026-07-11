@@ -6,7 +6,8 @@ import { calculateFinalScore } from "@/lib/image/scoring"
 import { generateDiffOverlay } from "@/lib/image/diff"
 import { compareExif, type ExifData } from "@/lib/image/exif"
 import { BUCKET, createSignedUrl } from "@/lib/storage"
-import type { ComparisonResultPayload, ExifSummary, ForensicSignals } from "@/types/comparison"
+import { GPT4oMiniVisionService } from "@/lib/vision/gpt4o-mini"
+import type { ComparisonResultPayload, ExifSummary, ForensicSignals, AiAnalysis } from "@/types/comparison"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -122,20 +123,68 @@ export async function POST(request: Request) {
 
     let pixelSimilarity: number | null = null
     let diffStoragePath: string | null = null
+    let aiAnalysis: AiAnalysis | null = null
 
-    try {
-      const overlay = await generateDiffOverlay(bufferA, bufferB)
-      pixelSimilarity = overlay.pixelSimilarity
+    // Run diff overlay and AI analysis in parallel to save latency.
+    const [diffResult, aiResult] = await Promise.allSettled([
+      generateDiffOverlay(bufferA, bufferB),
+      process.env.OPENAI_API_KEY
+        ? (async () => {
+            const vision = new GPT4oMiniVisionService()
+            const base64A = bufferA.toString("base64")
+            const base64B = bufferB.toString("base64")
+            return vision.compareBrands({
+              imageA: base64A,
+              imageB: base64B,
+              brandName1: imageA.filename,
+              brandName2: imageB.filename,
+            })
+          })()
+        : Promise.resolve(null),
+    ])
 
-      // Persist the overlay PNG so the result page and detail page can render it.
-      const tempId = crypto.randomUUID()
-      const candidatePath = `${user.id}/diffs/${tempId}.png`
-      const { error: diffUploadError } = await admin.storage
-        .from(BUCKET)
-        .upload(candidatePath, overlay.png, { contentType: "image/png", upsert: false })
-      if (!diffUploadError) diffStoragePath = candidatePath
-    } catch (err) {
-      console.error("[v0] diff overlay generation failed", err)
+    if (diffResult.status === "fulfilled" && diffResult.value) {
+      pixelSimilarity = diffResult.value.pixelSimilarity
+      try {
+        const tempId = crypto.randomUUID()
+        const candidatePath = `${user.id}/diffs/${tempId}.png`
+        const { error: diffUploadError } = await admin.storage
+          .from(BUCKET)
+          .upload(candidatePath, diffResult.value.png, { contentType: "image/png", upsert: false })
+        if (!diffUploadError) diffStoragePath = candidatePath
+      } catch (err) {
+        console.error("[v0] diff upload failed", err)
+      }
+    } else if (diffResult.status === "rejected") {
+      console.error("[v0] diff overlay generation failed", diffResult.reason)
+    }
+
+    if (aiResult.status === "fulfilled" && aiResult.value) {
+      const r = aiResult.value as {
+        colorSimilarity: number
+        typesSimilarity: number
+        styleSimilarity: number
+        similarities: string[]
+        differences: string[]
+        confusionRisk: string
+        overallScore: number
+        recommendation: string
+        colorsA?: string[]
+        colorsB?: string[]
+        tokensUsed?: number
+      }
+      aiAnalysis = {
+        summary: r.recommendation ?? "",
+        similarities: r.similarities ?? [],
+        differences: r.differences ?? [],
+        ai_score: r.overallScore ?? 0,
+        confusion_risk: (["low", "medium", "high"].includes(r.confusionRisk) ? r.confusionRisk : "low") as AiAnalysis["confusion_risk"],
+        colors_a: r.colorsA ?? [],
+        colors_b: r.colorsB ?? [],
+        tokens_used: r.tokensUsed ?? 0,
+      }
+    } else if (aiResult.status === "rejected") {
+      console.error("[v0] AI analysis failed", aiResult.reason)
     }
 
     const result = calculateFinalScore({
@@ -247,6 +296,7 @@ export async function POST(request: Request) {
       exif_a: exifSummary(exifA),
       exif_b: exifSummary(exifB),
       created_at: comparison.created_at,
+      ai_analysis: aiAnalysis,
     }
 
     return NextResponse.json(payload)
