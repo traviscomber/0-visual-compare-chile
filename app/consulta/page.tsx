@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Shield, ArrowLeft, Database } from 'lucide-react'
+import { Shield, ArrowLeft, Database, Globe } from 'lucide-react'
 import { SearchResult, SearchFilters } from '@/types/marca'
 import { useSearch } from '@/hooks/useSearch'
+import { useInapiSearch } from '@/hooks/useInapiSearch'
 import { API_PORTAL_MARCAS } from '@/lib/api-portal-data'
 import {
   ExportDialog,
@@ -15,111 +16,38 @@ import {
   StatsBar
 } from '@/components/api-portal'
 
-const PAGE_SIZE = 8
+const PAGE_SIZE = 20
 
 const DEFAULT_FILTERS: SearchFilters = {}
 
 export default function ConsultaPage() {
-  const [query, setQuery] = useState('VISUAL')
-  const [activeQuery, setActiveQuery] = useState('VISUAL')
+  const [query, setQuery] = useState('')
+  const [activeQuery, setActiveQuery] = useState('')
   const [searchType, setSearchType] = useState<'nombre' | 'niza' | 'viena'>('nombre')
   const [filters, setFilters] = useState<SearchFilters>(DEFAULT_FILTERS)
   const [page, setPage] = useState(1)
   const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null)
   const [exportOpen, setExportOpen] = useState(false)
   const [lastSearchTime, setLastSearchTime] = useState(0)
-  const [totalInDatabase, setTotalInDatabase] = useState(API_PORTAL_MARCAS.length)
-  const [availableNiza, setAvailableNiza] = useState<string[]>(
-    () => Array.from(new Set(API_PORTAL_MARCAS.flatMap((item) => item.niza))).sort()
-  )
-  const [availableViena, setAvailableViena] = useState<string[]>(
-    () => Array.from(new Set(API_PORTAL_MARCAS.flatMap((item) => item.viena))).sort()
-  )
+  const [dataSource, setDataSource] = useState<'inapi' | 'local'>('inapi')
 
-  const {
-    search,
-    resultados,
-    cargando,
-    getStats
-  } = useSearch(API_PORTAL_MARCAS)
+  // Fixed set of 45 Niza classes for filter panel
+  const availableNiza = useMemo(() =>
+    Array.from({ length: 45 }, (_, i) => String(i + 1)), [])
+  const availableViena = useMemo(() =>
+    Array.from(new Set(API_PORTAL_MARCAS.flatMap((m) => m.viena))).sort(), [])
 
-  useEffect(() => {
-    const stats = getStats()
-    if (stats) {
-      setTotalInDatabase(stats.totalMarcas)
-    }
-  }, [getStats])
+  // INAPI live search (primary)
+  const inapi = useInapiSearch()
 
-  useEffect(() => {
-    const loadClassifications = async () => {
-      try {
-        const [nizaResponse, vienaResponse] = await Promise.all([
-          fetch('/api/v1/search/niza'),
-          fetch('/api/v1/search/viena'),
-        ])
+  // Local search (fallback / offline)
+  const local = useSearch(API_PORTAL_MARCAS)
 
-        if (nizaResponse.ok) {
-          const payload = await nizaResponse.json()
-          setAvailableNiza(
-            Array.isArray(payload.results)
-              ? payload.results.map((item: { codigo: string }) => item.codigo)
-              : []
-          )
-        }
+  // Active results come from whichever source last ran
+  const activeResults = dataSource === 'inapi' ? inapi.results : local.resultados
+  const cargando = inapi.loading || local.cargando
 
-        if (vienaResponse.ok) {
-          const payload = await vienaResponse.json()
-          setAvailableViena(
-            Array.isArray(payload.results)
-              ? payload.results.map((item: { codigo: string }) => item.codigo)
-              : []
-          )
-        }
-      } catch (error) {
-        console.error('[v0] Failed to load portal classifications:', error)
-      }
-    }
-
-    void loadClassifications()
-  }, [])
-
-  useEffect(() => {
-    const runInitialSearch = async () => {
-      const response = await search({
-        query: activeQuery,
-        type: searchType,
-        filters
-      })
-      setLastSearchTime(response.tiempo_ms)
-    }
-
-    void runInitialSearch()
-    // Only run on mount. Subsequent searches are triggered explicitly.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
-    setPage(1)
-  }, [resultados])
-
-  const filteredResults = useMemo(() => {
-    return resultados.filter((result) => {
-      if (filters.estado && result.marca.estado !== filters.estado) return false
-      if (filters.pais && result.marca.pais !== filters.pais.toUpperCase()) return false
-      if (filters.fechaDesde && new Date(result.marca.fecha) < new Date(filters.fechaDesde)) return false
-      if (filters.fechaHasta && new Date(result.marca.fecha) > new Date(filters.fechaHasta)) return false
-      if (filters.niza?.length && !filters.niza.some((item) => result.marca.niza.includes(item))) return false
-      if (filters.viena?.length && !filters.viena.some((item) => result.marca.viena.includes(item))) return false
-      return true
-    })
-  }, [filters, resultados])
-
-  const currentPageResults = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE
-    return filteredResults.slice(start, start + PAGE_SIZE)
-  }, [filteredResults, page])
-
-  const runSearch = async (
+  const runInapiSearch = async (
     nextQuery: string,
     nextType: 'nombre' | 'niza' | 'viena',
     nextFilters: SearchFilters = filters
@@ -127,27 +55,55 @@ export default function ConsultaPage() {
     setQuery(nextQuery)
     setActiveQuery(nextQuery)
     setSearchType(nextType)
-    const response = await search({
+
+    // Map viena/niza type to INAPI type
+    const inapiType = nextType === 'niza' ? 'clase' : 'nombre'
+    const response = await inapi.search({
       query: nextQuery,
-      type: nextType,
-      filters: nextFilters
+      type: inapiType,
+      filters: nextFilters,
     })
-    setLastSearchTime(response.tiempo_ms)
+
+    if (response.total > 0 || !inapi.error) {
+      setDataSource('inapi')
+      setLastSearchTime(response.tiempo_ms)
+    } else {
+      // INAPI unreachable — fall back to local
+      const localResp = await local.search({ query: nextQuery, type: nextType, filters: nextFilters })
+      setDataSource('local')
+      setLastSearchTime(localResp.tiempo_ms)
+    }
     setPage(1)
   }
 
   const runFilters = async (nextFilters: SearchFilters) => {
     setFilters(nextFilters)
-
-    const response = await search({
-      query: activeQuery.trim(),
-      type: searchType,
-      filters: nextFilters
-    })
-    setLastSearchTime(response.tiempo_ms)
-    setPage(1)
+    if (activeQuery) {
+      await runInapiSearch(activeQuery, searchType, nextFilters)
+    }
   }
 
+  // No initial search — wait for user input
+  useEffect(() => {
+    setPage(1)
+  }, [inapi.results, local.resultados])
+
+  const filteredResults = useMemo(() => {
+    return activeResults.filter((result) => {
+      if (filters.estado && result.marca.estado !== filters.estado) return false
+      if (filters.pais && result.marca.pais !== filters.pais.toUpperCase()) return false
+      if (filters.niza?.length && !filters.niza.some((item) => result.marca.niza.includes(item))) return false
+      if (filters.viena?.length && !filters.viena.some((item) => result.marca.viena.includes(item))) return false
+      return true
+    })
+  }, [filters, activeResults])
+
+  const currentPageResults = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE
+    return filteredResults.slice(start, start + PAGE_SIZE)
+  }, [filteredResults, page])
+
+  const totalInDatabase = 350000 // INAPI registry size (approximate)
   const activeResultCount = filteredResults.length
 
   return (
@@ -165,6 +121,14 @@ export default function ConsultaPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            <div className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${
+              dataSource === 'inapi'
+                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                : 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+            }`}>
+              <Globe className="h-3 w-3" />
+              {dataSource === 'inapi' ? 'INAPI en vivo' : 'Base local'}
+            </div>
             <Link
               href="/panel"
               className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 transition hover:bg-white/10"
@@ -185,9 +149,9 @@ export default function ConsultaPage() {
             onQueryChange={setQuery}
             onSearchTypeChange={(type) => {
               setSearchType(type)
-              void runSearch(query, type, filters)
+              void runInapiSearch(query, type, filters)
             }}
-            onSearch={runSearch}
+            onSearch={runInapiSearch}
           />
 
           <div className="space-y-6">
