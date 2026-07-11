@@ -21,11 +21,30 @@ async function getSession(): Promise<string> {
     cache: 'no-store',
   })
 
-  const setCookie = res.headers.get('set-cookie') ?? ''
-  const match = setCookie.match(/ASP\.NET_SessionId=([^;]+)/)
-  if (!match) throw new Error('Could not obtain INAPI session')
+  // Node 18+ fetch returns multiple Set-Cookie headers — use getSetCookie() when available,
+  // otherwise fall back to iterating raw headers entries.
+  let sessionId: string | null = null
 
-  cachedSession = match[1]
+  if (typeof (res.headers as unknown as { getSetCookie?: () => string[] }).getSetCookie === 'function') {
+    const cookies = (res.headers as unknown as { getSetCookie: () => string[] }).getSetCookie()
+    for (const c of cookies) {
+      const m = c.match(/ASP\.NET_SessionId=([^;]+)/)
+      if (m) { sessionId = m[1]; break }
+    }
+  }
+
+  if (!sessionId) {
+    // Fallback: join all set-cookie values
+    const setCookie = res.headers.get('set-cookie') ?? ''
+    const m = setCookie.match(/ASP\.NET_SessionId=([^;]+)/)
+    if (m) sessionId = m[1]
+  }
+
+  if (!sessionId) {
+    throw new Error(`Could not obtain INAPI session (status ${res.status})`)
+  }
+
+  cachedSession = sessionId
   sessionFetchedAt = now
   return cachedSession
 }
