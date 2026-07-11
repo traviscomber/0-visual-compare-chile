@@ -383,7 +383,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* EJEMPLOS NIZA Y VIENA EN ACCI✔N */}
+      {/* EJEMPLOS NIZA Y VIENA EN ACCION */}
       <NizaVienExamples />
 
       {/* CASOS DE USO */}
@@ -508,7 +508,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="mb-16">
             <div className="inline-block mb-6">
-            <span className="text-xs font-bold text-blue-300 bg-purple-500/50 px-4 py-2 rounded-lg">MOTOR IA DE COMPARACI✔N</span>
+            <span className="text-xs font-bold text-blue-300 bg-purple-500/50 px-4 py-2 rounded-lg">MOTOR IA DE COMPARACI&#211;N</span>
             </div>
             <h2 className="text-5xl font-bold text-white mb-4">Roadmap MVP: 2 Meses</h2>
             <p className="text-xl text-blue-200 max-w-2xl leading-relaxed">Plan MVP con presupuesto CLP $5M. API de comparación visual con 3 métodos (SHA-256, pHash, Embeddings IA). Portal de Consulta en Fase 2.</p>
@@ -797,7 +797,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* INTEGRACI✔N */}
+            {/* INTEGRACION */}
             <div className="group">
               <div className="absolute -inset-1 bg-gradient-to-r from-purple-500/30 via-transparent to-transparent rounded-2xl blur-xl -z-10 group-hover:blur-2xl transition-all"></div>
               <div className="glass p-8 rounded-2xl border border-purple-500/50 bg-gradient-to-br from-purple-900/20 to-slate-900/50 backdrop-blur-xl hover:border-purple-400/70 transition-all">
@@ -811,10 +811,10 @@ export default function LandingPage() {
                   Conexión segura y escalable con los servidores de INAPI. Sincronización automática de datos para mantener la base de datos actualizada.
                 </p>
                 <ul className="space-y-2 text-sm text-blue-100">
-                  <li>✔Ã¢â‚¬Å“ Conexión API REST segura</li>
-                  <li>✔Ã¢â‚¬Å“ Sincronización automática</li>
-                  <li>✔Ã¢â‚¬Å“ Manejo de errores robusto</li>
-                  <li>✔Ã¢â‚¬Å“ Rate limiting y throttling</li>
+                  <li>&#10004; Conexión API REST segura</li>
+                  <li>&#10004; Sincronización automática</li>
+                  <li>&#10004; Manejo de errores robusto</li>
+                  <li>&#10004; Rate limiting y throttling</li>
                 </ul>
               </div>
             </div>
@@ -833,16 +833,16 @@ export default function LandingPage() {
                   Datos verificados directamente de la fuente oficial. Cumplimiento normativo total con requisitos de INAPI para aplicaciones autorizadas.
                 </p>
                 <ul className="space-y-2 text-sm text-blue-100">
-                  <li>✔Ã¢â‚¬Å“ Datos de fuente oficial</li>
-                  <li>✔Ã¢â‚¬Å“ Cumplimiento legal total</li>
-                  <li>✔Ã¢â‚¬Å“ Auditoría de acceso</li>
-                  <li>✔Ã¢â‚¬Å“ Encriptación en tránsito</li>
+                  <li>&#10004; Datos de fuente oficial</li>
+                  <li>&#10004; Cumplimiento legal total</li>
+                  <li>&#10004; Auditoría de acceso</li>
+                  <li>&#10004; Encriptación en tránsito</li>
                 </ul>
               </div>
             </div>
           </div>
 
-          {/* FLUJO DE INTEGRACI✔N */}
+          {/* FLUJO DE INTEGRACION */}
           <div className="glass p-8 border border-blue-500/30 rounded-2xl bg-gradient-to-br from-blue-900/10 to-slate-900/50">
             <h3 className="text-2xl font-bold text-white mb-8 font-montserrat">Cómo Funciona</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -1093,10 +1093,10 @@ else:
               <Shield className="h-8 w-8 text-blue-300 mb-4" />
               <h3 className="text-lg font-semibold text-white mb-3">Enterprise Security</h3>
               <ul className="text-sm text-blue-200 space-y-2">
-                <li>✔Ã¢â‚¬Å“ Encriptación en tránsito (TLS 1.3)</li>
-                <li>✔Ã¢â‚¬Å“ Almacenamiento encriptado</li>
-                <li>✔Ã¢â‚¬Å“ Autenticación Bearer token</li>
-                <li>✔Ã¢â‚¬Å“ Rate limiting por API key</li>
+                <li>&#10004; Encriptación en tránsito (TLS 1.3)</li>
+                <li>&#10004; Almacenamiento encriptado</li>
+                <li>&#10004; Autenticación Bearer token</li>
+                <li>&#10004; Rate limiting por API key</li>
               </ul>
             </div>
 
@@ -1104,10 +1104,10 @@ else:
               <Code2 className="h-8 w-8 text-blue-300 mb-4" />
               <h3 className="text-lg font-semibold text-white mb-3">API-First Design</h3>
               <ul className="text-sm text-blue-200 space-y-2">
-                <li>✔Ã¢â‚¬Å“ Endpoints REST cleanos</li>
-                <li>✔Ã¢â‚¬Å“ Respuestas JSON estándar</li>
-                <li>✔Ã¢â‚¬Å“ Batch processing disponible</li>
-                <li>✔Ã¢â‚¬Å“ Webhooks para eventos</li>
+                <li>&#10004; Endpoints REST limpios</li>
+                <li>&#10004; Respuestas JSON estándar</li>
+                <li>&#10004; Batch processing disponible</li>
+                <li>&#10004; Webhooks para eventos</li>
               </ul>
             </div>
 
@@ -1115,10 +1115,10 @@ else:
               <Database className="h-8 w-8 text-blue-300 mb-4" />
               <h3 className="text-lg font-semibold text-white mb-3">Reliability</h3>
               <ul className="text-sm text-blue-200 space-y-2">
-                <li>✔Ã¢â‚¬Å“ 99.95% SLA</li>
-                <li>✔Ã¢â‚¬Å“ Auto-scaling infraestructura</li>
-                <li>✔Ã¢â‚¬Å“ Backup redundante</li>
-                <li>✔Ã¢â‚¬Å“ Soporte técnico 24/7</li>
+                <li>&#10004; 99.95% SLA</li>
+                <li>&#10004; Auto-scaling infraestructura</li>
+                <li>&#10004; Backup redundante</li>
+                <li>&#10004; Soporte técnico 24/7</li>
               </ul>
             </div>
           </div>
