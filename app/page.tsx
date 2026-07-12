@@ -387,9 +387,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* EJEMPLOS NIZA Y VIENA EN ACCION */}
-      <NizaVienExamples />
-
       {/* CASOS DE USO */}
   <section id="casos" className="py-24 relative z-10 border-t border-blue-500/20">
   <div className="max-w-6xl mx-auto px-6">
