@@ -532,12 +532,6 @@ export function TrademarkReportDocument({ cases, generatedAt, preparedFor }: Tra
             </View>
           ))}
 
-          {/* Detail screenshot — inline after next steps, no extra title */}
-          <View style={{ height: 1, backgroundColor: C.border, marginVertical: 8 }} />
-          <View style={s.screenshotBox}>
-            <Image src={c.screenshotDetailPath} style={[s.screenshotImg, { height: 160 }]} />
-          </View>
-          <Text style={s.screenshotCap}>Vista detallada — secciones expandidas · {c.name}</Text>
         </View>
         <View style={s.footer}>
           <Text style={s.footerText}>{"Análisis generado el " + new Date().toLocaleDateString("es-CL") + " · Motor Visual Compare IA v1.0"}</Text>
