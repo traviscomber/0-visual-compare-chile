@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useRef } from "react"
+import Link from "next/link"
 import type { TrademarkInsightReport } from "@/lib/agent/trademark-agent"
 import {
   Upload, Loader2, AlertTriangle, CheckCircle2, ShieldAlert,
-  ChevronDown, ChevronUp, FileText, Cpu, Search, BarChart3
+  ChevronDown, ChevronUp, FileText, Cpu, Search, BarChart3, Download
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -163,6 +164,14 @@ export default function AgentePage() {
             Clasifica tu logo con Viena + Niza, detecta conflictos en el repositorio
             de marcas y obtiene un informe ejecutivo en segundos.
           </p>
+          <div className="pt-1">
+            <Link href="/agente/report">
+              <Button variant="outline" size="sm" className="gap-2 border-blue-500/40 text-blue-300 hover:bg-blue-500/10 hover:text-blue-200 bg-transparent">
+                <Download className="w-3.5 h-3.5" />
+                Descargar informe PDF de demo
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Input form */}
