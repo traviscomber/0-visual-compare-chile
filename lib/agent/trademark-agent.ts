@@ -16,6 +16,7 @@ import type { Marca } from '@/types/marca'
 
 export interface TrademarkAgentRequest {
   imageBase64: string         // logo a analizar
+  imageMimeType?: string      // MIME type de la imagen (default: 'image/png')
   nombreMarca: string
   descripcion?: string
   industria?: string
@@ -89,7 +90,7 @@ export class TrademarkAgent {
 
     // PASO 1 + 2 en paralelo: clasificar Viena (visión) y Niza (texto)
     const [viena, niza] = await Promise.all([
-      this.vienaClassifier.classify(req.imageBase64),
+      this.vienaClassifier.classify(req.imageBase64, req.imageMimeType),
       this.nizaClassifier.classify({
         nombre: req.nombreMarca,
         descripcion: req.descripcion,

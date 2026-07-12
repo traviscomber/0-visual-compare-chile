@@ -46,7 +46,7 @@ export class VienaClassifier {
     this.client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   }
 
-  async classify(imageBase64: string): Promise<VienaClassification> {
+  async classify(imageBase64: string, mimeType?: string): Promise<VienaClassification> {
     const userPrompt = `Analiza este logo y asigna los códigos Viena correspondientes.
 
 Responde ÚNICAMENTE con JSON válido (sin markdown, sin texto extra):
@@ -69,7 +69,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin texto extra):
         {
           role: 'user',
           content: [
-            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${imageBase64}`, detail: 'high' } },
+            { type: 'image_url', image_url: { url: `data:${mimeType ?? 'image/png'};base64,${imageBase64}`, detail: 'high' } },
             { type: 'text', text: userPrompt },
           ],
         },
