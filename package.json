@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "check:env": "node scripts/verify-env.mjs",
     "smoke": "node scripts/smoke-check.mjs",
+    "sync:inapi": "node scripts/run-inapi-sync.mjs",
     "audit:deploy": "node scripts/audit-deployment.mjs",
     "release:gate": "node scripts/release-gate.mjs"
   },

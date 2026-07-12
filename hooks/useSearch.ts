@@ -6,6 +6,7 @@ import { useAuditLog } from './useAuditLog'
 
 interface SearchStats {
   totalMarcas: number
+  source?: string
 }
 
 export function useSearch() {
@@ -110,19 +111,19 @@ export function useSearch() {
 
   const getStats = useCallback(async (): Promise<SearchStats | null> => {
     try {
-      const url = new URL('/api/v1/search', window.location.origin)
-      url.searchParams.set('q', '')
-      url.searchParams.set('type', 'nombre')
-      url.searchParams.set('limit', '1')
+      const url = new URL('/api/v1/search/stats', window.location.origin)
 
       const response = await fetch(url.toString())
       const payload = response.ok ? await response.json() : null
 
-      if (!response.ok || !payload || typeof payload.total !== 'number') {
+      if (!response.ok || !payload || typeof payload.totalRecords !== 'number') {
         return null
       }
 
-      return { totalMarcas: payload.total }
+      return {
+        totalMarcas: payload.totalRecords,
+        source: typeof payload.source === 'string' ? payload.source : undefined,
+      }
     } catch (err) {
       console.error('[v0] Error obteniendo estadisticas de busqueda:', err)
       return null

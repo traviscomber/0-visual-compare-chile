@@ -1,179 +1,58 @@
-import { NextResponse } from 'next/server'
-import type { Marca } from '@/types/marca'
+import { NextResponse } from "next/server"
+import { searchInapi, type InapiMatchMode, type InapiSearchType } from "@/lib/inapi/client"
 
-const INAPI_BASE = 'https://buscadormarcas.inapi.cl/Marca'
-const USER_AGENT =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+export const runtime = "nodejs"
 
-// ─── session cache (per process) ─────────────────────────────────────────────
-let cachedSession: string | null = null
-let sessionFetchedAt = 0
-const SESSION_TTL_MS = 25 * 60 * 1000 // 25 minutes
+const ALLOWED_TYPES = new Set<InapiSearchType>(["nombre", "solicitante", "clase", "solicitud", "registro"])
+const ALLOWED_MATCH_MODES = new Set<InapiMatchMode>(["1", "2", "3", "4"])
 
-async function getSession(): Promise<string> {
-  const now = Date.now()
-  if (cachedSession && now - sessionFetchedAt < SESSION_TTL_MS) {
-    return cachedSession
-  }
-
-  const res = await fetch(`${INAPI_BASE}/BuscarMarca.aspx`, {
-    headers: { 'User-Agent': USER_AGENT },
-    cache: 'no-store',
-  })
-
-  // Node 18+ fetch returns multiple Set-Cookie headers — use getSetCookie() when available,
-  // otherwise fall back to iterating raw headers entries.
-  let sessionId: string | null = null
-
-  if (typeof (res.headers as unknown as { getSetCookie?: () => string[] }).getSetCookie === 'function') {
-    const cookies = (res.headers as unknown as { getSetCookie: () => string[] }).getSetCookie()
-    for (const c of cookies) {
-      const m = c.match(/ASP\.NET_SessionId=([^;]+)/)
-      if (m) { sessionId = m[1]; break }
-    }
-  }
-
-  if (!sessionId) {
-    // Fallback: join all set-cookie values
-    const setCookie = res.headers.get('set-cookie') ?? ''
-    const m = setCookie.match(/ASP\.NET_SessionId=([^;]+)/)
-    if (m) sessionId = m[1]
-  }
-
-  if (!sessionId) {
-    throw new Error(`Could not obtain INAPI session (status ${res.status})`)
-  }
-
-  cachedSession = sessionId
-  sessionFetchedAt = now
-  return cachedSession
-}
-
-// ─── INAPI cell → Marca ───────────────────────────────────────────────────────
-function cellToMarca(cell: string[], id: string): Marca {
-  // cell layout: [numSol, numRegistro, clases_niza, denominacion, titular, estado, tipoMarca, tipoMarca2, numSol2, fileType]
-  const niza = (cell[2] ?? '')
-    .split(',')
-    .map((c) => c.trim())
-    .filter(Boolean)
-
-  const estadoRaw = cell[5] ?? ''
-  const estado = estadoRaw === 'En Trámite' || estadoRaw === 'Pendiente'
-    ? 'Pendiente'
-    : estadoRaw === 'Registrada'
-      ? 'Registrada'
-      : 'Denegada'
-
-  return {
-    id,
-    nombre: cell[3] ?? '',
-    solicitante: cell[4] ?? '',
-    numeroRegistro: cell[1] ?? '',
-    estado,
-    fecha: '',           // Not returned by FindMarcas – populated by detail fetch
-    pais: 'CL',
-    niza,
-    viena: [],           // Not returned by FindMarcas
-    metadata: {
-      numSolicitud: cell[0] ?? '',
-      estadoOriginal: estadoRaw,
-      tipoMarca: cell[6] ?? '',
-      fileSeq: cell[8] ?? '',
-      fileType: cell[9] ?? '',
-    },
-  }
-}
-
-// ─── Route handler ────────────────────────────────────────────────────────────
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url)
-
-  const query = (searchParams.get('q') ?? '').trim()
-  const type = searchParams.get('type') ?? 'nombre'   // nombre | solicitante | clase | solicitud | registro
-  const matchMode = searchParams.get('match') ?? '2'  // 1=exacta 2=contenga 3=empieza 4=termina
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const query = searchParams.get("q")?.trim() ?? ""
+  const rawType = (searchParams.get("type") ?? "nombre") as InapiSearchType
+  const rawMatchMode = (searchParams.get("match") ?? "2") as InapiMatchMode
 
   if (!query) {
-    return NextResponse.json({ error: 'q parameter is required' }, { status: 400 })
+    return NextResponse.json({ error: "q parameter is required" }, { status: 400 })
+  }
+
+  if (!ALLOWED_TYPES.has(rawType)) {
+    return NextResponse.json({ error: "Invalid INAPI search type" }, { status: 400 })
+  }
+
+  if (!ALLOWED_MATCH_MODES.has(rawMatchMode)) {
+    return NextResponse.json({ error: "Invalid INAPI match mode" }, { status: 400 })
   }
 
   try {
-    const sessionId = await getSession()
-
-    // Build param object – maps search type to INAPI params
-    const params: Record<string, string> = {
-      LastNumSol: '0',
-      Hash: '',
-      IDW: '',
-      responseCaptcha: 'este texto no se validará',
-      param1: type === 'solicitud'   ? query : '',
-      param2: type === 'registro'    ? query : '',
-      param3: type === 'nombre'      ? query : '',
-      param4: type === 'solicitante' ? query : '',
-      param5: type === 'clase'       ? query : '',
-      param6: '',
-      param7: '',
-      param8: '',
-      param9: '',
-      param10: '', param11: '', param12: '', param13: '', param14: '', param15: '',
-      param16: '',
-      param17: matchMode,
-    }
-
-    const res = await fetch(`${INAPI_BASE}/BuscarMarca.aspx/FindMarcas`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-        'Accept': 'application/json, text/javascript, */*',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Referer': `${INAPI_BASE}/BuscarMarca.aspx`,
-        'User-Agent': USER_AGENT,
-        'Cookie': `ASP.NET_SessionId=${sessionId}`,
-      },
-      body: JSON.stringify(params),
-      cache: 'no-store',
+    const results = await searchInapi({
+      query,
+      type: rawType,
+      matchMode: rawMatchMode,
     })
-
-    if (!res.ok) {
-      throw new Error(`INAPI responded with HTTP ${res.status}`)
-    }
-
-    const json = await res.json()
-    const data = JSON.parse(json.d ?? '{}')
-
-    if (data.ErrorMessage) {
-      return NextResponse.json({ error: data.ErrorMessage }, { status: 502 })
-    }
-
-    const marcas: Marca[] = (data.Marcas ?? []).map(
-      (item: { id: string; cell: string[] }) => cellToMarca(item.cell, item.id)
-    )
-
-    // Update session hash for subsequent requests within this process
-    if (data.Hash) {
-      // Hash rotates per request — cache the session but not the hash
-    }
 
     return NextResponse.json(
       {
-        results: marcas,
-        total: marcas.length,
-        source: 'inapi',
+        results,
+        total: results.length,
+        source: "inapi-live",
         query,
-        type,
+        type: rawType,
       },
       {
         headers: {
-          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
         },
-      }
+      },
     )
-  } catch (err) {
-    // Invalidate session so next request retries
-    cachedSession = null
-    console.error('[inapi/search] error:', err)
+  } catch (error) {
+    console.error("[inapi/search] error", error)
     return NextResponse.json(
-      { error: 'Failed to query INAPI', detail: String(err) },
-      { status: 502 }
+      {
+        error: "Failed to query INAPI",
+        detail: String(error),
+      },
+      { status: 502 },
     )
   }
 }

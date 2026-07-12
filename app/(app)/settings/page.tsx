@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 import { ApiKeyManager } from "@/components/app/api-key-manager"
+import { InapiSyncManager } from "@/components/app/inapi-sync-manager"
 import { ProfileForm } from "@/components/app/profile-form"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -78,6 +79,7 @@ export default async function SettingsPage() {
       </Card>
 
       <ApiKeyManager />
+      <InapiSyncManager />
     </div>
   )
 }

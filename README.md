@@ -1,15 +1,34 @@
 # Visual Compare Chile
 
-MVP para comparacion visual de marcas con auth Supabase, upload consistente, comparacion auditada, historial y rutas protegidas.
+Plataforma de inteligencia marcaria para Chile con comparacion visual, consulta operativa, auth Supabase, historial, API v1 y base para organizaciones y monetizacion por API.
 
 ## Estado actual
 
+- Fase 0 completada.
+- Fase 1 en curso: datos reales, API keys, multi-tenant, audit log, rate limiting y exportacion masiva.
 - Auth Supabase integrada.
 - Upload soporta JPG, PNG, WebP y TIFF hasta 50 MB.
 - La comparacion persiste score, clasificacion, recomendacion y senales forenses.
 - Historial y detalle estan protegidos por sesion.
 - Build de produccion y smoke local pasan.
 - En Vercel, el preview activo responde y el dominio canonico actual necesita correccion.
+
+## Roadmap operativo
+
+La fuente de verdad del desarrollo es `ROADMAP.md`.
+
+Resumen de fases:
+
+- Fase 0 - Completada: landing, dashboard, motor de comparacion, API v1, auth, historial y PDF report
+- Fase 1 - En curso: INAPI, API keys self-service, organizaciones, audit log, quotas y exportacion
+- Fase 2 - Planificada: registrabilidad IA, vigilancia, batch compare, webhooks, analytics, SDK
+- Fase 3 - Planificada: expansion LATAM, motor multimodal, white-label, marketplace juridico
+
+Criterio de salida de Fase 1:
+
+1. Sync INAPI con al menos 10K marcas reales
+2. Portal de API keys con emision, revocacion y uso en tiempo real
+3. Rate limiting efectivo sobre el limite configurado
 
 ## Flujo principal
 

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
-import { API_PORTAL_MARCAS } from "@/lib/api-portal-data"
-import { resetSearchEngine } from "@/lib/search-engine"
+import { searchTrademarkRecords } from "@/lib/trademark-records"
 import type { SearchFilters } from "@/types/marca"
 
 export const runtime = "nodejs"
@@ -33,16 +32,6 @@ function parseFilters(searchParams: URLSearchParams): SearchFilters {
   }
 }
 
-function matchesFilters(marca: (typeof API_PORTAL_MARCAS)[number], filters: SearchFilters) {
-  if (filters.estado && marca.estado !== filters.estado) return false
-  if (filters.pais && marca.pais !== filters.pais.toUpperCase()) return false
-  if (filters.fechaDesde && new Date(marca.fecha) < new Date(filters.fechaDesde)) return false
-  if (filters.fechaHasta && new Date(marca.fecha) > new Date(filters.fechaHasta)) return false
-  if (filters.niza?.length && !filters.niza.some((item) => marca.niza.includes(item))) return false
-  if (filters.viena?.length && !filters.viena.some((item) => marca.viena.includes(item))) return false
-  return true
-}
-
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url)
@@ -58,31 +47,24 @@ export async function GET(request: Request) {
     const page = pageParam ? Math.max(1, Math.floor(Number(pageParam) || 1)) : 1
     const limit = limitParam ? Math.max(1, Math.floor(Number(limitParam) || 10)) : 0
     const filters = parseFilters(url.searchParams)
-
-    const engine = resetSearchEngine(API_PORTAL_MARCAS)
     const startedAt = performance.now()
-    const allResults = query
-      ? engine.search({ query, type, filters })
-      : API_PORTAL_MARCAS.filter((marca) => matchesFilters(marca, filters)).map((marca) => ({
-          marca,
-          relevancia: 0,
-          matchType: "partial" as const,
-        }))
-
-    const total = allResults.length
-    const isPaginated = limit > 0
-    const totalPages = isPaginated ? Math.max(1, Math.ceil(total / limit)) : 1
-    const from = isPaginated ? (page - 1) * limit : 0
-    const results = isPaginated ? allResults.slice(from, from + limit) : allResults
+    const response = await searchTrademarkRecords({
+      query,
+      type,
+      filters,
+      page,
+      limit,
+    })
     const tiempo_ms = Math.round(performance.now() - startedAt)
 
     return NextResponse.json(
       {
-        results,
-        total,
-        page,
-        totalPages,
-        limit: isPaginated ? limit : total || 0,
+        results: response.results,
+        total: response.total,
+        page: response.page,
+        totalPages: response.totalPages,
+        limit: response.limit,
+        source: response.source,
         tiempo_ms,
       },
       { status: 200 },

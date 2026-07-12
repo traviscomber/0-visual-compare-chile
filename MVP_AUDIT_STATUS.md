@@ -1,260 +1,151 @@
 # MVP Audit Status - Visual Compare Chile
 
-Fecha de auditoria: 2026-07-11 / 2026-07-12
+Fecha de auditoria: 2026-07-12
 
 ## Fuente de verdad
 
 - `ROADMAP.md`
 - `README.md`
-- `DEPLOYMENT_CHECKLIST.md`
 - `RELEASE_GATE.md`
+- `VERCEL_SUPABASE_CANONICAL_FIX.md`
 
 ## Resumen ejecutivo
 
-Estado local del MVP:
+Estado del producto:
+
+- Fase 0: completada
+- Fase 1: en curso
+- Fase 2 y Fase 3: aun no iniciadas como entregables productivos
+
+Estado tecnico local:
 
 - `tsc`: pasa
 - `build`: pasa
 - `smoke`: pasa localmente
-- `smoke` pasa sobre `next start` en `http://127.0.0.1:3014`
-- `api/v1`: alineada de forma razonable con el flujo principal
-- `settings`, `history`, `compare`, `comparisons/[id]`: revisados y consolidados
-- catalogo Niza/Viena: limpio, sin mojibake y visible en `consulta` y detalle operativo
-- `consulta` ya no carga el dataset completo en el cliente
-- `compare` difiere `ComparisonResultView` hasta tener un resultado
+- `api/v1`: alineada con el flujo principal
+- `compare`, `history`, `comparisons/[id]`, `consulta`, `settings`: consolidados para el MVP base
 
-Estado externo del MVP:
+Estado tecnico publico:
 
-- Preview Vercel actual: reachable, pero sirve contrato viejo
-- Dominio canonico: roto (`404`)
-- Release gate publico: no puede pasar mientras Vercel no sirva esta build
-
-Conclusion actual:
-
-- El MVP no puede declararse terminado todavia.
-- La razon ya no es deuda local importante.
-- La razon es falta de evidencia publica sobre deploy correcto, dominio correcto y callback correcta.
-
-## Auditoria contra ROADMAP.md
-
-### 1. Auth y rutas estables
-
-Estado: `Localmente probado`
-
-Evidencia:
-
-- `/auth/login` responde `200` en smoke local
-- `/auth/signup` redirige a `/auth/sign-up`
-- `/compare`, `/dashboard`, `/history`, `/settings`, `/reportes`, `/admin` redirigen a login cuando no hay sesion
-- `proxy.ts` reemplaza middleware legacy y mantiene proteccion de rutas
-
-Prueba local:
-
-- `pnpm smoke`
-
-Falta para cierre completo:
-
-- verificar el mismo comportamiento en el deployment publico correcto
-
-### 2. Consulta consistente
-
-Estado: `Localmente probado`
-
-Evidencia:
-
-- `/consulta` existe como ruta publica
-- `/api/v1/search`
-- `/api/v1/search/niza`
-- `/api/v1/search/viena`
-- `/api/v1/registros/[id]`
-- `lib/classification-knowledge.ts` toma titulos canonicos desde `API_PORTAL_NIZA` y `API_PORTAL_VIENA`
-- `consulta` y `comparisons/[id]` muestran etiquetas operativas junto a codigos Niza/Viena
-- smoke local pasa sobre `search`, `niza`, `viena` y `registros`
-
-Prueba local:
-
-- `pnpm smoke`
-
-Falta para cierre completo:
-
-- misma evidencia en Vercel con el deployment actualizado
-
-### 3. Upload consistente
-
-Estado: `Localmente consolidado`
-
-Evidencia:
-
-- `app/api/images/upload/route.ts` usa validacion, deduplicacion, OCR, EXIF, ELA y `usage_logs`
-- `app/api/v1/images/route.ts` fue alineada para acercarse al mismo motor
-- upload soporta JPG, PNG, WebP y TIFF hasta 50 MB
-
-Prueba local disponible:
-
-- `pnpm build`
-- revision de contrato en codigo
-
-Falta para cierre completo:
-
-- verificacion real con credenciales y Supabase publico
-- smoke/manual test publico con usuario real
-
-### 4. Comparacion confiable
-
-Estado: `Localmente consolidado`
-
-Evidencia:
-
-- `app/api/compare/route.ts` usa scoring real, EXIF, ELA, OCR, diff y persistencia
-- `app/api/v1/compare/route.ts` fue alineada al motor principal
-- `components/app/comparison-result-view.tsx` expone contrato visible del resultado
-- `app/(app)/comparisons/[id]/page.tsx` muestra resumen operativo, cobertura y ruta sugerida
-- `components/app/comparison-result-view.tsx` expone etiquetas Niza/Viena legibles y links directos a `/consulta`
-
-Prueba local disponible:
-
-- `pnpm build`
-- `pnpm smoke`
-- revision de payload y vistas
-
-Falta para cierre completo:
-
-- prueba real con imagenes autenticas sobre Supabase/Vercel publicos
-
-### 5. Historial, detalle, API keys y QA final
-
-Estado: `Mayormente cubierto localmente`
-
-Evidencia:
-
-- `/history` existe y fue limpiado
-- `/comparisons/[id]` existe y fue reforzado
-- `/settings` fue limpiado
-- `components/app/api-key-manager.tsx` y `components/app/profile-form.tsx` fueron consolidados
-- `app/api/account/api-keys/*` ahora tienen validaciones y `usage_logs`
-
-Prueba local:
-
-- `pnpm build`
-- `pnpm smoke`
-
-Falta para cierre completo:
-
-- prueba autenticada real con usuario Supabase
-- verificar creacion/revocacion real de API keys sobre el proyecto correcto
-
-### 6. ES/EN sin rutas rotas
-
-Estado: `Probado localmente`
-
-Evidencia:
-
-- `/es` redirige a `/`
-- `/en` redirige a `/`
-- `/es/compare` redirige a `/compare`
-- `/en/history` redirige a `/history`
-
-Prueba local:
-
-- `pnpm smoke`
-
-Falta para cierre completo:
-
-- repetir esta evidencia en el deploy publico correcto
-
-### 7. Supabase y Vercel estables
-
-Estado: `No probado publicamente`
-
-Evidencia local:
-
-- `/api/v1/health` y `/api/health` publican:
-  - `revision`
-  - `host`
-  - `config.supabase_public_env`
-  - `config.supabase_service_env`
-  - `config.supabase_url_host`
-  - `config.supabase_project_ref`
-  - `config.site_origin`
-  - `config.callback_urls`
-- `release:gate` existe
-- `audit:deploy` existe
-- `git rev-parse HEAD` actual:
-  - `2cd759ddd0ec7216319d36c7d536e2a4b1f6d636`
-- `http://127.0.0.1:3014/api/v1/health` devuelve:
-  - `revision: "local"`
-  - `host: "localhost:3014"`
-  - `config.supabase_project_ref: "btyylseeswnvsuaojvjx"`
-  - `config.site_origin: "https://v0-visual-compare-chile.vercel.app"`
-  - `config.callback_urls: ["https://v0-visual-compare-chile.vercel.app/auth/callback"]`
-- preview publico actual devuelve contrato correcto:
-  - `revision: "2cd759ddd0ec7216319d36c7d536e2a4b1f6d636"`
-  - `host: "v0-visual-compare-chile-git-main-travis-projects-c14a785a.vercel.app"`
-  - `config.supabase_project_ref: "btyylseeswnvsuaojvjx"`
-  - `config.site_origin: "https://v0-visual-compare-chile-git-main-travis-projects-c14a785a.vercel.app"`
-  - `config.callback_urls` solo con URLs preview
-
-Bloqueo externo actual:
-
-- preview actual ya sirve el commit correcto
-- dominio canonico `https://v0-visual-compare-chile.vercel.app/` sigue devolviendo `404`
-- `site_origin` publico sigue apuntando al preview
-- `callback_urls` publicas siguen sin incluir la URL canonica esperada
-- `pnpm audit:deploy` contra URLs publicas actuales devuelve:
-  - `PASS active root`
-  - `PASS active health`
-  - `PASS active revision`
-  - `PASS active supabase project`
-  - `FAIL active site origin`
-  - `FAIL active callback url`
-  - `FAIL canonical root`
-  - `FAIL canonical health`
+- el preview activo ya sirvio el commit correcto
+- el dominio canonico sigue roto
+- la callback publica canonica sigue desalineada
 
 Conclusion:
 
-- este punto es el bloqueador real del cierre del objetivo
-- ya no es un problema de codigo ni de SHA en Vercel
-- ahora es un problema de configuracion publica de dominio y callback
+- la base entregada de Fase 0 esta tecnicamente consolidada
+- el cierre publico del deploy sigue bloqueado por configuracion externa
+- el trabajo prioritario de producto ya debe medirse contra Fase 1
 
-## Comandos de evidencia local ya verificados
+## Cobertura cerrada de Fase 0
 
-```bash
-pnpm exec tsc --noEmit
-pnpm build
-pnpm smoke
-```
+Entregado y con base tecnica visible en el repo:
 
-Validado tambien con `next start` local:
+- landing y branding
+- dashboard con KPIs reales desde Supabase
+- auth Supabase con roles y rutas protegidas
+- API v1 publica
+- motor de comparacion visual
+- historial y CRUD de comparaciones
+- PDF report descargable
+- catalogos Niza y Viena sembrados y visibles
 
-```bash
-SMOKE_BASE_URL=http://127.0.0.1:3014 pnpm smoke
-```
+Evidencia local consolidada:
 
-## Comando de cierre publico pendiente
+- `pnpm exec tsc --noEmit`
+- `pnpm build`
+- `pnpm smoke`
 
-```bash
-ACTIVE_DEPLOYMENT_URL=https://your-active-deployment.vercel.app
-CANONICAL_DEPLOYMENT_URL=https://your-canonical-domain.vercel.app
-EXPECTED_REVISION=<git-sha>
-EXPECTED_SUPABASE_PROJECT_REF=<supabase-ref>
-EXPECTED_SITE_ORIGIN=https://your-canonical-domain.vercel.app
-EXPECTED_CALLBACK_URL=https://your-canonical-domain.vercel.app/auth/callback
-pnpm release:gate
-```
+## Estado auditado frente a Fase 1
 
-## Criterio de cierre real
+### 1. Integracion INAPI
 
-El objetivo puede considerarse completo solo si:
+Estado: `Pendiente`
 
-1. `pnpm release:gate` pasa contra la URL publica real
-2. el dominio canonico deja de responder `404`
-3. el health publico devuelve revision y config completas
-4. el deploy publico coincide con el checkout actual
+Existe contexto funcional para consulta y persistencia, pero no hay evidencia cerrada en esta auditoria de:
 
-## Siguiente paso operativo
+- scraper estable
+- sync periodico
+- carga validada de 10K marcas reales
 
-1. Reasignar o restaurar el dominio canonico en Vercel
-2. Confirmar `NEXT_PUBLIC_SITE_URL=https://v0-visual-compare-chile.vercel.app`
-3. Confirmar callback canonica en Supabase Auth
-4. Redeploy de produccion
-5. Repetir `pnpm release:gate` contra la URL publica real
+### 2. API key management self-service
+
+Estado: `Parcial`
+
+Existe base en UI y endpoints de cuenta, pero Fase 1 exige evidencia adicional de:
+
+- emision real
+- revocacion real
+- medicion de uso en tiempo real
+- quotas ligadas a plan o tenant
+
+### 3. Organizaciones y roles multi-tenant
+
+Estado: `Pendiente`
+
+El auth base y roles iniciales existen, pero aun no se puede marcar cerrada la capa multi-tenant de Fase 1 sin:
+
+- organizaciones
+- membresias
+- aislamiento de recursos por tenant
+- permisos `admin`, `editor`, `member`
+
+### 4. Audit log completo
+
+Estado: `Parcial`
+
+Hay trazas y `usage_logs` en partes del flujo, pero falta trazabilidad integral de acciones criticas:
+
+- autenticacion
+- emision o revocacion de claves
+- cambios de rol
+- comparaciones y exportaciones sensibles
+
+### 5. Rate limiting por API key
+
+Estado: `Pendiente`
+
+No hay evidencia cerrada en esta auditoria de bloqueo efectivo con Upstash Redis sobre limites configurados por plan o clave.
+
+### 6. Exportacion masiva CSV + Excel
+
+Estado: `Pendiente`
+
+La capacidad de exportacion existe en el alcance historico del MVP, pero Fase 1 pide una salida masiva y operativa para busquedas y comparaciones que aun no queda auditada como entregable terminado.
+
+## Criterio de salida de Fase 1
+
+Fase 1 solo puede cerrarse cuando exista evidencia publica o verificable de:
+
+1. sync INAPI con al menos 10K marcas reales
+2. portal de API keys que emite, revoca y mide uso en tiempo real
+3. rate limiting que bloquea requests sobre el limite configurado
+
+## Bloqueo externo actual de deploy
+
+Situacion confirmada:
+
+- el preview activo ya sirvio el commit correcto
+- el dominio canonico `https://v0-visual-compare-chile.vercel.app/` sigue roto
+- `site_origin` publico sigue apuntando al preview
+- la callback canonica publica no esta cerrada
+
+Impacto:
+
+- no bloquea seguir desarrollando Fase 1 localmente
+- si bloquea declarar estable el despliegue publico de referencia
+
+## Siguiente foco recomendado
+
+### Track producto
+
+1. Integracion INAPI con primer lote real medible
+2. Portal de API keys con uso en tiempo real
+3. Rate limiting efectivo por clave
+
+### Track plataforma
+
+1. Restaurar dominio canonico en Vercel
+2. Alinear `NEXT_PUBLIC_SITE_URL`
+3. Alinear callback canonica en Supabase Auth
+4. Repetir `pnpm release:gate`

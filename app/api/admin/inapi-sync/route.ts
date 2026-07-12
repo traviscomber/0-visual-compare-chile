@@ -1,0 +1,138 @@
+import { NextResponse } from "next/server"
+import { runInapiSync, runInapiSyncBatch } from "@/lib/inapi/sync"
+import { isInapiPresetKey } from "@/lib/inapi/presets"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { createClient } from "@/lib/supabase/server"
+import type { InapiMatchMode, InapiSearchType } from "@/lib/inapi/client"
+
+export const runtime = "nodejs"
+
+const ALLOWED_SEARCH_TYPES: InapiSearchType[] = ["nombre", "solicitante", "clase", "solicitud", "registro"]
+const ALLOWED_MATCH_MODES: InapiMatchMode[] = ["1", "2", "3", "4"]
+
+export async function GET() {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: "No autorizado." }, { status: 401 })
+    }
+
+    const admin = createAdminClient()
+    const [runsResponse, recordsResponse, lastCompletedResponse] = await Promise.all([
+      admin
+        .from("inapi_sync_runs")
+        .select(
+          "id, source, status, search_type, query, total_fetched, inserted_count, updated_count, metadata, error_message, started_at, finished_at, created_at",
+        )
+        .order("created_at", { ascending: false })
+        .limit(20),
+      admin.from("trademark_records").select("id", { count: "exact", head: true }),
+      admin
+        .from("inapi_sync_runs")
+        .select("id, created_at, finished_at, total_fetched, inserted_count, updated_count, metadata")
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
+        .limit(1),
+    ])
+
+    if (runsResponse.error) {
+      throw runsResponse.error
+    }
+
+    return NextResponse.json(
+      {
+        runs: runsResponse.data ?? [],
+        stats: {
+          totalRecords: recordsResponse.count ?? 0,
+          lastCompletedRun: lastCompletedResponse.data?.[0] ?? null,
+        },
+      },
+      { status: 200 },
+    )
+  } catch (error) {
+    console.error("[v0] list inapi sync runs error", error)
+    return NextResponse.json({ error: "No fue posible cargar las sincronizaciones INAPI." }, { status: 500 })
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: "No autorizado." }, { status: 401 })
+    }
+
+    const body = await request.json().catch(() => null)
+    const query = typeof body?.query === "string" ? body.query.trim() : ""
+    const queries =
+      Array.isArray(body?.queries) && body.queries.every((item: unknown) => typeof item === "string")
+        ? body.queries.map((item: string) => item.trim()).filter(Boolean)
+        : []
+    const searchType = isInapiSearchType(body?.searchType) ? body.searchType : "nombre"
+    const matchMode = isInapiMatchMode(body?.matchMode) ? body.matchMode : "2"
+    const preset = isInapiPresetKey(body?.preset) ? body.preset : null
+    const delayMs =
+      typeof body?.delayMs === "number" && Number.isFinite(body.delayMs) ? Math.max(0, Math.floor(body.delayMs)) : 400
+
+    if (!query && !queries.length && !preset) {
+      return NextResponse.json(
+        { error: "Debes indicar un query, una lista de queries o un preset para sincronizar desde INAPI." },
+        { status: 400 },
+      )
+    }
+
+    const result =
+      preset || queries.length > 1
+        ? await runInapiSyncBatch({
+            jobs: queries.length
+              ? queries.map((item) => ({
+                  query: item,
+                  searchType,
+                }))
+              : undefined,
+            preset: preset ?? undefined,
+            matchMode,
+            initiatedBy: user.id,
+            delayMs,
+          })
+        : await runInapiSync({
+            query: query || queries[0],
+            searchType,
+            matchMode,
+            initiatedBy: user.id,
+          })
+
+    return NextResponse.json(
+      {
+        ok: true,
+        ...result,
+      },
+      { status: 201 },
+    )
+  } catch (error) {
+    console.error("[v0] run inapi sync error", error)
+    return NextResponse.json(
+      {
+        error: "No fue posible ejecutar la sincronizacion INAPI.",
+        detail: String(error),
+      },
+      { status: 500 },
+    )
+  }
+}
+
+function isInapiSearchType(value: unknown): value is InapiSearchType {
+  return typeof value === "string" && ALLOWED_SEARCH_TYPES.includes(value as InapiSearchType)
+}
+
+function isInapiMatchMode(value: unknown): value is InapiMatchMode {
+  return typeof value === "string" && ALLOWED_MATCH_MODES.includes(value as InapiMatchMode)
+}

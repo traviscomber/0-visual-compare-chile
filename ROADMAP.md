@@ -1,99 +1,131 @@
-# Roadmap MVP - Visual Compare Chile
+# Roadmap - Visual Compare Chile
 
-## Objetivo
-Entregar en 8 semanas un MVP vendible y estable para comparar imagenes de marca, con autenticacion Supabase, flujo principal completo, localizacion ES/EN, historial, API compartida y deploy confiable en Vercel.
+## Fuente de verdad
 
-## Alcance congelado del MVP
-Incluye:
-- Login y signup con Supabase.
-- Rutas protegidas y session refresh.
-- Flujo principal de consulta, carga, comparacion e historial.
-- Capa compartida `api/v1` para search, compare, images, registros y usage.
-- Localizacion funcional entre ES/EN sin rutas rotas.
-- Configuracion de Supabase, claves API y deploy estable.
+Este documento reemplaza el roadmap anterior de "8 semanas" como referencia operativa principal del producto.
 
-Fuera de alcance por ahora:
-- Nuevos productos o flujos paralelos.
-- Redisenos grandes.
-- Automatizaciones complejas.
-- Dataset masivo o features enterprise.
+## Vision de producto
 
-## Estado actual
-- La UI principal ya existe.
-- La autenticacion ya esta integrada a Supabase.
-- La consulta por marcas ya tiene motor funcional y API v1 compartida.
-- La subida de imagenes y el motor de comparacion ya usan endpoints reales.
-- Se alinearon contratos de `api/v1` para `search`, `compare`, `images`, `comparisons` y `usage`.
-- Se corrigio el leakage de `comparisons` por usuario y la auditoria de `usage_logs` para legacy routes.
-- Falta cerrar una pasada final de coherencia en runtime limpio y verificar que Vercel use la build correcta.
+Construir una plataforma de inteligencia marcaria para Chile y luego LATAM, con:
 
-## Prioridad real
-1. Auth y rutas estables.
-2. Consulta consistente.
-3. Upload consistente.
-4. Comparacion confiable.
-5. Historial, detalle, API keys y QA final.
+- comparacion visual y contextual de marcas
+- busqueda por nombre, Niza y Viena
+- autenticacion y organizaciones multi-tenant
+- API publica con control de acceso, quotas y auditoria
+- motor IA para analisis, registrabilidad y vigilancia
 
-## Plan de 8 semanas
+## Estado por fases
 
-### Semana 1: Auditoria y congelamiento
-- Validar el flujo real en runtime limpio.
-- Identificar rutas rotas o desalineadas.
-- Confirmar variables de entorno y Supabase.
-- Definir lo que entra y lo que queda fuera del MVP.
+### Fase 0 - Completada (Julio 2026)
 
-### Semana 2: Auth y rutas
-- Cerrar login, signup, callback y logout.
-- Mantener middleware y session refresh.
-- Revisar proteccion de rutas principales.
-- Eliminar links o redirects inconsistentes.
+Entregado:
 
-### Semana 3: ES/EN y navegacion
-- Alinear localizacion sin romper la ruta canonica.
-- Confirmar comportamiento de `/es` y `/en`.
-- Mantener landing, dashboard y app core coherentes.
-- Revisar textos y labels criticos del flujo.
+- Landing page y branding base
+- Dashboard con KPIs reales desde Supabase
+- Agente IA con GPT-4o Vision para analisis de marcas
+- PDF report descargable con imagenes embebidas
+- Schema de base de datos de produccion con tablas, RLS y seed Niza + Viena
+- Auth Supabase con roles, login, signup y rutas protegidas
+- API v1 publica documentada
+- Motor de comparacion visual con score ponderado y deteccion de conflictos
+- Historial y comparaciones con CRUD, filtros y exportacion
+- KMZ Vitacura con GeoJSON publico y descargable
 
-### Semana 4: Consulta y API Portal
-- Cerrar `/consulta` sobre la fuente compartida.
-- Validar search por Niza y Viena.
-- Mantener contratos de `api/v1` estables.
-- Confirmar que los resultados no dependan de rutas legacy.
+### Fase 1 - En curso (Q3 2026)
 
-### Semana 5: Upload y comparacion
-- Verificar upload real.
-- Mantener deduplicacion y validaciones.
-- Asegurar compare estable y user-scoped.
-- Revisar persistencia de resultados y metadatos.
+Objetivo:
 
-### Semana 6: Historial y detalle
-- Cerrar historial.
-- Cerrar detalle de comparacion.
-- Revisar borrado seguro si sigue en scope.
-- Confirmar permisos por usuario.
+Cerrar la capa de datos reales, seguridad operativa y monetizacion basica del producto.
 
-### Semana 7: Settings, API keys y QA
-- Cerrar settings y gestion de claves API.
-- Revisar mensajes de error y estados vacios.
-- Ejecutar smoke test end to end.
-- Revisar regresiones visuales y de navegacion.
+Lineas de trabajo:
 
-### Semana 8: Deploy y estabilizacion
-- Verificar build de produccion.
-- Confirmar Vercel con variables correctas.
-- Validar dominio final y rutas publicas.
-- Dejar checklist de salida y handoff.
+- Integracion INAPI por scraping con sync periodico
+- API key management self-service
+- Organizaciones y roles multi-tenant: `admin`, `editor`, `member`
+- Audit log completo por usuario y accion
+- Rate limiting por API key con Upstash Redis
+- Exportacion masiva en CSV y Excel
 
-## Definicion de listo
-El MVP queda listo cuando:
-- Un usuario puede entrar, autenticarse y navegar sin rutas rotas.
-- Puede consultar, subir, comparar y revisar historial.
-- ES/EN no rompe el flujo.
-- Supabase y Vercel estan configurados de forma estable.
-- Smoke test y build de produccion pasan.
+### Fase 2 - Planificada (Q4 2026)
 
-## Foco inmediato
-- Validar `/consulta` con la fuente compartida.
-- Cerrar settings y claves API.
-- Verificar que no queden rutas rotas en el flujo principal.
-- Confirmar que el servidor desplegado use el checkout actualizado y no una build vieja.
+- Motor IA de registrabilidad antes de registrar
+- Vigilancia de marca con alertas
+- Comparacion en lote desde CSV
+- Webhooks y eventos HTTP
+- Dashboard analitico avanzado
+- SDK cliente para Node y Python
+
+### Fase 3 - Planificada (2027)
+
+- Cobertura LATAM: Argentina, Colombia y Mexico
+- Motor multimodal mejorado: fonetico + visual
+- White-label para estudios legales
+- Marketplace de agentes juridicos especializados
+
+## Criterio de salida de Fase 1
+
+Fase 1 no se considera cerrada hasta cumplir simultaneamente:
+
+1. El sync INAPI carga al menos 10.000 marcas reales
+2. El portal de API keys emite, revoca y mide uso en tiempo real
+3. El rate limiting bloquea requests sobre el limite configurado
+
+## Estado tecnico actual frente a Fase 1
+
+Base ya disponible desde Fase 0:
+
+- comparacion visual operativa
+- consulta por rutas `api/v1`
+- auth Supabase y rutas protegidas
+- historial y detalle persistidos
+- dashboard conectado a datos reales
+
+Bloqueadores fuera de codigo que siguen abiertos:
+
+- el dominio canonico actual de Vercel sigue roto
+- la callback publica canonica de Supabase/Vercel sigue desalineada
+
+Eso no cambia la prioridad de producto, pero si bloquea declarar el despliegue publico como completamente cerrado.
+
+## Orden operativo recomendado
+
+### Track 1 - Datos reales INAPI
+
+- definir contrato del scraper y persistencia incremental
+- cargar primer lote validado
+- dejar job repetible con metricas de sync
+- llegar a un primer umbral operativo de 10K marcas
+
+### Track 2 - API keys + quotas
+
+- cerrar UX de emision, rotacion y revocacion
+- persistir consumo por clave y por organizacion
+- exponer metrica de uso en tiempo real
+- enlazar quotas de plan a rate limiting
+
+### Track 3 - Multi-tenant y auditabilidad
+
+- modelar organizaciones, membresias y permisos
+- aislar recursos por tenant
+- registrar acciones criticas en audit log
+- cubrir altas, bajas, cambios de rol y uso de claves
+
+### Track 4 - Exportacion masiva
+
+- definir formato de salida de busquedas y comparaciones
+- soportar CSV primero y Excel despues
+- proteger exportaciones por permisos y quotas
+
+## Siguiente corte de entregables
+
+El siguiente hito real debe dejar evidencia concreta de:
+
+- primer sync INAPI con volumen medible
+- portal de API keys utilizable por usuario final
+- limites por API key realmente aplicados
+
+## Documentos complementarios
+
+- `README.md`: estado practico del repo y ejecucion local
+- `MVP_AUDIT_STATUS.md`: estado auditado del deploy y de la base tecnica
+- `VERCEL_SUPABASE_CANONICAL_FIX.md`: correccion pendiente de dominio y callback
