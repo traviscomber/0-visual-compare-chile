@@ -4,6 +4,9 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  --font-montserrat: "Aptos", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-code: "Consolas", "Cascadia Code", "SFMono-Regular", monospace;
+
   /* Visual Compare Chile Brand Palette */
   --background: #0f172a; /* Slate-950 */
   --foreground: #ffffff; /* White */

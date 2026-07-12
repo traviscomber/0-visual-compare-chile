@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
-import { createAdminClient } from "@/lib/supabase/admin"
 import { authenticateApiKey } from "@/lib/api/auth"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 export const runtime = "nodejs"
 
@@ -24,7 +24,6 @@ export async function GET(request: Request) {
     const offset = Number.isFinite(parsedOffset) ? Math.max(parsedOffset, 0) : 0
 
     const admin = createAdminClient()
-
     const { data: comparisons, error } = await admin
       .from("comparisons")
       .select("*")
@@ -33,21 +32,21 @@ export async function GET(request: Request) {
       .range(offset, offset + limit - 1)
 
     if (error) {
-      console.error("[v0] Query error:", error)
+      console.error("[v0] comparisons query error", error)
       return NextResponse.json({ error: "Failed to fetch comparisons" }, { status: 500 })
     }
 
     return NextResponse.json(
       {
-        data: comparisons || [],
+        data: comparisons ?? [],
         limit,
         offset,
-        count: comparisons?.length || 0,
+        count: comparisons?.length ?? 0,
       },
-      { status: 200 }
+      { status: 200 },
     )
   } catch (error) {
-    console.error("[v0] List error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("[v0] comparisons list error", error)
+    return NextResponse.json({ error: "Failed to fetch comparisons" }, { status: 500 })
   }
 }

@@ -1,37 +1,52 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
 import { createApiKey, listApiKeys } from "@/lib/api/key-management"
+import { createClient } from "@/lib/supabase/server"
 
 export const runtime = "nodejs"
+
+async function logUsage(userId: string, action: string, metadata: Record<string, unknown>) {
+  const supabase = await createClient()
+
+  await supabase.from("usage_logs").insert({
+    user_id: userId,
+    organization_id: userId,
+    action,
+    metadata,
+  })
+}
 
 export async function GET() {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "No autorizado." }, { status: 401 })
     }
 
     const keys = await listApiKeys(user.id)
     if (!keys) {
-      return NextResponse.json({ error: "Failed to load API keys" }, { status: 500 })
+      return NextResponse.json({ error: "No fue posible cargar las claves API." }, { status: 500 })
     }
 
-    return NextResponse.json({ keys: keys ?? [] }, { status: 200 })
+    return NextResponse.json({ keys }, { status: 200 })
   } catch (error) {
-    console.error("[v0] List api keys error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("[v0] list api keys error", error)
+    return NextResponse.json({ error: "Error interno al cargar las claves API." }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "No autorizado." }, { status: 401 })
     }
 
     const body = await request.json().catch(() => null)
@@ -40,21 +55,31 @@ export async function POST(request: Request) {
     const expiresAt = expiresAtValue ? new Date(expiresAtValue) : undefined
 
     if (!name) {
-      return NextResponse.json({ error: "API key name is required" }, { status: 400 })
+      return NextResponse.json({ error: "Debes indicar un nombre para la clave." }, { status: 400 })
     }
 
     if (expiresAt && Number.isNaN(expiresAt.getTime())) {
-      return NextResponse.json({ error: "Invalid expiration date" }, { status: 400 })
+      return NextResponse.json({ error: "La fecha de expiracion no es valida." }, { status: 400 })
+    }
+
+    if (expiresAt && expiresAt.getTime() <= Date.now()) {
+      return NextResponse.json({ error: "La fecha de expiracion debe ser futura." }, { status: 400 })
     }
 
     const created = await createApiKey(user.id, user.id, name, expiresAt)
     if (!created) {
-      return NextResponse.json({ error: "Failed to create API key" }, { status: 500 })
+      return NextResponse.json({ error: "No fue posible crear la clave API." }, { status: 500 })
     }
+
+    await logUsage(user.id, "api_key.created", {
+      api_key_id: created.id,
+      name,
+      expires_at: expiresAt?.toISOString() ?? null,
+    })
 
     return NextResponse.json({ key: created.key, id: created.id }, { status: 201 })
   } catch (error) {
-    console.error("[v0] Create api key error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("[v0] create api key error", error)
+    return NextResponse.json({ error: "Error interno al crear la clave API." }, { status: 500 })
   }
 }

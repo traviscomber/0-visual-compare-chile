@@ -1,16 +1,15 @@
 "use client"
 
 import type React from "react"
-
-import { createClient } from "@/lib/supabase/client"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { AlertCircle } from "lucide-react"
+import { useState } from "react"
+import { Logo } from "@/components/brand/logo"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-import { Logo } from "@/components/brand/logo"
-import { AlertCircle } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 import { safeInternalRedirect } from "@/lib/redirect"
 
 export function SignUpForm({ redirectTo }: { redirectTo: string }) {
@@ -31,19 +30,19 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
     setError(null)
 
     if (password !== repeatPassword) {
-      setError("Las contraseñas no coinciden")
+      setError("Las contrasenas no coinciden")
       setIsLoading(false)
       return
     }
 
     if (password.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres")
+      setError("La contrasena debe tener al menos 8 caracteres")
       setIsLoading(false)
       return
     }
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -55,7 +54,7 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
         },
       })
 
-      if (error) throw error
+      if (signUpError) throw signUpError
 
       if (data.session) {
         router.replace(next)
@@ -72,29 +71,29 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
   }
 
   return (
-    <div className="min-h-svh bg-background flex flex-col">
+    <div className="flex min-h-svh flex-col bg-background">
       <header className="border-b border-border">
-        <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <Link href="/" aria-label="Visual Compare Chile">
             <Logo />
           </Link>
         </div>
       </header>
 
-      <main className="flex-1 flex items-center justify-center px-4 py-12">
+      <main className="flex flex-1 items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           <div className="mb-8 text-center">
-            <h1 className="font-serif text-3xl text-foreground mb-2 text-balance">Crear cuenta</h1>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <h1 className="mb-2 text-balance font-serif text-3xl text-foreground">Crear cuenta</h1>
+            <p className="text-sm leading-relaxed text-muted-foreground">
               Comienza a verificar la consistencia visual de tus operaciones.
             </p>
           </div>
 
           <form
             onSubmit={handleSignUp}
-            className="bg-card border border-border rounded-lg p-6 flex flex-col gap-5"
+            className="flex flex-col gap-5 rounded-lg border border-border bg-card p-6"
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="fullName">Nombre completo</Label>
                 <Input
@@ -117,7 +116,7 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="email">Correo electrónico</Label>
+              <Label htmlFor="email">Correo electronico</Label>
               <Input
                 id="email"
                 type="email"
@@ -130,7 +129,7 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="password">Contraseña</Label>
+              <Label htmlFor="password">Contrasena</Label>
               <Input
                 id="password"
                 type="password"
@@ -139,11 +138,11 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
               />
-              <p className="text-xs text-muted-foreground">Mínimo 8 caracteres.</p>
+              <p className="text-xs text-muted-foreground">Minimo 8 caracteres.</p>
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="repeatPassword">Repetir contraseña</Label>
+              <Label htmlFor="repeatPassword">Repetir contrasena</Label>
               <Input
                 id="repeatPassword"
                 type="password"
@@ -156,7 +155,7 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
 
             {error && (
               <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
@@ -165,13 +164,13 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
               {isLoading ? "Creando cuenta..." : "Crear cuenta"}
             </Button>
 
-            <p className="text-sm text-muted-foreground text-center">
-              {"¿Ya tienes cuenta? "}
+            <p className="text-center text-sm text-muted-foreground">
+              Ya tienes cuenta?{" "}
               <Link
                 href={`/auth/login?redirectTo=${encodeURIComponent(next)}`}
                 className="text-primary underline-offset-4 hover:underline"
               >
-                Iniciar sesión
+                Iniciar sesion
               </Link>
             </p>
           </form>

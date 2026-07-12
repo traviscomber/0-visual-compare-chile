@@ -28,7 +28,7 @@ const phases = [
   {
     title: 'Semana 6',
     badge: 'Piloto',
-    items: ['Checklist de despliegue', 'Documentacion breve', 'Smoke tests y ajustes finales']
+    items: ['Checklist de despliegue', 'Documentacion breve', 'Smoke tests, audit de deploy y ajustes finales']
   }
 ]
 
@@ -84,6 +84,9 @@ export default function RoadmapPage() {
             <h2 className="mb-4 text-3xl font-bold">Criterio de salida</h2>
             <p className="text-muted-foreground">
               El MVP se considera listo cuando auth, upload, comparacion, historial y despliegue pasen build y smoke tests.
+            </p>
+            <p className="mx-auto mt-4 max-w-2xl text-sm text-muted-foreground">
+              En despliegue, eso incluye verificar revision y host desde el build stamp visible y desde <code>/api/v1/health</code>.
             </p>
           </div>
         </section>

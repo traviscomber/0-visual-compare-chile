@@ -1,12 +1,12 @@
-'use client'
+﻿'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Shield, ArrowLeft, Database, Globe } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
+import { Shield, ArrowLeft, Database, Search, Tags } from 'lucide-react'
 import { SearchResult, SearchFilters } from '@/types/marca'
 import { useSearch } from '@/hooks/useSearch'
-import { useInapiSearch } from '@/hooks/useInapiSearch'
-import { API_PORTAL_MARCAS } from '@/lib/api-portal-data'
+import { buildClassificationKnowledgeDigest, searchClassificationCatalog } from '@/lib/classification-knowledge'
 import {
   ExportDialog,
   FilterPanel,
@@ -16,38 +16,137 @@ import {
   StatsBar
 } from '@/components/api-portal'
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 8
 
 const DEFAULT_FILTERS: SearchFilters = {}
 
 export default function ConsultaPage() {
-  const [query, setQuery] = useState('')
-  const [activeQuery, setActiveQuery] = useState('')
-  const [searchType, setSearchType] = useState<'nombre' | 'niza' | 'viena'>('nombre')
+  return (
+    <Suspense fallback={<ConsultaLoadingState />}>
+      <ConsultaPageContent />
+    </Suspense>
+  )
+}
+
+function ConsultaPageContent() {
+  const searchParams = useSearchParams()
+  const initialQuery = getInitialQuery(searchParams)
+  const initialType = getInitialSearchType(searchParams)
+  const searchParamsKey = searchParams.toString()
+
+  const [query, setQuery] = useState(initialQuery)
+  const [activeQuery, setActiveQuery] = useState(initialQuery)
+  const [searchType, setSearchType] = useState<'nombre' | 'niza' | 'viena'>(initialType)
   const [filters, setFilters] = useState<SearchFilters>(DEFAULT_FILTERS)
   const [page, setPage] = useState(1)
   const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null)
   const [exportOpen, setExportOpen] = useState(false)
   const [lastSearchTime, setLastSearchTime] = useState(0)
-  const [dataSource, setDataSource] = useState<'inapi' | 'local'>('inapi')
+  const [totalInDatabase, setTotalInDatabase] = useState(0)
+  const [availableNiza, setAvailableNiza] = useState<string[]>([])
+  const [availableViena, setAvailableViena] = useState<string[]>([])
+  const classificationDigest = useMemo(() => buildClassificationKnowledgeDigest(), [])
+  const operationalSuggestions = useMemo(() => {
+    return {
+      niza: searchClassificationCatalog('niza', query, 3),
+      viena: searchClassificationCatalog('viena', query, 3),
+    }
+  }, [query])
 
-  // Fixed set of 45 Niza classes for filter panel
-  const availableNiza = useMemo(() =>
-    Array.from({ length: 45 }, (_, i) => String(i + 1)), [])
-  const availableViena = useMemo(() =>
-    Array.from(new Set(API_PORTAL_MARCAS.flatMap((m) => m.viena))).sort(), [])
+  const {
+    search,
+    resultados,
+    cargando,
+    getStats
+  } = useSearch()
 
-  // INAPI live search (primary)
-  const inapi = useInapiSearch()
+  useEffect(() => {
+    const loadStats = async () => {
+      const stats = await getStats()
+      if (stats) {
+        setTotalInDatabase(stats.totalMarcas)
+      }
+    }
 
-  // Local search (fallback / offline)
-  const local = useSearch(API_PORTAL_MARCAS)
+    void loadStats()
+  }, [getStats])
 
-  // Active results come from whichever source last ran
-  const activeResults = dataSource === 'inapi' ? inapi.results : local.resultados
-  const cargando = inapi.loading || local.cargando
+  useEffect(() => {
+    const loadClassifications = async () => {
+      try {
+        const [nizaResponse, vienaResponse] = await Promise.all([
+          fetch('/api/v1/search/niza'),
+          fetch('/api/v1/search/viena'),
+        ])
 
-  const runInapiSearch = async (
+        if (nizaResponse.ok) {
+          const payload = await nizaResponse.json()
+          setAvailableNiza(
+            Array.isArray(payload.results)
+              ? payload.results.map((item: { codigo: string }) => item.codigo)
+              : []
+          )
+        }
+
+        if (vienaResponse.ok) {
+          const payload = await vienaResponse.json()
+          setAvailableViena(
+            Array.isArray(payload.results)
+              ? payload.results.map((item: { codigo: string }) => item.codigo)
+              : []
+          )
+        }
+      } catch (error) {
+        console.error('[v0] Failed to load portal classifications:', error)
+      }
+    }
+
+    void loadClassifications()
+  }, [])
+
+  useEffect(() => {
+    const runInitialSearch = async () => {
+      const nextQuery = getInitialQuery(searchParams)
+      const nextType = getInitialSearchType(searchParams)
+
+      setQuery(nextQuery)
+      setActiveQuery(nextQuery)
+      setSearchType(nextType)
+      setFilters(DEFAULT_FILTERS)
+
+      const response = await search({
+        query: nextQuery,
+        type: nextType,
+        filters: DEFAULT_FILTERS
+      })
+      setLastSearchTime(response.tiempo_ms)
+    }
+
+    void runInitialSearch()
+  }, [search, searchParamsKey])
+
+  useEffect(() => {
+    setPage(1)
+  }, [resultados])
+
+  const filteredResults = useMemo(() => {
+    return resultados.filter((result) => {
+      if (filters.estado && result.marca.estado !== filters.estado) return false
+      if (filters.pais && result.marca.pais !== filters.pais.toUpperCase()) return false
+      if (filters.fechaDesde && new Date(result.marca.fecha) < new Date(filters.fechaDesde)) return false
+      if (filters.fechaHasta && new Date(result.marca.fecha) > new Date(filters.fechaHasta)) return false
+      if (filters.niza?.length && !filters.niza.some((item) => result.marca.niza.includes(item))) return false
+      if (filters.viena?.length && !filters.viena.some((item) => result.marca.viena.includes(item))) return false
+      return true
+    })
+  }, [filters, resultados])
+
+  const currentPageResults = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE
+    return filteredResults.slice(start, start + PAGE_SIZE)
+  }, [filteredResults, page])
+
+  const runSearch = async (
     nextQuery: string,
     nextType: 'nombre' | 'niza' | 'viena',
     nextFilters: SearchFilters = filters
@@ -55,55 +154,27 @@ export default function ConsultaPage() {
     setQuery(nextQuery)
     setActiveQuery(nextQuery)
     setSearchType(nextType)
-
-    // Map viena/niza type to INAPI type
-    const inapiType = nextType === 'niza' ? 'clase' : 'nombre'
-    const response = await inapi.search({
+    const response = await search({
       query: nextQuery,
-      type: inapiType,
-      filters: nextFilters,
+      type: nextType,
+      filters: nextFilters
     })
-
-    if (response.total > 0 || !inapi.error) {
-      setDataSource('inapi')
-      setLastSearchTime(response.tiempo_ms)
-    } else {
-      // INAPI unreachable — fall back to local
-      const localResp = await local.search({ query: nextQuery, type: nextType, filters: nextFilters })
-      setDataSource('local')
-      setLastSearchTime(localResp.tiempo_ms)
-    }
+    setLastSearchTime(response.tiempo_ms)
     setPage(1)
   }
 
   const runFilters = async (nextFilters: SearchFilters) => {
     setFilters(nextFilters)
-    if (activeQuery) {
-      await runInapiSearch(activeQuery, searchType, nextFilters)
-    }
+
+    const response = await search({
+      query: activeQuery.trim(),
+      type: searchType,
+      filters: nextFilters
+    })
+    setLastSearchTime(response.tiempo_ms)
+    setPage(1)
   }
 
-  // No initial search — wait for user input
-  useEffect(() => {
-    setPage(1)
-  }, [inapi.results, local.resultados])
-
-  const filteredResults = useMemo(() => {
-    return activeResults.filter((result) => {
-      if (filters.estado && result.marca.estado !== filters.estado) return false
-      if (filters.pais && result.marca.pais !== filters.pais.toUpperCase()) return false
-      if (filters.niza?.length && !filters.niza.some((item) => result.marca.niza.includes(item))) return false
-      if (filters.viena?.length && !filters.viena.some((item) => result.marca.viena.includes(item))) return false
-      return true
-    })
-  }, [filters, activeResults])
-
-  const currentPageResults = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE
-    return filteredResults.slice(start, start + PAGE_SIZE)
-  }, [filteredResults, page])
-
-  const totalInDatabase = 350000 // INAPI registry size (approximate)
   const activeResultCount = filteredResults.length
 
   return (
@@ -121,14 +192,6 @@ export default function ConsultaPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${
-              dataSource === 'inapi'
-                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-                : 'border-amber-500/30 bg-amber-500/10 text-amber-300'
-            }`}>
-              <Globe className="h-3 w-3" />
-              {dataSource === 'inapi' ? 'INAPI en vivo' : 'Base local'}
-            </div>
             <Link
               href="/panel"
               className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 transition hover:bg-white/10"
@@ -149,9 +212,9 @@ export default function ConsultaPage() {
             onQueryChange={setQuery}
             onSearchTypeChange={(type) => {
               setSearchType(type)
-              void runInapiSearch(query, type, filters)
+              void runSearch(query, type, filters)
             }}
-            onSearch={runInapiSearch}
+            onSearch={runSearch}
           />
 
           <div className="space-y-6">
@@ -159,6 +222,16 @@ export default function ConsultaPage() {
               totalResults={activeResultCount}
               searchTime={lastSearchTime}
               totalInDatabase={totalInDatabase}
+            />
+
+            <SearchContextCard
+              query={query}
+              searchType={searchType}
+              totalResults={activeResultCount}
+              availableNiza={availableNiza}
+              availableViena={availableViena}
+              classificationDigest={classificationDigest}
+              suggestions={operationalSuggestions}
             />
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
@@ -220,3 +293,132 @@ export default function ConsultaPage() {
     </div>
   )
 }
+
+function ConsultaLoadingState() {
+  return (
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.18),_transparent_35%),linear-gradient(135deg,_#020617_0%,_#0f172a_40%,_#111827_100%)]" />
+  )
+}
+
+function SearchContextCard({
+  query,
+  searchType,
+  totalResults,
+  availableNiza,
+  availableViena,
+  classificationDigest,
+  suggestions,
+}: {
+  query: string
+  searchType: 'nombre' | 'niza' | 'viena'
+  totalResults: number
+  availableNiza: string[]
+  availableViena: string[]
+  classificationDigest: { niza: { codigo: string; titulo: string; keywords: string[] }[]; viena: { codigo: string; titulo: string; keywords: string[] }[] }
+  suggestions: { niza: { codigo: string; titulo: string; keywords: string[] }[]; viena: { codigo: string; titulo: string; keywords: string[] }[] }
+}) {
+  const quickNiza = availableNiza.slice(0, 3)
+  const quickViena = availableViena.slice(0, 3)
+  const suggestedNiza = suggestions.niza
+  const suggestedViena = suggestions.viena
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
+      <div className="flex items-center gap-3">
+        <div className="rounded-full border border-white/10 bg-white/5 p-3 text-blue-200">
+          <Search className="h-4 w-4" />
+        </div>
+        <div>
+          <p className="text-sm text-slate-300">Contexto operativo</p>
+          <p className="text-lg font-semibold text-white">{query.trim() || 'Sin consulta activa'}</p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+        <BadgePill label="Tipo" value={searchType} />
+        <BadgePill label="Resultados" value={`${totalResults}`} />
+      </div>
+
+      <div className="mt-4 space-y-3">
+        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-slate-400">
+          <Tags className="h-3.5 w-3.5" />
+          Atajos rápidos
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {quickNiza.map((code) => (
+            <Link
+              key={`quick-niza-${code}`}
+              href={`/consulta?type=niza&q=${encodeURIComponent(code)}`}
+              className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-100 transition hover:bg-white/10"
+            >
+              Niza {code}
+            </Link>
+          ))}
+          {quickViena.map((code) => (
+            <Link
+              key={`quick-viena-${code}`}
+              href={`/consulta?type=viena&q=${encodeURIComponent(code)}`}
+              className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-100 transition hover:bg-white/10"
+            >
+              Viena {code}
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5 space-y-3">
+        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-slate-400">
+          <Database className="h-3.5 w-3.5" />
+          Sugerencias operativas
+        </div>
+        <div className="space-y-2">
+          {suggestedNiza.map((item) => (
+            <Link
+              key={`suggested-niza-${item.codigo}`}
+              href={`/consulta?type=niza&q=${encodeURIComponent(item.codigo)}`}
+              className="block rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
+            >
+              <p className="text-sm font-medium text-white">Niza {item.codigo}</p>
+              <p className="text-xs text-slate-400">{item.titulo}</p>
+            </Link>
+          ))}
+          {suggestedViena.map((item) => (
+            <Link
+              key={`suggested-viena-${item.codigo}`}
+              href={`/consulta?type=viena&q=${encodeURIComponent(item.codigo)}`}
+              className="block rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
+            >
+              <p className="text-sm font-medium text-white">Viena {item.codigo}</p>
+              <p className="text-xs text-slate-400">{item.titulo}</p>
+            </Link>
+          ))}
+        </div>
+        <p className="text-xs text-slate-500">
+          {classificationDigest.niza.length} clases Niza y {classificationDigest.viena.length} códigos Viena en el
+          catálogo operativo.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function BadgePill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-full border border-white/10 bg-slate-900/60 px-3 py-1 text-slate-200">
+      <span className="text-slate-400">{label}:</span> {value}
+    </div>
+  )
+}
+
+function getInitialQuery(searchParams: ReturnType<typeof useSearchParams>): string {
+  const q = searchParams.get('q')?.trim()
+  return q && q.length > 0 ? q : 'VISUAL'
+}
+
+function getInitialSearchType(searchParams: ReturnType<typeof useSearchParams>): 'nombre' | 'niza' | 'viena' {
+  const type = searchParams.get('type')
+  if (type === 'niza' || type === 'viena') return type
+  return 'nombre'
+}
+
+

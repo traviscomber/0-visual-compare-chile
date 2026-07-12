@@ -1,14 +1,15 @@
-import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
-import { createAdminClient } from "@/lib/supabase/admin"
-import { validateImageFile } from "@/lib/validations"
-import { calculateSha256 } from "@/lib/image/hash"
-import { calculatePerceptualHash } from "@/lib/image/phash"
-import { extractMetadata } from "@/lib/image/metadata"
-import { extractExif } from "@/lib/image/exif"
-import { computeEla } from "@/lib/image/ela"
-import { BUCKET, createSignedUrl } from "@/lib/storage"
 import { randomUUID } from "node:crypto"
+import { NextResponse } from "next/server"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { extractExif } from "@/lib/image/exif"
+import { calculateSha256 } from "@/lib/image/hash"
+import { computeEla } from "@/lib/image/ela"
+import { extractMetadata } from "@/lib/image/metadata"
+import { extractImageText } from "@/lib/image/ocr"
+import { calculatePerceptualHash } from "@/lib/image/phash"
+import { BUCKET, createSignedUrl } from "@/lib/storage"
+import { createClient } from "@/lib/supabase/server"
+import { validateImageFile } from "@/lib/validations"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
     const file = formData.get("file")
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: "No se recibió ningún archivo." }, { status: 400 })
+      return NextResponse.json({ error: "No se recibio ningun archivo." }, { status: 400 })
     }
 
     const validation = validateImageFile(file)
@@ -48,7 +49,6 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(arrayBuffer)
     const sha256 = calculateSha256(buffer)
 
-    // Dedup: if the user already has this exact file, return the existing record.
     const { data: existing } = await supabase
       .from("images")
       .select("id, filename, size_bytes, width, height, mime_type, storage_path")
@@ -59,6 +59,7 @@ export async function POST(request: Request) {
 
     if (existing) {
       const signedUrl = await createSignedUrl(existing.storage_path, 60 * 60)
+
       return NextResponse.json({
         id: existing.id,
         filename: existing.filename,
@@ -71,18 +72,18 @@ export async function POST(request: Request) {
       })
     }
 
-    // Run heavy analysis in parallel; failures degrade gracefully.
-    const [phash, meta, exif, ela] = await Promise.all([
-      calculatePerceptualHash(buffer).catch((err) => {
-        console.error("[v0] phash failed", err)
+    const [phash, meta, exif, ela, ocr] = await Promise.all([
+      calculatePerceptualHash(buffer).catch((error) => {
+        console.error("[v0] phash failed", error)
         return null
       }),
       extractMetadata(buffer),
       extractExif(buffer),
-      computeEla(buffer).catch((err) => {
-        console.error("[v0] ela failed", err)
+      computeEla(buffer).catch((error) => {
+        console.error("[v0] ela failed", error)
         return null
       }),
+      extractImageText(buffer),
     ])
 
     const imageId = randomUUID()
@@ -94,18 +95,21 @@ export async function POST(request: Request) {
       contentType: file.type,
       upsert: false,
     })
+
     if (uploadError) {
       return NextResponse.json({ error: "No pudimos subir la imagen al almacenamiento." }, { status: 500 })
     }
 
-    // Persist the ELA visualization (best effort).
     let elaPath: string | null = null
     if (ela && ela.png.length > 0) {
       const candidate = `${user.id}/${imageId}/ela.png`
       const { error: elaUploadError } = await admin.storage
         .from(BUCKET)
         .upload(candidate, ela.png, { contentType: "image/png", upsert: true })
-      if (!elaUploadError) elaPath = candidate
+
+      if (!elaUploadError) {
+        elaPath = candidate
+      }
     }
 
     const { data: imageRow, error: insertError } = await supabase
@@ -127,6 +131,11 @@ export async function POST(request: Request) {
           aspect_ratio: meta.aspect_ratio,
           avg_color: meta.avg_color,
           brightness: meta.brightness,
+          ocr: {
+            text: ocr.text,
+            confidence: ocr.confidence,
+            language: ocr.language,
+          },
           exif: {
             camera_make: exif.camera_make,
             camera_model: exif.camera_model,
@@ -146,9 +155,11 @@ export async function POST(request: Request) {
       .single()
 
     if (insertError || !imageRow) {
-      // Race condition fallback: another concurrent upload won the unique index.
       await admin.storage.from(BUCKET).remove([storagePath])
-      if (elaPath) await admin.storage.from(BUCKET).remove([elaPath])
+      if (elaPath) {
+        await admin.storage.from(BUCKET).remove([elaPath])
+      }
+
       const { data: raceWinner } = await supabase
         .from("images")
         .select("id, filename, size_bytes, width, height, mime_type, storage_path")
@@ -156,8 +167,10 @@ export async function POST(request: Request) {
         .eq("sha256", sha256)
         .eq("status", "active")
         .maybeSingle()
+
       if (raceWinner) {
         const signedUrl = await createSignedUrl(raceWinner.storage_path, 60 * 60)
+
         return NextResponse.json({
           id: raceWinner.id,
           filename: raceWinner.filename,
@@ -169,6 +182,7 @@ export async function POST(request: Request) {
           deduplicated: true,
         })
       }
+
       return NextResponse.json({ error: "No pudimos registrar la imagen en la base de datos." }, { status: 500 })
     }
 
@@ -182,10 +196,13 @@ export async function POST(request: Request) {
         mime_type: file.type,
         ela_score: ela?.tampering_score ?? null,
         had_exif: Object.keys(exif.raw).length > 0,
+        had_ocr: Boolean(ocr.text),
+        ocr_confidence: ocr.confidence,
       },
     })
 
     const signedUrl = await createSignedUrl(storagePath, 60 * 60)
+
     return NextResponse.json({
       id: imageRow.id,
       filename: imageRow.filename,

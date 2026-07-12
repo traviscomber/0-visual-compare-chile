@@ -1,7 +1,7 @@
 import Link from "next/link"
+import { CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle2 } from "lucide-react"
 import { safeInternalRedirect } from "@/lib/redirect"
 
 export default function SignUpSuccessPage({
@@ -20,12 +20,12 @@ export default function SignUpSuccessPage({
           </div>
           <CardTitle>Revisa tu correo</CardTitle>
           <CardDescription>
-            Te enviamos un correo de confirmación. Confirma tu cuenta para acceder a Visual Compare Chile.
+            Te enviamos un correo de confirmacion. Confirma tu cuenta para acceder a Visual Compare Chile.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Button asChild variant="outline" className="w-full bg-transparent">
-            <Link href={`/auth/login?redirectTo=${encodeURIComponent(next)}`}>Volver al inicio de sesión</Link>
+            <Link href={`/auth/login?redirectTo=${encodeURIComponent(next)}`}>Volver al inicio de sesion</Link>
           </Button>
         </CardContent>
       </Card>

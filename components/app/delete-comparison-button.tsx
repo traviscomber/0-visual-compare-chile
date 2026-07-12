@@ -3,9 +3,9 @@
 import { useState } from "react"
 import type React from "react"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Trash2, Loader2 } from "lucide-react"
+import { Loader2, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
 
 export function DeleteComparisonButton({
   id,
@@ -27,14 +27,14 @@ export function DeleteComparisonButton({
     event.preventDefault()
     event.stopPropagation()
     if (pending) return
-    if (!confirm("¿Eliminar esta comparación? Esta acción no se puede deshacer.")) return
+    if (!confirm("Eliminar esta comparacion? Esta accion no se puede deshacer.")) return
 
     setPending(true)
     try {
       const res = await fetch(`/api/comparisons/${id}`, { method: "DELETE" })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error ?? "No pudimos eliminar la comparación.")
-      toast.success("Comparación eliminada")
+      if (!res.ok) throw new Error(json.error ?? "No pudimos eliminar la comparacion.")
+      toast.success("Comparacion eliminada")
       if (redirectTo) {
         router.push(redirectTo)
       } else {
@@ -53,14 +53,10 @@ export function DeleteComparisonButton({
       disabled={pending}
       variant={variant}
       size={size}
-      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-      aria-label="Eliminar comparación"
+      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+      aria-label="Eliminar comparacion"
     >
-      {pending ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : (
-        <Trash2 className="h-4 w-4" />
-      )}
+      {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
       {!iconOnly && <span className="ml-1.5">Eliminar</span>}
     </Button>
   )

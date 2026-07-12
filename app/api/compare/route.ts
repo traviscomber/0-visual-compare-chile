@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { compareRequestSchema } from "@/lib/validations"
-import { calculateFinalScore } from "@/lib/image/scoring"
+import { buildBrandTaxonomyContext, mergeBrandTaxonomyContext } from "@/lib/brand-context"
+import { insertComparisonWithFallback } from "@/lib/comparison/persistence"
 import { generateDiffOverlay } from "@/lib/image/diff"
 import { compareExif, type ExifData } from "@/lib/image/exif"
+import { calculateFinalScore } from "@/lib/image/scoring"
 import { BUCKET, createSignedUrl } from "@/lib/storage"
-import { GPT4oMiniVisionService } from "@/lib/vision/gpt4o-mini"
-import type { ComparisonResultPayload, ExifSummary, ForensicSignals, AiAnalysis } from "@/types/comparison"
+import { compareRequestSchema } from "@/lib/validations"
+import type {
+  BrandTaxonomyContext,
+  ComparisonResultPayload,
+  ExifSummary,
+  ForensicSignals,
+} from "@/types/comparison"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -17,12 +23,14 @@ interface ImageMetadataJson {
   aspect_ratio?: number | null
   avg_color?: { r: number; g: number; b: number } | null
   brightness?: number | null
+  ocr?: { text?: string | null; confidence?: number | null; language?: string | null } | null
   exif?: Partial<ExifData> | null
   ela?: { score?: number | null; storage_path?: string | null } | null
 }
 
 function exifFromMetadata(meta: ImageMetadataJson | null): ExifData {
   const e = meta?.exif
+
   return {
     camera_make: e?.camera_make ?? null,
     camera_model: e?.camera_model ?? null,
@@ -39,6 +47,7 @@ function exifFromMetadata(meta: ImageMetadataJson | null): ExifData {
 
 function exifSummary(exif: ExifData): ExifSummary {
   const camera = [exif.camera_make, exif.camera_model].filter(Boolean).join(" ").trim() || null
+
   return {
     camera,
     software: exif.software,
@@ -62,12 +71,12 @@ export async function POST(request: Request) {
     const body = await request.json()
     const parse = compareRequestSchema.safeParse(body)
     if (!parse.success) {
-      return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 })
+      return NextResponse.json({ error: "Solicitud invalida." }, { status: 400 })
     }
 
     const { image_a_id, image_b_id } = parse.data
     if (image_a_id === image_b_id) {
-      return NextResponse.json({ error: "Selecciona dos imágenes distintas." }, { status: 400 })
+      return NextResponse.json({ error: "Selecciona dos imagenes distintas." }, { status: 400 })
     }
 
     const { data: images, error } = await supabase
@@ -77,13 +86,14 @@ export async function POST(request: Request) {
       .eq("status", "active")
 
     if (error || !images || images.length !== 2) {
-      return NextResponse.json({ error: "Imágenes no encontradas." }, { status: 404 })
+      return NextResponse.json({ error: "Imagenes no encontradas." }, { status: 404 })
     }
 
-    const imageA = images.find((i) => i.id === image_a_id)
-    const imageB = images.find((i) => i.id === image_b_id)
+    const imageA = images.find((image) => image.id === image_a_id)
+    const imageB = images.find((image) => image.id === image_b_id)
+
     if (!imageA || !imageB || imageA.user_id !== user.id || imageB.user_id !== user.id) {
-      return NextResponse.json({ error: "No tienes acceso a estas imágenes." }, { status: 403 })
+      return NextResponse.json({ error: "No tienes acceso a estas imagenes." }, { status: 403 })
     }
 
     const metaA = (imageA.metadata as ImageMetadataJson | null) ?? null
@@ -109,82 +119,54 @@ export async function POST(request: Request) {
       ela_alert: elaAlert,
     }
 
-    // Download both originals from storage so we can run pixel-level diffing.
+    const brandContextA = buildBrandTaxonomyContext({
+      image_id: imageA.id,
+      filename: imageA.filename,
+      metadata_hint: [metaA?.ocr?.text, metaA?.format, exifA.camera_make, exifA.camera_model, exifA.software]
+        .filter(Boolean)
+        .join(" "),
+    })
+    const brandContextB = buildBrandTaxonomyContext({
+      image_id: imageB.id,
+      filename: imageB.filename,
+      metadata_hint: [metaB?.ocr?.text, metaB?.format, exifB.camera_make, exifB.camera_model, exifB.software]
+        .filter(Boolean)
+        .join(" "),
+    })
+    const brandContext: BrandTaxonomyContext | null = mergeBrandTaxonomyContext(brandContextA, brandContextB)
+
     const admin = createAdminClient()
     const [downloadA, downloadB] = await Promise.all([
       admin.storage.from(BUCKET).download(imageA.storage_path),
       admin.storage.from(BUCKET).download(imageB.storage_path),
     ])
+
     if (downloadA.error || !downloadA.data || downloadB.error || !downloadB.data) {
-      return NextResponse.json({ error: "No pudimos cargar las imágenes para comparar." }, { status: 500 })
+      return NextResponse.json({ error: "No pudimos cargar las imagenes para comparar." }, { status: 500 })
     }
+
     const bufferA = Buffer.from(await downloadA.data.arrayBuffer())
     const bufferB = Buffer.from(await downloadB.data.arrayBuffer())
 
     let pixelSimilarity: number | null = null
     let diffStoragePath: string | null = null
-    let aiAnalysis: AiAnalysis | null = null
 
-    // Run diff overlay and AI analysis in parallel to save latency.
-    const [diffResult, aiResult] = await Promise.allSettled([
-      generateDiffOverlay(bufferA, bufferB),
-      process.env.OPENAI_API_KEY
-        ? (async () => {
-            const vision = new GPT4oMiniVisionService()
-            const base64A = bufferA.toString("base64")
-            const base64B = bufferB.toString("base64")
-            return vision.compareBrands({
-              imageA: base64A,
-              imageB: base64B,
-              brandName1: imageA.filename,
-              brandName2: imageB.filename,
-            })
-          })()
-        : Promise.resolve(null),
-    ])
+    try {
+      const overlay = await generateDiffOverlay(bufferA, bufferB)
+      pixelSimilarity = overlay.pixelSimilarity
 
-    if (diffResult.status === "fulfilled" && diffResult.value) {
-      pixelSimilarity = diffResult.value.pixelSimilarity
-      try {
-        const tempId = crypto.randomUUID()
-        const candidatePath = `${user.id}/diffs/${tempId}.png`
-        const { error: diffUploadError } = await admin.storage
-          .from(BUCKET)
-          .upload(candidatePath, diffResult.value.png, { contentType: "image/png", upsert: false })
-        if (!diffUploadError) diffStoragePath = candidatePath
-      } catch (err) {
-        console.error("[v0] diff upload failed", err)
-      }
-    } else if (diffResult.status === "rejected") {
-      console.error("[v0] diff overlay generation failed", diffResult.reason)
-    }
+      // Persist the overlay PNG so the result page and detail page can render it.
+      const tempId = crypto.randomUUID()
+      const candidatePath = `${user.id}/diffs/${tempId}.png`
+      const { error: diffUploadError } = await admin.storage
+        .from(BUCKET)
+        .upload(candidatePath, overlay.png, { contentType: "image/png", upsert: false })
 
-    if (aiResult.status === "fulfilled" && aiResult.value) {
-      const r = aiResult.value as {
-        colorSimilarity: number
-        typesSimilarity: number
-        styleSimilarity: number
-        similarities: string[]
-        differences: string[]
-        confusionRisk: string
-        overallScore: number
-        recommendation: string
-        colorsA?: string[]
-        colorsB?: string[]
-        tokensUsed?: number
+      if (!diffUploadError) {
+        diffStoragePath = candidatePath
       }
-      aiAnalysis = {
-        summary: r.recommendation ?? "",
-        similarities: r.similarities ?? [],
-        differences: r.differences ?? [],
-        ai_score: r.overallScore ?? 0,
-        confusion_risk: (["low", "medium", "high"].includes(r.confusionRisk) ? r.confusionRisk : "low") as AiAnalysis["confusion_risk"],
-        colors_a: r.colorsA ?? [],
-        colors_b: r.colorsB ?? [],
-        tokens_used: r.tokensUsed ?? 0,
-      }
-    } else if (aiResult.status === "rejected") {
-      console.error("[v0] AI analysis failed", aiResult.reason)
+    } catch (err) {
+      console.error("[v0] diff overlay generation failed", err)
     }
 
     const result = calculateFinalScore({
@@ -217,8 +199,13 @@ export async function POST(request: Request) {
       classification: result.classification,
       signals: result.signals,
       recommendation: result.recommendation,
+      ocr: {
+        a: metaA?.ocr ?? null,
+        b: metaB?.ocr ?? null,
+      },
       exif: { a: exifA, b: exifB },
       ela: { a: { score: elaScoreA, storage_path: elaPathA }, b: { score: elaScoreB, storage_path: elaPathB } },
+      brand_context: brandContext,
       images: {
         a: {
           id: imageA.id,
@@ -243,26 +230,25 @@ export async function POST(request: Request) {
       },
     }
 
-    const { data: comparison, error: insertError } = await supabase
-      .from("comparisons")
-      .insert({
-        user_id: user.id,
-        image_a_id: imageA.id,
-        image_b_id: imageB.id,
-        similarity_score: result.similarity_score,
-        classification: result.classification,
-        signals: result.signals,
-        recommendation: result.recommendation,
-        result_json: resultJson,
-        diff_storage_path: diffStoragePath,
-      })
-      .select()
-      .single()
+    const { data: comparison, error: insertError } = await insertComparisonWithFallback(supabase, {
+      user_id: user.id,
+      image_a_id: imageA.id,
+      image_b_id: imageB.id,
+      similarity_score: result.similarity_score,
+      classification: result.classification,
+      signals: result.signals,
+      recommendation: result.recommendation,
+      result_json: resultJson,
+      brand_context: brandContext,
+      diff_storage_path: diffStoragePath,
+    })
 
     if (insertError || !comparison) {
-      // Best-effort cleanup of orphan diff overlay
-      if (diffStoragePath) await admin.storage.from(BUCKET).remove([diffStoragePath])
-      return NextResponse.json({ error: "No pudimos guardar la comparación." }, { status: 500 })
+      if (diffStoragePath) {
+        await admin.storage.from(BUCKET).remove([diffStoragePath])
+      }
+
+      return NextResponse.json({ error: "No pudimos guardar la comparacion." }, { status: 500 })
     }
 
     await supabase.from("usage_logs").insert({
@@ -295,8 +281,10 @@ export async function POST(request: Request) {
       ela_url_b: elaUrlB,
       exif_a: exifSummary(exifA),
       exif_b: exifSummary(exifB),
+      brand_context: brandContext,
+      ocr_a: metaA?.ocr ?? null,
+      ocr_b: metaB?.ocr ?? null,
       created_at: comparison.created_at,
-      ai_analysis: aiAnalysis,
     }
 
     return NextResponse.json(payload)

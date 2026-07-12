@@ -9,17 +9,17 @@ const routes = [
   {
     title: 'Panel operativo',
     href: '/panel',
-    summary: 'Vista principal para comparar, revisar historial y moverse entre módulos del MVP.',
+    summary: 'Vista principal para comparar, revisar historial y moverse entre modulos del MVP.',
   },
   {
     title: 'Comparar',
     href: '/compare',
-    summary: 'Workbench de comparación visual con señales forenses y clasificacion operativa.',
+    summary: 'Workbench de comparacion visual con senales forenses y clasificacion operativa.',
   },
   {
     title: 'Consulta',
     href: '/consulta',
-    summary: 'Exploracion de marcas y registros con filtros y contexto de búsqueda.',
+    summary: 'Exploracion de marcas y registros con filtros y contexto de busqueda.',
   },
 ]
 
@@ -27,28 +27,30 @@ const apiSections = [
   {
     method: 'GET',
     path: '/api/v1/health',
-    description: 'Verifica estado del servicio y disponibilidad del backend.',
+    description: 'Verifica estado del servicio, revision activa, host servido y presencia de configuracion critica.',
     example: 'curl https://api.visualcompare.cl/api/v1/health',
   },
   {
     method: 'POST',
     path: '/api/v1/images',
-    description: 'Carga una imagen para su análisis y generación de identificadores.',
-    example: 'curl -X POST https://api.visualcompare.cl/api/v1/images -H "Authorization: Bearer YOUR_API_KEY" -F "image=@logo.jpg"',
+    description: 'Carga una imagen para su analisis y generacion de identificadores.',
+    example:
+      'curl -X POST https://api.visualcompare.cl/api/v1/images -H "Authorization: Bearer YOUR_API_KEY" -F "image=@logo.jpg"',
   },
   {
     method: 'POST',
     path: '/api/v1/compare',
-    description: 'Compara dos imágenes y devuelve score, clasificacion y trazas operativas.',
-    example: 'curl -X POST https://api.visualcompare.cl/api/v1/compare -H "Authorization: Bearer YOUR_API_KEY" -d \'{"image_a_id":"uuid-1","image_b_id":"uuid-2"}\'',
+    description: 'Compara dos imagenes y devuelve score, clasificacion y trazas operativas.',
+    example:
+      'curl -X POST https://api.visualcompare.cl/api/v1/compare -H "Authorization: Bearer YOUR_API_KEY" -d \'{"image_a_id":"uuid-1","image_b_id":"uuid-2"}\'',
   },
 ]
 
 const designTokens = [
-  { label: 'Canvas', value: 'slate-950 + blue/violet glows', helper: 'Fondo oscuro con profundidad neural' },
-  { label: 'Primary', value: 'blue-500 / cyan-500', helper: 'Accion principal y confianza' },
-  { label: 'Accent', value: 'violet-500 / emerald-500', helper: 'Energía visual y estados verificados' },
-  { label: 'Type', value: 'Montserrat + JetBrains Mono', helper: 'Editorial para interfaz, mono para datos' },
+  { label: 'Canvas', value: 'slate-950 + blue/cyan glows', helper: 'Fondo oscuro con profundidad neural.' },
+  { label: 'Primary', value: 'blue-500 / cyan-500', helper: 'Accion principal y confianza.' },
+  { label: 'Accent', value: 'emerald-500 / amber-400', helper: 'Estados, alertas y confirmaciones.' },
+  { label: 'Type', value: 'Serif + Mono', helper: 'Editorial para interfaz, mono para datos y API.' },
 ]
 
 const principles = [
@@ -60,7 +62,7 @@ const principles = [
   {
     title: 'Neural',
     icon: <Sparkles className="h-5 w-5" />,
-    text: 'Usar capas, glow controlado y contraste alto sin caer en ruido visual.',
+    text: 'Usar capas, glow controlado y contraste alto sin ruido visual gratuito.',
   },
   {
     title: 'Verificable',
@@ -70,11 +72,17 @@ const principles = [
   {
     title: 'Operativo',
     icon: <Orbit className="h-5 w-5" />,
-    text: 'La estética debe servir al trabajo real, no a una demo temporal.',
+    text: 'La estetica sirve al trabajo real, no a una demo temporal.',
   },
 ]
 
-export default function APIDocsPage() {
+const deploySignals = [
+  'Build stamp visible en footer y /panel con env, host y revision corta.',
+  'Health endpoint con status, version, revision, host y resumen de env de Supabase.',
+  'Smoke y audit de deploy deben ejecutarse contra la URL publica real antes de aceptar un release.',
+]
+
+export default function DocsPage() {
   const [copied, setCopied] = useState<string | null>(null)
 
   const copyToClipboard = async (value: string) => {
@@ -85,9 +93,9 @@ export default function APIDocsPage() {
 
   return (
     <main className="min-h-screen bg-[#020617] text-white">
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-32 h-96 w-96 rounded-full bg-cyan-500/20 blur-3xl" />
-        <div className="absolute top-44 -left-32 h-96 w-96 rounded-full bg-violet-500/20 blur-3xl" />
+        <div className="absolute top-44 -left-32 h-96 w-96 rounded-full bg-blue-500/15 blur-3xl" />
       </div>
 
       <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
@@ -103,10 +111,10 @@ export default function APIDocsPage() {
           </Link>
           <div className="flex items-center gap-3">
             <Link
-              href="/brandbook"
+              href="/docs/clasificaciones"
               className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100 transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
             >
-              Brandbook
+              Clasificaciones
             </Link>
             <Link href="/panel">
               <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">Ir al panel</Button>
@@ -123,18 +131,15 @@ export default function APIDocsPage() {
               Product docs
             </div>
             <h1 className="mt-6 max-w-3xl text-5xl font-black leading-[0.95] text-white md:text-7xl">
-              Documentacion del MVP con estilo N3uralia.
+              Documentacion operativa del MVP.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
-              Esta pagina resume el sistema visual, las rutas activas y la superficie tecnica del producto. Sirve como
-              guia para continuar el desarrollo sin volver al lenguaje de demo.
+              Esta pagina resume el sistema visual, las rutas activas y la superficie tecnica real del producto.
+              Sirve para continuar el desarrollo sin volver al lenguaje de demo.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                href="/panel"
-                className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950"
-              >
+              <Link href="/panel" className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950">
                 Abrir panel
               </Link>
               <Link
@@ -156,7 +161,7 @@ export default function APIDocsPage() {
             <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">Quick map</p>
             <div className="mt-5 space-y-4">
               {routes.map((route) => (
-                <a
+                <Link
                   key={route.href}
                   href={route.href}
                   className="block rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
@@ -169,7 +174,7 @@ export default function APIDocsPage() {
                     <ArrowRight className="h-4 w-4 text-cyan-300" />
                   </div>
                   <p className="mt-3 text-sm leading-6 text-slate-300">{route.summary}</p>
-                </a>
+                </Link>
               ))}
             </div>
           </div>
@@ -178,10 +183,7 @@ export default function APIDocsPage() {
 
       <section className="mx-auto grid max-w-6xl gap-4 px-6 pb-14 md:grid-cols-2 xl:grid-cols-4">
         {designTokens.map((token) => (
-          <article
-            key={token.label}
-            className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl"
-          >
+          <article key={token.label} className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
             <p className="text-xs uppercase tracking-[0.25em] text-slate-400">{token.label}</p>
             <p className="mt-2 text-lg font-semibold text-white">{token.value}</p>
             <p className="mt-3 text-sm leading-6 text-slate-300">{token.helper}</p>
@@ -204,7 +206,7 @@ export default function APIDocsPage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-6 pb-20">
-        <div className="rounded-[2rem] border border-cyan-400/20 bg-gradient-to-r from-blue-500/15 via-cyan-500/10 to-violet-500/15 p-8 backdrop-blur-xl">
+        <div className="rounded-[2rem] border border-cyan-400/20 bg-gradient-to-r from-blue-500/15 via-cyan-500/10 to-slate-900/20 p-8 backdrop-blur-xl">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-cyan-200">API surface</p>
@@ -214,9 +216,7 @@ export default function APIDocsPage() {
                 junto con el codigo.
               </p>
             </div>
-            <div className="text-sm text-slate-300">
-              Base public docs, brandbook y routes primarias para desarrollo continuo.
-            </div>
+            <div className="text-sm text-slate-300">Panel, compare y consulta como superficies primarias del producto.</div>
           </div>
 
           <div className="mt-8 grid gap-4">
@@ -241,6 +241,20 @@ export default function APIDocsPage() {
                 <pre className="mt-4 overflow-x-auto rounded-2xl border border-white/10 bg-slate-950/80 p-4 text-sm text-cyan-100">
                   {section.example}
                 </pre>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 pb-24">
+        <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur-xl">
+          <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">Deploy provenance</p>
+          <h2 className="mt-3 text-3xl font-black text-white">Senales minimas para validar el deploy correcto.</h2>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {deploySignals.map((signal) => (
+              <article key={signal} className="rounded-3xl border border-white/10 bg-slate-950/60 p-5">
+                <p className="text-sm leading-6 text-slate-300">{signal}</p>
               </article>
             ))}
           </div>

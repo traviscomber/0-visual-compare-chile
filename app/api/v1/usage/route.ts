@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
-import { createAdminClient } from "@/lib/supabase/admin"
 import { authenticateApiKey } from "@/lib/api/auth"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 export const runtime = "nodejs"
 
@@ -36,51 +36,44 @@ export async function GET(request: Request) {
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
-    // Get upload count today
     const { count: uploadsToday } = await admin
       .from("images")
       .select("*", { count: "exact" })
       .eq("organization_id", context.organization_id)
       .gte("created_at", today.toISOString())
 
-    // Get upload count this month
     const { count: uploadsMonth } = await admin
       .from("images")
       .select("*", { count: "exact" })
       .eq("organization_id", context.organization_id)
       .gte("created_at", monthStart.toISOString())
 
-    // Get comparison count today
     const { count: comparisonsToday } = await admin
       .from("comparisons")
       .select("*", { count: "exact" })
       .eq("organization_id", context.organization_id)
       .gte("created_at", today.toISOString())
 
-    // Get comparison count this month
     const { count: comparisonsMonth } = await admin
       .from("comparisons")
       .select("*", { count: "exact" })
       .eq("organization_id", context.organization_id)
       .gte("created_at", monthStart.toISOString())
 
-    // Get total storage used
     const { data: images } = await admin
       .from("images")
       .select("size_bytes")
       .eq("organization_id", context.organization_id)
 
-    const storageBytes = images?.reduce((acc, img) => acc + (img.size_bytes || 0), 0) || 0
+    const storageBytes = images?.reduce((sum, image) => sum + (image.size_bytes || 0), 0) || 0
     const storageGb = storageBytes / (1024 * 1024 * 1024)
 
-    // Get API calls today
     const { count: apiCallsToday } = await admin
       .from("usage_logs")
       .select("*", { count: "exact" })
       .eq("organization_id", context.organization_id)
       .gte("created_at", today.toISOString())
 
-    // Get API calls this month
     const { count: apiCallsMonth } = await admin
       .from("usage_logs")
       .select("*", { count: "exact" })
@@ -105,7 +98,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(stats, { status: 200 })
   } catch (error) {
-    console.error("[v0] Usage error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("[v0] usage error", error)
+    return NextResponse.json({ error: "Failed to fetch usage stats" }, { status: 500 })
   }
 }

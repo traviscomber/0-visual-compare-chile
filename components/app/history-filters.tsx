@@ -71,14 +71,14 @@ export function HistoryFilters({
   )
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:flex-wrap">
-      <div className="flex-1 min-w-[200px]">
-        <label className="text-xs font-medium text-muted-foreground">Buscar recomendación</label>
+    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+      <div className="min-w-[200px] flex-1">
+        <label className="text-xs font-medium text-muted-foreground">Buscar recomendacion</label>
         <div className="relative mt-1">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
-            placeholder="ej: idéntica, modificada"
+            placeholder="ej: identica, modificada"
             className="pl-8"
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -86,7 +86,7 @@ export function HistoryFilters({
       </div>
 
       <div className="w-full sm:w-48">
-        <label className="text-xs font-medium text-muted-foreground">Clasificación</label>
+        <label className="text-xs font-medium text-muted-foreground">Clasificacion</label>
         <Select value={defaultClassification} onValueChange={(v) => update("classification", v)}>
           <SelectTrigger className="mt-1">
             <SelectValue />
@@ -94,7 +94,7 @@ export function HistoryFilters({
           <SelectContent>
             <SelectItem value="all">Todas</SelectItem>
             <SelectItem value="exact_match">Coincidencia exacta</SelectItem>
-            <SelectItem value="near_duplicate">Casi idéntica</SelectItem>
+            <SelectItem value="near_duplicate">Casi identica</SelectItem>
             <SelectItem value="visually_similar">Visualmente similar</SelectItem>
             <SelectItem value="partially_similar">Parcialmente similar</SelectItem>
             <SelectItem value="different">Diferente</SelectItem>
@@ -104,7 +104,7 @@ export function HistoryFilters({
 
       <div className="flex gap-2 sm:w-56">
         <div className="flex-1">
-          <label className="text-xs font-medium text-muted-foreground">Mín %</label>
+          <label className="text-xs font-medium text-muted-foreground">Min %</label>
           <Input
             type="number"
             inputMode="numeric"
@@ -117,7 +117,7 @@ export function HistoryFilters({
           />
         </div>
         <div className="flex-1">
-          <label className="text-xs font-medium text-muted-foreground">Máx %</label>
+          <label className="text-xs font-medium text-muted-foreground">Max %</label>
           <Input
             type="number"
             inputMode="numeric"
@@ -134,7 +134,7 @@ export function HistoryFilters({
       <div className="flex items-center gap-2">
         {hasFilters && (
           <Button variant="ghost" size="sm" onClick={reset}>
-            <X className="h-4 w-4 mr-1" />
+            <X className="mr-1 h-4 w-4" />
             Limpiar
           </Button>
         )}

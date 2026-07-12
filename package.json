@@ -10,7 +10,9 @@
     "prestart": "pnpm check:env",
     "lint": "eslint .",
     "check:env": "node scripts/verify-env.mjs",
-    "smoke": "node scripts/smoke-check.mjs"
+    "smoke": "node scripts/smoke-check.mjs",
+    "audit:deploy": "node scripts/audit-deployment.mjs",
+    "release:gate": "node scripts/release-gate.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -70,6 +72,7 @@
     "sonner": "^1.7.1",
     "sql.js": "^1.14.1",
     "tailwind-merge": "^3.3.1",
+    "tesseract.js": "^7.0.0",
     "vaul": "^1.1.2",
     "zod": "^3.24.1"
   },

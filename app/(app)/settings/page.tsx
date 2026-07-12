@@ -1,15 +1,16 @@
-import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { ProfileForm } from "@/components/app/profile-form"
 import { ApiKeyManager } from "@/components/app/api-key-manager"
+import { ProfileForm } from "@/components/app/profile-form"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { createClient } from "@/lib/supabase/server"
 
 export const dynamic = "force-dynamic"
 
 export default async function SettingsPage() {
   const supabase = await createClient()
   let user = null
+
   try {
     const result = await supabase.auth.getUser()
     user = result.data.user
@@ -30,14 +31,14 @@ export default async function SettingsPage() {
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-10">
       <div>
-        <h1 className="font-serif text-3xl text-foreground">Configuración</h1>
+        <h1 className="font-serif text-3xl text-foreground">Configuracion</h1>
         <p className="mt-1 text-muted-foreground">Gestiona los datos de tu cuenta y empresa.</p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="font-serif text-lg">Cuenta</CardTitle>
-          <CardDescription>Resumen de identidad y alcance de tu sesión.</CardDescription>
+          <CardDescription>Resumen de identidad y alcance de tu sesion.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3 text-sm">
           <Badge variant="outline" className="border-slate-200/20 bg-slate-100/5 text-foreground">
@@ -66,12 +67,12 @@ export default async function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-serif text-lg">Seguridad</CardTitle>
-          <CardDescription>Tu sesión está protegida con autenticación de Supabase.</CardDescription>
+          <CardDescription>Tu sesion esta protegida con autenticacion de Supabase.</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Para cambiar tu contraseña, cierra sesión e inicia el flujo de recuperación desde la pantalla
-            de inicio de sesión. Próximamente podrás hacerlo directamente desde aquí.
+            Para cambiar tu contrasena, cierra sesion e inicia el flujo de recuperacion desde la pantalla de inicio de
+            sesion. Proximamente podras hacerlo directamente desde aqui.
           </p>
         </CardContent>
       </Card>

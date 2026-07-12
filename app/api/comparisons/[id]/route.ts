@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { createClient } from "@/lib/supabase/server"
 import { BUCKET } from "@/lib/storage"
 
 export const runtime = "nodejs"
@@ -24,7 +24,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     .single()
 
   if (error || !data) {
-    return NextResponse.json({ error: "Comparación no encontrada." }, { status: 404 })
+    return NextResponse.json({ error: "Comparacion no encontrada." }, { status: 404 })
   }
 
   return NextResponse.json({ comparison: data })
@@ -50,12 +50,12 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       .single()
 
     if (fetchError || !comparison) {
-      return NextResponse.json({ error: "Comparación no encontrada." }, { status: 404 })
+      return NextResponse.json({ error: "Comparacion no encontrada." }, { status: 404 })
     }
 
     const { error: deleteError } = await supabase.from("comparisons").delete().eq("id", id)
     if (deleteError) {
-      return NextResponse.json({ error: "No pudimos eliminar la comparación." }, { status: 500 })
+      return NextResponse.json({ error: "No pudimos eliminar la comparacion." }, { status: 500 })
     }
 
     if (comparison.diff_storage_path) {

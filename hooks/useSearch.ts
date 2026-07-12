@@ -1,37 +1,27 @@
-/**
- * Hook para manejo de búsquedas con caching y estado
- * Integra el motor de búsqueda con React
- */
-
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
-import { Marca, SearchParams, SearchResult, SearchResponse } from '@/types/marca'
-import { SearchEngine, resetSearchEngine } from '@/lib/search-engine'
+import { useCallback, useState } from 'react'
+import { SearchParams, SearchResponse, SearchResult } from '@/types/marca'
 import { useAuditLog } from './useAuditLog'
 
-export function useSearch(marcas: Marca[]) {
-  const searchEngine = useMemo<SearchEngine | null>(() => {
-    if (marcas.length === 0) return null
-    return resetSearchEngine(marcas)
-  }, [marcas])
+interface SearchStats {
+  totalMarcas: number
+}
 
+export function useSearch() {
   const [resultados, setResultados] = useState<SearchResult[]>([])
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [ultimaBusqueda, setUltimaBusqueda] = useState<SearchParams | null>(null)
   const { registrarBusqueda } = useAuditLog()
 
-  /**
-   * Ejecutar búsqueda
-   */
   const search = useCallback(
     async (params: SearchParams): Promise<SearchResponse> => {
       try {
         setCargando(true)
         setError(null)
 
-        const inicio = performance.now()
+        const startedAt = performance.now()
         const url = new URL('/api/v1/search', window.location.origin)
         url.searchParams.set('q', params.query)
         url.searchParams.set('type', params.type)
@@ -72,119 +62,73 @@ export function useSearch(marcas: Marca[]) {
         const payload = apiResponse.ok ? await apiResponse.json() : null
 
         if (!apiResponse.ok || !payload) {
-          throw new Error('Error consultando el API de búsqueda')
+          throw new Error('Error consultando el API de busqueda')
         }
 
         const results = Array.isArray(payload.results) ? payload.results : []
         const total = typeof payload.total === 'number' ? payload.total : results.length
         const page = typeof payload.page === 'number' ? payload.page : params.page || 1
         const totalPaginas = typeof payload.totalPages === 'number' ? payload.totalPages : 1
-        const tiempo_ms = typeof payload.tiempo_ms === 'number' ? payload.tiempo_ms : Math.round(performance.now() - inicio)
+        const tiempo_ms =
+          typeof payload.tiempo_ms === 'number'
+            ? payload.tiempo_ms
+            : Math.round(performance.now() - startedAt)
 
-        // Registrar en auditoría
         registrarBusqueda({
           query: params.query,
           tipo: params.type,
-          resultados: total
+          resultados: total,
         })
 
-        // Guardar estado
         setResultados(results)
         setUltimaBusqueda(params)
 
-        const searchResponse: SearchResponse = {
+        return {
           resultados: results,
           total,
           pagina: page,
           totalPaginas,
-          tiempo_ms
+          tiempo_ms,
         }
-
-        console.log(`[v0] Búsqueda completada: ${results.length} resultados en ${tiempo_ms}ms`)
-
-        return searchResponse
       } catch (err) {
-        if (searchEngine) {
-          const results = searchEngine.search(params)
-          setResultados(results)
-          setUltimaBusqueda(params)
-          registrarBusqueda({
-            query: params.query,
-            tipo: params.type,
-            resultados: results.length
-          })
-          return {
-            resultados: results,
-            total: results.length,
-            pagina: 1,
-            totalPaginas: 1,
-            tiempo_ms: 0
-          }
-        }
-
         const mensaje = err instanceof Error ? err.message : 'Error desconocido'
         setError(mensaje)
-        console.error('[v0] Error en búsqueda:', err)
+        console.error('[v0] Error en busqueda:', err)
         return { resultados: [], total: 0, pagina: 1, totalPaginas: 0, tiempo_ms: 0 }
       } finally {
         setCargando(false)
       }
     },
-    [searchEngine, registrarBusqueda]
+    [registrarBusqueda],
   )
 
-  /**
-   * Búsqueda rápida por nombre
-   */
-  const searchByName = useCallback(
-    (nombre: string) => {
-      return search({ query: nombre, type: 'nombre' })
-    },
-    [search]
-  )
+  const searchByName = useCallback((nombre: string) => search({ query: nombre, type: 'nombre' }), [search])
+  const searchByNiza = useCallback((niza: string) => search({ query: niza, type: 'niza' }), [search])
+  const searchByViena = useCallback((viena: string) => search({ query: viena, type: 'viena' }), [search])
 
-  /**
-   * Búsqueda por clase Niza
-   */
-  const searchByNiza = useCallback(
-    (niza: string) => {
-      return search({ query: niza, type: 'niza' })
-    },
-    [search]
-  )
+  const autocomplete = useCallback((): string[] => [], [])
 
-  /**
-   * Búsqueda por código Viena
-   */
-  const searchByViena = useCallback(
-    (viena: string) => {
-      return search({ query: viena, type: 'viena' })
-    },
-    [search]
-  )
+  const getStats = useCallback(async (): Promise<SearchStats | null> => {
+    try {
+      const url = new URL('/api/v1/search', window.location.origin)
+      url.searchParams.set('q', '')
+      url.searchParams.set('type', 'nombre')
+      url.searchParams.set('limit', '1')
 
-  /**
-   * Autocompletar
-   */
-  const autocomplete = useCallback(
-    (query: string, limit: number = 10): string[] => {
-      if (!searchEngine) return []
-      return searchEngine.autocomplete(query, limit)
-    },
-    [searchEngine]
-  )
+      const response = await fetch(url.toString())
+      const payload = response.ok ? await response.json() : null
 
-  /**
-   * Obtener estadísticas
-   */
-  const getStats = useCallback(() => {
-    if (!searchEngine) return null
-    return searchEngine.getStats()
-  }, [searchEngine])
+      if (!response.ok || !payload || typeof payload.total !== 'number') {
+        return null
+      }
 
-  /**
-   * Limpiar búsqueda
-   */
+      return { totalMarcas: payload.total }
+    } catch (err) {
+      console.error('[v0] Error obteniendo estadisticas de busqueda:', err)
+      return null
+    }
+  }, [])
+
   const limpiar = useCallback(() => {
     setResultados([])
     setUltimaBusqueda(null)
@@ -192,13 +136,10 @@ export function useSearch(marcas: Marca[]) {
   }, [])
 
   return {
-    // Estado
     resultados,
     cargando,
     error,
     ultimaBusqueda,
-
-    // Métodos
     search,
     searchByName,
     searchByNiza,
@@ -206,9 +147,7 @@ export function useSearch(marcas: Marca[]) {
     autocomplete,
     getStats,
     limpiar,
-
-    // Información
     totalResultados: resultados.length,
-    engine: searchEngine
+    engine: null,
   }
 }

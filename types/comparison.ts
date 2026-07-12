@@ -13,7 +13,7 @@ export interface ComparisonSignals {
   color_similarity: number
   aspect_ratio_similarity: number
   metadata_similarity: number
-  /** EXIF + forensic signals — null/false-ish if EXIF was missing on either side. */
+  /** EXIF plus forensic signals. Values can be null when EXIF is missing on either side. */
   forensics: ForensicSignals
 }
 
@@ -64,8 +64,76 @@ export interface ComparisonRecord {
   signals: ComparisonSignals
   recommendation: string | null
   result_json: Record<string, unknown>
+  brand_context?: BrandTaxonomyContext | null
   diff_storage_path: string | null
   created_at: string
+}
+
+export interface BrandTaxonomyMatch {
+  id: string
+  nombre: string
+  solicitante: string
+  numeroRegistro: string
+  relevancia: number
+  matchType: "exact" | "partial" | "fuzzy"
+  niza: string[]
+  viena: string[]
+}
+
+export interface BrandTaxonomySnapshot {
+  image_id: string
+  filename: string
+  source: "filename" | "metadata"
+  query: string
+  normalized_query: string
+  hints: {
+    niza: string[]
+    viena: string[]
+  }
+  primary_match: BrandTaxonomyMatch | null
+  matches: BrandTaxonomyMatch[]
+}
+
+export type BrandTaxonomySnapshotLike = Partial<
+  Omit<BrandTaxonomySnapshot, "hints" | "primary_match" | "matches">
+> & {
+  hints?: {
+    niza?: string[]
+    viena?: string[]
+  }
+  primary_match?: {
+    id?: string
+    nombre?: string | null
+    solicitante?: string
+    numeroRegistro?: string
+    relevancia?: number
+    matchType?: "exact" | "partial" | "fuzzy"
+    niza?: string[]
+    viena?: string[]
+  } | null
+  matches?: Array<{
+    id?: string
+    nombre?: string | null
+    solicitante?: string
+    numeroRegistro?: string
+    relevancia?: number
+    matchType?: "exact" | "partial" | "fuzzy"
+    niza?: string[]
+    viena?: string[]
+  }>
+}
+
+export interface BrandTaxonomyContext {
+  image_a?: BrandTaxonomySnapshotLike | null
+  image_b?: BrandTaxonomySnapshotLike | null
+  shared_niza?: string[]
+  shared_viena?: string[]
+}
+
+export interface OcrSummary {
+  text?: string | null
+  confidence?: number | null
+  language?: string | null
 }
 
 export interface ExifSummary {
@@ -97,7 +165,7 @@ export interface AiAnalysis {
 export interface ComparisonResultPayload {
   id: string
   similarity_score: number
-  classification: string
+  classification: Classification
   recommendation: string | null
   signals: ComparisonSignals
   diff_url: string | null
@@ -105,6 +173,9 @@ export interface ComparisonResultPayload {
   ela_url_b: string | null
   exif_a: ExifSummary | null
   exif_b: ExifSummary | null
+  brand_context?: BrandTaxonomyContext | null
+  ocr_a?: OcrSummary | null
+  ocr_b?: OcrSummary | null
   created_at: string
   /** Optional GPT-4o mini enrichment — present when OPENAI_API_KEY is set. */
   ai_analysis?: AiAnalysis | null

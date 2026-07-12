@@ -1,42 +1,56 @@
-'use client'
+"use client"
 
-import { useCallback, useEffect, useState } from 'react'
-import { toast } from 'sonner'
-import { Copy, KeyRound, Plus, Trash2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import type { ApiKeyRecord } from '@/lib/api/key-management'
+import { useCallback, useEffect, useState } from "react"
+import { Copy, KeyRound, Plus, Trash2 } from "lucide-react"
+import { toast } from "sonner"
+import type { ApiKeyRecord } from "@/lib/api/key-management"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 
 type CreatedKey = { id: string; key: string } | null
+
+function formatExpiration(expiresAt: string | null) {
+  if (!expiresAt) {
+    return "Sin expiracion"
+  }
+
+  const expirationDate = new Date(expiresAt)
+  if (Number.isNaN(expirationDate.getTime())) {
+    return "Expiracion invalida"
+  }
+
+  return expirationDate.toLocaleString("es-CL")
+}
 
 export function ApiKeyManager() {
   const [keys, setKeys] = useState<ApiKeyRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [revokingId, setRevokingId] = useState<string | null>(null)
-  const [name, setName] = useState('')
-  const [expiresAt, setExpiresAt] = useState('')
+  const [name, setName] = useState("")
+  const [expiresAt, setExpiresAt] = useState("")
   const [createdKey, setCreatedKey] = useState<CreatedKey>(null)
 
   const loadKeys = useCallback(async () => {
     setLoading(true)
+
     try {
-      const response = await fetch('/api/account/api-keys')
+      const response = await fetch("/api/account/api-keys")
       if (response.status === 401) {
-        window.location.href = '/auth/login?redirectTo=/settings'
+        window.location.href = "/auth/login?redirectTo=/settings"
         return
       }
 
       if (!response.ok) {
-        throw new Error('No fue posible cargar las claves API')
+        throw new Error("No fue posible cargar las claves API")
       }
 
       const payload = await response.json()
       setKeys(Array.isArray(payload.keys) ? payload.keys : [])
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al cargar claves API')
+      toast.error(error instanceof Error ? error.message : "Error al cargar claves API")
     } finally {
       setLoading(false)
     }
@@ -48,15 +62,16 @@ export function ApiKeyManager() {
 
   const handleCreate = async () => {
     if (!name.trim()) {
-      toast.error('Escribe un nombre para la clave')
+      toast.error("Escribe un nombre para la clave")
       return
     }
 
     setCreating(true)
+
     try {
-      const response = await fetch('/api/account/api-keys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/account/api-keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
           expiresAt: expiresAt || undefined,
@@ -64,22 +79,22 @@ export function ApiKeyManager() {
       })
 
       if (response.status === 401) {
-        window.location.href = '/auth/login?redirectTo=/settings'
+        window.location.href = "/auth/login?redirectTo=/settings"
         return
       }
 
       const payload = await response.json()
       if (!response.ok) {
-        throw new Error(payload.error || 'No fue posible crear la clave')
+        throw new Error(payload.error || "No fue posible crear la clave")
       }
 
       setCreatedKey({ id: payload.id, key: payload.key })
-      setName('')
-      setExpiresAt('')
-      toast.success('Clave API creada')
+      setName("")
+      setExpiresAt("")
+      toast.success("Clave API creada")
       await loadKeys()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al crear clave API')
+      toast.error(error instanceof Error ? error.message : "Error al crear clave API")
     } finally {
       setCreating(false)
     }
@@ -87,22 +102,23 @@ export function ApiKeyManager() {
 
   const handleRevoke = async (keyId: string) => {
     setRevokingId(keyId)
+
     try {
-      const response = await fetch(`/api/account/api-keys/${keyId}`, { method: 'DELETE' })
+      const response = await fetch(`/api/account/api-keys/${keyId}`, { method: "DELETE" })
       if (response.status === 401) {
-        window.location.href = '/auth/login?redirectTo=/settings'
+        window.location.href = "/auth/login?redirectTo=/settings"
         return
       }
 
       const payload = await response.json()
       if (!response.ok) {
-        throw new Error(payload.error || 'No fue posible revocar la clave')
+        throw new Error(payload.error || "No fue posible revocar la clave")
       }
 
-      toast.success('Clave API revocada')
+      toast.success("Clave API revocada")
       await loadKeys()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Error al revocar clave API')
+      toast.error(error instanceof Error ? error.message : "Error al revocar clave API")
     } finally {
       setRevokingId(null)
     }
@@ -110,8 +126,9 @@ export function ApiKeyManager() {
 
   const copySecret = async () => {
     if (!createdKey?.key) return
+
     await navigator.clipboard.writeText(createdKey.key)
-    toast.success('Clave copiada')
+    toast.success("Clave copiada")
   }
 
   return (
@@ -147,7 +164,7 @@ export function ApiKeyManager() {
             className="bg-gradient-to-r from-blue-600 to-indigo-500 text-white hover:from-blue-500 hover:to-indigo-400"
           >
             <Plus className="mr-2 h-4 w-4" />
-            {creating ? 'Creando' : 'Crear'}
+            {creating ? "Creando" : "Crear"}
           </Button>
         </div>
 
@@ -183,41 +200,51 @@ export function ApiKeyManager() {
             </div>
           ) : (
             <div className="space-y-3">
-              {keys.map((key) => (
-                <div
-                  key={key.id}
-                  className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/40 p-4 md:flex-row md:items-center md:justify-between"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-white">{key.name}</p>
-                      <Badge className={key.is_active ? 'bg-emerald-500/20 text-emerald-100' : 'bg-slate-500/20 text-slate-200'}>
-                        {key.is_active ? 'Activa' : 'Revocada'}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-slate-400">
-                      Creada {new Date(key.created_at).toLocaleString('es-CL')}
-                    </p>
-                    <p className="text-sm text-slate-400">
-                      Último uso:{' '}
-                      {key.last_used_at ? new Date(key.last_used_at).toLocaleString('es-CL') : 'Nunca'}
-                    </p>
-                  </div>
+              {keys.map((key) => {
+                const expirationLabel = formatExpiration(key.expires_at)
+                const expirationState =
+                  key.expires_at && new Date(key.expires_at).getTime() < Date.now() ? "Vencida" : expirationLabel
 
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="border-white/10 bg-white/5 text-slate-100 hover:bg-white/10"
-                      onClick={() => handleRevoke(key.id)}
-                      disabled={revokingId === key.id || !key.is_active}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      {revokingId === key.id ? 'Revocando' : 'Revocar'}
-                    </Button>
+                return (
+                  <div
+                    key={key.id}
+                    className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/40 p-4 md:flex-row md:items-center md:justify-between"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-white">{key.name}</p>
+                        <Badge
+                          className={
+                            key.is_active
+                              ? "bg-emerald-500/20 text-emerald-100"
+                              : "bg-slate-500/20 text-slate-200"
+                          }
+                        >
+                          {key.is_active ? "Activa" : "Revocada"}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-slate-400">Creada {new Date(key.created_at).toLocaleString("es-CL")}</p>
+                      <p className="text-sm text-slate-400">
+                        Ultimo uso: {key.last_used_at ? new Date(key.last_used_at).toLocaleString("es-CL") : "Nunca"}
+                      </p>
+                      <p className="text-sm text-slate-400">Expiracion: {expirationState}</p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="border-white/10 bg-white/5 text-slate-100 hover:bg-white/10"
+                        onClick={() => handleRevoke(key.id)}
+                        disabled={revokingId === key.id || !key.is_active}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {revokingId === key.id ? "Revocando" : "Revocar"}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>

@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server"
-import { createAdminClient } from "@/lib/supabase/admin"
 import { authenticateApiKey } from "@/lib/api/auth"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 export const runtime = "nodejs"
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    
     const authHeader = request.headers.get("authorization")
     if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Missing or invalid Authorization header" }, { status: 401 })
@@ -20,7 +19,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const admin = createAdminClient()
-
     const { data: comparison, error } = await admin
       .from("comparisons")
       .select("*")
@@ -34,7 +32,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     return NextResponse.json({ success: true, data: comparison }, { status: 200 })
   } catch (error) {
-    console.error("[v0] Get comparison error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("[v0] get comparison error", error)
+    return NextResponse.json({ error: "Failed to fetch comparison" }, { status: 500 })
   }
 }

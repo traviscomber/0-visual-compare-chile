@@ -1,26 +1,28 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Montserrat, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/lib/auth-context"
 import "./globals.css"
 
-const montserrat = Montserrat({
-  subsets: ["latin"],
-  variable: "--font-montserrat",
-  weight: ["400", "500", "600", "700", "800"],
-})
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-code",
-})
+function resolveMetadataBase() {
+  const configuredOrigin = process.env.NEXT_PUBLIC_SITE_URL?.trim()
+  const fallbackOrigin = "http://127.0.0.1:3000"
+
+  try {
+    return new URL(configuredOrigin || fallbackOrigin)
+  } catch {
+    return new URL(fallbackOrigin)
+  }
+}
 
 export const metadata: Metadata = {
-  title: "Sistema de Marcas Registradas - Comparacion de Logos y Consulta",
+  metadataBase: resolveMetadataBase(),
+  title: "Visual Compare Chile | Comparacion visual de marcas",
   description:
-    "Plataforma para comparacion visual de logos, consulta de marcas registradas (INAPI), clasificaciones Niza y Viena. MVP operativo.",
-  generator: "v0.app",
+    "MVP operativo para comparacion visual de marcas con upload, historial, consulta y trazabilidad sobre Supabase y Vercel.",
+  applicationName: "Visual Compare Chile",
+  generator: "Codex",
 }
 
 export const viewport: Viewport = {
@@ -35,15 +37,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className={`${montserrat.variable} ${jetbrainsMono.variable}`}>
+    <html lang="es">
       <body className="bg-gradient-to-br from-slate-950 via-blue-950 to-purple-950 font-sans text-foreground antialiased">
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <AuthProvider>{children}</AuthProvider>
         <Toaster richColors position="top-right" />
         {process.env.NODE_ENV === "production" && <Analytics />}
       </body>
     </html>
   )
 }
-

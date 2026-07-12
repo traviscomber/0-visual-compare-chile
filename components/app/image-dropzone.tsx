@@ -2,11 +2,11 @@
 
 import type React from "react"
 import { useCallback, useRef, useState } from "react"
-import { Loader2, Upload, X, ImageIcon } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { ImageIcon, Loader2, Upload, X } from "lucide-react"
 import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
 import { formatBytes } from "@/lib/format"
+import { cn } from "@/lib/utils"
 import { validateImageFile } from "@/lib/validations"
 
 type UploadedImage = {
@@ -50,7 +50,7 @@ export function ImageDropzone({
         const json = await res.json()
         if (!res.ok) throw new Error(json.error ?? "Error al subir imagen")
         if (json.deduplicated) {
-          toast.info("Reutilizamos una imagen idéntica que ya tenías subida.")
+          toast.info("Reutilizamos una imagen identica que ya tenias subida.")
         }
         onChange(json as UploadedImage)
       } catch (err: unknown) {
@@ -77,7 +77,7 @@ export function ImageDropzone({
           <button
             type="button"
             onClick={() => onChange(null)}
-            className="text-xs text-foreground hover:text-primary inline-flex items-center gap-1"
+            className="inline-flex items-center gap-1 text-xs text-foreground hover:text-primary"
           >
             <X className="h-3 w-3" />
             Quitar
@@ -86,22 +86,22 @@ export function ImageDropzone({
       </div>
 
       {image ? (
-        <div className="rounded-lg border border-border overflow-hidden bg-card">
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={image.url || "/placeholder.svg"}
             alt={image.filename}
-            className="w-full aspect-[4/3] object-contain bg-muted"
+            className="aspect-[4/3] w-full object-contain bg-muted"
           />
-          <div className="p-3 border-t border-border flex items-center justify-between text-xs">
-            <div className="flex flex-col min-w-0">
+          <div className="flex items-center justify-between border-t border-border p-3 text-xs">
+            <div className="min-w-0 flex flex-col">
               <span className="truncate text-foreground">{image.filename}</span>
               <span className="text-foreground">
-                {image.width && image.height ? `${image.width} × ${image.height} px · ` : ""}
+                {image.width && image.height ? `${image.width} x ${image.height} px · ` : ""}
                 {formatBytes(image.size_bytes)}
               </span>
             </div>
-            <ImageIcon className="h-4 w-4 text-foreground shrink-0 ml-2" />
+            <ImageIcon className="ml-2 h-4 w-4 shrink-0 text-foreground" />
           </div>
         </div>
       ) : (
@@ -116,24 +116,23 @@ export function ImageDropzone({
           onDrop={handleDrop}
           variant="outline"
           className={cn(
-            "rounded-lg border-dashed bg-card hover:bg-secondary/40 transition-colors",
-            "aspect-[4/3] flex flex-col items-center justify-center gap-3 px-4 text-center h-auto py-6",
+            "aspect-[4/3] h-auto flex-col items-center justify-center gap-3 rounded-lg border-dashed bg-card px-4 py-6 text-center transition-colors hover:bg-secondary/40",
             dragActive && "border-primary bg-primary/5",
           )}
         >
           {uploading ? (
             <>
-              <Loader2 className="h-6 w-6 text-primary animate-spin" />
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
               <span className="text-sm text-foreground">Subiendo imagen...</span>
             </>
           ) : (
             <>
-              <span className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
                 <Upload className="h-5 w-5 text-foreground" />
               </span>
               <span className="text-sm text-foreground">Arrastra o selecciona una imagen</span>
               <span className="text-xs text-foreground">JPG, PNG, WebP o TIFF · hasta 50 MB</span>
-              <span className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground px-3 py-1 cursor-pointer mt-1">
+              <span className="mt-1 inline-flex h-9 cursor-pointer items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-3 py-1 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50">
                 Elegir archivo
               </span>
             </>
@@ -144,8 +143,8 @@ export function ImageDropzone({
             accept="image/jpeg,image/png,image/webp,image/tiff"
             className="hidden"
             onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) handleFile(f)
+              const file = e.target.files?.[0]
+              if (file) handleFile(file)
               e.target.value = ""
             }}
           />

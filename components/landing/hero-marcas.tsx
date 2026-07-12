@@ -20,7 +20,8 @@ export function HeroMarcas() {
             </Badge>
 
             <h1 className="text-balance text-5xl font-bold leading-[1.1] tracking-tight text-foreground md:text-6xl">
-              Sistema de <span className="text-primary">Comparacion, Consulta y Auditoria</span> de Marcas
+              Protege tus marcas.
+              <span className="block text-primary">Nosotros las analizamos.</span>
             </h1>
 
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
