@@ -32,100 +32,100 @@ const C = {
 }
 
 const s = StyleSheet.create({
-  page:            { backgroundColor: C.white, fontFamily: "Helvetica", paddingBottom: 48 },
+  page:            { backgroundColor: C.white, fontFamily: "Helvetica", paddingBottom: 32 },
   cover:           { backgroundColor: C.navy, flex: 1 },
-  coverAccent:     { backgroundColor: C.blue, height: 6 },
-  coverBody:       { padding: 52, flex: 1, justifyContent: "space-between" },
-  coverLogoRow:    { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 44 },
-  coverLogoBox:    { width: 38, height: 38, backgroundColor: C.blue, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  coverLogoTxt:    { fontSize: 17, color: C.white, fontFamily: "Helvetica-Bold" },
-  coverBrand:      { fontSize: 18, color: C.white, fontFamily: "Helvetica-Bold" },
+  coverAccent:     { backgroundColor: C.blue, height: 5 },
+  coverBody:       { padding: 44, flex: 1, justifyContent: "space-between" },
+  coverLogoRow:    { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 32 },
+  coverLogoBox:    { width: 36, height: 36, backgroundColor: C.blue, borderRadius: 7, alignItems: "center", justifyContent: "center" },
+  coverLogoTxt:    { fontSize: 16, color: C.white, fontFamily: "Helvetica-Bold" },
+  coverBrand:      { fontSize: 17, color: C.white, fontFamily: "Helvetica-Bold" },
   coverBrandSub:   { fontSize: 8, color: C.blueLight, letterSpacing: 2 },
-  coverTitle:      { fontSize: 36, color: C.white, fontFamily: "Helvetica-Bold", lineHeight: 1.25, marginBottom: 14 },
-  coverSubtitle:   { fontSize: 13, color: C.blueLight, lineHeight: 1.55, marginBottom: 44 },
-  coverStatRow:    { flexDirection: "row", gap: 16, marginBottom: 40 },
-  coverStatBox:    { flex: 1, backgroundColor: C.navyLight, borderRadius: 10, padding: 16, alignItems: "center" },
-  coverStatNum:    { fontSize: 28, fontFamily: "Helvetica-Bold", marginBottom: 4 },
+  coverTitle:      { fontSize: 34, color: C.white, fontFamily: "Helvetica-Bold", lineHeight: 1.2, marginBottom: 10 },
+  coverSubtitle:   { fontSize: 12, color: C.blueLight, lineHeight: 1.5, marginBottom: 32 },
+  coverStatRow:    { flexDirection: "row", gap: 12, marginBottom: 32 },
+  coverStatBox:    { flex: 1, backgroundColor: C.navyLight, borderRadius: 8, padding: 14, alignItems: "center" },
+  coverStatNum:    { fontSize: 26, fontFamily: "Helvetica-Bold", marginBottom: 3 },
   coverStatLabel:  { fontSize: 8, textTransform: "uppercase", letterSpacing: 1 },
-  coverDivider:    { height: 1, backgroundColor: C.navyLight, marginBottom: 28 },
-  coverMetaRow:    { flexDirection: "row", gap: 28 },
+  coverDivider:    { height: 1, backgroundColor: C.navyLight, marginBottom: 20 },
+  coverMetaRow:    { flexDirection: "row", gap: 24 },
   coverMetaItem:   { flexDirection: "column", gap: 3 },
   coverMetaLabel:  { fontSize: 8, color: C.slateLight, textTransform: "uppercase", letterSpacing: 1.5 },
   coverMetaValue:  { fontSize: 11, color: C.white, fontFamily: "Helvetica-Bold" },
   coverFooterRow:  { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
-  coverBadge:      { backgroundColor: C.blue, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 4 },
+  coverBadge:      { backgroundColor: C.blue, borderRadius: 4, paddingHorizontal: 9, paddingVertical: 4 },
   coverBadgeTxt:   { fontSize: 8, color: C.white, fontFamily: "Helvetica-Bold", letterSpacing: 1 },
 
-  pageHdr:         { backgroundColor: C.navy, height: 46, flexDirection: "row", alignItems: "center", paddingHorizontal: 40, justifyContent: "space-between" },
+  pageHdr:         { backgroundColor: C.navy, height: 40, flexDirection: "row", alignItems: "center", paddingHorizontal: 36, justifyContent: "space-between" },
   pageHdrBrand:    { fontSize: 10, color: C.white, fontFamily: "Helvetica-Bold" },
   pageHdrSub:      { fontSize: 8, color: C.slateLight },
   pageNum:         { fontSize: 8, color: C.slateLight },
 
-  content:         { paddingHorizontal: 40, paddingTop: 26 },
-  sectionTagRow:   { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 18 },
-  sectionTagLine:  { height: 3, width: 26, backgroundColor: C.blue, borderRadius: 2 },
+  content:         { paddingHorizontal: 36, paddingTop: 16 },
+  sectionTagRow:   { flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 10 },
+  sectionTagLine:  { height: 3, width: 22, backgroundColor: C.blue, borderRadius: 2 },
   sectionTagTxt:   { fontSize: 9, color: C.blue, fontFamily: "Helvetica-Bold", textTransform: "uppercase", letterSpacing: 1.5 },
 
-  h1:              { fontSize: 22, color: C.navy, fontFamily: "Helvetica-Bold", marginBottom: 6 },
-  h2:              { fontSize: 16, color: C.navy, fontFamily: "Helvetica-Bold", marginBottom: 4 },
-  h3:              { fontSize: 12, color: C.navy, fontFamily: "Helvetica-Bold", marginBottom: 4 },
-  body:            { fontSize: 10, color: C.textMuted, lineHeight: 1.6, marginBottom: 10 },
-  bodySmall:       { fontSize: 9, color: C.textMuted, lineHeight: 1.5 },
+  h1:              { fontSize: 20, color: C.navy, fontFamily: "Helvetica-Bold", marginBottom: 5 },
+  h2:              { fontSize: 15, color: C.navy, fontFamily: "Helvetica-Bold", marginBottom: 4 },
+  h3:              { fontSize: 11, color: C.navy, fontFamily: "Helvetica-Bold", marginBottom: 4 },
+  body:            { fontSize: 9.5, color: C.textMuted, lineHeight: 1.55, marginBottom: 10 },
+  bodySmall:       { fontSize: 8.5, color: C.textMuted, lineHeight: 1.45 },
 
-  card:            { backgroundColor: C.offwhite, borderRadius: 10, padding: 18, marginBottom: 14, borderWidth: 1, borderColor: C.border },
-  cardRow:         { flexDirection: "row", alignItems: "flex-start", gap: 14 },
-  cardLogoBox:     { width: 68, height: 68, borderRadius: 8, borderWidth: 1, borderColor: C.border, overflow: "hidden" },
+  card:            { backgroundColor: C.offwhite, borderRadius: 8, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: C.border },
+  cardRow:         { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  cardLogoBox:     { width: 58, height: 58, borderRadius: 7, borderWidth: 1, borderColor: C.border, overflow: "hidden" },
   cardLogoImg:     { width: "100%", height: "100%" },
   cardInfo:        { flex: 1 },
   cardTitleRow:    { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 2 },
-  cardTitle:       { fontSize: 17, color: C.navy, fontFamily: "Helvetica-Bold" },
-  cardMeta:        { fontSize: 8, color: C.slateLight, marginBottom: 6 },
-  cardDesc:        { fontSize: 9, color: C.textMuted, lineHeight: 1.45 },
+  cardTitle:       { fontSize: 15, color: C.navy, fontFamily: "Helvetica-Bold" },
+  cardMeta:        { fontSize: 8, color: C.slateLight, marginBottom: 4 },
+  cardDesc:        { fontSize: 8.5, color: C.textMuted, lineHeight: 1.4 },
 
-  statsRow:        { flexDirection: "row", gap: 8, marginTop: 12 },
-  statBox:         { flex: 1, borderRadius: 8, padding: 10, alignItems: "center" },
-  statNum:         { fontSize: 20, fontFamily: "Helvetica-Bold", marginBottom: 2 },
-  statLabel:       { fontSize: 8, textTransform: "uppercase", letterSpacing: 1 },
+  statsRow:        { flexDirection: "row", gap: 6, marginTop: 8 },
+  statBox:         { flex: 1, borderRadius: 6, padding: 7, alignItems: "center" },
+  statNum:         { fontSize: 17, fontFamily: "Helvetica-Bold", marginBottom: 2 },
+  statLabel:       { fontSize: 7.5, textTransform: "uppercase", letterSpacing: 1 },
 
-  riskBadge:       { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4, alignSelf: "flex-start" },
-  riskText:        { fontSize: 9, fontFamily: "Helvetica-Bold", letterSpacing: 0.5 },
+  riskBadge:       { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3, alignSelf: "flex-start" },
+  riskText:        { fontSize: 8.5, fontFamily: "Helvetica-Bold", letterSpacing: 0.5 },
 
-  tableHdr:        { flexDirection: "row", backgroundColor: C.navy, paddingHorizontal: 10, paddingVertical: 7, marginBottom: 0 },
-  tableHdrCell:    { fontSize: 8, color: C.slateLight, fontFamily: "Helvetica-Bold", textTransform: "uppercase", letterSpacing: 0.8 },
-  tableRow:        { flexDirection: "row", paddingHorizontal: 10, paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: C.border, alignItems: "center" },
+  tableHdr:        { flexDirection: "row", backgroundColor: C.navy, paddingHorizontal: 9, paddingVertical: 6, marginBottom: 0 },
+  tableHdrCell:    { fontSize: 7.5, color: C.slateLight, fontFamily: "Helvetica-Bold", textTransform: "uppercase", letterSpacing: 0.8 },
+  tableRow:        { flexDirection: "row", paddingHorizontal: 9, paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: C.border, alignItems: "center" },
   tableRowAlt:     { backgroundColor: C.offwhite },
-  tableCell:       { fontSize: 9, color: C.text },
-  tableCellMuted:  { fontSize: 9, color: C.textMuted },
+  tableCell:       { fontSize: 8.5, color: C.text },
+  tableCellMuted:  { fontSize: 8.5, color: C.textMuted },
 
-  chipRow:         { flexDirection: "row", flexWrap: "wrap", gap: 4, marginBottom: 8 },
-  chip:            { borderRadius: 4, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: C.blueFaint },
-  chipText:        { fontSize: 8, color: C.blue, fontFamily: "Helvetica-Bold" },
+  chipRow:         { flexDirection: "row", flexWrap: "wrap", gap: 3, marginBottom: 6 },
+  chip:            { borderRadius: 3, paddingHorizontal: 6, paddingVertical: 2, backgroundColor: C.blueFaint },
+  chipText:        { fontSize: 7.5, color: C.blue, fontFamily: "Helvetica-Bold" },
 
-  screenshotBox:   { borderRadius: 8, overflow: "hidden", borderWidth: 1, borderColor: C.border, marginBottom: 6 },
-  screenshotImg:   { width: "100%", height: 230 },
-  screenshotCap:   { fontSize: 8, color: C.slateLight, textAlign: "center", marginBottom: 10 },
+  screenshotBox:   { borderRadius: 6, overflow: "hidden", borderWidth: 1, borderColor: C.border, marginBottom: 4 },
+  screenshotImg:   { width: "100%", height: 175 },
+  screenshotCap:   { fontSize: 7.5, color: C.slateLight, textAlign: "center", marginBottom: 8 },
 
-  recItem:         { flexDirection: "row", gap: 10, marginBottom: 9, alignItems: "flex-start" },
-  recNum:          { width: 18, height: 18, borderRadius: 9, backgroundColor: C.blue, alignItems: "center", justifyContent: "center" },
-  recNumTxt:       { fontSize: 9, color: C.white, fontFamily: "Helvetica-Bold" },
-  recText:         { flex: 1, fontSize: 9.5, color: C.textMuted, lineHeight: 1.55, paddingTop: 1 },
+  recItem:         { flexDirection: "row", gap: 8, marginBottom: 6, alignItems: "flex-start" },
+  recNum:          { width: 16, height: 16, borderRadius: 8, backgroundColor: C.blue, alignItems: "center", justifyContent: "center" },
+  recNumTxt:       { fontSize: 8, color: C.white, fontFamily: "Helvetica-Bold" },
+  recText:         { flex: 1, fontSize: 9, color: C.textMuted, lineHeight: 1.5, paddingTop: 1 },
 
-  nextStepRow:     { flexDirection: "row", gap: 8, marginBottom: 5, alignItems: "flex-start" },
-  nextStepDot:     { width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.blue, marginTop: 3 },
-  nextStepText:    { flex: 1, fontSize: 9, color: C.textMuted, lineHeight: 1.5 },
+  nextStepRow:     { flexDirection: "row", gap: 7, marginBottom: 4, alignItems: "flex-start" },
+  nextStepDot:     { width: 4, height: 4, borderRadius: 2, backgroundColor: C.blue, marginTop: 3 },
+  nextStepText:    { flex: 1, fontSize: 8.5, color: C.textMuted, lineHeight: 1.45 },
 
-  divider:         { height: 1, backgroundColor: C.border, marginVertical: 16 },
-  twoCol:          { flexDirection: "row", gap: 12 },
+  divider:         { height: 1, backgroundColor: C.border, marginVertical: 10 },
+  twoCol:          { flexDirection: "row", gap: 10 },
   col:             { flex: 1 },
 
-  highlightBox:    { borderRadius: 8, padding: 14, marginBottom: 14, borderLeftWidth: 3 },
-  highlightText:   { fontSize: 9.5, lineHeight: 1.6 },
+  highlightBox:    { borderRadius: 7, padding: 11, marginBottom: 11, borderLeftWidth: 3 },
+  highlightText:   { fontSize: 9, lineHeight: 1.55 },
 
-  footer:          { position: "absolute", bottom: 16, left: 40, right: 40, flexDirection: "row", justifyContent: "space-between" },
-  footerText:      { fontSize: 8, color: C.slateLight },
+  footer:          { position: "absolute", bottom: 12, left: 36, right: 36, flexDirection: "row", justifyContent: "space-between" },
+  footerText:      { fontSize: 7.5, color: C.slateLight },
 })
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────��───────────────────────────────────────────────
 export interface CaseData {
   name: string
   industry: string
@@ -269,14 +269,14 @@ export function TrademarkReportDocument({ cases, generatedAt, preparedFor }: Tra
           <Text style={s.sectionTagTxt}>Resumen ejecutivo</Text>
         </View>
         <Text style={s.h1}>Resultados del análisis</Text>
-        <Text style={[s.body, { marginBottom: 18 }]}>
+        <Text style={[s.body, { marginBottom: 10 }]}>
           Se analizaron {cases.length} marcas mediante el motor de inteligencia artificial de Visual Compare Chile,
           que combina visión por computador (GPT-4o Vision) para clasificación Viena, análisis semántico para
           clases Niza, y un motor de conflictos con scoring ponderado contra el repositorio de marcas registradas.
         </Text>
 
         {/* Summary table */}
-        <View style={{ borderRadius: 8, overflow: "hidden", borderWidth: 1, borderColor: C.border, marginBottom: 18 }}>
+        <View style={{ borderRadius: 7, overflow: "hidden", borderWidth: 1, borderColor: C.border, marginBottom: 11 }}>
           <View style={s.tableHdr}>
             <Text style={[s.tableHdrCell, { flex: 2 }]}>Marca</Text>
             <Text style={[s.tableHdrCell, { flex: 1.5 }]}>Sector</Text>
@@ -398,7 +398,7 @@ export function TrademarkReportDocument({ cases, generatedAt, preparedFor }: Tra
           </View>
 
           {/* Screenshot */}
-          <Text style={[s.h3, { marginBottom: 7 }]}>Resultado en plataforma</Text>
+          <Text style={[s.h3, { marginBottom: 4 }]}>Resultado en plataforma</Text>
           <View style={s.screenshotBox}>
             <Image src={c.screenshotPath} style={s.screenshotImg} />
           </View>
@@ -407,8 +407,8 @@ export function TrademarkReportDocument({ cases, generatedAt, preparedFor }: Tra
           </Text>
 
           {/* Viena codes */}
-          <View style={s.divider} />
-          <Text style={[s.h3, { marginBottom: 7 }]}>Clasificación Viena detectada (VCL 10a ed.)</Text>
+          <View style={[s.divider, { marginVertical: 8 }]} />
+          <Text style={[s.h3, { marginBottom: 5 }]}>Clasificación Viena detectada (VCL 10a ed.)</Text>
           <View style={s.chipRow}>
             {c.viena.map(v => (
               <View key={v.code} style={s.chip}>
@@ -416,14 +416,14 @@ export function TrademarkReportDocument({ cases, generatedAt, preparedFor }: Tra
               </View>
             ))}
           </View>
-          <View style={{ borderWidth: 1, borderColor: C.border, borderRadius: 6, overflow: "hidden" }}>
+          <View style={{ borderWidth: 1, borderColor: C.border, borderRadius: 5, overflow: "hidden" }}>
             {c.viena.map((v, vi) => (
-              <View key={v.code} style={[s.tableRow, vi % 2 === 1 ? s.tableRowAlt : {}, { paddingVertical: 6 }]}>
+              <View key={v.code} style={[s.tableRow, vi % 2 === 1 ? s.tableRowAlt : {}, { paddingVertical: 5 }]}>
                 <Text style={[s.tableCell, { flex: 0.7, fontFamily: "Helvetica-Bold", color: C.blue }]}>{v.code}</Text>
                 <Text style={[s.tableCellMuted, { flex: 3 }]}>{v.description}</Text>
                 <View style={{ flex: 0.5, alignItems: "flex-end" }}>
-                  <View style={{ backgroundColor: v.confidence >= 90 ? C.greenFaint : C.amberFaint, borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 }}>
-                    <Text style={{ fontSize: 8, color: v.confidence >= 90 ? C.green : C.amber, fontFamily: "Helvetica-Bold" }}>{v.confidence}%</Text>
+                  <View style={{ backgroundColor: v.confidence >= 90 ? C.greenFaint : C.amberFaint, borderRadius: 3, paddingHorizontal: 4, paddingVertical: 2 }}>
+                    <Text style={{ fontSize: 7.5, color: v.confidence >= 90 ? C.green : C.amber, fontFamily: "Helvetica-Bold" }}>{v.confidence}%</Text>
                   </View>
                 </View>
               </View>
@@ -457,8 +457,8 @@ export function TrademarkReportDocument({ cases, generatedAt, preparedFor }: Tra
           </View>
 
           {/* Niza */}
-          <Text style={[s.h3, { marginBottom: 7 }]}>Clases Niza recomendadas (NCL 13a ed.)</Text>
-          <View style={{ borderWidth: 1, borderColor: C.border, borderRadius: 6, overflow: "hidden", marginBottom: 16 }}>
+          <Text style={[s.h3, { marginBottom: 4 }]}>Clases Niza recomendadas (NCL 13a ed.)</Text>
+          <View style={{ borderWidth: 1, borderColor: C.border, borderRadius: 5, overflow: "hidden", marginBottom: 10 }}>
             <View style={s.tableHdr}>
               <Text style={[s.tableHdrCell, { flex: 0.6 }]}>Clase</Text>
               <Text style={[s.tableHdrCell, { flex: 3 }]}>Descripción</Text>
@@ -476,8 +476,8 @@ export function TrademarkReportDocument({ cases, generatedAt, preparedFor }: Tra
           </View>
 
           {/* Conflicts — always render the view, show "sin conflictos" if empty */}
-          <Text style={[s.h3, { marginBottom: 7 }]}>Conflictos detectados ({c.conflicts.length})</Text>
-          <View style={{ borderWidth: 1, borderColor: C.border, borderRadius: 6, overflow: "hidden", marginBottom: 16 }}>
+          <Text style={[s.h3, { marginBottom: 4 }]}>Conflictos detectados ({c.conflicts.length})</Text>
+          <View style={{ borderWidth: 1, borderColor: C.border, borderRadius: 5, overflow: "hidden", marginBottom: 10 }}>
             <View style={s.tableHdr}>
               <Text style={[s.tableHdrCell, { flex: 2 }]}>Marca registrada</Text>
               <Text style={[s.tableHdrCell, { flex: 0.7, textAlign: "center" }]}>Score</Text>
@@ -509,8 +509,8 @@ export function TrademarkReportDocument({ cases, generatedAt, preparedFor }: Tra
           </View>
 
           {/* Recommendations */}
-          <View style={s.divider} />
-          <Text style={[s.h3, { marginBottom: 10 }]}>Recomendaciones del agente</Text>
+          <View style={[s.divider, { marginVertical: 8 }]} />
+          <Text style={[s.h3, { marginBottom: 7 }]}>Recomendaciones del agente</Text>
           {c.recommendations.map((rec, ri) => (
             <View key={ri} style={s.recItem}>
               <View style={s.recNum}>
@@ -521,8 +521,8 @@ export function TrademarkReportDocument({ cases, generatedAt, preparedFor }: Tra
           ))}
 
           {/* Next steps */}
-          <View style={{ height: 1, backgroundColor: C.border, marginVertical: 12 }} />
-          <Text style={[s.bodySmall, { fontFamily: "Helvetica-Bold", color: C.navy, marginBottom: 7, textTransform: "uppercase", letterSpacing: 1 }]}>
+          <View style={{ height: 1, backgroundColor: C.border, marginVertical: 8 }} />
+          <Text style={[s.bodySmall, { fontFamily: "Helvetica-Bold", color: C.navy, marginBottom: 5, textTransform: "uppercase", letterSpacing: 1 }]}>
             Próximos pasos
           </Text>
           {c.nextSteps.map((step, si) => (
@@ -532,12 +532,12 @@ export function TrademarkReportDocument({ cases, generatedAt, preparedFor }: Tra
             </View>
           ))}
 
-          {/* Detail screenshot */}
-          <View style={{ height: 1, backgroundColor: C.border, marginVertical: 12 }} />
-          <Text style={[s.h3, { marginBottom: 7 }]}>Vista detallada — secciones expandidas</Text>
+          {/* Detail screenshot — inline after next steps, no extra title */}
+          <View style={{ height: 1, backgroundColor: C.border, marginVertical: 8 }} />
           <View style={s.screenshotBox}>
-            <Image src={c.screenshotDetailPath} style={[s.screenshotImg, { height: 190 }]} />
+            <Image src={c.screenshotDetailPath} style={[s.screenshotImg, { height: 160 }]} />
           </View>
+          <Text style={s.screenshotCap}>Vista detallada — secciones expandidas · {c.name}</Text>
         </View>
         <View style={s.footer}>
           <Text style={s.footerText}>{"Análisis generado el " + new Date().toLocaleDateString("es-CL") + " · Motor Visual Compare IA v1.0"}</Text>
