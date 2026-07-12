@@ -14,14 +14,22 @@ function resolveEnv(base: string): string {
     if (v?.trim()) return v.trim()
   }
 
-  // 3. SUPABASE_PUBLISHABLE_KEY is sometimes used instead of NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // 3. Anon key aliases — Supabase integration uses different names depending on version
   if (base === "NEXT_PUBLIC_SUPABASE_ANON_KEY") {
+    // New Supabase integration style (NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
+    const pub1 = process.env["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"]
+    if (pub1?.trim()) return pub1.trim()
+    for (let i = 2; i <= 6; i++) {
+      const v = process.env[`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY_${i}`]
+      if (v?.trim()) return v.trim()
+    }
+    // Older style without NEXT_PUBLIC prefix
     for (let i = 2; i <= 6; i++) {
       const v = process.env[`SUPABASE_PUBLISHABLE_KEY_${i}`]
       if (v?.trim()) return v.trim()
     }
-    const pub = process.env["SUPABASE_PUBLISHABLE_KEY"]
-    if (pub?.trim()) return pub.trim()
+    const pub2 = process.env["SUPABASE_PUBLISHABLE_KEY"]
+    if (pub2?.trim()) return pub2.trim()
     const anon = process.env["SUPABASE_ANON_KEY"]
     if (anon?.trim()) return anon.trim()
   }
