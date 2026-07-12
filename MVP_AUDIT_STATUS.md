@@ -180,31 +180,41 @@ Evidencia local:
 - `release:gate` existe
 - `audit:deploy` existe
 - `git rev-parse HEAD` actual:
-  - `648fa1fc39ace30778b05f975ae33d01a56cf5b1`
+  - `2cd759ddd0ec7216319d36c7d536e2a4b1f6d636`
 - `http://127.0.0.1:3014/api/v1/health` devuelve:
   - `revision: "local"`
   - `host: "localhost:3014"`
   - `config.supabase_project_ref: "btyylseeswnvsuaojvjx"`
   - `config.site_origin: "https://v0-visual-compare-chile.vercel.app"`
   - `config.callback_urls: ["https://v0-visual-compare-chile.vercel.app/auth/callback"]`
+- preview publico actual devuelve contrato correcto:
+  - `revision: "2cd759ddd0ec7216319d36c7d536e2a4b1f6d636"`
+  - `host: "v0-visual-compare-chile-git-main-travis-projects-c14a785a.vercel.app"`
+  - `config.supabase_project_ref: "btyylseeswnvsuaojvjx"`
+  - `config.site_origin: "https://v0-visual-compare-chile-git-main-travis-projects-c14a785a.vercel.app"`
+  - `config.callback_urls` solo con URLs preview
 
 Bloqueo externo actual:
 
-- preview actual devuelve contrato viejo:
-  - `{"status":"ok","version":"1.0.0","timestamp":"2026-07-12T13:52:54.234Z"}`
-- falta `revision`
-- falta `host`
-- falta `config.*`
-- dominio canonico `https://v0-visual-compare-chile.vercel.app/` devuelve `404`
+- preview actual ya sirve el commit correcto
+- dominio canonico `https://v0-visual-compare-chile.vercel.app/` sigue devolviendo `404`
+- `site_origin` publico sigue apuntando al preview
+- `callback_urls` publicas siguen sin incluir la URL canonica esperada
 - `pnpm audit:deploy` contra URLs publicas actuales devuelve:
   - `PASS active root`
-  - `FAIL active health`
+  - `PASS active health`
+  - `PASS active revision`
+  - `PASS active supabase project`
+  - `FAIL active site origin`
+  - `FAIL active callback url`
   - `FAIL canonical root`
   - `FAIL canonical health`
 
 Conclusion:
 
 - este punto es el bloqueador real del cierre del objetivo
+- ya no es un problema de codigo ni de SHA en Vercel
+- ahora es un problema de configuracion publica de dominio y callback
 
 ## Comandos de evidencia local ya verificados
 
@@ -243,8 +253,8 @@ El objetivo puede considerarse completo solo si:
 
 ## Siguiente paso operativo
 
-1. Commit de la tanda local validada
-2. Push a `origin/main`
-3. Confirmar que Vercel redeploye desde ese commit
-4. Reasignar o restaurar el dominio canonico
+1. Reasignar o restaurar el dominio canonico en Vercel
+2. Confirmar `NEXT_PUBLIC_SITE_URL=https://v0-visual-compare-chile.vercel.app`
+3. Confirmar callback canonica en Supabase Auth
+4. Redeploy de produccion
 5. Repetir `pnpm release:gate` contra la URL publica real
