@@ -5,11 +5,12 @@ import Link from "next/link"
 import type { TrademarkInsightReport } from "@/lib/agent/trademark-agent"
 import {
   Upload, Loader2, AlertTriangle, CheckCircle2, ShieldAlert,
-  FileText, Cpu, Search, BarChart3, Download, Zap
+  FileText, Cpu, Search, BarChart3, Download, Zap, HelpCircle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { useState as useStateHelp } from "react"
 
 // Risk badge helper
 function RiskBadge({ nivel }: { nivel: string }) {
@@ -40,7 +41,16 @@ export default function AgentePage() {
   const [loading, setLoading] = useState(false)
   const [report, setReport] = useState<TrademarkInsightReport | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [activeHelp, setActiveHelp] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // Compute step progress
+  const stepComplete = {
+    imagen: !!image,
+    nombre: !!nombre.trim(),
+    resultados: !!report
+  }
+  const progress = (Object.values(stepComplete).filter(Boolean).length / 3) * 100
 
   const handleFile = (file: File) => {
     if (!file.type.startsWith("image/")) return
@@ -92,6 +102,20 @@ export default function AgentePage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-purple-950 py-12 px-4">
       <div className="max-w-5xl mx-auto">
+        {/* Progress bar */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-slate-300">Progreso del análisis</h3>
+            <span className="text-xs text-slate-500">{Math.round(progress)}%</span>
+          </div>
+          <div className="w-full h-2 bg-slate-700/50 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-300 rounded-full"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+
         {/* Header */}
         <div className="text-center space-y-3 mb-8">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 text-sm font-medium">
@@ -108,56 +132,114 @@ export default function AgentePage() {
 
         {/* Input form */}
         <div className="grid gap-6 mb-8">
-          {/* Image upload */}
-          <div
-            onDrop={handleDrop}
-            onDragOver={e => e.preventDefault()}
-            onClick={() => fileRef.current?.click()}
-            className="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-blue-500/60 hover:bg-blue-500/5 transition-all bg-slate-900/30"
-          >
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
-            />
-            {imagePreview ? (
-              <div className="flex flex-col items-center gap-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={imagePreview} alt="Logo" className="max-h-24 max-w-xs rounded-lg object-contain" />
-                <p className="text-xs text-slate-400">Haz clic para cambiar</p>
+          {/* Step 1: Image upload */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${stepComplete.imagen ? 'bg-green-500/20 text-green-300 border border-green-500/40' : 'bg-blue-500/20 text-blue-300 border border-blue-500/40'}`}>
+                {stepComplete.imagen ? '✓' : '1'}
               </div>
-            ) : (
-              <div className="flex flex-col items-center gap-2 text-slate-400">
-                <Upload className="w-8 h-8 opacity-50" />
-                <p className="text-sm font-medium text-slate-300">Arrastra tu logo aquí</p>
-                <p className="text-xs">o haz clic para seleccionar</p>
+              <h3 className="font-semibold text-white">Paso 1: Sube tu logo</h3>
+              <button
+                onClick={() => setActiveHelp(activeHelp === 'image' ? null : 'image')}
+                className="ml-auto text-slate-400 hover:text-slate-300"
+              >
+                <HelpCircle className="w-4 h-4" />
+              </button>
+            </div>
+            
+            {activeHelp === 'image' && (
+              <div className="text-xs text-slate-300 bg-blue-500/10 p-3 rounded border border-blue-500/20 mb-3 flex gap-2">
+                <span className="text-blue-400 shrink-0">💡</span>
+                <span>Usa una imagen clara y de alta resolución. PNG, JPG o SVG funcionan bien. La imagen puede ser el logo solo o con nombre de marca.</span>
               </div>
             )}
+
+            <div
+              onDrop={handleDrop}
+              onDragOver={e => e.preventDefault()}
+              onClick={() => fileRef.current?.click()}
+              className="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-blue-500/60 hover:bg-blue-500/5 transition-all bg-slate-900/30"
+            >
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
+              />
+              {imagePreview ? (
+                <div className="flex flex-col items-center gap-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={imagePreview} alt="Logo" className="max-h-24 max-w-xs rounded-lg object-contain" />
+                  <p className="text-xs text-slate-400">Haz clic para cambiar</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2 text-slate-400">
+                  <Upload className="w-8 h-8 opacity-50" />
+                  <p className="text-sm font-medium text-slate-300">Arrastra tu logo aquí</p>
+                  <p className="text-xs">o haz clic para seleccionar</p>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Nombre input */}
-          <Input
-            value={nombre}
-            onChange={e => setNombre(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && canAnalyze && handleAnalyze()}
-            placeholder="Nombre de la marca (ej: VISUAL COMPARE)"
-            className="bg-slate-900/60 border-slate-600 text-white placeholder:text-slate-500 h-11"
-          />
+          {/* Step 2: Nombre */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${stepComplete.nombre ? 'bg-green-500/20 text-green-300 border border-green-500/40' : 'bg-blue-500/20 text-blue-300 border border-blue-500/40'}`}>
+                {stepComplete.nombre ? '✓' : '2'}
+              </div>
+              <h3 className="font-semibold text-white">Paso 2: Nombre de la marca</h3>
+              <button
+                onClick={() => setActiveHelp(activeHelp === 'nombre' ? null : 'nombre')}
+                className="ml-auto text-slate-400 hover:text-slate-300"
+              >
+                <HelpCircle className="w-4 h-4" />
+              </button>
+            </div>
 
-          {/* Analyze button */}
-          <Button
-            onClick={handleAnalyze}
-            disabled={!canAnalyze}
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold h-11 gap-2"
-          >
-            {loading ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Analizando...</>
-            ) : (
-              <><Search className="w-4 h-4" /> Analizar</>
+            {activeHelp === 'nombre' && (
+              <div className="text-xs text-slate-300 bg-blue-500/10 p-3 rounded border border-blue-500/20 mb-3 flex gap-2">
+                <span className="text-blue-400 shrink-0">💡</span>
+                <span>Escribe exactamente cómo quieres registrar tu marca en INAPI. Usa mayúsculas, caracteres especiales si los tiene. Ejemplo: "VISUAL COMPARE®" o "La Marca™"</span>
+              </div>
             )}
-          </Button>
+
+            <Input
+              value={nombre}
+              onChange={e => setNombre(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && canAnalyze && handleAnalyze()}
+              placeholder="Nombre de la marca (ej: VISUAL COMPARE)"
+              className="bg-slate-900/60 border-slate-600 text-white placeholder:text-slate-500 h-11"
+            />
+          </div>
+
+          {/* Step 3: Analyze */}
+          <div>
+            <Button
+              onClick={handleAnalyze}
+              disabled={!canAnalyze}
+              className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold h-12 gap-2 text-base"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <div className="text-left">
+                    <div className="text-sm">Analizando...</div>
+                    <div className="text-xs opacity-75">Viena • Niza • INAPI</div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Search className="w-5 h-5" />
+                  <div className="text-left">
+                    <div className="text-sm">Analizar marca</div>
+                    <div className="text-xs opacity-75">Paso 3 de 3</div>
+                  </div>
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Error */}
