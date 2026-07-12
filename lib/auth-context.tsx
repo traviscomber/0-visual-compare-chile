@@ -37,6 +37,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let active = true
     const supabase = createClient()
 
+    if (!supabase) {
+      setIsLoading(false)
+      return
+    }
+
     const syncSession = async () => {
       const {
         data: { user: sessionUser },
@@ -104,6 +109,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string, role: UserRole) => {
     setIsLoading(true)
     const supabase = createClient()
+    
+    if (!supabase) {
+      setIsLoading(false)
+      throw new Error("Supabase is not configured")
+    }
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -120,7 +131,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     setUser(null)
-    void createClient().auth.signOut()
+    const supabase = createClient()
+    if (supabase) {
+      void supabase.auth.signOut()
+    }
   }
 
   return (
