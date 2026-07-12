@@ -186,6 +186,35 @@ export default function AgentePage() {
               )}
             </div>
 
+            {/* INAPI Registrabilidad — verificación real en Chile */}
+            {report.registrabilidad && (
+              <div className={`rounded-lg p-4 border ${
+                report.registrabilidad.disponible
+                  ? 'bg-green-500/10 border-green-500/30'
+                  : 'bg-red-500/10 border-red-500/30'
+              }`}>
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <h3 className={`font-semibold flex items-center gap-1.5 ${report.registrabilidad.disponible ? 'text-green-300' : 'text-red-300'}`}>
+                    <CheckCircle2 className="w-4 h-4" />
+                    {report.registrabilidad.disponible ? 'Disponible en Chile' : 'No disponible'}
+                  </h3>
+                </div>
+                <p className={`text-sm ${report.registrabilidad.disponible ? 'text-green-200' : 'text-red-200'}`}>
+                  {report.registrabilidad.recomendacion}
+                </p>
+                {report.registrabilidad.marca_encontrada && (
+                  <div className="text-xs text-slate-300 bg-slate-900/50 rounded p-2 mt-2 space-y-1">
+                    <p className="font-semibold text-slate-200">{report.registrabilidad.marca_encontrada.nombre}</p>
+                    <p className="text-slate-400">Solicitante: {report.registrabilidad.marca_encontrada.solicitante}</p>
+                    <p className="text-slate-400">Estado: {report.registrabilidad.marca_encontrada.estado}</p>
+                  </div>
+                )}
+                {report.registrabilidad.conflictos_reales > 0 && (
+                  <p className="text-xs text-slate-300 mt-2">Conflictos en INAPI: <span className="font-semibold text-slate-200">{report.registrabilidad.conflictos_reales}</span></p>
+                )}
+              </div>
+            )}
+
             {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-center">
