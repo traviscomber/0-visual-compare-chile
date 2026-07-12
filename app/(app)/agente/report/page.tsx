@@ -54,44 +54,39 @@ function CaseCard({ c }: { c: typeof CASES[0] }) {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <h3 className="font-bold text-foreground text-base">{c.name}</h3>
+            <h3 className="font-bold text-base" style={{ color: "#111827" }}>{c.name}</h3>
             <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${cfg.bg} ${cfg.color} border ${cfg.border}`}>
               <Icon className="w-3 h-3" />
               {cfg.label}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5 mb-3">{c.industry}</p>
+          <p className="text-xs mt-0.5 mb-3" style={{ color: "#6b7280" }}>{c.industry}</p>
 
           {/* Stats row */}
           <div className="grid grid-cols-4 gap-2">
-            <div className="bg-white/80 rounded-lg p-2 text-center border border-border/50">
-              <div className="text-sm font-bold text-foreground">{c.conflicts}</div>
-              <div className="text-[10px] text-muted-foreground">Conflictos</div>
-            </div>
-            <div className="bg-white/80 rounded-lg p-2 text-center border border-border/50">
-              <div className="text-sm font-bold text-foreground">{c.tokens.toLocaleString()}</div>
-              <div className="text-[10px] text-muted-foreground">Tokens</div>
-            </div>
-            <div className="bg-white/80 rounded-lg p-2 text-center border border-border/50">
-              <div className="text-sm font-bold text-foreground">{c.cost}</div>
-              <div className="text-[10px] text-muted-foreground">Costo IA</div>
-            </div>
-            <div className="bg-white/80 rounded-lg p-2 text-center border border-border/50">
-              <div className="text-sm font-bold text-foreground">{c.time}</div>
-              <div className="text-[10px] text-muted-foreground">Tiempo</div>
-            </div>
+            {[
+              { value: String(c.conflicts), label: "Conflictos" },
+              { value: c.tokens.toLocaleString(), label: "Tokens" },
+              { value: c.cost, label: "Costo IA" },
+              { value: c.time, label: "Tiempo" },
+            ].map(({ value, label }) => (
+              <div key={label} className="rounded-lg p-2 text-center border" style={{ backgroundColor: "rgba(255,255,255,0.85)", borderColor: "rgba(0,0,0,0.1)" }}>
+                <div className="text-sm font-bold" style={{ color: "#111827" }}>{value}</div>
+                <div className="text-[10px]" style={{ color: "#6b7280" }}>{label}</div>
+              </div>
+            ))}
           </div>
 
           {/* Viena / Niza chips */}
           <div className="flex flex-wrap gap-1.5 mt-3">
             {c.viena.map(v => (
-              <Badge key={v} variant="outline" className="text-[10px] h-5 font-mono bg-white/60">{v}</Badge>
+              <span key={v} className="inline-flex items-center rounded-md border px-2 h-5 font-mono text-[10px]" style={{ backgroundColor: "rgba(255,255,255,0.7)", borderColor: "rgba(0,0,0,0.15)", color: "#374151" }}>{v}</span>
             ))}
             {c.niza.map(n => (
-              <Badge key={n} className="text-[10px] h-5 bg-primary/10 text-primary border-0 font-mono">NCL {n}</Badge>
+              <span key={n} className="inline-flex items-center rounded-md px-2 h-5 font-mono text-[10px] font-semibold" style={{ backgroundColor: "rgba(59,130,246,0.15)", color: "#1d4ed8" }}>NCL {n}</span>
             ))}
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">{c.conflictBreakdown}</p>
+          <p className="text-[10px] mt-1" style={{ color: "#6b7280" }}>{c.conflictBreakdown}</p>
         </div>
       </div>
     </div>
