@@ -3,6 +3,7 @@ import { renderToBuffer, Document, Page, Text, View } from "@react-pdf/renderer"
 import { createElement } from "react"
 import { TrademarkReportDocument } from "@/lib/pdf/trademark-report"
 import path from "path"
+import fs from "fs"
 
 export const maxDuration = 60
 
@@ -18,10 +19,20 @@ async function renderMinimal(): Promise<Buffer> {
   return renderToBuffer(doc)
 }
 
-// Resolve an image path to an absolute file:// URL the PDF renderer can read
-function imgUrl(relativePath: string): string {
+// Read an image from public/ and return a base64 data URI.
+// react-pdf on Vercel serverless cannot read file:// paths reliably,
+// but accepts data URIs directly.
+function imgDataUri(relativePath: string): string {
   const abs = path.join(process.cwd(), "public", relativePath)
-  return `file://${abs}`
+  try {
+    const buf = fs.readFileSync(abs)
+    const ext = path.extname(relativePath).toLowerCase().replace(".", "")
+    const mime = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : "image/png"
+    return `data:${mime};base64,${buf.toString("base64")}`
+  } catch {
+    // Return a 1x1 transparent PNG data URI as fallback so the PDF still renders
+    return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -81,9 +92,9 @@ export async function GET(req: NextRequest) {
         "Iniciar el proceso de registro de la marca 'TORO BEBIDAS' en la clase 32.",
         "Evaluar la necesidad de registro en la clase 35 y proceder si se considera estratégico.",
       ],
-      logoPath: imgUrl("test-logos/logo-toro-bebidas.png"),
-      screenshotPath: imgUrl("report-assets/toro-result.png"),
-      screenshotDetailPath: imgUrl("report-assets/toro-viena.png"),
+      logoPath: imgDataUri("test-logos/logo-toro-bebidas.png"),
+      screenshotPath: imgDataUri("report-assets/toro-result.png"),
+      screenshotDetailPath: imgDataUri("report-assets/toro-viena.png"),
     },
     {
       name: "TORITO ENERGIA",
@@ -128,9 +139,9 @@ export async function GET(req: NextRequest) {
         "Solicitar un informe de viabilidad de registro con un experto en propiedad intelectual.",
         "Evaluar la posibilidad de rebranding o ajustes en el diseño de la marca para minimizar riesgos.",
       ],
-      logoPath: imgUrl("test-logos/logo-torito-energia.png"),
-      screenshotPath: imgUrl("report-assets/torito-result.png"),
-      screenshotDetailPath: imgUrl("report-assets/torito-detail.png"),
+      logoPath: imgDataUri("test-logos/logo-torito-energia.png"),
+      screenshotPath: imgDataUri("report-assets/torito-result.png"),
+      screenshotDetailPath: imgDataUri("report-assets/torito-detail.png"),
     },
   ]
 
