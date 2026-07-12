@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { ConceptModal } from "@/components/concept-modal"
 import { useState as useStateHelp } from "react"
 
 // Risk badge helper
@@ -42,6 +43,7 @@ export default function AgentePage() {
   const [report, setReport] = useState<TrademarkInsightReport | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [activeHelp, setActiveHelp] = useState<string | null>(null)
+  const [conceptModal, setConceptModal] = useState<'viena' | 'niza' | 'disponible' | 'conflictos' | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Compute step progress
@@ -280,6 +282,13 @@ export default function AgentePage() {
                     <CheckCircle2 className="w-4 h-4" />
                     {report.registrabilidad.disponible ? 'Disponible en Chile' : 'No disponible'}
                   </h3>
+                  <button
+                    onClick={() => setConceptModal('disponible')}
+                    className="text-slate-400 hover:text-slate-300 transition-colors"
+                    title="¿Qué significa disponible?"
+                  >
+                    <HelpCircle className="w-4 h-4" />
+                  </button>
                 </div>
                 <p className={`text-sm ${report.registrabilidad.disponible ? 'text-green-200' : 'text-red-200'}`}>
                   {report.registrabilidad.recomendacion}
@@ -297,7 +306,17 @@ export default function AgentePage() {
               </div>
             )}
 
-            {/* Stats */}
+            {/* Stats — Conflictos */}
+            <div className="mb-2 flex items-center gap-2 px-1">
+              <h3 className="font-semibold text-slate-300 text-sm">Conflictos detectados</h3>
+              <button
+                onClick={() => setConceptModal('conflictos')}
+                className="text-slate-400 hover:text-slate-300 transition-colors"
+                title="¿Qué son conflictos?"
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+              </button>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-center">
                 <p className="text-lg font-bold text-red-300">{report.conflictos.breakdown.alto}</p>
@@ -323,6 +342,13 @@ export default function AgentePage() {
               <div className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-4">
                 <h3 className="font-semibold text-purple-300 text-sm mb-2 flex items-center gap-1.5">
                   <BarChart3 className="w-4 h-4" /> Viena ({report.viena.codes.length})
+                  <button
+                    onClick={() => setConceptModal('viena')}
+                    className="ml-auto text-slate-400 hover:text-slate-300 transition-colors"
+                    title="¿Qué es Viena?"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                  </button>
                 </h3>
                 <div className="flex flex-wrap gap-1 mb-3">
                   {report.viena.elementos_detectados.slice(0, 3).map((e, i) => (
@@ -346,6 +372,13 @@ export default function AgentePage() {
               <div className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-4">
                 <h3 className="font-semibold text-blue-300 text-sm mb-2 flex items-center gap-1.5">
                   <FileText className="w-4 h-4" /> Niza ({report.niza.clases.length})
+                  <button
+                    onClick={() => setConceptModal('niza')}
+                    className="ml-auto text-slate-400 hover:text-slate-300 transition-colors"
+                    title="¿Qué es Niza?"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                  </button>
                 </h3>
                 <ul className="space-y-1.5 text-xs">
                   {report.niza.clases.slice(0, 4).map(c => (
@@ -391,6 +424,12 @@ export default function AgentePage() {
             <p className="text-xs text-center text-slate-500">{report.informe.disclaimer}</p>
           </div>
         )}
+
+        {/* Concept modals */}
+        <ConceptModal concept="viena" isOpen={conceptModal === 'viena'} onClose={() => setConceptModal(null)} />
+        <ConceptModal concept="niza" isOpen={conceptModal === 'niza'} onClose={() => setConceptModal(null)} />
+        <ConceptModal concept="disponible" isOpen={conceptModal === 'disponible'} onClose={() => setConceptModal(null)} />
+        <ConceptModal concept="conflictos" isOpen={conceptModal === 'conflictos'} onClose={() => setConceptModal(null)} />
       </div>
     </main>
   )
