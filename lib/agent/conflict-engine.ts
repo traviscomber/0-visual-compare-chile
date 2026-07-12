@@ -134,20 +134,40 @@ export class ConflictEngine {
   }
 
   /**
-   * Similitud de nombres — bigram Jaccard (0–1)
+   * Similitud de nombres — combina bigram Jaccard + deteccion de prefijo/substring.
+   * Un nombre que es prefijo del otro o que lo contiene como substring recibe score alto.
    */
   private nameSimilarity(a: string, b: string): number {
     if (a === b) return 1
     if (a.length < 2 || b.length < 2) return 0
 
+    // Limpiar palabras vacias comunes (EL, LA, LOS, DE, DEL)
+    const clean = (s: string) => s.replace(/\b(EL|LA|LOS|LAS|DE|DEL|Y|EN)\b/g, '').replace(/\s+/g, ' ').trim()
+    const ca = clean(a)
+    const cb = clean(b)
+
+    // Prefijo: "TORO" es prefijo de "TORITO" → alta similitud
+    if (ca.startsWith(cb) || cb.startsWith(ca)) {
+      const shorter = Math.min(ca.length, cb.length)
+      const longer  = Math.max(ca.length, cb.length)
+      return 0.75 + (shorter / longer) * 0.25  // 0.75–1.0
+    }
+
+    // Substring: "TORO" aparece dentro de "EL TORO ENERGY"
+    if (ca.includes(cb) || cb.includes(ca)) {
+      const shorter = Math.min(ca.length, cb.length)
+      const longer  = Math.max(ca.length, cb.length)
+      return 0.60 + (shorter / longer) * 0.20  // 0.60–0.80
+    }
+
+    // Bigram Jaccard
     const bigrams = (s: string) => {
       const set = new Set<string>()
       for (let i = 0; i < s.length - 1; i++) set.add(s.slice(i, i + 2))
       return set
     }
-
-    const ba = bigrams(a)
-    const bb = bigrams(b)
+    const ba = bigrams(ca)
+    const bb = bigrams(cb)
     const intersection = [...ba].filter(x => bb.has(x)).length
     const union = new Set([...ba, ...bb]).size
 
