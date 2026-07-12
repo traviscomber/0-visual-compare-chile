@@ -44,67 +44,68 @@ export default function LandingPage() {
       </nav>
 
       {/* HERO */}
-      <section className="max-w-6xl mx-auto px-6 py-32 relative z-10">
+      <section className="max-w-6xl mx-auto px-6 py-28 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
-            {/* Badge pill - HIDDEN */}
-            {/* <div className="inline-block mb-6">
-              <div className="glass-sm px-4 py-2">
-                <p className="text-sm font-medium text-blue-300">N3uralia style •Ã‚Â¢ Deteccion visual •Ã‚Â¢ CLP $5M Presupuesto</p>
-              </div>
-            </div> */}
+            {/* Badge pill */}
+            <div className="inline-flex items-center gap-2 mb-6 glass-sm px-4 py-2 rounded-full border border-blue-500/30">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <p className="text-sm font-medium text-blue-200">MVP operativo &middot; Chile &middot; 350K+ marcas registradas</p>
+            </div>
             
-            <h1 className="text-6xl md:text-7xl font-bold text-white leading-tight mb-6">
-              Protege tus marcas.<br/>Nosotros las analizamos
+            <h1 className="text-6xl md:text-7xl font-bold text-white leading-[1.05] mb-6 text-balance">
+              Protege tus marcas.<br/>
+              <span className="text-blue-400">Nosotros las analizamos.</span>
             </h1>
             
-            <p className="text-lg text-blue-100 mb-4 max-w-2xl leading-relaxed">
-              Plataforma neural para comparacion visual de marcas y consulta operativa de registros. Motor hibrido de 3 metodos: SHA-256 exacto, pHash perceptual y embeddings visuales.
-            </p>
-            
-            <p className="text-sm text-blue-200 mb-8 max-w-2xl leading-relaxed">
-              MVP operativo: comparacion en &lt;<span className="text-blue-300 font-semibold">100ms</span>, 350K+ registros consultables y foco en trazabilidad. Construido en Next.js 16 + React 19 + Supabase.
+            <p className="text-lg text-blue-100 mb-8 max-w-xl leading-relaxed">
+              Plataforma de comparaci&oacute;n visual de marcas para abogados, examinadores y titulares. Motor h&iacute;brido con 3 m&eacute;todos: SHA-256 exacto, pHash perceptual y embeddings visuales.
             </p>
 
-            <div className="flex gap-4 mb-12">
+            <div className="flex flex-wrap gap-4 mb-10">
               <Link href="/auth/signup">
-                <Button size="lg" className="bg-blue-500 hover:bg-blue-600 text-white">Entrar al panel</Button>
+                <Button size="lg" className="bg-blue-500 hover:bg-blue-400 text-white font-semibold px-8 shadow-lg shadow-blue-500/25">
+                  Comenzar gratis
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
               </Link>
               <Link href="/consulta">
-                <Button size="lg" variant="outline" className="border-blue-500/50 text-blue-300 hover:bg-blue-500/20">Abrir consulta</Button>
+                <Button size="lg" variant="outline" className="border-blue-500/40 text-blue-300 hover:bg-blue-500/10 hover:border-blue-400">
+                  Consultar marcas
+                </Button>
               </Link>
             </div>
 
-
-            {/* Key metrics - HIDDEN */}
-            {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="glass p-4">
+            {/* Key metrics — visible */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="glass p-4 rounded-xl border border-blue-500/20">
                 <div className="text-2xl font-bold text-blue-300 mb-1">&lt;100ms</div>
-                <p className="text-xs text-blue-200">Latencia P95</p>
+                <p className="text-xs text-blue-400">Latencia P95</p>
               </div>
-              <div className="glass p-4">
+              <div className="glass p-4 rounded-xl border border-blue-500/20">
                 <div className="text-2xl font-bold text-emerald-400 mb-1">350K+</div>
-                <p className="text-xs text-blue-200">Marcas</p>
+                <p className="text-xs text-blue-400">Marcas registradas</p>
               </div>
-              <div className="glass p-4">
-                <div className="text-2xl font-bold text-blue-300 mb-1">3 métodos</div>
-                <p className="text-xs text-blue-200">Análisis híbrido</p>
+              <div className="glass p-4 rounded-xl border border-blue-500/20">
+                <div className="text-2xl font-bold text-blue-300 mb-1">3</div>
+                <p className="text-xs text-blue-400">M&eacute;todos de an&aacute;lisis</p>
               </div>
-              <div className="glass p-4">
-                <div className="text-2xl font-bold text-blue-300 mb-1">99.95%</div>
-                <p className="text-xs text-blue-200">SLA uptime</p>
+              <div className="glass p-4 rounded-xl border border-blue-500/20">
+                <div className="text-2xl font-bold text-amber-400 mb-1">5</div>
+                <p className="text-xs text-blue-400">Categor&iacute;as de similitud</p>
               </div>
-            </div> */}
+            </div>
           </div>
 
           {/* Hero Image */}
-          <div className="glass p-6">
+          <div className="glass p-3 rounded-2xl border border-blue-500/30 shadow-2xl shadow-blue-500/10">
             <Image
-              src="/images/logo-comparison-hero.jpg"
-              alt="Visual comparison for brand review"
-              width={500}
-              height={400}
-              className="w-full rounded-lg"
+              src="/images/brand-comparison-hero.png"
+              alt="Panel de comparaci&oacute;n visual de marcas mostrando 94% de similitud"
+              width={600}
+              height={450}
+              className="w-full rounded-xl"
+              priority
             />
           </div>
         </div>
@@ -113,8 +114,12 @@ export default function LandingPage() {
       {/* MOTOR - Technical Specs */}
       <section id="motor" className="py-24 relative z-10 border-t border-blue-500/20">
         <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-4xl font-bold text-white mb-4">Motor neural de comparacion</h2>
-          <p className="text-lg text-blue-200 mb-12 max-w-2xl">Analisis simultaneo usando SHA-256, pHash perceptual y embeddings visuales para maxima precision. Haz clic en cada metodo para ver el criterio operativo.</p>
+          <div className="inline-flex items-center gap-2 mb-4 glass-sm px-3 py-1.5 rounded-full border border-blue-500/30">
+            <Cpu className="h-3.5 w-3.5 text-blue-400" />
+            <p className="text-xs font-medium text-blue-300 uppercase tracking-wider">Tecnolog&iacute;a</p>
+          </div>
+          <h2 className="text-4xl font-bold text-white mb-4">C&oacute;mo detectamos la similitud</h2>
+          <p className="text-lg text-blue-200 mb-12 max-w-2xl">An&aacute;lisis simult&aacute;neo con 3 m&eacute;todos complementarios para m&aacute;xima precisi&oacute;n. Desde coincidencia exacta hasta similitud conceptual profunda.</p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <MethodFlipCard
@@ -209,8 +214,11 @@ export default function LandingPage() {
           </div>
 
           <div className="glass p-5 mb-8">
-            <h3 className="text-lg font-bold text-white mb-5">Clasificacion automatica (5 categorias)</h3>
-            <p className="text-xs text-blue-200 mb-4">Haz clic en cualquier categoria para explorar señales y casos de uso</p>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xl font-bold text-white">Clasificaci&oacute;n autom&aacute;tica</h3>
+              <span className="text-xs text-blue-400 glass-sm px-2 py-1 rounded-full border border-blue-500/20">5 categor&iacute;as</span>
+            </div>
+            <p className="text-sm text-blue-300 mb-5">Haz clic en cualquier categor&iacute;a para explorar se&ntilde;ales y casos de uso concretos</p>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               <ClassificationFlipCard
                 tag="exact_match"
@@ -345,37 +353,36 @@ export default function LandingPage() {
           </div>
 
           {/* Performance specs */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="glass p-6">
-              <p className="text-xs text-blue-200 mb-2">Latencia promedio</p>
-              <p className="text-2xl font-bold text-blue-300">47ms</p>
-            </div>
-            <div className="glass p-6">
-              <p className="text-xs text-blue-200 mb-2">Capacidad máxima</p>
-              <p className="text-2xl font-bold text-blue-300">1000+</p>
-              <p className="text-xs text-blue-400">req/seg</p>
-            </div>
-            <div className="glass p-6">
-              <p className="text-xs text-blue-200 mb-2">Tamaño máximo imagen</p>
-              <p className="text-2xl font-bold text-blue-300">50MB</p>
-            </div>
-            <div className="glass p-6">
-              <p className="text-xs text-blue-200 mb-2">Formatos soportados</p>
-              <p className="text-xs text-blue-300">JPEG, PNG, WebP, TIFF</p>
-            </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+            {[
+              { value: "47ms", label: "Latencia promedio", sub: "P95 en producci\u00f3n", color: "text-blue-300" },
+              { value: "1.000+", label: "Req / segundo", sub: "Capacidad m\u00e1xima", color: "text-emerald-400" },
+              { value: "50MB", label: "Tama\u00f1o m\u00e1ximo", sub: "Por imagen", color: "text-blue-300" },
+              { value: "4", label: "Formatos", sub: "JPEG, PNG, WebP, TIFF", color: "text-amber-400" },
+            ].map((stat) => (
+              <div key={stat.label} className="glass p-6 rounded-xl border border-blue-500/20 hover:border-blue-400/40 transition-all">
+                <p className={`text-2xl font-bold mb-1 ${stat.color}`}>{stat.value}</p>
+                <p className="text-sm font-medium text-white mb-0.5">{stat.label}</p>
+                <p className="text-xs text-blue-400">{stat.sub}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* CARRUSEL DE EJEMPLOS */}
-      <section className="py-24 relative z-10 border-t border-blue-500/20">
+      <section id="ejemplos" className="py-24 relative z-10 border-t border-blue-500/20">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 mb-4 glass-sm px-3 py-1.5 rounded-full border border-blue-500/30">
+              <Eye className="h-3.5 w-3.5 text-blue-400" />
+              <p className="text-xs font-medium text-blue-300 uppercase tracking-wider">Motor en acci&oacute;n</p>
+            </div>
             <h2 className="text-4xl font-bold text-white mb-4">
-              Ejemplos en acción
+              Comparaciones reales
             </h2>
-            <p className="text-lg text-blue-100">
-              Explora diferentes tipos de comparaciones y clasificaciones
+            <p className="text-lg text-blue-200 max-w-xl mx-auto">
+              As&iacute; clasifica nuestro motor cada par de im&aacute;genes. Explora los 5 niveles de similitud.
             </p>
           </div>
           
@@ -508,7 +515,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="mb-16">
             <div className="inline-block mb-6">
-            <span className="text-xs font-bold text-blue-300 bg-purple-500/50 px-4 py-2 rounded-lg">MOTOR IA DE COMPARACI&#211;N</span>
+            <span className="text-xs font-bold text-blue-300 glass-sm border border-blue-500/30 px-4 py-2 rounded-lg uppercase tracking-wider">Roadmap del proyecto</span>
             </div>
             <h2 className="text-5xl font-bold text-white mb-4">Roadmap MVP: 2 Meses</h2>
             <p className="text-xl text-blue-200 max-w-2xl leading-relaxed">Plan MVP con presupuesto CLP $5M. API de comparación visual con 3 métodos (SHA-256, pHash, Embeddings IA). Portal de Consulta en Fase 2.</p>
@@ -534,7 +541,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="mb-16">
             <div className="inline-block mb-6">
-              <span className="text-xs font-bold text-blue-300 bg-blue-500/50 px-4 py-2 rounded-lg">PANEL OPERATIVO</span>
+              <span className="text-xs font-bold text-blue-300 glass-sm border border-blue-500/30 px-4 py-2 rounded-lg uppercase tracking-wider">Panel operativo</span>
             </div>
             <h2 className="text-5xl font-bold text-white mb-4">Panel interactivo</h2>
             <p className="text-xl text-blue-200 max-w-2xl leading-relaxed">Accede a los modulos activos del MVP. Motor de comparacion y visualizador de marcas con interfaz glassmorphism.</p>
@@ -601,7 +608,7 @@ export default function LandingPage() {
                 <div className="space-y-3 mb-6">
                   <div className="flex items-center gap-3">
                     <CheckCircle2 className="h-5 w-5 text-emerald-400 flex-shrink-0" />
-                    <span className="text-sm text-blue-100">7 módulos funcionales</span>
+                    <span className="text-sm text-blue-100">7 m&oacute;dulos funcionales</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle2 className="h-5 w-5 text-emerald-400 flex-shrink-0" />

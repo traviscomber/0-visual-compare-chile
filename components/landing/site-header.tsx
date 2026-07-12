@@ -11,10 +11,11 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false)
 
   const navLinks = [
-    { href: "#modulos", label: "Modulos" },
-    { href: "#como-funciona", label: "Como funciona" },
-    { href: "/casos", label: "Casos" },
-    { href: "/seguridad", label: "Seguridad" },
+    { href: "#motor", label: "Motor" },
+    { href: "#casos", label: "Casos de uso" },
+    { href: "#como", label: "C\u00f3mo funciona" },
+    { href: "/consulta", label: "Consulta de Marcas" },
+    { href: "/docs", label: "API" },
   ]
 
   return (
@@ -66,17 +67,17 @@ export function SiteHeader() {
         </Sheet>
 
         <div className="hidden items-center gap-2 md:flex">
-          <Button asChild variant="ghost" size="sm" className="text-foreground hover:text-[--color-brand-teal]">
-            <Link href="/auth/login">Iniciar sesion</Link>
+          <Button asChild variant="ghost" size="sm" className="text-foreground hover:text-primary">
+            <Link href="/auth/login">Iniciar sesi&oacute;n</Link>
           </Button>
-          <Button asChild size="sm" className="bg-[--color-brand-teal] font-semibold hover:bg-[--color-brand-teal-dark]">
-            <Link href="/auth/sign-up">Crear cuenta</Link>
+          <Button asChild size="sm" className="font-semibold">
+            <Link href="/auth/sign-up">Entrar al panel</Link>
           </Button>
         </div>
 
         <div className="md:hidden">
-          <Button asChild size="sm" className="bg-[--color-brand-teal] font-semibold hover:bg-[--color-brand-teal-dark]">
-            <Link href="/auth/sign-up">Crear</Link>
+          <Button asChild size="sm" className="font-semibold">
+            <Link href="/auth/sign-up">Entrar</Link>
           </Button>
         </div>
       </div>
