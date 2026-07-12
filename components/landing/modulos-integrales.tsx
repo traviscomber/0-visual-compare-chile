@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card"
 
 export function ModulosIntegrales() {
   return (
-    <section id="modulos" className="border-t border-border bg-secondary/30 px-6 py-20">
+    <section id="modulos" className="border-t border-border bg-card/30 px-6 py-20">
       <div className="mx-auto max-w-6xl">
         <div className="mb-16 text-center">
           <h2 className="text-4xl font-bold text-foreground">Dos modulos integrados</h2>

@@ -39,7 +39,7 @@ export function ClasificacionesNizaViena() {
                 </div>
               </div>
 
-              <Card className="border-amber-200 bg-amber-50 p-6">
+              <Card className="border-amber-500/30 bg-amber-500/10 p-6">
                 <p className="mb-4 font-semibold text-foreground">Ejemplo práctico</p>
                 <div className="space-y-3 text-sm">
                   <div>
@@ -47,7 +47,7 @@ export function ClasificacionesNizaViena() {
                     <p className="text-muted-foreground">Producto: Jugos de frutas</p>
                     <p className="mt-1 font-semibold text-primary">→ Clase 32: Bebidas sin alcohol</p>
                   </div>
-                  <hr className="my-3 border-amber-200" />
+                  <hr className="my-3 border-amber-500/30" />
                   <p className="text-xs text-muted-foreground">
                     La misma marca en ropa estaría en Clase 25, sin conflicto. Cada clase es independiente.
                   </p>
@@ -83,7 +83,7 @@ export function ClasificacionesNizaViena() {
                 </div>
               </div>
 
-              <Card className="border-violet-200 bg-violet-50 p-6">
+              <Card className="border-violet-500/30 bg-violet-500/10 p-6">
                 <p className="mb-4 font-semibold text-foreground">Categorías comunes</p>
                 <div className="space-y-2 text-sm">
                   <ClassRow label="Animales (reales)" code="Código 01" />
@@ -111,7 +111,7 @@ function InfoCard({
   tone: "amber" | "violet"
 }) {
   return (
-    <Card className={tone === "amber" ? "border-amber-200 bg-amber-50 p-4" : "border-violet-200 bg-violet-50 p-4"}>
+    <Card className={tone === "amber" ? "border-amber-500/30 bg-amber-500/10 p-4" : "border-violet-500/30 bg-violet-500/10 p-4"}>
       <p className="text-sm font-semibold text-foreground">{title}</p>
       <p className="mt-1 text-sm text-muted-foreground">{description}</p>
     </Card>

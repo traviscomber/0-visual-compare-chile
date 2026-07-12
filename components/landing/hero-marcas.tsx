@@ -13,7 +13,7 @@ export function HeroMarcas() {
           <div>
             <Badge
               variant="outline"
-              className="mb-6 gap-2 rounded-full border-border bg-secondary px-3 py-1 text-xs font-medium text-foreground"
+              className="mb-6 gap-2 rounded-full border-border bg-card px-3 py-1 text-xs font-medium text-foreground"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
               Plataforma MVP para marcas registradas en Chile
