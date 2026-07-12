@@ -356,7 +356,7 @@ export default function AgentePage() {
                   ))}
                 </div>
                 <ul className="space-y-1.5 text-xs">
-                  {report.viena.codes.slice(0, 3).map(c => (
+                  {Array.from(new Map(report.viena.codes.map(c => [c.code, c])).values()).slice(0, 3).map(c => (
                     <li key={c.code} className="flex items-center justify-between text-slate-300">
                       <span>{c.code} • {c.titulo.substring(0, 30)}</span>
                       <span className="text-purple-300">{Math.round(c.confidence * 100)}%</span>

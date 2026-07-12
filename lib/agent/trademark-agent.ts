@@ -12,10 +12,12 @@ import OpenAI from 'openai'
 import { VienaClassifier, type VienaClassification } from './viena-classifier'
 import { NizaClassifier, type NizaClassification } from './niza-classifier'
 import { ConflictEngine, type ConflictReport } from './conflict-engine'
+import { searchInapi } from '@/lib/inapi/client'
 import type { Marca } from '@/types/marca'
 
 export interface TrademarkAgentRequest {
   imageBase64: string         // logo a analizar
+  imageMimeType?: string      // MIME type de la imagen (default: 'image/png')
   nombreMarca: string
   descripcion?: string
   industria?: string
@@ -89,7 +91,7 @@ export class TrademarkAgent {
 
     // PASO 1 + 2 en paralelo: clasificar Viena (visión) y Niza (texto)
     const [viena, niza] = await Promise.all([
-      this.vienaClassifier.classify(req.imageBase64),
+      this.vienaClassifier.classify(req.imageBase64, req.imageMimeType),
       this.nizaClassifier.classify({
         nombre: req.nombreMarca,
         descripcion: req.descripcion,
@@ -242,60 +244,47 @@ Responde ÚNICAMENTE con JSON válido:
     nombreMarca: string,
     nizaClases: NizaClassification['clases']
   ): Promise<TrademarkInsightReport['registrabilidad']> {
-    // Búsqueda 1: Por nombre exacto
-    const searchResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3000'}/api/inapi/search?q=${encodeURIComponent(nombreMarca)}&type=nombre&match=1`,
-      { headers: { 'User-Agent': 'TrademarkAgent/1.0' } }
-    )
+    // Búsqueda 1: Por nombre exacto — llamada directa sin HTTP loop
+    const marcasEncontradas = await searchInapi({
+      query: nombreMarca,
+      type: 'nombre',
+      matchMode: '1',
+    })
 
-    if (!searchResponse.ok) {
-      throw new Error(`INAPI search failed: ${searchResponse.status}`)
-    }
-
-    const searchData = await searchResponse.json()
-    const marcasEncontradas = searchData.resultados || []
-
-    // Analizar resultados
     if (marcasEncontradas.length > 0) {
-      // Marca similar o idéntica encontrada
       const marca = marcasEncontradas[0]
-      const disponible = marca.estado === 'cancelada' || marca.estado === 'rechazada'
+      const disponible = marca.estado === 'Denegada'
 
       return {
         disponible,
         marca_encontrada: {
           nombre: marca.nombre,
           solicitante: marca.solicitante || 'Desconocido',
-          clase_niza: marca.clase_niza || 'N/A',
+          clase_niza: marca.niza?.join(', ') || 'N/A',
           estado: marca.estado,
-          fecha_registro: marca.fecha_registro,
+          fecha_registro: marca.fecha || '',
           pais: 'Chile',
         },
         conflictos_reales: marcasEncontradas.length,
         recomendacion: disponible
-          ? '✓ La marca está disponible para registrar (registro previo cancelado/rechazado). Puedes proceder con confianza.'
+          ? '✓ La marca está disponible para registrar (registro previo denegado). Puedes proceder con confianza.'
           : '⚠ Esta marca ya existe registrada en Chile. No es registrable. Considera un nombre alternativo.',
       }
     }
 
-    // Búsqueda 2: Por clases Niza
+    // Búsqueda 2: Por nombre en clase Niza principal — llamada directa sin HTTP loop
     if (nizaClases.length > 0) {
-      const clasePrincipal = nizaClases.find(c => c.tipo === 'principal')?.numero || nizaClases[0].numero
-      const searchByClass = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3000'}/api/inapi/search?q=${encodeURIComponent(nombreMarca)}&type=clase_niza&match=2`,
-        { headers: { 'User-Agent': 'TrademarkAgent/1.0' } }
-      )
+      const conflictosClase = await searchInapi({
+        query: nombreMarca,
+        type: 'clase_niza',
+        matchMode: '2',
+      })
 
-      if (searchByClass.ok) {
-        const classData = await searchByClass.json()
-        const conflictosClase = classData.resultados?.length || 0
-
-        if (conflictosClase > 0) {
-          return {
-            disponible: false,
-            conflictos_reales: conflictosClase,
-            recomendacion: `⚠ Se encontraron ${conflictosClase} marca(s) similar(es) en la misma clase Niza. Riesgo moderado. Consulta con un abogado de PI.`,
-          }
+      if (conflictosClase.length > 0) {
+        return {
+          disponible: false,
+          conflictos_reales: conflictosClase.length,
+          recomendacion: `⚠ Se encontraron ${conflictosClase.length} marca(s) similar(es) en la misma clase Niza. Riesgo moderado. Consulta con un abogado de PI.`,
         }
       }
     }

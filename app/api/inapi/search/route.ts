@@ -3,7 +3,7 @@ import { searchInapi, type InapiMatchMode, type InapiSearchType } from "@/lib/in
 
 export const runtime = "nodejs"
 
-const ALLOWED_TYPES = new Set<InapiSearchType>(["nombre", "solicitante", "clase", "solicitud", "registro"])
+const ALLOWED_TYPES = new Set<InapiSearchType>(["nombre", "solicitante", "clase", "clase_niza", "solicitud", "registro"])
 const ALLOWED_MATCH_MODES = new Set<InapiMatchMode>(["1", "2", "3", "4"])
 
 export async function GET(request: Request) {

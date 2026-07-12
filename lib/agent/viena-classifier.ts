@@ -46,7 +46,7 @@ export class VienaClassifier {
     this.client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   }
 
-  async classify(imageBase64: string): Promise<VienaClassification> {
+  async classify(imageBase64: string, mimeType?: string): Promise<VienaClassification> {
     const userPrompt = `Analiza este logo y asigna los códigos Viena correspondientes.
 
 Responde ÚNICAMENTE con JSON válido (sin markdown, sin texto extra):
@@ -69,7 +69,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin texto extra):
         {
           role: 'user',
           content: [
-            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${imageBase64}`, detail: 'high' } },
+            { type: 'image_url', image_url: { url: `data:${mimeType ?? 'image/png'};base64,${imageBase64}`, detail: 'high' } },
             { type: 'text', text: userPrompt },
           ],
         },
@@ -87,16 +87,20 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin texto extra):
       parsed = {}
     }
 
-    // Enriquecer con títulos del catálogo
-    const codes: VienaCode[] = (parsed.codes ?? []).map(c => {
+    // Enriquecer con títulos del catálogo y deduplicar por código
+    const seen = new Set<string>()
+    const codes: VienaCode[] = (parsed.codes ?? []).reduce<VienaCode[]>((acc, c) => {
+      if (seen.has(c.code)) return acc
+      seen.add(c.code)
       const catalog = API_PORTAL_VIENA.find(v => v.codigo === c.code)
-      return {
+      acc.push({
         code: c.code,
         titulo: catalog?.titulo ?? c.code,
         elemento: c.elemento,
         confidence: Math.max(0, Math.min(1, c.confidence ?? 0.5)),
-      }
-    })
+      })
+      return acc
+    }, [])
 
     return {
       codes,

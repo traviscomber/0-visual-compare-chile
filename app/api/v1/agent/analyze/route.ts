@@ -62,17 +62,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'El campo "image" (base64) es requerido.' }, { status: 400 })
     }
 
-    // Limpiar prefijo data URI si viene incluido
-    const cleanImage = image.replace(/^data:image\/[a-z]+;base64,/, '')
+    // Extraer MIME type del data URI si viene incluido
+    const mimeMatch = image.match(/^data:(image\/[a-z+]+);base64,/)
+    const imageMimeType = mimeMatch ? mimeMatch[1] : 'image/png'
+    const cleanImage = image.replace(/^data:image\/[a-z+]+;base64,/, '')
 
     if (cleanImage.length > 6 * 1024 * 1024) {
       return NextResponse.json({ error: 'Imagen demasiado grande. Máximo 4.5 MB.' }, { status: 413 })
     }
 
-    console.log(`[v0] TrademarkAgent.analyze: "${nombre}" — imagen ${Math.round(cleanImage.length / 1024)}KB`)
+    console.log(`[v0] TrademarkAgent.analyze: "${nombre}" — imagen ${Math.round(cleanImage.length / 1024)}KB tipo ${imageMimeType}`)
 
     const report = await agent.analyze({
       imageBase64: cleanImage,
+      imageMimeType,
       nombreMarca: nombre.trim(),
       descripcion: descripcion.trim() || undefined,
       industria:   industria.trim()   || undefined,

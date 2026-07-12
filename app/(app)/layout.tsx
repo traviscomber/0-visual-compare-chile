@@ -18,12 +18,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       user = result.data.user ?? null
 
       if (user) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("profiles")
           .select("full_name, company_name")
           .eq("id", user.id)
           .maybeSingle()
-        profile = data ?? null
+        // Only set profile if no error — silently ignore PGRST205 (table missing) and any other DB errors
+        if (!error) profile = data ?? null
       }
     } catch {
       user = null

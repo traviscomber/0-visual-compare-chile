@@ -5,7 +5,7 @@ const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 const SESSION_TTL_MS = 25 * 60 * 1000
 
-export type InapiSearchType = "nombre" | "solicitante" | "clase" | "solicitud" | "registro"
+export type InapiSearchType = "nombre" | "solicitante" | "clase" | "clase_niza" | "solicitud" | "registro"
 export type InapiMatchMode = "1" | "2" | "3" | "4"
 
 interface InapiSearchOptions {
@@ -67,7 +67,7 @@ async function requestInapi({
     param2: type === "registro" ? query : "",
     param3: type === "nombre" ? query : "",
     param4: type === "solicitante" ? query : "",
-    param5: type === "clase" ? query : "",
+    param5: (type === "clase" || type === "clase_niza") ? query : "",
     param6: "",
     param7: "",
     param8: "",
