@@ -13,17 +13,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LayoutDashboard, GitCompareArrows, History, Settings, LogOut, Menu, Search, Cpu } from "lucide-react"
+import { LayoutDashboard, GitCompareArrows, History, Settings, LogOut, Menu, Search, Cpu, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
 
+// Main navigation: only essential items visible
 const navItems = [
-  { href: "/dashboard", label: "Resumen", icon: LayoutDashboard },
-  { href: "/compare", label: "Comparar", icon: GitCompareArrows },
-  { href: "/agente", label: "Agente IA", icon: Cpu },
-  { href: "/consulta", label: "Consulta", icon: Search },
+  { href: "/dashboard", label: "Inicio", icon: LayoutDashboard, primary: true },
+  { href: "/agente", label: "Analizar Marca", icon: Cpu, primary: true },
+]
+
+// Secondary items hidden in user menu
+const secondaryNavItems = [
+  { href: "/consulta", label: "Consulta de marcas", icon: Search },
   { href: "/history", label: "Historial", icon: History },
-  { href: "/settings", label: "Configuración", icon: Settings },
+  { href: "/compare", label: "Comparar imágenes", icon: GitCompareArrows },
 ]
 
 export function AppNav({
@@ -115,6 +119,24 @@ export function AppNav({
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+              
+              {/* Secondary navigation items */}
+              <div className="px-1 py-1">
+                <p className="text-xs font-medium text-muted-foreground px-2 py-1">Herramientas</p>
+                {secondaryNavItems.map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <DropdownMenuItem key={item.href} asChild>
+                      <Link href={item.href} className="cursor-pointer">
+                        <Icon className="mr-2 h-4 w-4" />
+                        {item.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  )
+                })}
+              </div>
+              
+              <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href="/settings">
                   <Settings className="mr-2 h-4 w-4" />
@@ -133,6 +155,7 @@ export function AppNav({
       {mobileOpen && (
         <nav className="border-t border-border bg-background md:hidden">
           <div className="mx-auto flex max-w-7xl flex-col px-2 py-2">
+            {/* Main items */}
             {navItems.map((item) => {
               const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
               const Icon = item.icon
@@ -143,10 +166,35 @@ export function AppNav({
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm",
+                    "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium",
                     active
                       ? "bg-secondary text-foreground"
                       : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              )
+            })}
+            
+            {/* Secondary items separator */}
+            <div className="my-2 border-t border-border" />
+            <p className="text-xs font-medium text-muted-foreground px-3 py-1">Más herramientas</p>
+            
+            {/* Secondary items */}
+            {secondaryNavItems.map((item) => {
+              const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+              const Icon = item.icon
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+                    active && "bg-secondary text-foreground",
                   )}
                 >
                   <Icon className="h-4 w-4" />

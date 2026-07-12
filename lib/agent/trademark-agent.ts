@@ -37,6 +37,21 @@ export interface TrademarkInsightReport {
   // Conflictos
   conflictos: ConflictReport
 
+  // INAPI registrabilidad — estado real en Chile
+  registrabilidad?: {
+    disponible: boolean
+    marca_encontrada?: {
+      nombre: string
+      solicitante: string
+      clase_niza: string
+      estado: string
+      fecha_registro?: string
+      pais: string
+    }
+    conflictos_reales: number
+    recomendacion: string
+  }
+
   // Informe ejecutivo generado por IA
   informe: {
     resumen_ejecutivo: string
@@ -93,6 +108,16 @@ export class TrademarkAgent {
       nombreMarca: req.nombreMarca,
     })
 
+    // PASO 3.5: Búsqueda INAPI para verificar disponibilidad real en Chile
+    let registrabilidad: TrademarkInsightReport['registrabilidad'] | undefined
+    try {
+      const inapiResult = await this.searchInapiAvailability(req.nombreMarca, niza.clases)
+      registrabilidad = inapiResult
+    } catch (err) {
+      console.error('[v0] INAPI search error:', err)
+      // Continuamos sin INAPI si falla (graceful fallback)
+    }
+
     // PASO 4: Generar informe ejecutivo con GPT-4o
     const informe = await this.generateReport({
       nombreMarca: req.nombreMarca,
@@ -116,6 +141,7 @@ export class TrademarkAgent {
       viena,
       niza,
       conflictos,
+      registrabilidad,
       informe: informe.data,
       pipeline_ms,
     }
@@ -206,5 +232,79 @@ Responde ÚNICAMENTE con JSON válido:
     }
 
     return { data, tokens_used }
+  }
+
+  /**
+   * Búsqueda en INAPI para verificar disponibilidad real de la marca en Chile
+   * Retorna estado de registrabilidad y conflictos encontrados
+   */
+  private async searchInapiAvailability(
+    nombreMarca: string,
+    nizaClases: NizaClassification['clases']
+  ): Promise<TrademarkInsightReport['registrabilidad']> {
+    // Búsqueda 1: Por nombre exacto
+    const searchResponse = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3000'}/api/inapi/search?q=${encodeURIComponent(nombreMarca)}&type=nombre&match=1`,
+      { headers: { 'User-Agent': 'TrademarkAgent/1.0' } }
+    )
+
+    if (!searchResponse.ok) {
+      throw new Error(`INAPI search failed: ${searchResponse.status}`)
+    }
+
+    const searchData = await searchResponse.json()
+    const marcasEncontradas = searchData.resultados || []
+
+    // Analizar resultados
+    if (marcasEncontradas.length > 0) {
+      // Marca similar o idéntica encontrada
+      const marca = marcasEncontradas[0]
+      const disponible = marca.estado === 'cancelada' || marca.estado === 'rechazada'
+
+      return {
+        disponible,
+        marca_encontrada: {
+          nombre: marca.nombre,
+          solicitante: marca.solicitante || 'Desconocido',
+          clase_niza: marca.clase_niza || 'N/A',
+          estado: marca.estado,
+          fecha_registro: marca.fecha_registro,
+          pais: 'Chile',
+        },
+        conflictos_reales: marcasEncontradas.length,
+        recomendacion: disponible
+          ? '✓ La marca está disponible para registrar (registro previo cancelado/rechazado). Puedes proceder con confianza.'
+          : '⚠ Esta marca ya existe registrada en Chile. No es registrable. Considera un nombre alternativo.',
+      }
+    }
+
+    // Búsqueda 2: Por clases Niza
+    if (nizaClases.length > 0) {
+      const clasePrincipal = nizaClases.find(c => c.tipo === 'principal')?.numero || nizaClases[0].numero
+      const searchByClass = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3000'}/api/inapi/search?q=${encodeURIComponent(nombreMarca)}&type=clase_niza&match=2`,
+        { headers: { 'User-Agent': 'TrademarkAgent/1.0' } }
+      )
+
+      if (searchByClass.ok) {
+        const classData = await searchByClass.json()
+        const conflictosClase = classData.resultados?.length || 0
+
+        if (conflictosClase > 0) {
+          return {
+            disponible: false,
+            conflictos_reales: conflictosClase,
+            recomendacion: `⚠ Se encontraron ${conflictosClase} marca(s) similar(es) en la misma clase Niza. Riesgo moderado. Consulta con un abogado de PI.`,
+          }
+        }
+      }
+    }
+
+    // Sin conflictos encontrados en INAPI
+    return {
+      disponible: true,
+      conflictos_reales: 0,
+      recomendacion: '✓ No se encontraron conflictos en el registro de INAPI. Marca disponible para registrar en Chile.',
+    }
   }
 }

@@ -5,16 +5,15 @@ import Link from "next/link"
 import type { TrademarkInsightReport } from "@/lib/agent/trademark-agent"
 import {
   Upload, Loader2, AlertTriangle, CheckCircle2, ShieldAlert,
-  ChevronDown, ChevronUp, FileText, Cpu, Search, BarChart3, Download
+  FileText, Cpu, Search, BarChart3, Download, Zap, HelpCircle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
+import { ConceptModal } from "@/components/concept-modal"
+import { useState as useStateHelp } from "react"
 
-// ─── Risk badge ────────────────────────────────────────────────────────────────
+// Risk badge helper
 function RiskBadge({ nivel }: { nivel: string }) {
   const n = nivel?.toUpperCase()
   if (n === "ALTO")
@@ -36,68 +35,24 @@ function RiskBadge({ nivel }: { nivel: string }) {
   )
 }
 
-// ─── Collapsible section ────────────────────────────────────────────────────────
-function Section({ title, icon, children, defaultOpen = false }: {
-  title: string
-  icon: React.ReactNode
-  children: React.ReactNode
-  defaultOpen?: boolean
-}) {
-  const [open, setOpen] = useState(defaultOpen)
-  return (
-    <Card className="bg-slate-800/60 border-slate-700/50 backdrop-blur-sm">
-      <CardHeader className="pb-0">
-        <button
-          onClick={() => setOpen(o => !o)}
-          className="flex items-center justify-between w-full text-left"
-        >
-          <CardTitle className="flex items-center gap-2 text-base font-semibold text-white">
-            {icon} {title}
-          </CardTitle>
-          {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-        </button>
-      </CardHeader>
-      {open && <CardContent className="pt-4">{children}</CardContent>}
-    </Card>
-  )
-}
-
-// ─── Conflict row ───────────────────────────────────────────────────────────────
-function ConflictRow({ c }: { c: TrademarkInsightReport["conflictos"]["conflictos"][0] }) {
-  const color =
-    c.nivel_riesgo === "alto"  ? "text-red-300 border-red-500/30 bg-red-500/10" :
-    c.nivel_riesgo === "medio" ? "text-amber-300 border-amber-500/30 bg-amber-500/10" :
-                                 "text-green-300 border-green-500/30 bg-green-500/10"
-  return (
-    <div className={`rounded-lg border p-3 text-sm ${color}`}>
-      <div className="flex items-center justify-between mb-1">
-        <span className="font-semibold">{c.marca.nombre}</span>
-        <span className="text-xs opacity-70">{c.marca.pais} · {c.marca.estado} · Score {c.score_total}/100</span>
-      </div>
-      <p className="opacity-80 text-xs leading-relaxed">{c.razon_conflicto}</p>
-      <div className="flex flex-wrap gap-1 mt-2">
-        {c.viena_overlap.map(v => (
-          <Badge key={v} variant="outline" className="text-[10px] border-current opacity-70">Viena {v}</Badge>
-        ))}
-        {c.niza_overlap.map(n => (
-          <Badge key={n} variant="outline" className="text-[10px] border-current opacity-70">Niza {n}</Badge>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ─── Main page ─────────────────────────────────────────────────────────────────
 export default function AgentePage() {
   const [image, setImage] = useState<string | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [nombre, setNombre] = useState("")
-  const [descripcion, setDescripcion] = useState("")
-  const [industria, setIndustria] = useState("")
   const [loading, setLoading] = useState(false)
   const [report, setReport] = useState<TrademarkInsightReport | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [activeHelp, setActiveHelp] = useState<string | null>(null)
+  const [conceptModal, setConceptModal] = useState<'viena' | 'niza' | 'disponible' | 'conflictos' | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // Compute step progress
+  const stepComplete = {
+    imagen: !!image,
+    nombre: !!nombre.trim(),
+    resultados: !!report
+  }
+  const progress = (Object.values(stepComplete).filter(Boolean).length / 3) * 100
 
   const handleFile = (file: File) => {
     if (!file.type.startsWith("image/")) return
@@ -126,7 +81,7 @@ export default function AgentePage() {
       const res = await fetch("/api/v1/agent/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image, nombre: nombre.trim(), descripcion, industria }),
+        body: JSON.stringify({ image, nombre: nombre.trim(), descripcion: "", industria: "" }),
       })
 
       const data = await res.json()
@@ -139,7 +94,6 @@ export default function AgentePage() {
       setReport(data as TrademarkInsightReport)
     } catch (err) {
       setError("Error de conexión. Intenta nuevamente.")
-      console.error("[v0] agente fetch error:", err)
     } finally {
       setLoading(false)
     }
@@ -149,41 +103,64 @@ export default function AgentePage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-purple-950 py-12 px-4">
-      <div className="max-w-4xl mx-auto space-y-8">
-
-        {/* Header */}
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 text-sm font-medium">
-            <Cpu className="w-4 h-4" />
-            Agente Marca Intelligence — IA
+      <div className="max-w-5xl mx-auto">
+        {/* Progress bar */}
+        <div className="mb-8 animate-fade-in">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-slate-300">Progreso del análisis</h3>
+            <span className="text-xs text-slate-500">{Math.round(progress)}%</span>
           </div>
-          <h1 className="text-4xl font-bold text-white text-balance">
-            Análisis inteligente de marcas
-          </h1>
-          <p className="text-slate-400 max-w-xl mx-auto leading-relaxed">
-            Clasifica tu logo con Viena + Niza, detecta conflictos en el repositorio
-            de marcas y obtiene un informe ejecutivo en segundos.
-          </p>
-          <div className="pt-1">
-            <Link href="/agente/report">
-              <Button variant="outline" size="sm" className="gap-2 border-blue-500/40 text-blue-300 hover:bg-blue-500/10 hover:text-blue-200 bg-transparent">
-                <Download className="w-3.5 h-3.5" />
-                Descargar informe PDF de demo
-              </Button>
-            </Link>
+          <div className="w-full h-2.5 bg-slate-700/50 rounded-full overflow-hidden border border-white/10">
+            <div
+              className={`h-full bg-gradient-to-r from-blue-500 via-cyan-400 to-blue-500 smooth-transition rounded-full ${progress > 0 ? 'animate-glow' : ''}`}
+              style={{ width: `${progress}%` }}
+            />
           </div>
         </div>
 
-        {/* Input form */}
-        <Card className="bg-slate-800/60 border-slate-700/50 backdrop-blur-sm">
-          <CardContent className="pt-6 space-y-5">
+        {/* Header */}
+        <div className="text-center space-y-3 mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 text-sm font-medium">
+            <Zap className="w-4 h-4" />
+            Agente IA — Análisis de Marcas
+          </div>
+          <h1 className="text-4xl font-bold text-white text-balance">
+            Analiza tu marca en segundos
+          </h1>
+          <p className="text-slate-400 max-w-2xl mx-auto">
+            Sube tu logo, ingresa el nombre y obtén clasificación Viena + Niza + detección de conflictos
+          </p>
+        </div>
 
-            {/* Drop zone */}
+        {/* Input form */}
+        <div className="grid gap-6 mb-8">
+          {/* Step 1: Image upload */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${stepComplete.imagen ? 'bg-green-500/20 text-green-300 border border-green-500/40' : 'bg-blue-500/20 text-blue-300 border border-blue-500/40'}`}>
+                {stepComplete.imagen ? '✓' : '1'}
+              </div>
+              <h3 className="font-semibold text-white">Paso 1: Sube tu logo</h3>
+              <button
+                onClick={() => setActiveHelp(activeHelp === 'image' ? null : 'image')}
+                className="ml-auto text-slate-400 hover:text-slate-300"
+              >
+                <HelpCircle className="w-4 h-4" />
+              </button>
+            </div>
+            
+            {activeHelp === 'image' && (
+              <div className="text-xs text-slate-300 bg-blue-500/10 p-3 rounded border border-blue-500/20 mb-3 flex gap-2">
+                <span className="text-blue-400 shrink-0">💡</span>
+                <span>Usa una imagen clara y de alta resolución. PNG, JPG o SVG funcionan bien. La imagen puede ser el logo solo o con nombre de marca.</span>
+              </div>
+            )}
+
             <div
               onDrop={handleDrop}
               onDragOver={e => e.preventDefault()}
               onClick={() => fileRef.current?.click()}
-              className="relative border-2 border-dashed border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-blue-500/60 hover:bg-blue-500/5 transition-all"
+              className="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-blue-500/60 hover:bg-blue-500/10 smooth-transition bg-slate-900/30 hover-lift group"
             >
               <input
                 ref={fileRef}
@@ -193,77 +170,83 @@ export default function AgentePage() {
                 onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
               />
               {imagePreview ? (
-                <div className="flex flex-col items-center gap-3">
+                <div className="flex flex-col items-center gap-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={imagePreview} alt="Logo a analizar" className="max-h-32 max-w-xs rounded-lg object-contain" />
-                  <p className="text-xs text-slate-400">Haz clic para cambiar imagen</p>
+                  <img src={imagePreview} alt="Logo" className="max-h-24 max-w-xs rounded-lg object-contain" />
+                  <p className="text-xs text-slate-400">Haz clic para cambiar</p>
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-3 text-slate-400">
-                  <Upload className="w-10 h-10 opacity-50" />
-                  <div>
-                    <p className="font-medium text-slate-300">Arrastra tu logo aquí</p>
-                    <p className="text-sm mt-1">o haz clic para seleccionar (PNG, JPG, SVG)</p>
-                  </div>
+                <div className="flex flex-col items-center gap-2 text-slate-400 group-hover:text-slate-300 smooth-transition">
+                  <Upload className="w-8 h-8 opacity-50 group-hover:opacity-100 group-hover:scale-110 group-hover:animate-float smooth-transition" />
+                  <p className="text-sm font-medium text-slate-300">Arrastra tu logo aquí</p>
+                  <p className="text-xs">o haz clic para seleccionar</p>
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Form fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-300">Nombre de la marca *</label>
-                <Input
-                  value={nombre}
-                  onChange={e => setNombre(e.target.value)}
-                  placeholder="ej: VISUAL COMPARE"
-                  className="bg-slate-900/60 border-slate-600 text-white placeholder:text-slate-500"
-                />
+          {/* Step 2: Nombre */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${stepComplete.nombre ? 'bg-green-500/20 text-green-300 border border-green-500/40' : 'bg-blue-500/20 text-blue-300 border border-blue-500/40'}`}>
+                {stepComplete.nombre ? '✓' : '2'}
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-300">Industria / sector</label>
-                <Input
-                  value={industria}
-                  onChange={e => setIndustria(e.target.value)}
-                  placeholder="ej: tecnología, retail, salud"
-                  className="bg-slate-900/60 border-slate-600 text-white placeholder:text-slate-500"
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-300">Descripción del negocio</label>
-              <Textarea
-                value={descripcion}
-                onChange={e => setDescripcion(e.target.value)}
-                placeholder="¿Qué hace tu empresa? ej: Plataforma SaaS de comparación visual de logos para abogados de PI"
-                className="bg-slate-900/60 border-slate-600 text-white placeholder:text-slate-500 resize-none h-20"
-              />
+              <h3 className="font-semibold text-white">Paso 2: Nombre de la marca</h3>
+              <button
+                onClick={() => setActiveHelp(activeHelp === 'nombre' ? null : 'nombre')}
+                className="ml-auto text-slate-400 hover:text-slate-300"
+              >
+                <HelpCircle className="w-4 h-4" />
+              </button>
             </div>
 
+            {activeHelp === 'nombre' && (
+              <div className="text-xs text-slate-300 bg-blue-500/10 p-3 rounded border border-blue-500/20 mb-3 flex gap-2">
+                <span className="text-blue-400 shrink-0">💡</span>
+                <span>Escribe exactamente cómo quieres registrar tu marca en INAPI. Usa mayúsculas, caracteres especiales si los tiene. Ejemplo: "VISUAL COMPARE®" o "La Marca™"</span>
+              </div>
+            )}
+
+            <Input
+              value={nombre}
+              onChange={e => setNombre(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && canAnalyze && handleAnalyze()}
+              placeholder="Nombre de la marca (ej: VISUAL COMPARE)"
+              className="bg-slate-900/60 border-slate-600 text-white placeholder:text-slate-500 h-11"
+            />
+          </div>
+
+          {/* Step 3: Analyze */}
+          <div>
             <Button
               onClick={handleAnalyze}
               disabled={!canAnalyze}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold h-11 gap-2"
+              className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold h-12 gap-2 text-base"
             >
               {loading ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Analizando con IA...</>
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <div className="text-left">
+                    <div className="text-sm">Analizando...</div>
+                    <div className="text-xs opacity-75">Viena • Niza • INAPI</div>
+                  </div>
+                </>
               ) : (
-                <><Search className="w-4 h-4" /> Analizar marca</>
+                <>
+                  <Search className="w-5 h-5" />
+                  <div className="text-left">
+                    <div className="text-sm">Analizar marca</div>
+                    <div className="text-xs opacity-75">Paso 3 de 3</div>
+                  </div>
+                </>
               )}
             </Button>
-
-            {loading && (
-              <div className="text-center text-sm text-slate-400 space-y-1">
-                <p>El agente está ejecutando 3 modelos en paralelo...</p>
-                <p className="text-xs opacity-60">Clasificación Viena (Vision) + Clasificación Niza + Detección de conflictos</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Error */}
         {error && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-300 text-sm flex items-start gap-2">
+          <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-300 text-sm flex items-start gap-2 mb-6">
             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>{error}</span>
           </div>
@@ -272,145 +255,181 @@ export default function AgentePage() {
         {/* Report */}
         {report && (
           <div className="space-y-4">
-
-            {/* Executive summary card */}
-            <Card className="bg-slate-800/80 border-slate-700/50 backdrop-blur-sm">
-              <CardContent className="pt-6">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
-                  <div>
-                    <h2 className="text-xl font-bold text-white">{report.marca}</h2>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {report.tokens_totales.toLocaleString()} tokens · ${report.costo_estimado_usd} USD · {report.pipeline_ms}ms
-                    </p>
-                  </div>
-                  <RiskBadge nivel={report.informe.nivel_riesgo_global} />
+            {/* Summary */}
+            <div className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-5">
+              <div className="flex items-start justify-between mb-3 gap-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-white">{report.marca}</h2>
+                  <p className="text-xs text-slate-400 mt-1">{report.pipeline_ms}ms · {report.tokens_totales} tokens</p>
                 </div>
+                <RiskBadge nivel={report.informe.nivel_riesgo_global} />
+              </div>
+              <p className="text-slate-200 text-sm leading-relaxed">{report.informe.resumen_ejecutivo}</p>
+              {report.informe.analisis_conflictos && (
+                <p className="text-slate-300 text-xs mt-3">{report.informe.analisis_conflictos}</p>
+              )}
+            </div>
 
-                <p className="text-slate-200 leading-relaxed">{report.informe.resumen_ejecutivo}</p>
-
-                {report.informe.analisis_conflictos && (
-                  <>
-                    <Separator className="my-4 bg-slate-700/50" />
-                    <p className="text-slate-300 text-sm leading-relaxed">{report.informe.analisis_conflictos}</p>
-                  </>
-                )}
-
-                {/* Conflict summary chips */}
-                <div className="flex flex-wrap gap-2 mt-4">
-                  <span className="text-xs px-2.5 py-1 rounded-full bg-red-500/15 text-red-300 border border-red-500/25">
-                    {report.conflictos.breakdown.alto} conflicto{report.conflictos.breakdown.alto !== 1 ? "s" : ""} alto
-                  </span>
-                  <span className="text-xs px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/25">
-                    {report.conflictos.breakdown.medio} medio{report.conflictos.breakdown.medio !== 1 ? "s" : ""}
-                  </span>
-                  <span className="text-xs px-2.5 py-1 rounded-full bg-green-500/15 text-green-300 border border-green-500/25">
-                    {report.conflictos.breakdown.bajo} bajo{report.conflictos.breakdown.bajo !== 1 ? "s" : ""}
-                  </span>
-                  <span className="text-xs px-2.5 py-1 rounded-full bg-slate-700/60 text-slate-300 border border-slate-600/50">
-                    {report.conflictos.total_marcas_analizadas.toLocaleString()} marcas analizadas
-                  </span>
+            {/* INAPI Registrabilidad — verificación real en Chile */}
+            {report.registrabilidad && (
+              <div className={`rounded-lg p-4 border ${
+                report.registrabilidad.disponible
+                  ? 'bg-green-500/10 border-green-500/30'
+                  : 'bg-red-500/10 border-red-500/30'
+              }`}>
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <h3 className={`font-semibold flex items-center gap-1.5 ${report.registrabilidad.disponible ? 'text-green-300' : 'text-red-300'}`}>
+                    <CheckCircle2 className="w-4 h-4" />
+                    {report.registrabilidad.disponible ? 'Disponible en Chile' : 'No disponible'}
+                  </h3>
+                  <button
+                    onClick={() => setConceptModal('disponible')}
+                    className="text-slate-400 hover:text-slate-300 transition-colors"
+                    title="¿Qué significa disponible?"
+                  >
+                    <HelpCircle className="w-4 h-4" />
+                  </button>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Recomendaciones */}
-            {report.informe.recomendaciones.length > 0 && (
-              <Section title="Recomendaciones" icon={<CheckCircle2 className="w-4 h-4 text-green-400" />} defaultOpen>
-                <ul className="space-y-2">
-                  {report.informe.recomendaciones.map((r, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
-                      <span className="mt-0.5 w-5 h-5 rounded-full bg-green-500/20 text-green-400 text-xs flex items-center justify-center shrink-0 font-semibold">{i + 1}</span>
-                      {r}
-                    </li>
-                  ))}
-                </ul>
-                {report.informe.proximos_pasos.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-slate-700/50">
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Próximos pasos</p>
-                    <ul className="space-y-1">
-                      {report.informe.proximos_pasos.map((p, i) => (
-                        <li key={i} className="text-sm text-slate-400 flex items-start gap-2">
-                          <span className="text-blue-400 mt-0.5">→</span> {p}
-                        </li>
-                      ))}
-                    </ul>
+                <p className={`text-sm ${report.registrabilidad.disponible ? 'text-green-200' : 'text-red-200'}`}>
+                  {report.registrabilidad.recomendacion}
+                </p>
+                {report.registrabilidad.marca_encontrada && (
+                  <div className="text-xs text-slate-300 bg-slate-900/50 rounded p-2 mt-2 space-y-1">
+                    <p className="font-semibold text-slate-200">{report.registrabilidad.marca_encontrada.nombre}</p>
+                    <p className="text-slate-400">Solicitante: {report.registrabilidad.marca_encontrada.solicitante}</p>
+                    <p className="text-slate-400">Estado: {report.registrabilidad.marca_encontrada.estado}</p>
                   </div>
                 )}
-              </Section>
+                {report.registrabilidad.conflictos_reales > 0 && (
+                  <p className="text-xs text-slate-300 mt-2">Conflictos en INAPI: <span className="font-semibold text-slate-200">{report.registrabilidad.conflictos_reales}</span></p>
+                )}
+              </div>
             )}
 
-            {/* Clasificación Viena */}
-            <Section title={`Clasificación Viena (${report.viena.codes.length} códigos)`} icon={<BarChart3 className="w-4 h-4 text-purple-400" />}>
-              <div className="space-y-3">
-                <div className="flex flex-wrap gap-1.5">
-                  {report.viena.elementos_detectados.map((e, i) => (
+            {/* Stats — Conflictos */}
+            <div className="mb-2 flex items-center gap-2 px-1">
+              <h3 className="font-semibold text-slate-300 text-sm">Conflictos detectados</h3>
+              <button
+                onClick={() => setConceptModal('conflictos')}
+                className="text-slate-400 hover:text-slate-300 transition-colors"
+                title="¿Qué son conflictos?"
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-center">
+                <p className="text-lg font-bold text-red-300">{report.conflictos.breakdown.alto}</p>
+                <p className="text-xs text-red-300 opacity-70">Alto</p>
+              </div>
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-center">
+                <p className="text-lg font-bold text-amber-300">{report.conflictos.breakdown.medio}</p>
+                <p className="text-xs text-amber-300 opacity-70">Medio</p>
+              </div>
+              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-center">
+                <p className="text-lg font-bold text-green-300">{report.conflictos.breakdown.bajo}</p>
+                <p className="text-xs text-green-300 opacity-70">Bajo</p>
+              </div>
+              <div className="bg-slate-700/30 border border-slate-600/50 rounded-lg p-3 text-center">
+                <p className="text-lg font-bold text-slate-200">{report.viena.codes.length + report.niza.clases.length}</p>
+                <p className="text-xs text-slate-400">Clasificaciones</p>
+              </div>
+            </div>
+
+            {/* Classifications grid */}
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Viena */}
+              <div className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-4">
+                <h3 className="font-semibold text-purple-300 text-sm mb-2 flex items-center gap-1.5">
+                  <BarChart3 className="w-4 h-4" /> Viena ({report.viena.codes.length})
+                  <button
+                    onClick={() => setConceptModal('viena')}
+                    className="ml-auto text-slate-400 hover:text-slate-300 transition-colors"
+                    title="¿Qué es Viena?"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                  </button>
+                </h3>
+                <div className="flex flex-wrap gap-1 mb-3">
+                  {report.viena.elementos_detectados.slice(0, 3).map((e, i) => (
                     <Badge key={i} variant="outline" className="text-xs border-purple-500/30 text-purple-300 bg-purple-500/10">{e}</Badge>
                   ))}
                 </div>
-                <div className="space-y-2">
-                  {report.viena.codes.map(c => (
-                    <div key={c.code} className="flex items-start gap-3 text-sm">
-                      <code className="shrink-0 px-2 py-0.5 rounded bg-purple-500/15 text-purple-300 text-xs font-mono">{c.code}</code>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-slate-300">{c.titulo}</span>
-                        <span className="text-slate-500 text-xs ml-2">({c.elemento})</span>
-                      </div>
-                      <span className="text-xs text-slate-500 shrink-0">{Math.round(c.confidence * 100)}%</span>
-                    </div>
+                <ul className="space-y-1.5 text-xs">
+                  {report.viena.codes.slice(0, 3).map(c => (
+                    <li key={c.code} className="flex items-center justify-between text-slate-300">
+                      <span>{c.code} • {c.titulo.substring(0, 30)}</span>
+                      <span className="text-purple-300">{Math.round(c.confidence * 100)}%</span>
+                    </li>
                   ))}
-                </div>
-                {report.viena.colores_dominantes.length > 0 && (
-                  <p className="text-xs text-slate-400">Colores dominantes: {report.viena.colores_dominantes.join(", ")}</p>
-                )}
+                  {report.viena.codes.length > 3 && (
+                    <li className="text-slate-500">+{report.viena.codes.length - 3} más</li>
+                  )}
+                </ul>
               </div>
-            </Section>
 
-            {/* Clasificación Niza */}
-            <Section title={`Clasificación Niza (${report.niza.clases.length} clases)`} icon={<FileText className="w-4 h-4 text-blue-400" />}>
-              <div className="space-y-3">
-                {report.niza.clases.map(c => (
-                  <div key={c.numero} className="flex items-start gap-3 text-sm">
-                    <div className="shrink-0 flex flex-col items-center gap-0.5">
-                      <code className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-300 text-xs font-mono">Clase {c.numero}</code>
-                      <span className={`text-[10px] ${c.tipo === "principal" ? "text-blue-400" : "text-slate-500"}`}>
-                        {c.tipo}
+              {/* Niza */}
+              <div className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-300 text-sm mb-2 flex items-center gap-1.5">
+                  <FileText className="w-4 h-4" /> Niza ({report.niza.clases.length})
+                  <button
+                    onClick={() => setConceptModal('niza')}
+                    className="ml-auto text-slate-400 hover:text-slate-300 transition-colors"
+                    title="¿Qué es Niza?"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                  </button>
+                </h3>
+                <ul className="space-y-1.5 text-xs">
+                  {report.niza.clases.slice(0, 4).map(c => (
+                    <li key={c.numero} className="flex items-center justify-between text-slate-300">
+                      <span>Clase {c.numero} • {c.titulo.substring(0, 24)}</span>
+                      <span className={`text-xs ${c.tipo === "principal" ? "text-blue-300 font-semibold" : "text-slate-500"}`}>
+                        {c.tipo === "principal" ? "P" : "S"}
                       </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-slate-300 font-medium leading-tight">{c.titulo}</p>
-                      <p className="text-slate-400 text-xs mt-0.5 leading-relaxed">{c.razon}</p>
-                    </div>
-                  </div>
-                ))}
-                <div className={`text-xs px-3 py-2 rounded-lg mt-1 ${
-                  report.niza.riesgo_sin_registro === "alto"  ? "bg-red-500/10 text-red-300 border border-red-500/20" :
-                  report.niza.riesgo_sin_registro === "medio" ? "bg-amber-500/10 text-amber-300 border border-amber-500/20" :
-                                                                "bg-green-500/10 text-green-300 border border-green-500/20"
-                }`}>
-                  Riesgo sin registro: <strong>{report.niza.riesgo_sin_registro.toUpperCase()}</strong>
-                  {report.niza.resumen && ` — ${report.niza.resumen}`}
-                </div>
+                    </li>
+                  ))}
+                  {report.niza.clases.length > 4 && (
+                    <li className="text-slate-500">+{report.niza.clases.length - 4} más</li>
+                  )}
+                </ul>
               </div>
-            </Section>
+            </div>
 
             {/* Conflictos */}
             {report.conflictos.conflictos.length > 0 && (
-              <Section title={`Conflictos detectados (${report.conflictos.conflictos.length})`} icon={<ShieldAlert className="w-4 h-4 text-amber-400" />}>
-                <div className="space-y-2">
-                  {report.conflictos.conflictos.map((c, i) => (
-                    <ConflictRow key={i} c={c} />
+              <div className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-4">
+                <h3 className="font-semibold text-amber-300 text-sm mb-3 flex items-center gap-1.5">
+                  <ShieldAlert className="w-4 h-4" /> Conflictos ({report.conflictos.conflictos.length})
+                </h3>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {report.conflictos.conflictos.slice(0, 3).map((c, i) => (
+                    <div key={i} className={`text-xs p-2 rounded border ${
+                      c.nivel_riesgo === "alto" ? "bg-red-500/10 border-red-500/20 text-red-300" :
+                      c.nivel_riesgo === "medio" ? "bg-amber-500/10 border-amber-500/20 text-amber-300" :
+                      "bg-green-500/10 border-green-500/20 text-green-300"
+                    }`}>
+                      <p className="font-semibold">{c.marca.nombre}</p>
+                      <p className="opacity-80 mt-0.5">{c.razon_conflicto.substring(0, 80)}...</p>
+                    </div>
                   ))}
+                  {report.conflictos.conflictos.length > 3 && (
+                    <p className="text-slate-500 text-xs">+{report.conflictos.conflictos.length - 3} conflictos más</p>
+                  )}
                 </div>
-              </Section>
+              </div>
             )}
 
-            {/* Disclaimer */}
-            <p className="text-xs text-center text-slate-500 px-4">
-              {report.informe.disclaimer}
-            </p>
-
+            {/* Footer */}
+            <p className="text-xs text-center text-slate-500">{report.informe.disclaimer}</p>
           </div>
         )}
+
+        {/* Concept modals */}
+        <ConceptModal concept="viena" isOpen={conceptModal === 'viena'} onClose={() => setConceptModal(null)} />
+        <ConceptModal concept="niza" isOpen={conceptModal === 'niza'} onClose={() => setConceptModal(null)} />
+        <ConceptModal concept="disponible" isOpen={conceptModal === 'disponible'} onClose={() => setConceptModal(null)} />
+        <ConceptModal concept="conflictos" isOpen={conceptModal === 'conflictos'} onClose={() => setConceptModal(null)} />
       </div>
     </main>
   )
