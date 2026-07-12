@@ -1,7 +1,7 @@
-# Visual Compare API V1 - Implementation Status
+﻿# Visual Compare API V1 - Implementation Status
 
 **Date**: May 11, 2026
-**Status**: ✅ COMPLETE - Ready for Testing
+**Status**: âœ… COMPLETE - Ready for Testing
 **Version**: 1.0.0
 
 ---
@@ -16,36 +16,36 @@ The Visual Compare API V1 is fully implemented with all core endpoints, authenti
 
 ### 6 Core API Endpoints
 
-✅ **GET /api/v1/health** - Health check endpoint
+âœ… **GET /api/v1/health** - Health check endpoint
 - Returns API status, version, and timestamp
 - No authentication required (public)
 - Response time: <100ms
 
-✅ **POST /api/v1/images** - Image upload
+âœ… **POST /api/v1/images** - Image upload
 - Accepts JPEG, PNG, WebP, TIFF (max 50MB)
 - Calculates SHA-256 and pHash automatically
 - Stores in Supabase Storage with private bucket
 - Returns image metadata and IDs
 
-✅ **POST /api/v1/compare** - Image comparison
+âœ… **POST /api/v1/compare** - Image comparison
 - Core business logic: similarity scoring
 - 3-method approach: SHA-256 + pHash + metadata
 - Weighted scoring (60% pHash, 15% metadata, etc)
 - 5-category classification system
 - Returns similarity score (0-100%) + recommendation
 
-✅ **GET /api/v1/comparisons** - List comparisons
+âœ… **GET /api/v1/comparisons** - List comparisons
 - Paginated results (limit, offset)
 - Filtered by organization_id
 - Sorted by created_at (newest first)
 - Up to 100 results per page
 
-✅ **GET /api/v1/comparisons/{id}** - Get comparison details
+âœ… **GET /api/v1/comparisons/{id}** - Get comparison details
 - Returns full comparison result
 - Includes images, signals, and recommendation
 - Organized results for display/reporting
 
-✅ **GET /api/v1/usage** - Usage statistics
+âœ… **GET /api/v1/usage** - Usage statistics
 - Uploads (today/month)
 - Comparisons (today/month)
 - Storage used (GB)
@@ -56,7 +56,7 @@ The Visual Compare API V1 is fully implemented with all core endpoints, authenti
 
 ## Authentication System
 
-✅ **API Key Authentication**
+âœ… **API Key Authentication**
 - Bearer token in Authorization header
 - SHA-256 hashed key storage
 - Per-organization API keys
@@ -83,7 +83,7 @@ The Visual Compare API V1 is fully implemented with all core endpoints, authenti
 ### Similarity Calculation
 
 ```
-Score = (pHash × 60%) + (metadata × 15%) + (dimensions × 15%) + (size × 10%)
+Score = (pHash Ã— 60%) + (metadata Ã— 15%) + (dimensions Ã— 15%) + (size Ã— 10%)
 ```
 
 **pHash Method**:
@@ -98,7 +98,7 @@ Score = (pHash × 60%) + (metadata × 15%) + (dimensions × 15%) + (size × 10%)
 - Performance: <5ms
 
 **Dimensions Method**:
-- Width × height match
+- Width Ã— height match
 - Weight: 15%
 - Performance: <5ms
 
@@ -157,21 +157,21 @@ Added indexes on:
 
 ```
 /vercel/share/v0-project/
-├── app/api/v1/
-│   ├── health/route.ts
-│   ├── images/route.ts
-│   ├── compare/route.ts
-│   ├── comparisons/
-│   │   ├── route.ts
-│   │   └── [id]/route.ts
-│   └── usage/route.ts
-├── lib/api/
-│   ├── auth.ts
-│   └── key-management.ts
-├── supabase/migrations/
-│   └── add_api_keys.sql
-├── API_V1_DOCUMENTATION.md
-└── V1_IMPLEMENTATION_STATUS.md
+â”œâ”€â”€ app/api/v1/
+â”‚   â”œâ”€â”€ health/route.ts
+â”‚   â”œâ”€â”€ images/route.ts
+â”‚   â”œâ”€â”€ compare/route.ts
+â”‚   â”œâ”€â”€ comparisons/
+â”‚   â”‚   â”œâ”€â”€ route.ts
+â”‚   â”‚   â””â”€â”€ [id]/route.ts
+â”‚   â””â”€â”€ usage/route.ts
+â”œâ”€â”€ lib/api/
+â”‚   â”œâ”€â”€ auth.ts
+â”‚   â””â”€â”€ key-management.ts
+â”œâ”€â”€ supabase/migrations/
+â”‚   â””â”€â”€ add_api_keys.sql
+â”œâ”€â”€ API_V1_DOCUMENTATION.md
+â””â”€â”€ V1_IMPLEMENTATION_STATUS.md
 ```
 
 ---
@@ -180,35 +180,35 @@ Added indexes on:
 
 ### Endpoints
 
-- [ ] GET /api/v1/health → 200 with version
-- [ ] POST /api/v1/images → 201 with image data
-- [ ] POST /api/v1/compare → 200 with similarity score
-- [ ] GET /api/v1/comparisons → 200 with paginated list
-- [ ] GET /api/v1/comparisons/{id} → 200 with details
-- [ ] GET /api/v1/usage → 200 with stats
+- [ ] GET /api/v1/health â†’ 200 with version
+- [ ] POST /api/v1/images â†’ 201 with image data
+- [ ] POST /api/v1/compare â†’ 200 with similarity score
+- [ ] GET /api/v1/comparisons â†’ 200 with paginated list
+- [ ] GET /api/v1/comparisons/{id} â†’ 200 with details
+- [ ] GET /api/v1/usage â†’ 200 with stats
 
 ### Authentication
 
-- [ ] Valid API key → requests succeed
-- [ ] Invalid API key → 401 Unauthorized
-- [ ] Missing Authorization header → 401 Unauthorized
-- [ ] Expired API key → 401 Unauthorized
+- [ ] Valid API key â†’ requests succeed
+- [ ] Invalid API key â†’ 401 Unauthorized
+- [ ] Missing Authorization header â†’ 401 Unauthorized
+- [ ] Expired API key â†’ 401 Unauthorized
 
 ### Business Logic
 
-- [ ] Exact same image → exact_match classification
-- [ ] Nearly identical image → near_duplicate classification
-- [ ] Different image → different classification
+- [ ] Exact same image â†’ exact_match classification
+- [ ] Nearly identical image â†’ near_duplicate classification
+- [ ] Different image â†’ different classification
 - [ ] Similarity score between 0-100
 - [ ] Recommendation matches classification
 
 ### Error Handling
 
-- [ ] Invalid image format → 400 Bad Request
-- [ ] File too large (>50MB) → 413 Payload Too Large
-- [ ] Missing image IDs → 400 Bad Request
-- [ ] Image not found → 404 Not Found
-- [ ] Server error → 500 Internal Server Error
+- [ ] Invalid image format â†’ 400 Bad Request
+- [ ] File too large (>50MB) â†’ 413 Payload Too Large
+- [ ] Missing image IDs â†’ 400 Bad Request
+- [ ] Image not found â†’ 404 Not Found
+- [ ] Server error â†’ 500 Internal Server Error
 
 ---
 
@@ -216,26 +216,26 @@ Added indexes on:
 
 | Operation | Target | Actual | Status |
 |-----------|--------|--------|--------|
-| Health check | <100ms | ~10ms | ✅ |
-| Image upload | <2s | 1.5s | ✅ |
-| Image compare | <100ms | 75ms | ✅ |
-| List comparisons | <500ms | 300ms | ✅ |
-| Get details | <200ms | 150ms | ✅ |
-| Usage stats | <500ms | 400ms | ✅ |
+| Health check | <100ms | ~10ms | âœ… |
+| Image upload | <2s | 1.5s | âœ… |
+| Image compare | <100ms | 75ms | âœ… |
+| List comparisons | <500ms | 300ms | âœ… |
+| Get details | <200ms | 150ms | âœ… |
+| Usage stats | <500ms | 400ms | âœ… |
 
 ---
 
 ## Security Features
 
-✅ API keys hashed (SHA-256)
-✅ Bearer token authentication
-✅ Organization-scoped access
-✅ RLS policies on database
-✅ Audit logging on all actions
-✅ Input validation
-✅ Error handling (no system info leaks)
-✅ CORS ready (configurable)
-✅ Rate limiting infrastructure
+âœ… API keys hashed (SHA-256)
+âœ… Bearer token authentication
+âœ… Organization-scoped access
+âœ… RLS policies on database
+âœ… Audit logging on all actions
+âœ… Input validation
+âœ… Error handling (no system info leaks)
+âœ… CORS ready (configurable)
+âœ… Rate limiting infrastructure
 
 ---
 
@@ -272,13 +272,13 @@ Added indexes on:
 
 ### Current Demo Implementations
 
-⚠️ **pHash Algorithm** - Using simplified demo version
+âš ï¸ **pHash Algorithm** - Using simplified demo version
 - Uses MD5 of first 1KB of image
 - **TODO**: Implement proper pHash algorithm (jimp, OpenCV, or custom)
 - Impact: Similarity scoring may be inaccurate for similar images
 - Fix: Replace `calculateSimpleHash()` in `/app/api/v1/images/route.ts`
 
-⚠️ **Rate Limiting** - Infrastructure ready, not active
+âš ï¸ **Rate Limiting** - Infrastructure ready, not active
 - **TODO**: Connect to Upstash Redis or similar
 - Add middleware to `/lib/api/auth.ts`
 - Track by API key, not user
@@ -323,7 +323,7 @@ Added indexes on:
 
 1. Deploy database migration
 2. Implement proper pHash algorithm
-3. Add rate limiting middleware
+3. Validate per-key quota enforcement in deployed environment
 4. Integration testing
 
 ### Medium Term (This Sprint)
@@ -343,6 +343,14 @@ Added indexes on:
 
 ---
 
-**Last Updated**: May 11, 2026
+## July 2026 Update
+
+- API key manager now supports configurable `quota_daily` and `quota_monthly`
+- Usage is persisted and reported per API key
+- Authenticated `v1` routes return `429` when a key exceeds quota
+- Successful and over-quota responses now expose `X-RateLimit-Limit-Daily`, `X-RateLimit-Remaining-Daily`, `X-RateLimit-Limit-Monthly`, and `X-RateLimit-Remaining-Monthly`
+- Remaining validation for the roadmap exit criterion is operational: apply the quota migration in Supabase and confirm `429` from the deployed app with a low-quota test key
+
+**Last Updated**: July 12, 2026
 **Version**: 1.0.0
-**Status**: ✅ Ready for Production Testing
+**Status**: Ready for quota verification in production

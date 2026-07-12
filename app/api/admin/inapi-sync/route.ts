@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { runInapiSync, runInapiSyncBatch } from "@/lib/inapi/sync"
+import { buildPhase1WindowPlan } from "@/lib/inapi/phase1"
 import { isInapiPresetKey } from "@/lib/inapi/presets"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
@@ -22,7 +23,7 @@ export async function GET() {
     }
 
     const admin = createAdminClient()
-    const [runsResponse, recordsResponse, lastCompletedResponse] = await Promise.all([
+    const [runsResponse, recordsResponse, nizaResponse, vienaResponse, completedRunsResponse, failedRunsResponse, lastCompletedResponse, phase1CompletedResponse] = await Promise.all([
       admin
         .from("inapi_sync_runs")
         .select(
@@ -31,24 +32,42 @@ export async function GET() {
         .order("created_at", { ascending: false })
         .limit(20),
       admin.from("trademark_records").select("id", { count: "exact", head: true }),
+      admin.from("trademark_record_niza").select("trademark_record_id", { count: "exact", head: true }),
+      admin.from("trademark_record_viena").select("trademark_record_id", { count: "exact", head: true }),
+      admin.from("inapi_sync_runs").select("id", { count: "exact", head: true }).eq("status", "completed"),
+      admin.from("inapi_sync_runs").select("id", { count: "exact", head: true }).eq("status", "failed"),
       admin
         .from("inapi_sync_runs")
         .select("id, created_at, finished_at, total_fetched, inserted_count, updated_count, metadata")
         .eq("status", "completed")
         .order("created_at", { ascending: false })
         .limit(1),
+      admin
+        .from("inapi_sync_runs")
+        .select("metadata")
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
+        .limit(200),
     ])
 
     if (runsResponse.error) {
       throw runsResponse.error
     }
 
+    const phase1Plan = buildPhase1WindowPlan(phase1CompletedResponse.data ?? [], 25)
+
     return NextResponse.json(
       {
         runs: runsResponse.data ?? [],
         stats: {
           totalRecords: recordsResponse.count ?? 0,
+          targetRecords: 10000,
+          completedRuns: completedRunsResponse.count ?? 0,
+          failedRuns: failedRunsResponse.count ?? 0,
+          nizaAssignments: nizaResponse.count ?? 0,
+          vienaAssignments: vienaResponse.count ?? 0,
           lastCompletedRun: lastCompletedResponse.data?.[0] ?? null,
+          phase1Plan,
         },
       },
       { status: 200 },
@@ -81,6 +100,10 @@ export async function POST(request: Request) {
     const preset = isInapiPresetKey(body?.preset) ? body.preset : null
     const delayMs =
       typeof body?.delayMs === "number" && Number.isFinite(body.delayMs) ? Math.max(0, Math.floor(body.delayMs)) : 400
+    const startIndex =
+      typeof body?.startIndex === "number" && Number.isFinite(body.startIndex) ? Math.max(0, Math.floor(body.startIndex)) : 0
+    const maxJobs =
+      typeof body?.maxJobs === "number" && Number.isFinite(body.maxJobs) ? Math.max(1, Math.floor(body.maxJobs)) : undefined
 
     if (!query && !queries.length && !preset) {
       return NextResponse.json(
@@ -93,7 +116,7 @@ export async function POST(request: Request) {
       preset || queries.length > 1
         ? await runInapiSyncBatch({
             jobs: queries.length
-              ? queries.map((item) => ({
+              ? queries.map((item: string) => ({
                   query: item,
                   searchType,
                 }))
@@ -102,6 +125,8 @@ export async function POST(request: Request) {
             matchMode,
             initiatedBy: user.id,
             delayMs,
+            startIndex,
+            maxJobs,
           })
         : await runInapiSync({
             query: query || queries[0],

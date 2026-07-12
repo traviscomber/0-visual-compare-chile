@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { generateApiKey, hashApiKey } from "@/lib/api/auth"
+import { DEFAULT_API_KEY_DAILY_QUOTA, DEFAULT_API_KEY_MONTHLY_QUOTA } from "@/lib/api/quotas"
 
 export interface ApiKeyRecord {
   id: string
@@ -8,13 +9,18 @@ export interface ApiKeyRecord {
   created_at: string
   last_used_at: string | null
   expires_at: string | null
+  quota_daily: number
+  quota_monthly: number
+  usage_today: number
+  usage_month: number
 }
 
 export async function createApiKey(
   organizationId: string,
   userId: string,
   name: string,
-  expiresAt?: Date
+  expiresAt?: Date,
+  quotas?: { daily?: number; monthly?: number }
 ): Promise<{ key: string; id: string } | null> {
   try {
     const admin = createAdminClient()
@@ -29,6 +35,8 @@ export async function createApiKey(
         key_hash: keyHash,
         name,
         expires_at: expiresAt?.toISOString(),
+        quota_daily: quotas?.daily ?? DEFAULT_API_KEY_DAILY_QUOTA,
+        quota_monthly: quotas?.monthly ?? DEFAULT_API_KEY_MONTHLY_QUOTA,
       })
       .select("id")
       .single()
@@ -73,7 +81,7 @@ export async function listApiKeys(organizationId: string): Promise<ApiKeyRecord[
     const admin = createAdminClient()
     const { data, error } = await admin
       .from("api_keys")
-      .select("id, name, is_active, created_at, last_used_at, expires_at")
+      .select("id, name, is_active, created_at, last_used_at, expires_at, quota_daily, quota_monthly")
       .eq("organization_id", organizationId)
       .order("created_at", { ascending: false })
 
@@ -82,7 +90,40 @@ export async function listApiKeys(organizationId: string): Promise<ApiKeyRecord[
       return null
     }
 
-    return (data ?? []) as ApiKeyRecord[]
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+
+    const keys = (data ?? []) as Array<ApiKeyRecord & { usage_today?: number; usage_month?: number }>
+
+    const enriched = await Promise.all(
+      keys.map(async (key) => {
+        const [{ count: usageToday }, { count: usageMonth }] = await Promise.all([
+          admin
+            .from("usage_logs")
+            .select("id", { count: "exact", head: true })
+            .eq("organization_id", organizationId)
+            .contains("metadata", { api_key_id: key.id })
+            .gte("created_at", today),
+          admin
+            .from("usage_logs")
+            .select("id", { count: "exact", head: true })
+            .eq("organization_id", organizationId)
+            .contains("metadata", { api_key_id: key.id })
+            .gte("created_at", monthStart),
+        ])
+
+        return {
+          ...key,
+          quota_daily: key.quota_daily ?? DEFAULT_API_KEY_DAILY_QUOTA,
+          quota_monthly: key.quota_monthly ?? DEFAULT_API_KEY_MONTHLY_QUOTA,
+          usage_today: usageToday ?? 0,
+          usage_month: usageMonth ?? 0,
+        }
+      }),
+    )
+
+    return enriched
   } catch (error) {
     console.error("[v0] List API keys error:", error)
     return null

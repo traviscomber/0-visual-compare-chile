@@ -18,8 +18,6 @@ import { TrademarkAgent } from '@/lib/agent/trademark-agent'
 export const runtime = 'nodejs'
 export const maxDuration = 60 // GPT-4o vision puede tardar hasta 30s
 
-const agent = new TrademarkAgent()
-
 export async function POST(request: NextRequest) {
   try {
     // Verificar OPENAI_API_KEY
@@ -73,6 +71,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`[v0] TrademarkAgent.analyze: "${nombre}" — imagen ${Math.round(cleanImage.length / 1024)}KB tipo ${imageMimeType}`)
 
+    const agent = new TrademarkAgent()
     const report = await agent.analyze({
       imageBase64: cleanImage,
       imageMimeType,

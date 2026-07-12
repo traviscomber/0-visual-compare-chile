@@ -10,6 +10,11 @@
     "check:env": "node scripts/verify-env.mjs",
     "smoke": "node scripts/smoke-check.mjs",
     "sync:inapi": "node scripts/run-inapi-sync.mjs",
+    "fixture:api-key": "node scripts/create-api-key-fixture.mjs",
+    "evidence:inapi": "node scripts/inapi-sync-evidence.mjs",
+    "plan:inapi": "node scripts/plan-inapi-window.mjs",
+    "gate:phase1": "node scripts/phase1-gate.mjs",
+    "verify:quota": "node scripts/verify-api-quota.mjs",
     "audit:deploy": "node scripts/audit-deployment.mjs",
     "release:gate": "node scripts/release-gate.mjs"
   },

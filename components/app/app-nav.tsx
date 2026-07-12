@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LayoutDashboard, GitCompareArrows, History, Settings, LogOut, Menu, Search, Cpu, ChevronDown } from "lucide-react"
+import { LayoutDashboard, GitCompareArrows, History, Settings, LogOut, Menu, Search, Cpu } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
 
@@ -45,6 +45,11 @@ export function AppNav({
 
   const handleLogout = async () => {
     const supabase = createClient()
+    if (!supabase) {
+      router.push("/")
+      router.refresh()
+      return
+    }
     await supabase.auth.signOut()
     router.push("/")
     router.refresh()

@@ -27,7 +27,11 @@ export interface ComparisonResult {
   similarities: string[]
   differences: string[]
   confusionRisk: 'low' | 'medium' | 'high'
+  overallScore: number
   recommendation: string
+  colorsA: string[]
+  colorsB: string[]
+  tokensUsed: number
   analysisDetails: {
     timestamp: string
     imageSizes: {

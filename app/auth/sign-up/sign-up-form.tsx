@@ -29,6 +29,12 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
     setIsLoading(true)
     setError(null)
 
+    if (!supabase) {
+      setError("Supabase no esta configurado en este entorno")
+      setIsLoading(false)
+      return
+    }
+
     if (password !== repeatPassword) {
       setError("Las contrasenas no coinciden")
       setIsLoading(false)

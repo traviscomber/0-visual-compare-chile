@@ -1,4 +1,4 @@
-# Visual Compare API v1 - Complete Documentation
+﻿# Visual Compare API v1 - Complete Documentation
 
 ## Overview
 
@@ -19,22 +19,35 @@ Authorization: Bearer your_api_key_here
 ### Getting an API Key
 
 1. Sign up at https://v0-visual-compare-chile.vercel.app
-2. Navigate to Settings → API Keys
-3. Click "Generate New Key"
+2. Navigate to `Settings -> API Keys`
+3. Create a key with optional expiration plus `daily` and `monthly` quotas
 4. Copy the key (shown only once for security)
 5. Use in requests: `Authorization: Bearer sc_xxxxx`
 
 ## Rate Limiting
 
-- **Free tier**: 100 requests/day, 10 images/upload
-- **Pro tier**: 10,000 requests/day, 100 images/upload
-- **Enterprise**: Custom limits
+- Rate limits are enforced per API key
+- Each key stores `quota_daily` and `quota_monthly`
+- Default base quota for the MVP is `5,000` image analyses per month per API key
+- When a request exceeds either quota, the API returns `429 Too Many Requests`
+- API key creation and revocation do not consume that key's quota
 
 Rate limit headers:
 ```
-X-RateLimit-Limit: 10000
-X-RateLimit-Remaining: 9999
-X-RateLimit-Reset: 1704067200
+X-RateLimit-Limit-Daily: 500
+X-RateLimit-Remaining-Daily: 499
+X-RateLimit-Limit-Monthly: 5000
+X-RateLimit-Remaining-Monthly: 4999
+```
+
+The quota headers are returned on successful authenticated requests and on `429` responses when a key is already over its configured limit.
+
+Quota exceeded response:
+```json
+{
+  "error": "API key quota exceeded",
+  "reason": "quota_exceeded"
+}
 ```
 
 ## Endpoints
@@ -97,6 +110,7 @@ image: <binary file>
 - `400 Bad Request`: Missing or invalid image
 - `401 Unauthorized`: Invalid API key
 - `413 Payload Too Large`: File exceeds 50MB
+- `429 Too Many Requests`: API key quota exceeded
 
 **Example**:
 ```bash
@@ -163,6 +177,7 @@ Content-Type: application/json
 - `400 Bad Request`: Missing or invalid image IDs
 - `401 Unauthorized`: Invalid API key
 - `404 Not Found`: Images not found
+- `429 Too Many Requests`: API key quota exceeded
 
 **Example**:
 ```bash
@@ -213,6 +228,10 @@ Get all comparisons for your organization.
 curl -X GET "https://v0-visual-compare-chile.vercel.app/api/v1/comparisons?limit=10" \
   -H "Authorization: Bearer your_api_key"
 ```
+
+**Error Responses**:
+- `401 Unauthorized`: Invalid API key
+- `429 Too Many Requests`: API key quota exceeded
 
 ---
 
@@ -267,6 +286,7 @@ Get detailed results for a specific comparison.
 **Error Responses**:
 - `401 Unauthorized`: Invalid API key
 - `404 Not Found`: Comparison not found
+- `429 Too Many Requests`: API key quota exceeded
 
 ---
 
@@ -274,23 +294,55 @@ Get detailed results for a specific comparison.
 
 **GET** `/usage`
 
-Get usage statistics for current billing period.
+Get usage statistics for current billing period and the current API key quota snapshot.
 
 **Response** (200 OK):
 ```json
 {
-  "uploads_today": 45,
-  "uploads_month": 1200,
-  "comparisons_today": 32,
-  "comparisons_month": 950,
-  "storage_gb": 12.5,
-  "api_calls_today": 128,
-  "api_calls_month": 3850,
+  "uploads_today": 3,
+  "uploads_month": 12,
+  "comparisons_today": 4,
+  "comparisons_month": 21,
+  "storage_gb": 0.18,
+  "api_calls_today": 7,
+  "api_calls_month": 52,
   "period": {
-    "start_date": "2024-01-01T00:00:00Z",
-    "end_date": "2024-01-31T23:59:59Z"
+    "start_date": "2026-07-01T00:00:00.000Z",
+    "end_date": "2026-07-31T00:00:00.000Z"
+  },
+  "current_key": {
+    "quota_daily": 500,
+    "quota_monthly": 5000,
+    "usage_today": 7,
+    "usage_month": 52,
+    "remaining_daily": 493,
+    "remaining_monthly": 4948
   }
 }
+```
+
+**Error Responses**:
+- `401 Unauthorized`: Invalid API key
+- `429 Too Many Requests`: API key quota exceeded
+
+### Verification Flow
+
+Use this sequence after deploying the quota migration:
+
+```bash
+# 1. Create a key in Settings with daily quota = 2 and monthly quota = 10
+
+# 2. First request should succeed and return X-RateLimit headers
+curl -i https://v0-visual-compare-chile.vercel.app/api/v1/usage \
+  -H "Authorization: Bearer sc_your_key"
+
+# 3. Second request should still succeed
+curl -i https://v0-visual-compare-chile.vercel.app/api/v1/usage \
+  -H "Authorization: Bearer sc_your_key"
+
+# 4. Third request should return 429
+curl -i https://v0-visual-compare-chile.vercel.app/api/v1/usage \
+  -H "Authorization: Bearer sc_your_key"
 ```
 
 ---
@@ -312,7 +364,7 @@ All errors return appropriate HTTP status codes with JSON error messages:
 - `401 Unauthorized`: Missing or invalid API key
 - `404 Not Found`: Resource not found
 - `413 Payload Too Large`: File too large
-- `429 Too Many Requests`: Rate limit exceeded
+- `429 Too Many Requests`: API key quota exceeded
 - `500 Internal Server Error`: Server error
 
 ---

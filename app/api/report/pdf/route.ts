@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { renderToBuffer, Document, Page, Text, View } from "@react-pdf/renderer"
-import { createElement } from "react"
+import { renderToBuffer, Document, Page, Text, View, type DocumentProps } from "@react-pdf/renderer"
+import { createElement, type ReactElement } from "react"
 import { TrademarkReportDocument } from "@/lib/pdf/trademark-report"
 import path from "path"
 import fs from "fs"
@@ -156,7 +156,7 @@ export async function GET(req: NextRequest) {
       preparedFor: "Visual Compare Chile — Demo",
     })
 
-    const buffer = await renderToBuffer(element)
+    const buffer = await renderToBuffer(element as unknown as ReactElement<DocumentProps>)
 
     return new NextResponse(buffer, {
       status: 200,

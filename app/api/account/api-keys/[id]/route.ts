@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { revokeApiKey } from "@/lib/api/key-management"
+import { ensureAccountBootstrap } from "@/lib/supabase/bootstrap-account"
 import { createClient } from "@/lib/supabase/server"
 
 export const runtime = "nodejs"
@@ -14,6 +15,8 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     if (!user) {
       return NextResponse.json({ error: "No autorizado." }, { status: 401 })
     }
+
+    await ensureAccountBootstrap(user)
 
     const { id } = await params
     if (!id) {
@@ -30,7 +33,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       organization_id: user.id,
       action: "api_key.revoked",
       metadata: {
-        api_key_id: id,
+        target_api_key_id: id,
       },
     })
 
