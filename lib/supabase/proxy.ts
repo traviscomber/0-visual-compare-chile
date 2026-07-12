@@ -18,10 +18,16 @@ function stripLocalePrefix(pathname: string) {
 }
 
 export async function updateSession(request: NextRequest) {
-  const supabaseUrl = getSupabaseUrl()
-  const supabaseAnonKey = getSupabaseAnonKey()
-
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return NextResponse.next({ request })
+  }
+
+  let supabaseUrl: string
+  let supabaseAnonKey: string
+  try {
+    supabaseUrl = getSupabaseUrl()
+    supabaseAnonKey = getSupabaseAnonKey()
+  } catch {
     return NextResponse.next({ request })
   }
 
