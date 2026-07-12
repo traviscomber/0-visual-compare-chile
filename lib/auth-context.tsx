@@ -43,36 +43,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const syncSession = async () => {
-      const {
-        data: { user: sessionUser },
-      } = await supabase.auth.getUser()
+      try {
+        const {
+          data: { user: sessionUser },
+        } = await supabase.auth.getUser()
 
-      if (!active) return
+        if (!active) return
 
-      if (!sessionUser) {
-        setUser(null)
+        if (!sessionUser) {
+          setUser(null)
+          setIsLoading(false)
+          return
+        }
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, company_name")
+          .eq("id", sessionUser.id)
+          .maybeSingle()
+
+        if (!active) return
+
+        const metadata = sessionUser.user_metadata ?? {}
+        const email = sessionUser.email ?? ""
+
+        setUser({
+          id: sessionUser.id,
+          email,
+          name: buildDisplayName(email, profile?.full_name ?? (typeof metadata.full_name === "string" ? metadata.full_name : null)),
+          role: roleFromMetadata(metadata.role),
+        })
         setIsLoading(false)
-        return
+      } catch {
+        if (active) {
+          setUser(null)
+          setIsLoading(false)
+        }
       }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, company_name")
-        .eq("id", sessionUser.id)
-        .maybeSingle()
-
-      if (!active) return
-
-      const metadata = sessionUser.user_metadata ?? {}
-      const email = sessionUser.email ?? ""
-
-      setUser({
-        id: sessionUser.id,
-        email,
-        name: buildDisplayName(email, profile?.full_name ?? (typeof metadata.full_name === "string" ? metadata.full_name : null)),
-        role: roleFromMetadata(metadata.role),
-      })
-      setIsLoading(false)
     }
 
     void syncSession()

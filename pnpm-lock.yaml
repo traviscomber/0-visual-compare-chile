@@ -1682,6 +1682,7 @@ packages:
         optional: true
       zod:
         optional: true
+
   opencollective-postinstall@2.0.3:
     resolution: {integrity: sha512-8AV/sCtuzUeTo8gQK5qDZzARrulB3egtLzFgteqB2tcT4Mw7B8Kt7JcDHmltjz6FOAHsvTevk70gZEbhM4ZS9Q==}
     hasBin: true
@@ -3226,6 +3227,7 @@ snapshots:
   openai@6.46.0(zod@3.25.76):
     optionalDependencies:
       zod: 3.25.76
+
   opencollective-postinstall@2.0.3: {}
 
   picocolors@1.1.1: {}
