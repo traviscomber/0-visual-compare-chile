@@ -646,130 +646,178 @@ export default function LandingPage() {
       <FrontendShowcase />
 
       {/* CLASIFICACIONES NIZA Y VIENA */}
-      <section className="py-20 border-t border-blue-500/10 relative z-10">
+      <section id="clasificaciones" className="py-24 border-t border-blue-500/10 relative z-10">
         <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-4xl font-bold text-white mb-4 font-montserrat text-center">Clasificación de Marcas</h2>
-          <p className="text-xl text-blue-200 text-center mb-16 max-w-3xl mx-auto">
-            Visual Compare Chile utiliza los sistemas internacionales de clasificación Niza y Viena para organizar y buscar marcas registradas con precisión
-          </p>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+          {/* Header */}
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 mb-4 glass-sm px-3 py-1.5 rounded-full border border-blue-500/30">
+              <Package className="h-3.5 w-3.5 text-blue-400" />
+              <p className="text-xs font-medium text-blue-300 uppercase tracking-wider">Est&aacute;ndares internacionales</p>
+            </div>
+            <h2 className="text-4xl font-bold text-white mb-4 text-balance">
+              &iquest;C&oacute;mo se organiza una marca registrada?
+            </h2>
+            <p className="text-lg text-blue-200 max-w-2xl mx-auto leading-relaxed">
+              Toda marca registrada en Chile tiene <strong className="text-white">dos clasificaciones</strong>: una por lo que <em>vende</em> y otra por c&oacute;mo <em>se ve</em>. Nuestro motor usa ambas para encontrar conflictos que otros sistemas pasan por alto.
+            </p>
+          </div>
+
+          {/* Two columns: Niza + Viena */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
             {/* NIZA */}
-            <div className="group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/30 via-transparent to-transparent rounded-2xl blur-xl -z-10 group-hover:blur-2xl transition-all"></div>
-              <div className="glass p-8 rounded-2xl border border-blue-500/50 bg-gradient-to-br from-blue-900/20 to-slate-900/50 backdrop-blur-xl hover:border-blue-400/70 transition-all">
-                <div className="flex items-start justify-between mb-6">
-                  <div>
-                    <h3 className="text-2xl font-bold text-white mb-2 font-montserrat">Clasificación Niza</h3>
-                    <p className="text-sm text-blue-300">Sistema de clasificación de productos y servicios</p>
-                  </div>
-                  <div className="h-10 w-10 rounded-lg bg-blue-500/20 border border-blue-500/50 flex items-center justify-center">
-                    <Package className="h-5 w-5 text-blue-400" />
-                  </div>
+            <div className="glass rounded-2xl border border-blue-500/30 overflow-hidden">
+              {/* Top color band */}
+              <div className="bg-blue-500/20 border-b border-blue-500/30 px-6 py-4 flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-blue-500/30 border border-blue-500/50 flex items-center justify-center flex-shrink-0">
+                  <Package className="h-5 w-5 text-blue-300" />
                 </div>
+                <div>
+                  <p className="text-xs text-blue-400 uppercase tracking-wider font-semibold">Clasificaci&oacute;n Niza</p>
+                  <p className="text-white font-bold text-lg leading-tight">&iquest;Qu&eacute; vende la marca?</p>
+                </div>
+                <div className="ml-auto glass-sm px-2.5 py-1 rounded-full border border-blue-400/30">
+                  <p className="text-xs font-bold text-blue-300">45 clases</p>
+                </div>
+              </div>
 
-                <p className="text-blue-100 mb-6">
-                  La Clasificación Niza agrupa los productos y servicios en 45 clases internacionales. Es el sistema estándar para clasificar marcas en registros de propiedad intelectual a nivel mundial.
+              <div className="p-6 space-y-5">
+                <p className="text-blue-100 leading-relaxed">
+                  Agrupa los <strong className="text-white">productos y servicios</strong> que la marca cubre. Dos marcas visualmente id&eacute;nticas pueden coexistir legalmente si est&aacute;n en clases distintas.
                 </p>
 
-                <div className="space-y-3 mb-6">
-                  <div className="flex items-start gap-3">
-                    <span className="text-blue-400 font-bold">→</span>
-                    <span className="text-sm text-blue-100"><strong>45 clases:</strong> Productos (1-34) y Servicios (35-45)</span>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <span className="text-blue-400 font-bold">→</span>
-                    <span className="text-sm text-blue-100"><strong>Búsqueda granular:</strong> Encuentra marcas por industria específica</span>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <span className="text-blue-400 font-bold">→</span>
-                    <span className="text-sm text-blue-100"><strong>Estándar internacional:</strong> Usado por EUIPO, USPTO, OMPI</span>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <span className="text-blue-400 font-bold">→</span>
-                    <span className="text-sm text-blue-100"><strong>Actualizaciones regulares:</strong> Refleja nuevas clases y servicios</span>
+                {/* Example pills */}
+                <div>
+                  <p className="text-xs text-blue-400 uppercase tracking-wider font-semibold mb-3">Ejemplos de clases</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { clase: "Clase 25", desc: "Ropa y calzado" },
+                      { clase: "Clase 32", desc: "Bebidas y jugos" },
+                      { clase: "Clase 42", desc: "Software y tecnolog&iacute;a" },
+                      { clase: "Clase 35", desc: "Publicidad y marketing" },
+                    ].map((item) => (
+                      <div key={item.clase} className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2">
+                        <span className="text-xs font-bold text-blue-300 whitespace-nowrap">{item.clase}</span>
+                        <span className="text-xs text-blue-200" dangerouslySetInnerHTML={{ __html: item.desc }} />
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                <Link href="/docs/clasificaciones" className="inline-flex items-center gap-2 text-blue-300 hover:text-blue-200 font-semibold transition">
-                  Aprende más sobre Niza
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
+                {/* Key insight */}
+                <div className="flex items-start gap-3 bg-blue-500/10 border border-blue-400/20 rounded-xl p-4">
+                  <div className="h-5 w-5 rounded-full bg-blue-400/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-blue-300 text-xs font-bold">!</span>
+                  </div>
+                  <p className="text-sm text-blue-100">
+                    <strong className="text-white">Conflicto t&iacute;pico:</strong> dos marcas similares en la misma clase Niza es el principal motivo de oposici&oacute;n en el INAPI.
+                  </p>
+                </div>
               </div>
             </div>
 
             {/* VIENA */}
-            <div className="group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-purple-500/30 via-transparent to-transparent rounded-2xl blur-xl -z-10 group-hover:blur-2xl transition-all"></div>
-              <div className="glass p-8 rounded-2xl border border-purple-500/50 bg-gradient-to-br from-purple-900/20 to-slate-900/50 backdrop-blur-xl hover:border-purple-400/70 transition-all">
-                <div className="flex items-start justify-between mb-6">
-                  <div>
-                    <h3 className="text-2xl font-bold text-white mb-2 font-montserrat">Clasificación Viena</h3>
-                    <p className="text-sm text-purple-300">Sistema de clasificación visual de diseños</p>
-                  </div>
-                  <div className="h-10 w-10 rounded-lg bg-purple-500/20 border border-purple-500/50 flex items-center justify-center">
-                    <Palette className="h-5 w-5 text-purple-400" />
-                  </div>
+            <div className="glass rounded-2xl border border-violet-500/30 overflow-hidden">
+              {/* Top color band */}
+              <div className="bg-violet-500/20 border-b border-violet-500/30 px-6 py-4 flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-violet-500/30 border border-violet-500/50 flex items-center justify-center flex-shrink-0">
+                  <Palette className="h-5 w-5 text-violet-300" />
                 </div>
+                <div>
+                  <p className="text-xs text-violet-400 uppercase tracking-wider font-semibold">Clasificaci&oacute;n Viena</p>
+                  <p className="text-white font-bold text-lg leading-tight">&iquest;C&oacute;mo se ve la marca?</p>
+                </div>
+                <div className="ml-auto glass-sm px-2.5 py-1 rounded-full border border-violet-400/30">
+                  <p className="text-xs font-bold text-violet-300">29 categor&iacute;as</p>
+                </div>
+              </div>
 
-                <p className="text-blue-100 mb-6">
-                  La Clasificación Viena organiza diseños gráficos y logotipos en 29 categorías basadas en sus características visuales. Facilita la búsqueda visual y comparación de elementos gráficos similares.
+              <div className="p-6 space-y-5">
+                <p className="text-blue-100 leading-relaxed">
+                  Describe los <strong className="text-white">elementos visuales</strong> del logo: formas, colores, s&iacute;mbolos, figuras. Permite detectar conflictos aunque las marcas tengan nombres completamente distintos.
                 </p>
 
-                <div className="space-y-3 mb-6">
-                  <div className="flex items-start gap-3">
-                    <span className="text-purple-400 font-bold">→</span>
-                    <span className="text-sm text-blue-100"><strong>29 categorías:</strong> Organizadas por tipo de elemento visual</span>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <span className="text-purple-400 font-bold">→</span>
-                    <span className="text-sm text-blue-100"><strong>Búsqueda visual:</strong> Encuentra diseños por características gráficas</span>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <span className="text-purple-400 font-bold">→</span>
-                    <span className="text-sm text-blue-100"><strong>Comparación de logotipos:</strong> Ideal para análisis de similitud visual</span>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <span className="text-purple-400 font-bold">→</span>
-                    <span className="text-sm text-blue-100"><strong>Integrado en motor IA:</strong> Amplía precisión de comparaciones</span>
+                {/* Visual examples */}
+                <div>
+                  <p className="text-xs text-violet-400 uppercase tracking-wider font-semibold mb-3">Tipos de elementos que clasifica</p>
+                  <div className="space-y-2">
+                    {[
+                      { icon: "◆", label: "Formas geom&eacute;tricas", pct: 22 },
+                      { icon: "Aa", label: "Texto y letras estilizadas", pct: 31 },
+                      { icon: "★", label: "S&iacute;mbolos y decoraci&oacute;n", pct: 14 },
+                      { icon: "●", label: "Colores y combinaciones", pct: 9 },
+                    ].map((item) => (
+                      <div key={item.label} className="flex items-center gap-3">
+                        <span className="text-violet-300 w-5 text-center text-sm flex-shrink-0">{item.icon}</span>
+                        <span className="text-sm text-blue-100 flex-1" dangerouslySetInnerHTML={{ __html: item.label }} />
+                        <div className="w-20 h-1.5 rounded-full bg-violet-500/20 overflow-hidden">
+                          <div className="h-full rounded-full bg-violet-400" style={{ width: `${item.pct}%` }} />
+                        </div>
+                        <span className="text-xs text-violet-300 w-7 text-right">{item.pct}%</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                <Link href="/docs/clasificaciones" className="inline-flex items-center gap-2 text-purple-300 hover:text-purple-200 font-semibold transition">
-                  Aprende más sobre Viena
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
+                {/* Key insight */}
+                <div className="flex items-start gap-3 bg-violet-500/10 border border-violet-400/20 rounded-xl p-4">
+                  <div className="h-5 w-5 rounded-full bg-violet-400/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-violet-300 text-xs font-bold">!</span>
+                  </div>
+                  <p className="text-sm text-blue-100">
+                    <strong className="text-white">Ejemplo real:</strong> &ldquo;HEXATECH&rdquo; y &ldquo;HEXA PRO&rdquo; son nombres distintos, pero si ambos usan un hex&aacute;gono azul, Viena lo detecta como conflicto visual.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Uso en Visual Compare Chile */}
-          <div className="glass p-8 border border-amber-500/30 bg-gradient-to-br from-amber-900/10 to-slate-900/50 rounded-2xl">
-            <h3 className="text-2xl font-bold text-white mb-4 font-montserrat flex items-center gap-3">
-              <Zap className="h-6 w-6 text-amber-400" />
-              Como se usan en Visual Compare Chile
-            </h3>
+          {/* How we use both — 3-step flow */}
+          <div className="glass rounded-2xl border border-amber-500/20 p-8">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="h-8 w-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                <Zap className="h-4 w-4 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-xs text-amber-400 uppercase tracking-wider font-semibold">C&oacute;mo lo usamos</p>
+                <h3 className="text-white font-bold text-xl">Niza + Viena + IA = resultado preciso</h3>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <h4 className="text-amber-300 font-bold mb-2">Portal de Consulta</h4>
-                <p className="text-blue-100 text-sm">
-                  Busca marcas registradas filtrando por clasificación Niza (industria) o Viena (características visuales). Accede a 350K+ registros organizados por estos sistemas.
-                </p>
-              </div>
-              <div>
-                <h4 className="text-amber-300 font-bold mb-2">Comparador IA</h4>
-                <p className="text-blue-100 text-sm">
-                  El motor combina clasificación Niza/Viena con análisis visual (SHA-256, pHash, Embeddings) para determinar similitud. Aumenta precisión y reduce falsos positivos.
-                </p>
-              </div>
-              <div>
-                <h4 className="text-amber-300 font-bold mb-2">Análisis Legal</h4>
-                <p className="text-blue-100 text-sm">
-                  Identifica potenciales conflictos de marca dentro de clases Niza similares. Evalúa riesgo de infracción basándose en clasificación + similitud visual.
-                </p>
-              </div>
+              {[
+                {
+                  step: "01",
+                  title: "Buscas una marca",
+                  body: "Ingresas el nombre o subes el logo que quieres proteger o validar.",
+                  color: "text-blue-300",
+                  border: "border-blue-500/20",
+                },
+                {
+                  step: "02",
+                  title: "Filtramos por Niza y Viena",
+                  body: "El sistema consulta registros de la misma clase de productos y con elementos visuales similares.",
+                  color: "text-violet-300",
+                  border: "border-violet-500/20",
+                },
+                {
+                  step: "03",
+                  title: "El motor da un veredicto",
+                  body: "Score de similitud 0&ndash;100%, clasificaci&oacute;n en 5 niveles y recomendaci&oacute;n de riesgo legal.",
+                  color: "text-amber-300",
+                  border: "border-amber-500/20",
+                },
+              ].map((item) => (
+                <div key={item.step} className={`glass-sm rounded-xl border ${item.border} p-5`}>
+                  <p className={`text-3xl font-black mb-3 ${item.color}`}>{item.step}</p>
+                  <h4 className="text-white font-semibold mb-2">{item.title}</h4>
+                  <p className="text-sm text-blue-200 leading-relaxed" dangerouslySetInnerHTML={{ __html: item.body }} />
+                </div>
+              ))}
             </div>
           </div>
+
         </div>
       </section>
 
