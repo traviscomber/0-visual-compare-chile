@@ -1,10 +1,11 @@
 import { LoginForm } from "./login-form"
 import { safeInternalRedirect } from "@/lib/redirect"
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
-  searchParams?: { redirectTo?: string }
+  searchParams?: Promise<{ redirectTo?: string }>
 }) {
-  return <LoginForm redirectTo={safeInternalRedirect(searchParams?.redirectTo)} />
+  const params = await searchParams
+  return <LoginForm redirectTo={safeInternalRedirect(params?.redirectTo)} />
 }
