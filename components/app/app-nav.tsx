@@ -13,14 +13,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LayoutDashboard, GitCompareArrows, History, Settings, LogOut, Menu, Search } from "lucide-react"
+import { LayoutDashboard, GitCompareArrows, History, Settings, LogOut, Menu, Search, Cpu } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
 
 const navItems = [
   { href: "/dashboard", label: "Resumen", icon: LayoutDashboard },
   { href: "/compare", label: "Comparar", icon: GitCompareArrows },
-  { href: "/consulta", label: "Consulta de Marcas", icon: Search },
+  { href: "/agente", label: "Agente IA", icon: Cpu },
+  { href: "/consulta", label: "Consulta", icon: Search },
   { href: "/history", label: "Historial", icon: History },
   { href: "/settings", label: "Configuración", icon: Settings },
 ]

@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { createClientAsync } from "@/lib/supabase/client"
 
 export type UserRole = "admin" | "analista" | "auditor"
 
@@ -35,79 +35,103 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true
-    const supabase = createClient()
+    let unsubscribe: (() => void) | null = null
 
-    const syncSession = async () => {
-      const {
-        data: { user: sessionUser },
-      } = await supabase.auth.getUser()
+    const init = async () => {
+      const supabase = await createClientAsync()
 
       if (!active) return
 
-      if (!sessionUser) {
-        setUser(null)
+      if (!supabase) {
         setIsLoading(false)
         return
       }
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, company_name")
-        .eq("id", sessionUser.id)
-        .maybeSingle()
-
-      if (!active) return
-
-      const metadata = sessionUser.user_metadata ?? {}
-      const email = sessionUser.email ?? ""
-
-      setUser({
-        id: sessionUser.id,
-        email,
-        name: buildDisplayName(email, profile?.full_name ?? (typeof metadata.full_name === "string" ? metadata.full_name : null)),
-        role: roleFromMetadata(metadata.role),
+      // Set up auth state change listener
+      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (!active) return
+        if (!session?.user) {
+          setUser(null)
+          setIsLoading(false)
+          return
+        }
+        const metadata = session.user.user_metadata ?? {}
+        const email = session.user.email ?? ""
+        setUser({
+          id: session.user.id,
+          email,
+          name: buildDisplayName(
+            email,
+            typeof metadata.full_name === "string" ? metadata.full_name : null,
+          ),
+          role: roleFromMetadata(metadata.role),
+        })
+        setIsLoading(false)
       })
-      setIsLoading(false)
+      unsubscribe = () => data.subscription.unsubscribe()
+
+      // Sync current session immediately
+      try {
+        const {
+          data: { user: sessionUser },
+        } = await supabase.auth.getUser()
+
+        if (!active) return
+
+        if (!sessionUser) {
+          setUser(null)
+          setIsLoading(false)
+          return
+        }
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, company_name")
+          .eq("id", sessionUser.id)
+          .maybeSingle()
+
+        if (!active) return
+
+        const metadata = sessionUser.user_metadata ?? {}
+        const email = sessionUser.email ?? ""
+
+        setUser({
+          id: sessionUser.id,
+          email,
+          name: buildDisplayName(
+            email,
+            profile?.full_name ??
+              (typeof metadata.full_name === "string" ? metadata.full_name : null),
+          ),
+          role: roleFromMetadata(metadata.role),
+        })
+        setIsLoading(false)
+      } catch {
+        if (active) {
+          setUser(null)
+          setIsLoading(false)
+        }
+      }
     }
 
-    void syncSession()
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!active) return
-
-      if (!session?.user) {
-        setUser(null)
-        setIsLoading(false)
-        return
-      }
-
-      const metadata = session.user.user_metadata ?? {}
-      const email = session.user.email ?? ""
-
-      setUser({
-        id: session.user.id,
-        email,
-        name: buildDisplayName(email, typeof metadata.full_name === "string" ? metadata.full_name : null),
-        role: roleFromMetadata(metadata.role),
-      })
-      setIsLoading(false)
-    })
+    void init()
 
     return () => {
       active = false
-      subscription.unsubscribe()
+      unsubscribe?.()
     }
   }, [])
 
   const login = async (email: string, password: string, role: UserRole) => {
     setIsLoading(true)
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    const supabase = await createClientAsync()
+
+    if (!supabase) {
+      setIsLoading(false)
+      throw new Error("Supabase no está configurado. Verifica las variables de entorno.")
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
       setIsLoading(false)
@@ -118,9 +142,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false)
   }
 
-  const logout = () => {
+  const logout = async () => {
     setUser(null)
-    void createClient().auth.signOut()
+    const supabase = await createClientAsync()
+    if (supabase) void supabase.auth.signOut()
   }
 
   return (

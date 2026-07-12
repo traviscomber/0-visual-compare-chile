@@ -8,7 +8,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { createClient } from "@/lib/supabase/client"
+import { createClientAsync } from "@/lib/supabase/client"
 import { safeInternalRedirect } from "@/lib/redirect"
 
 export function LoginForm({ redirectTo }: { redirectTo: string }) {
@@ -41,7 +41,10 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
     }
 
     try {
-      const supabase = createClient()
+      const supabase = await createClientAsync()
+      if (!supabase) {
+        throw new Error("Supabase no está configurado. Verifica las variables de entorno.")
+      }
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,

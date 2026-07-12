@@ -1,32 +1,43 @@
 import type React from "react"
 import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
+import { tryGetSupabaseUrl, tryGetSupabaseAnonKey } from "@/lib/supabase/env"
 import { AppNav } from "@/components/app/app-nav"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
+  // Guard: if Supabase is not configured, skip auth check and render with guest nav
+  const supabaseReady = !!(tryGetSupabaseUrl() && tryGetSupabaseAnonKey())
+
   let user = null
-  try {
-    const result = await supabase.auth.getUser()
-    user = result.data.user
-  } catch {
-    user = null
-  }
+  let profile: { full_name: string | null; company_name: string | null } | null = null
 
-  if (!user) {
-    redirect("/auth/login")
-  }
+  if (supabaseReady) {
+    try {
+      const { createClient } = await import("@/lib/supabase/server")
+      const supabase = await createClient()
+      const result = await supabase.auth.getUser()
+      user = result.data.user ?? null
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, company_name")
-    .eq("id", user.id)
-    .maybeSingle()
+      if (user) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("full_name, company_name")
+          .eq("id", user.id)
+          .maybeSingle()
+        profile = data ?? null
+      }
+    } catch {
+      user = null
+    }
+
+    if (!user) {
+      redirect("/auth/login")
+    }
+  }
 
   return (
     <div className="min-h-svh bg-background flex flex-col">
       <AppNav
-        userEmail={user.email ?? ""}
+        userEmail={user?.email ?? "demo@visualcompare.cl"}
         fullName={profile?.full_name ?? null}
         companyName={profile?.company_name ?? null}
       />
