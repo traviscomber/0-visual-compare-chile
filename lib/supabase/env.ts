@@ -8,42 +8,51 @@ function resolveEnv(base: string): string {
   const direct = process.env[base]
   if (direct?.trim()) return direct.trim()
 
-  // 2. Numbered suffixes (_2 … _6) from multi-instance setups
-  for (let i = 2; i <= 6; i++) {
+  // 2. Numbered suffixes (_2 … _8) from multi-instance setups
+  for (let i = 2; i <= 8; i++) {
     const v = process.env[`${base}_${i}`]
     if (v?.trim()) return v.trim()
   }
 
-  // 3. Anon key aliases — Supabase integration uses different names depending on version
+  // 3. Anon key aliases — prefer full JWT keys (eyJ...) over publishable/sb_ keys
   if (base === "NEXT_PUBLIC_SUPABASE_ANON_KEY") {
-    // New Supabase integration style (NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
+    // Full JWT anon keys first (most correct for auth)
+    for (let i = 2; i <= 8; i++) {
+      const v = process.env[`SUPABASE_ANON_KEY_${i}`]
+      if (v?.startsWith("eyJ")) return v.trim()
+    }
+    const anon = process.env["SUPABASE_ANON_KEY"]
+    if (anon?.startsWith("eyJ")) return anon.trim()
+
+    // Fallback: publishable keys (sb_publishable_...)
     const pub1 = process.env["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"]
     if (pub1?.trim()) return pub1.trim()
-    for (let i = 2; i <= 6; i++) {
+    for (let i = 2; i <= 8; i++) {
       const v = process.env[`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY_${i}`]
-      if (v?.trim()) return v.trim()
-    }
-    // Older style without NEXT_PUBLIC prefix
-    for (let i = 2; i <= 6; i++) {
-      const v = process.env[`SUPABASE_PUBLISHABLE_KEY_${i}`]
+        ?? process.env[`SUPABASE_PUBLISHABLE_KEY_${i}`]
       if (v?.trim()) return v.trim()
     }
     const pub2 = process.env["SUPABASE_PUBLISHABLE_KEY"]
     if (pub2?.trim()) return pub2.trim()
-    const anon = process.env["SUPABASE_ANON_KEY"]
-    if (anon?.trim()) return anon.trim()
   }
 
   if (base === "NEXT_PUBLIC_SUPABASE_URL") {
     // SUPABASE_URL (no NEXT_PUBLIC prefix) is sometimes set instead
     const plain = process.env["SUPABASE_URL"]
     if (plain?.trim()) return plain.trim()
-    // Build from POSTGRES_HOST if available
-    const host = process.env["POSTGRES_HOST"] || process.env["POSTGRES_HOST_2"]
-    if (host?.trim()) {
-      // POSTGRES_HOST is db.xxxx.supabase.co → project ref is the subdomain
-      const match = host.match(/^db\.([^.]+)\.supabase\.co$/)
-      if (match) return `https://${match[1]}.supabase.co`
+    // Numbered SUPABASE_URL_N variants
+    for (let i = 2; i <= 8; i++) {
+      const v = process.env[`SUPABASE_URL_${i}`]
+      if (v?.trim()) return v.trim()
+    }
+    // Build from POSTGRES_HOST_N if available
+    for (let i = 1; i <= 8; i++) {
+      const key = i === 1 ? "POSTGRES_HOST" : `POSTGRES_HOST_${i}`
+      const host = process.env[key]
+      if (host?.trim()) {
+        const match = host.match(/^db\.([^.]+)\.supabase\.co$/)
+        if (match) return `https://${match[1]}.supabase.co`
+      }
     }
   }
 
