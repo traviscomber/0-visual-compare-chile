@@ -105,14 +105,14 @@ export default function AgentePage() {
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-purple-950 py-12 px-4">
       <div className="max-w-5xl mx-auto">
         {/* Progress bar */}
-        <div className="mb-8">
+        <div className="mb-8 animate-fade-in">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium text-slate-300">Progreso del análisis</h3>
             <span className="text-xs text-slate-500">{Math.round(progress)}%</span>
           </div>
-          <div className="w-full h-2 bg-slate-700/50 rounded-full overflow-hidden">
+          <div className="w-full h-2.5 bg-slate-700/50 rounded-full overflow-hidden border border-white/10">
             <div
-              className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-300 rounded-full"
+              className={`h-full bg-gradient-to-r from-blue-500 via-cyan-400 to-blue-500 smooth-transition rounded-full ${progress > 0 ? 'animate-glow' : ''}`}
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -160,7 +160,7 @@ export default function AgentePage() {
               onDrop={handleDrop}
               onDragOver={e => e.preventDefault()}
               onClick={() => fileRef.current?.click()}
-              className="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-blue-500/60 hover:bg-blue-500/5 transition-all bg-slate-900/30"
+              className="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-blue-500/60 hover:bg-blue-500/10 smooth-transition bg-slate-900/30 hover-lift group"
             >
               <input
                 ref={fileRef}
@@ -176,8 +176,8 @@ export default function AgentePage() {
                   <p className="text-xs text-slate-400">Haz clic para cambiar</p>
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-2 text-slate-400">
-                  <Upload className="w-8 h-8 opacity-50" />
+                <div className="flex flex-col items-center gap-2 text-slate-400 group-hover:text-slate-300 smooth-transition">
+                  <Upload className="w-8 h-8 opacity-50 group-hover:opacity-100 group-hover:scale-110 group-hover:animate-float smooth-transition" />
                   <p className="text-sm font-medium text-slate-300">Arrastra tu logo aquí</p>
                   <p className="text-xs">o haz clic para seleccionar</p>
                 </div>
