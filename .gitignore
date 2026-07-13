@@ -12,6 +12,9 @@ __v0_jsx-dev-runtime.ts
 # Common ignores
 node_modules
 .next/
+artifacts/
 .DS_Store
 .vercel
 *.log
+
+.env.vercel.production

@@ -2,11 +2,14 @@ import Link from "next/link"
 import {
   ArrowRight,
   BarChart3,
+  Database,
   GitCompareArrows,
   History,
   Home,
+  KeyRound,
   Search,
   Settings,
+  ShieldAlert,
   Upload,
 } from "lucide-react"
 import { BuildStamp } from "@/components/build/build-stamp"
@@ -31,6 +34,30 @@ const modules = [
     description: "Explora busquedas y referencias de marcas.",
     icon: Search,
     href: "/consulta",
+  },
+]
+
+const phase1Status = [
+  {
+    title: "INAPI campaign",
+    description: "Preset `phase1-10k`, ventanas sugeridas y seguimiento de cobertura disponibles en Settings.",
+    icon: Database,
+    href: "/settings",
+    cta: "Operar sync",
+  },
+  {
+    title: "API keys y quotas",
+    description: "Planes sugeridos, cuotas visibles, remanentes y riesgo por clave ya expuestos en el portal.",
+    icon: KeyRound,
+    href: "/settings",
+    cta: "Ver claves",
+  },
+  {
+    title: "Rate limiting",
+    description: "Headers y `429` ya estan integrados; la siguiente validacion pendiente es contra deploy real.",
+    icon: ShieldAlert,
+    href: "/roadmap",
+    cta: "Ver criterio",
   },
 ]
 
@@ -106,6 +133,41 @@ export default function PanelPage() {
             <h3 className="mb-2 font-semibold text-white">Deploy</h3>
             <p className="text-sm text-slate-400">Variables de entorno documentadas para Vercel y Supabase.</p>
           </Card>
+        </div>
+
+        <div className="mt-10 rounded-3xl border border-slate-800 bg-slate-900/60 p-8">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-sm font-medium text-cyan-400">Fase 1 operativa</p>
+              <h2 className="mt-1 text-2xl font-semibold text-white">Datos reales, quotas y control del MVP</h2>
+              <p className="mt-2 max-w-2xl text-sm text-slate-400">
+                Esta capa resume el estado actual del roadmap que ya se puede operar desde el producto mientras faltan
+                las verificaciones externas finales en Supabase y Vercel.
+              </p>
+            </div>
+            <Button asChild variant="outline" className="border-slate-700 text-slate-200 hover:bg-slate-800">
+              <Link href="/settings">Abrir consola operativa</Link>
+            </Button>
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+            {phase1Status.map((item) => {
+              const Icon = item.icon
+              return (
+                <Card key={item.title} className="border-slate-800 bg-slate-950/40 p-5">
+                  <Icon className="mb-4 h-7 w-7 text-cyan-400" />
+                  <h3 className="text-base font-semibold text-white">{item.title}</h3>
+                  <p className="mt-2 text-sm text-slate-400">{item.description}</p>
+                  <Button asChild variant="link" className="mt-4 px-0 text-cyan-300 hover:text-cyan-200">
+                    <Link href={item.href}>
+                      {item.cta}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </Card>
+              )
+            })}
+          </div>
         </div>
       </main>
     </div>

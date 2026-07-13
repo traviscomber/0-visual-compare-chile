@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto"
 import { NextResponse } from "next/server"
-import { authenticateApiKey } from "@/lib/api/auth"
+import { authenticateApiKey, getQuotaHeaders, logApiKeyUsage } from "@/lib/api/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { computeEla } from "@/lib/image/ela"
 import { extractExif } from "@/lib/image/exif"
@@ -54,10 +54,29 @@ export async function POST(request: Request) {
     }
 
     const apiKey = authHeader.slice(7)
-    const context = await authenticateApiKey(apiKey)
-    if (!context) {
-      return NextResponse.json({ error: "Invalid API key" }, { status: 401 })
+    const auth = await authenticateApiKey(apiKey)
+    if (!auth.ok) {
+      return NextResponse.json(
+        { error: auth.message, reason: auth.reason },
+        {
+          status: auth.reason === "quota_exceeded" ? 429 : 401,
+          headers:
+            auth.reason === "quota_exceeded" &&
+            auth.quota_daily !== undefined &&
+            auth.quota_monthly !== undefined &&
+            auth.usage_today !== undefined &&
+            auth.usage_month !== undefined
+              ? getQuotaHeaders({
+                  quota_daily: auth.quota_daily,
+                  quota_monthly: auth.quota_monthly,
+                  usage_today: auth.usage_today,
+                  usage_month: auth.usage_month,
+                })
+              : undefined,
+        },
+      )
     }
+    const context = auth.context
 
     const formData = await request.formData()
     const fileEntry = formData.get("image")
@@ -87,6 +106,18 @@ export async function POST(request: Request) {
       .maybeSingle()
 
     if (existing) {
+      await logApiKeyUsage({
+        user_id: context.user_id,
+        organization_id: context.organization_id,
+        api_key_id: context.api_key_id,
+        action: "image.uploaded",
+        metadata: {
+          image_id: existing.id,
+          filename: existing.filename,
+          deduplicated: true,
+        },
+      })
+
       const signedUrl = await createSignedUrl(existing.storage_path, 60 * 60)
       const response: UploadResponse = {
         id: existing.id,
@@ -103,7 +134,19 @@ export async function POST(request: Request) {
         deduplicated: true,
       }
 
-      return NextResponse.json({ success: true, data: response }, { status: 200 })
+      return NextResponse.json(
+        { success: true, data: response },
+        {
+          status: 200,
+          headers: getQuotaHeaders({
+            quota_daily: context.quota_daily,
+            quota_monthly: context.quota_monthly,
+            usage_today: context.usage_today,
+            usage_month: context.usage_month,
+            increment: 1,
+          }),
+        },
+      )
     }
 
     const [phash, meta, exif, ela, ocr] = await Promise.all([
@@ -227,15 +270,28 @@ export async function POST(request: Request) {
           deduplicated: true,
         }
 
-        return NextResponse.json({ success: true, data: response }, { status: 200 })
+        return NextResponse.json(
+          { success: true, data: response },
+          {
+            status: 200,
+            headers: getQuotaHeaders({
+              quota_daily: context.quota_daily,
+              quota_monthly: context.quota_monthly,
+              usage_today: context.usage_today,
+              usage_month: context.usage_month,
+              increment: 1,
+            }),
+          },
+        )
       }
 
       return NextResponse.json({ error: "Failed to save image metadata" }, { status: 500 })
     }
 
-    await admin.from("usage_logs").insert({
+    await logApiKeyUsage({
       user_id: context.user_id,
       organization_id: context.organization_id,
+      api_key_id: context.api_key_id,
       action: "image.uploaded",
       metadata: {
         image_id: image.id,
@@ -264,7 +320,19 @@ export async function POST(request: Request) {
       created_at: image.created_at,
     }
 
-    return NextResponse.json({ success: true, data: response }, { status: 201 })
+    return NextResponse.json(
+      { success: true, data: response },
+      {
+        status: 201,
+        headers: getQuotaHeaders({
+          quota_daily: context.quota_daily,
+          quota_monthly: context.quota_monthly,
+          usage_today: context.usage_today,
+          usage_month: context.usage_month,
+          increment: 1,
+        }),
+      },
+    )
   } catch (error) {
     console.error("[v0] upload error", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation"
 import { ApiKeyManager } from "@/components/app/api-key-manager"
 import { InapiSyncManager } from "@/components/app/inapi-sync-manager"
+import { Phase1StatusCard } from "@/components/app/phase1-status-card"
 import { ProfileForm } from "@/components/app/profile-form"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ensureAccountBootstrap } from "@/lib/supabase/bootstrap-account"
 import { createClient } from "@/lib/supabase/server"
 
 export const dynamic = "force-dynamic"
@@ -21,6 +23,12 @@ export default async function SettingsPage() {
 
   if (!user) {
     redirect(`/auth/login?redirectTo=${encodeURIComponent("/settings")}`)
+  }
+
+  try {
+    await ensureAccountBootstrap(user)
+  } catch (bootstrapError) {
+    console.error("[v0] settings bootstrap error", bootstrapError)
   }
 
   const { data: profile } = await supabase
@@ -77,6 +85,8 @@ export default async function SettingsPage() {
           </p>
         </CardContent>
       </Card>
+
+      <Phase1StatusCard organizationId={user.id} />
 
       <ApiKeyManager />
       <InapiSyncManager />

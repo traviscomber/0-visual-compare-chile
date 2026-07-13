@@ -24,10 +24,15 @@ export interface InapiBatchSyncInput {
   matchMode?: InapiMatchMode
   initiatedBy?: string | null
   delayMs?: number
+  startIndex?: number
+  maxJobs?: number
 }
 
 export interface InapiBatchSyncResult {
+  totalAvailableJobs: number
   totalRuns: number
+  startIndex: number
+  endIndex: number
   totalFetched: number
   totalInserted: number
   totalUpdated: number
@@ -185,6 +190,8 @@ export async function runInapiSyncBatch({
   matchMode = "2",
   initiatedBy = null,
   delayMs = 400,
+  startIndex = 0,
+  maxJobs,
 }: InapiBatchSyncInput): Promise<InapiBatchSyncResult> {
   const resolvedJobs = jobs?.length ? jobs : preset ? buildInapiPresetJobs(preset) : []
 
@@ -192,10 +199,22 @@ export async function runInapiSyncBatch({
     throw new Error("Batch sync requires at least one job or a preset")
   }
 
+  const normalizedStartIndex = Number.isFinite(startIndex) ? Math.max(0, Math.floor(startIndex)) : 0
+  const normalizedMaxJobs =
+    typeof maxJobs === "number" && Number.isFinite(maxJobs) ? Math.max(1, Math.floor(maxJobs)) : null
+  const slicedJobs = normalizedMaxJobs
+    ? resolvedJobs.slice(normalizedStartIndex, normalizedStartIndex + normalizedMaxJobs)
+    : resolvedJobs.slice(normalizedStartIndex)
+
+  if (!slicedJobs.length) {
+    throw new Error("Batch sync window resolved to zero jobs")
+  }
+
   const results: InapiSyncResult[] = []
 
-  for (let index = 0; index < resolvedJobs.length; index += 1) {
-    const job = resolvedJobs[index]
+  for (let index = 0; index < slicedJobs.length; index += 1) {
+    const job = slicedJobs[index]
+    const absolutePosition = normalizedStartIndex + index + 1
     const result = await runInapiSync({
       query: job.query,
       searchType: job.searchType,
@@ -204,20 +223,25 @@ export async function runInapiSyncBatch({
       metadata: {
         batch: true,
         preset: preset ?? null,
-        position: index + 1,
+        position: absolutePosition,
         total_jobs: resolvedJobs.length,
+        batch_start_index: normalizedStartIndex,
+        batch_window_size: slicedJobs.length,
       },
     })
 
     results.push(result)
 
-    if (delayMs > 0 && index < resolvedJobs.length - 1) {
+    if (delayMs > 0 && index < slicedJobs.length - 1) {
       await sleep(delayMs)
     }
   }
 
   return {
+    totalAvailableJobs: resolvedJobs.length,
     totalRuns: results.length,
+    startIndex: normalizedStartIndex,
+    endIndex: normalizedStartIndex + slicedJobs.length - 1,
     totalFetched: results.reduce((sum, item) => sum + item.totalFetched, 0),
     totalInserted: results.reduce((sum, item) => sum + item.inserted, 0),
     totalUpdated: results.reduce((sum, item) => sum + item.updated, 0),

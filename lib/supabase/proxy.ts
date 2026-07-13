@@ -1,6 +1,11 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
-import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/env"
+import {
+  getSupabaseAnonKey,
+  getSupabaseUrl,
+  tryGetSupabaseAnonKey,
+  tryGetSupabaseUrl,
+} from "@/lib/supabase/env"
 
 const PROTECTED_PATHS = ["/dashboard", "/compare", "/comparisons", "/settings", "/history", "/reportes", "/admin"]
 const SUPPORTED_LOCALES = new Set(["es", "en"])
@@ -18,7 +23,9 @@ function stripLocalePrefix(pathname: string) {
 }
 
 export async function updateSession(request: NextRequest) {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  // Use the same tolerant env resolution as the rest of the app so Vercel's
+  // suffixed Supabase vars still enable SSR auth/session handling.
+  if (!tryGetSupabaseUrl() || !tryGetSupabaseAnonKey()) {
     return NextResponse.next({ request })
   }
 

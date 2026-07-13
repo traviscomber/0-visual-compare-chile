@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 
 type SearchType = "nombre" | "solicitante" | "clase" | "solicitud" | "registro"
 type MatchMode = "1" | "2" | "3" | "4"
-type Preset = "custom" | "alphabet" | "niza-core" | "top-brands"
+type Preset = "custom" | "alphabet" | "niza-core" | "top-brands" | "phase1-10k"
 
 interface SyncRun {
   id: string
@@ -30,6 +30,11 @@ interface SyncRun {
 
 interface SyncStatsPayload {
   totalRecords: number
+  targetRecords: number
+  completedRuns: number
+  failedRuns: number
+  nizaAssignments: number
+  vienaAssignments: number
   lastCompletedRun: {
     id: string
     created_at: string
@@ -38,6 +43,16 @@ interface SyncStatsPayload {
     inserted_count: number
     updated_count: number
     metadata?: Record<string, unknown> | null
+  } | null
+  phase1Plan?: {
+    totalJobs: number
+    coveredJobs: number
+    remainingJobs: number
+    progressPct: number
+    nextWindow: {
+      startIndex: number
+      maxJobs: number
+    } | null
   } | null
 }
 
@@ -48,6 +63,8 @@ export function InapiSyncManager() {
   const [searchType, setSearchType] = useState<SearchType>("nombre")
   const [matchMode, setMatchMode] = useState<MatchMode>("2")
   const [delayMs, setDelayMs] = useState("400")
+  const [startIndex, setStartIndex] = useState("0")
+  const [maxJobs, setMaxJobs] = useState("25")
   const [loading, setLoading] = useState(true)
   const [running, setRunning] = useState(false)
   const [runs, setRuns] = useState<SyncRun[]>([])
@@ -61,6 +78,10 @@ export function InapiSyncManager() {
         .filter(Boolean),
     [queriesText],
   )
+  const progressPct = useMemo(() => {
+    if (!stats?.targetRecords) return 0
+    return Math.min(100, Math.round((stats.totalRecords / stats.targetRecords) * 10000) / 100)
+  }, [stats])
 
   const loadRuns = useCallback(async () => {
     setLoading(true)
@@ -86,18 +107,49 @@ export function InapiSyncManager() {
     }
   }, [])
 
+  const applySuggestedPhase1Window = () => {
+    const suggestion = stats?.phase1Plan?.nextWindow
+    if (!suggestion) {
+      toast.message("No hay una ventana pendiente sugerida para phase1-10k")
+      return
+    }
+
+    setPreset("phase1-10k")
+    setStartIndex(String(suggestion.startIndex))
+    setMaxJobs(String(suggestion.maxJobs))
+    setDelayMs("400")
+    setSearchType("nombre")
+    setMatchMode("2")
+  }
+
   useEffect(() => {
     void loadRuns()
   }, [loadRuns])
 
   const handleRun = async () => {
     const delay = Number(delayMs)
+    const parsedStartIndex = Number(startIndex)
+    const parsedMaxJobs = Number(maxJobs)
     const body =
       preset === "custom"
         ? customQueries.length > 1
-          ? { queries: customQueries, searchType, matchMode, delayMs: Number.isFinite(delay) ? delay : 400 }
+          ? {
+              queries: customQueries,
+              searchType,
+              matchMode,
+              delayMs: Number.isFinite(delay) ? delay : 400,
+              startIndex: Number.isFinite(parsedStartIndex) ? parsedStartIndex : 0,
+              maxJobs: Number.isFinite(parsedMaxJobs) ? parsedMaxJobs : undefined,
+            }
           : { query: query.trim(), searchType, matchMode }
-        : { preset, searchType, matchMode, delayMs: Number.isFinite(delay) ? delay : 400 }
+        : {
+            preset,
+            searchType,
+            matchMode,
+            delayMs: Number.isFinite(delay) ? delay : 400,
+            startIndex: Number.isFinite(parsedStartIndex) ? parsedStartIndex : 0,
+            maxJobs: Number.isFinite(parsedMaxJobs) ? parsedMaxJobs : undefined,
+          }
 
     if (preset === "custom" && !query.trim() && customQueries.length === 0) {
       toast.error("Debes indicar un query o una lista de queries")
@@ -150,24 +202,55 @@ export function InapiSyncManager() {
             icon={Database}
             label="Registros indexados"
             value={String(stats?.totalRecords ?? 0)}
+            help={stats ? `${progressPct}% de ${stats.targetRecords}` : undefined}
             accent="text-cyan-300"
           />
           <MetricCard
             icon={Play}
-            label="Ultima corrida"
-            value={stats?.lastCompletedRun ? String(stats.lastCompletedRun.total_fetched) : "0"}
-            help="fetched"
+            label="Corridas completadas"
+            value={String(stats?.completedRuns ?? 0)}
+            help={stats?.lastCompletedRun ? `ultima: ${stats.lastCompletedRun.total_fetched} fetched` : undefined}
             accent="text-emerald-300"
           />
           <MetricCard
             icon={TimerReset}
-            label="Insertados ultima corrida"
-            value={stats?.lastCompletedRun ? String(stats.lastCompletedRun.inserted_count) : "0"}
+            label="Cobertura taxonomica"
+            value={`${String(stats?.nizaAssignments ?? 0)} / ${String(stats?.vienaAssignments ?? 0)}`}
+            help={`Niza / Viena · fallidas: ${String(stats?.failedRuns ?? 0)}`}
             accent="text-amber-300"
           />
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {stats?.phase1Plan ? (
+          <div className="rounded-2xl border border-cyan-400/15 bg-cyan-500/5 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-200">Campaign phase1-10k</p>
+                <p className="text-sm text-slate-300">
+                  Cobertura de jobs: {stats.phase1Plan.coveredJobs}/{stats.phase1Plan.totalJobs} ·{" "}
+                  {stats.phase1Plan.progressPct}% completado
+                </p>
+                <p className="text-sm text-slate-400">
+                  Jobs pendientes: {stats.phase1Plan.remainingJobs}
+                  {stats.phase1Plan.nextWindow
+                    ? ` · siguiente ventana sugerida: start ${stats.phase1Plan.nextWindow.startIndex} / max ${stats.phase1Plan.nextWindow.maxJobs}`
+                    : " · no quedan ventanas pendientes"}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="border-cyan-400/20 bg-cyan-500/10 text-cyan-100 hover:bg-cyan-500/20"
+                onClick={applySuggestedPhase1Window}
+                disabled={!stats.phase1Plan.nextWindow}
+              >
+                Aplicar ventana sugerida
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
           <Select value={preset} onValueChange={(value) => setPreset(value as Preset)}>
             <SelectTrigger className="w-full border-white/10 bg-slate-950/60 text-white">
               <SelectValue placeholder="Preset" />
@@ -177,6 +260,7 @@ export function InapiSyncManager() {
               <SelectItem value="alphabet">Alphabet A-Z</SelectItem>
               <SelectItem value="niza-core">Niza 01-45</SelectItem>
               <SelectItem value="top-brands">Top brand seeds</SelectItem>
+              <SelectItem value="phase1-10k">Phase1 10K ramp</SelectItem>
             </SelectContent>
           </Select>
 
@@ -209,6 +293,18 @@ export function InapiSyncManager() {
             value={delayMs}
             onChange={(event) => setDelayMs(event.target.value)}
             placeholder="Delay ms"
+            className="border-white/10 bg-slate-950/60 text-white placeholder:text-slate-500"
+          />
+          <Input
+            value={startIndex}
+            onChange={(event) => setStartIndex(event.target.value)}
+            placeholder="Start index"
+            className="border-white/10 bg-slate-950/60 text-white placeholder:text-slate-500"
+          />
+          <Input
+            value={maxJobs}
+            onChange={(event) => setMaxJobs(event.target.value)}
+            placeholder="Max jobs"
             className="border-white/10 bg-slate-950/60 text-white placeholder:text-slate-500"
           />
         </div>
@@ -245,6 +341,10 @@ export function InapiSyncManager() {
               <p className="text-sm font-medium text-white">Preset activo: {preset}</p>
               <p className="text-sm text-slate-400">
                 Ejecuta una corrida secuencial con delay configurable para no golpear INAPI de forma agresiva.
+                {preset === "phase1-10k" ? " Este preset mezcla Niza 01-45, alfabeto y semillas nominales para empujar volumen real." : ""}
+              </p>
+              <p className="text-xs text-slate-500">
+                Usa `start index` y `max jobs` para correr ventanas del preset y retomar sin repetir todo el batch.
               </p>
             </div>
             <Button

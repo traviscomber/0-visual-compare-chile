@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createVisionService } from '@/lib/vision/gpt4o-mini'
 import { createVisionCache } from '@/lib/vision/cache'
-import { authenticateApiKey } from '@/lib/api/auth'
+import { authenticateApiKey, getQuotaHeaders, logApiKeyUsage } from '@/lib/api/auth'
 import type { ComparisonResult } from '@/lib/vision/types'
 
 export const runtime = 'nodejs'
@@ -26,10 +26,29 @@ export async function POST(request: NextRequest) {
     }
 
     const apiKey = authHeader.slice(7)
-    const context = await authenticateApiKey(apiKey)
-    if (!context) {
-      return NextResponse.json({ error: 'Invalid API key' }, { status: 401 })
+    const auth = await authenticateApiKey(apiKey)
+    if (!auth.ok) {
+      return NextResponse.json(
+        { error: auth.message, reason: auth.reason },
+        {
+          status: auth.reason === 'quota_exceeded' ? 429 : 401,
+          headers:
+            auth.reason === 'quota_exceeded' &&
+            auth.quota_daily !== undefined &&
+            auth.quota_monthly !== undefined &&
+            auth.usage_today !== undefined &&
+            auth.usage_month !== undefined
+              ? getQuotaHeaders({
+                  quota_daily: auth.quota_daily,
+                  quota_monthly: auth.quota_monthly,
+                  usage_today: auth.usage_today,
+                  usage_month: auth.usage_month,
+                })
+              : undefined,
+        }
+      )
     }
+    const context = auth.context
 
     // Parse request body
     const body: CompareRequest = await request.json()
@@ -56,6 +75,18 @@ export async function POST(request: NextRequest) {
     // Check cache first
     const cachedResult = cache.get(cacheHash)
     if (cachedResult) {
+      await logApiKeyUsage({
+        user_id: context.user_id,
+        organization_id: context.organization_id,
+        api_key_id: context.api_key_id,
+        action: 'vision.compare',
+        metadata: {
+          cached: true,
+          brandName1: body.brandName1 ?? null,
+          brandName2: body.brandName2 ?? null,
+        },
+      })
+
       return NextResponse.json(
         {
           result: cachedResult,
@@ -63,7 +94,16 @@ export async function POST(request: NextRequest) {
           modelUsed: visionService.getModelInfo().model,
           timestamp: new Date().toISOString(),
         },
-        { status: 200 }
+        {
+          status: 200,
+          headers: getQuotaHeaders({
+            quota_daily: context.quota_daily,
+            quota_monthly: context.quota_monthly,
+            usage_today: context.usage_today,
+            usage_month: context.usage_month,
+            increment: 1,
+          }),
+        }
       )
     }
 
@@ -82,6 +122,19 @@ export async function POST(request: NextRequest) {
 
     // Log to audit trail
     console.log(`[v0] Vision comparison: ${body.brandName1 || 'Brand1'} vs ${body.brandName2 || 'Brand2'} (Score: ${result.similarity})`)
+    await logApiKeyUsage({
+      user_id: context.user_id,
+      organization_id: context.organization_id,
+      api_key_id: context.api_key_id,
+      action: 'vision.compare',
+      metadata: {
+        cached: false,
+        brandName1: body.brandName1 ?? null,
+        brandName2: body.brandName2 ?? null,
+        similarity: result.similarity,
+        responseTime,
+      },
+    })
 
     return NextResponse.json(
       {
@@ -94,7 +147,16 @@ export async function POST(request: NextRequest) {
         timestamp: new Date().toISOString(),
         cacheKey: cacheHash,
       },
-      { status: 200 }
+      {
+        status: 200,
+        headers: getQuotaHeaders({
+          quota_daily: context.quota_daily,
+          quota_monthly: context.quota_monthly,
+          usage_today: context.usage_today,
+          usage_month: context.usage_month,
+          increment: 1,
+        }),
+      }
     )
   } catch (error) {
     console.error('[v0] Vision comparison error:', error)

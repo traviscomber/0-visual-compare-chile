@@ -9,7 +9,7 @@ const queries = resolveQueries(args)
 
 if (!queries.length) {
   console.error("Usage: node scripts/run-inapi-sync.mjs --query VISUAL [--type nombre] [--delayMs 400]")
-  console.error("   or: node scripts/run-inapi-sync.mjs --preset alphabet")
+  console.error("   or: node scripts/run-inapi-sync.mjs --preset phase1-10k [--startIndex 0] [--maxJobs 25] [--delayMs 400]")
   process.exit(1)
 }
 
@@ -26,18 +26,29 @@ const supabase = createClient(supabaseUrl, serviceKey, {
 })
 
 const delayMs = Number.isFinite(Number(args.delayMs)) ? Math.max(0, Number(args.delayMs)) : 400
+const startIndex = Number.isFinite(Number(args.startIndex)) ? Math.max(0, Number(args.startIndex)) : 0
+const maxJobs = Number.isFinite(Number(args.maxJobs)) ? Math.max(1, Number(args.maxJobs)) : null
+const slicedQueries = maxJobs ? queries.slice(startIndex, startIndex + maxJobs) : queries.slice(startIndex)
 
-for (let index = 0; index < queries.length; index += 1) {
-  const job = queries[index]
-  console.log(`[sync] ${index + 1}/${queries.length} ${job.searchType}:${job.query}`)
+if (!slicedQueries.length) {
+  console.error("Resolved batch window is empty. Check --startIndex and --maxJobs.")
+  process.exit(1)
+}
+
+for (let index = 0; index < slicedQueries.length; index += 1) {
+  const job = slicedQueries[index]
+  const absolutePosition = startIndex + index + 1
+  console.log(`[sync] ${absolutePosition}/${queries.length} ${job.searchType}:${job.query}`)
   await runJob(job, {
     delayMs,
-    position: index + 1,
+    position: absolutePosition,
     totalJobs: queries.length,
     preset: args.preset ?? null,
+    batchStartIndex: startIndex,
+    batchWindowSize: slicedQueries.length,
   })
 
-  if (delayMs > 0 && index < queries.length - 1) {
+  if (delayMs > 0 && index < slicedQueries.length - 1) {
     await sleep(delayMs)
   }
 }
@@ -273,6 +284,29 @@ function resolveQueries(inputArgs) {
   }
   if (inputArgs.preset === "top-brands") {
     return ["VISUAL", "COMPARE", "LOGO", "MARCA", "BRAND"].map((query) => ({ query, searchType: "nombre" }))
+  }
+  if (inputArgs.preset === "phase1-10k") {
+    const nameSeeds = [
+      "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
+      "AL", "AR", "BIO", "CASA", "CHILE", "CLUB", "DATA", "ECO", "EL", "FARMA", "GO", "LAB", "LA", "MAX", "MI", "MUNDO", "NET", "NOVA",
+      "PLUS", "PRO", "PUNTO", "RED", "SAN", "SMART", "SOL", "SUR", "TEC", "TU", "VITA",
+    ]
+    const applicantSeeds = ["SPA", "S.A.", "LTDA", "LIMITADA", "INVERSIONES", "COMERCIAL", "SERVICIOS", "HOLDING", "TECNOLOGIA", "INDUSTRIAL"]
+    const jobs = [
+      ...Array.from({ length: 45 }, (_, index) => ({
+        query: String(index + 1).padStart(2, "0"),
+        searchType: "clase",
+      })),
+      ...nameSeeds.map((query) => ({ query, searchType: "nombre" })),
+      ...applicantSeeds.map((query) => ({ query, searchType: "solicitante" })),
+    ]
+    const seen = new Set()
+    return jobs.filter((job) => {
+      const key = `${job.searchType}:${job.query}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
   }
   if (inputArgs.queries) {
     return inputArgs.queries

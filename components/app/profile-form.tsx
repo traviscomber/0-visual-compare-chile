@@ -28,6 +28,9 @@ export function ProfileForm({
 
     try {
       const supabase = createClient()
+      if (!supabase) {
+        throw new Error("Supabase no esta configurado en este entorno")
+      }
       const { data: userData } = await supabase.auth.getUser()
       const userId = userData.user?.id
 

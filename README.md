@@ -6,6 +6,7 @@ Plataforma de inteligencia marcaria para Chile con comparacion visual, consulta 
 
 - Fase 0 completada.
 - Fase 1 en curso: datos reales, API keys, multi-tenant, audit log, rate limiting y exportacion masiva.
+- Cuota base actual del MVP API: `5,000` analisis de imagen por mes por API key.
 - Auth Supabase integrada.
 - Upload soporta JPG, PNG, WebP y TIFF hasta 50 MB.
 - La comparacion persiste score, clasificacion, recomendacion y senales forenses.
@@ -81,6 +82,99 @@ pnpm check:env
 pnpm build
 pnpm smoke
 ```
+
+## Gate de Fase 1
+
+Para validar el estado tecnico actual del roadmap sin depender de memoria del operador:
+
+```bash
+pnpm gate:phase1
+```
+
+Ese gate ejecuta:
+
+1. `tsc --noEmit`
+2. `next build`
+3. Evidencia INAPI si existen `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`
+4. Verificacion de quota/429 si existe `QUOTA_VERIFY_API_KEY`
+5. Si no existe `QUOTA_VERIFY_API_KEY`, intenta crear una key fixture automaticamente cuando existen `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` y `FIXTURE_ORGANIZATION_ID`
+
+Las verificaciones 1 y 2 son requeridas.
+Las verificaciones 3 y 4 se marcan como `SKIP` cuando faltan credenciales del entorno.
+
+El gate escribe ademas un reporte JSON local en `artifacts/phase1-gate.json`.
+
+### Verificacion de quota en deploy
+
+Primero puedes crear una key de prueba con cuota baja:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key \
+pnpm fixture:api-key --organizationId <uuid> --userId <uuid> --quotaDaily 2 --quotaMonthly 10
+```
+
+Luego usa la `api_key` devuelta por ese comando:
+
+```bash
+QUOTA_VERIFY_API_KEY=sc_xxx \
+QUOTA_VERIFY_BASE_URL=https://v0-visual-compare-chile.vercel.app \
+pnpm verify:quota
+```
+
+### Evidencia de sync INAPI
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key \
+pnpm evidence:inapi
+```
+
+Para empujar volumen de manera repetible hacia el objetivo de `10K`, existe el preset:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key \
+pnpm sync:inapi --preset phase1-10k --delayMs 400
+```
+
+Tambien puedes correrlo por ventanas para campañas largas:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key \
+pnpm sync:inapi --preset phase1-10k --startIndex 0 --maxJobs 25 --delayMs 400
+```
+
+Y puedes pedir al repo que te sugiera la siguiente ventana pendiente segun `inapi_sync_runs`:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key \
+pnpm plan:inapi --maxJobs 25
+```
+
+Desde `/settings`, el manager INAPI ahora tambien muestra:
+
+- cobertura de jobs `phase1-10k`
+- porcentaje completado del batch
+- siguiente ventana sugerida (`startIndex` / `maxJobs`)
+- accion rapida para aplicar esa ventana al formulario antes de correr el preset
+
+Ese preset mezcla:
+
+- clases Niza `01-45`
+- semillas nominales por alfabeto
+- semillas de solicitante frecuentes en Chile
+
+El resultado incluye:
+
+- `totalRecords`
+- `progressPct`
+- `reachedTarget`
+- cobertura en `trademark_record_niza`
+- cobertura en `trademark_record_viena`
+- ultima corrida de `inapi_sync_runs`
 
 ## Smoke contra despliegue
 

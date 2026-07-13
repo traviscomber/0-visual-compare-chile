@@ -193,13 +193,32 @@ function cellToMarca(cell: string[], id: string): Marca {
 }
 
 function normalizeText(value: string) {
-  return value
-    .replace(/Ã¡/g, "á")
-    .replace(/Ã©/g, "é")
-    .replace(/Ã­/g, "í")
-    .replace(/Ã³/g, "ó")
-    .replace(/Ãº/g, "ú")
-    .replace(/Ã±/g, "ñ")
-    .replace(/TrÃ¡mite/g, "Trámite")
+  const trimmed = value.trim()
+  if (!trimmed) return ""
+
+  const repaired = repairMojibake(trimmed)
+  return repaired
+    .replace(/TrÃ¡mite/g, "Tramite")
+    .replace(/Ã¡/g, "a")
+    .replace(/Ã©/g, "e")
+    .replace(/Ã­/g, "i")
+    .replace(/Ã³/g, "o")
+    .replace(/Ãº/g, "u")
+    .replace(/Ã±/g, "n")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
     .trim()
+}
+
+function repairMojibake(value: string) {
+  if (!/[ÃÂ]/.test(value)) {
+    return value
+  }
+
+  try {
+    const repaired = Buffer.from(value, "latin1").toString("utf8")
+    return repaired.includes("�") ? value : repaired
+  } catch {
+    return value
+  }
 }

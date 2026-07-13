@@ -4,6 +4,15 @@
 
 Cerrar la Semana 8 del roadmap con una verificacion unica y repetible sobre el deployment publico real.
 
+## Relacion con Fase 1
+
+`pnpm release:gate` valida deploy y dominio.
+
+`pnpm gate:phase1` valida el estado tecnico del roadmap Fase 1 en el repo y, cuando hay credenciales, tambien:
+
+1. evidencia de sync INAPI hacia el umbral de `10K`
+2. verificacion de `429` por API key sobre el deployment o entorno elegido
+
 ## Variables requeridas
 
 ```bash

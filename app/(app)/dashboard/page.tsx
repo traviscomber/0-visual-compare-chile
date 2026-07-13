@@ -2,6 +2,7 @@
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
+import { DashboardPhase1Card } from "@/components/app/dashboard-phase1-card"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ArrowRight, Home, Search, Settings, Zap, CheckCircle, Clock } from "lucide-react"
@@ -126,6 +127,10 @@ export default function DashboardPage() {
               </Link>
             )
           })}
+        </div>
+
+        <div className="mb-8">
+          <DashboardPhase1Card />
         </div>
 
         {/* Info stats */}
