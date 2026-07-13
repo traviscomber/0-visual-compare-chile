@@ -30,8 +30,8 @@ export function buildPhase1WindowPlan(runs: Phase1RunLike[], requestedWindowSize
       continue
     }
 
-    const start = normalizeNumber(metadata.batch_start_index)
-    const size = normalizeNumber(metadata.batch_window_size)
+    const start = readMetadataNumber(metadata, "batch_start_index", "batchStartIndex")
+    const size = readMetadataNumber(metadata, "batch_window_size", "batchWindowSize")
 
     if (start === null || size === null) {
       continue
@@ -67,4 +67,15 @@ export function buildPhase1WindowPlan(runs: Phase1RunLike[], requestedWindowSize
 
 function normalizeNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? Math.floor(value) : null
+}
+
+function readMetadataNumber(metadata: Record<string, unknown>, ...keys: string[]) {
+  for (const key of keys) {
+    const normalized = normalizeNumber(metadata[key])
+    if (normalized !== null) {
+      return normalized
+    }
+  }
+
+  return null
 }

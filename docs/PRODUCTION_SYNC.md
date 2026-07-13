@@ -19,6 +19,8 @@ Run INAPI sync against the same production env used by Vercel:
 ```bash
 pnpm sync:inapi:prod -- --query VISUAL --type nombre --delayMs 0
 pnpm sync:inapi:prod -- --preset phase1-10k --startIndex 0 --maxJobs 5 --delayMs 400
+pnpm run:prod -- pnpm monitor:inapi
+pnpm run:prod -- pnpm advance:inapi -- --dry-run
 ```
 
 The wrapper handles the current Vercel quirk where canonical variables can arrive empty and the real values come in suffixed keys like `SUPABASE_SERVICE_ROLE_KEY_2` and `SUPABASE_URL_2`.
@@ -30,6 +32,13 @@ If work starts in Codex:
 1. Pull latest `main`
 2. Run `pnpm vercel:pull`
 3. Run production sync or validation commands through `pnpm sync:inapi:prod`
+
+Use `pnpm run:prod -- pnpm monitor:inapi` before launching the next `phase1-10k` window.
+It reports the active run, current `trademark_records`, and the next serial `startIndex`
+to continue the same useful batch flow after the current run finishes.
+
+Use `pnpm run:prod -- pnpm advance:inapi -- --dry-run` to verify the next serial window
+and `pnpm run:prod -- pnpm advance:inapi` to launch it only when no active run is present.
 
 If work starts in Vercel:
 

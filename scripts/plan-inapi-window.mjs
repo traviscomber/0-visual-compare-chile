@@ -46,8 +46,8 @@ const phaseRuns = (data ?? []).filter((run) => run.metadata?.preset === "phase1-
 const covered = new Set()
 
 for (const run of phaseRuns) {
-  const start = normalizeNumber(run.metadata?.batch_start_index)
-  const size = normalizeNumber(run.metadata?.batch_window_size)
+  const start = readMetadataNumber(run.metadata, "batch_start_index", "batchStartIndex")
+  const size = readMetadataNumber(run.metadata, "batch_window_size", "batchWindowSize")
   if (start === null || size === null) continue
   for (let index = start; index < start + size; index += 1) {
     covered.add(index)
@@ -89,6 +89,21 @@ console.log(
 
 function normalizeNumber(value) {
   return typeof value === "number" && Number.isFinite(value) ? Math.floor(value) : null
+}
+
+function readMetadataNumber(metadata, ...keys) {
+  if (!metadata || typeof metadata !== "object") {
+    return null
+  }
+
+  for (const key of keys) {
+    const normalized = normalizeNumber(metadata[key])
+    if (normalized !== null) {
+      return normalized
+    }
+  }
+
+  return null
 }
 
 function parseArgs(argv) {
