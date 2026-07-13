@@ -159,11 +159,16 @@ function cellToMarca(cell: string[], id: string): Marca {
     .filter(Boolean)
 
   const estadoOriginal = normalizeText(cell[5] ?? "")
-  const estado = estadoOriginal === "En Trámite" || estadoOriginal === "Pendiente"
-    ? "Pendiente"
-    : estadoOriginal === "Registrada"
+  const estadoLower = estadoOriginal.toLowerCase()
+  // Map INAPI states to canonical values
+  const estado: "Registrada" | "Pendiente" | "Denegada" | "No Vigente" =
+    estadoOriginal === "Registrada"
       ? "Registrada"
-      : "Denegada"
+      : estadoLower.includes("trámite") || estadoLower.includes("tramite") || estadoLower.includes("pendiente")
+        ? "Pendiente"
+        : estadoLower.includes("denegada") || estadoLower.includes("rechazada") || estadoLower.includes("abandonada")
+          ? "Denegada"
+          : "No Vigente" // cubre "Tenida por no presentada", "Caducada", "Cancelada", etc.
 
   return {
     id,

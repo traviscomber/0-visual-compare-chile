@@ -244,16 +244,58 @@ Responde ÚNICAMENTE con JSON válido:
     nombreMarca: string,
     nizaClases: NizaClassification['clases']
   ): Promise<TrademarkInsightReport['registrabilidad']> {
-    // Búsqueda 1: Por nombre exacto — llamada directa sin HTTP loop
-    const marcasEncontradas = await searchInapi({
-      query: nombreMarca,
-      type: 'nombre',
-      matchMode: '1',
+    // Extraer palabras clave significativas (>3 chars) para búsquedas adicionales
+    const palabrasClave = nombreMarca
+      .split(/\s+/)
+      .filter(p => p.length > 3)
+      .slice(0, 2) // máximo 2 subqueries para no abusar la API
+
+    // Construir lista de queries: nombre completo (match=2) + palabras clave relevantes
+    const queries = [
+      { query: nombreMarca, matchMode: '2' as const },
+      ...palabrasClave
+        .filter(p => p.toLowerCase() !== nombreMarca.toLowerCase())
+        .map(p => ({ query: p, matchMode: '2' as const })),
+    ]
+
+    // Ejecutar todas las búsquedas en paralelo
+    const resultados = await Promise.allSettled(
+      queries.map(({ query, matchMode }) =>
+        searchInapi({ query, type: 'nombre', matchMode })
+      )
+    )
+
+    // Unir y deduplicar por id/numeroRegistro
+    const seen = new Set<string>()
+    const todasLasMarcas = resultados.flatMap(r =>
+      r.status === 'fulfilled' ? r.value : []
+    ).filter(m => {
+      const key = m.id || m.nombre
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
     })
 
-    if (marcasEncontradas.length > 0) {
-      const marca = marcasEncontradas[0]
-      const disponible = marca.estado === 'Denegada'
+    if (todasLasMarcas.length > 0) {
+      // Clasificar por nivel de riesgo según estado
+      const bloqueantes = todasLasMarcas.filter(m =>
+        m.estado === 'Registrada' || m.estado === 'Pendiente'
+      )
+      const antecedentes = todasLasMarcas.filter(m =>
+        m.estado === 'Denegada' || m.estado === 'No Vigente'
+      )
+
+      const marca = bloqueantes[0] ?? antecedentes[0]
+      const disponible = bloqueantes.length === 0
+
+      let recomendacion: string
+      if (!disponible) {
+        recomendacion = `⚠ Se encontró la marca "${marca.nombre}" (${marca.estado}) en las clases ${marca.niza?.join(', ') || 'N/A'}. Existe riesgo de oposición. Consulta con un abogado de PI antes de proceder.`
+      } else if (antecedentes.length > 0) {
+        recomendacion = `⚠ Se encontraron ${antecedentes.length} antecedente(s) no vigente(s) similares (${antecedentes.map(m => `"${m.nombre}" - ${m.estado}`).join('; ')}). La marca podría ser registrable, pero se recomienda revisión profesional.`
+      } else {
+        recomendacion = '✓ Antecedentes encontrados pero ninguno vigente. Proceder con precaución.'
+      }
 
       return {
         disponible,
@@ -262,20 +304,21 @@ Responde ÚNICAMENTE con JSON válido:
           solicitante: marca.solicitante || 'Desconocido',
           clase_niza: marca.niza?.join(', ') || 'N/A',
           estado: marca.estado,
-          fecha_registro: marca.fecha || '',
+          fecha_registro: marca.metadata?.numSolicitud
+            ? `Solicitud ${marca.metadata.numSolicitud}`
+            : '',
           pais: 'Chile',
         },
-        conflictos_reales: marcasEncontradas.length,
-        recomendacion: disponible
-          ? '✓ La marca está disponible para registrar (registro previo denegado). Puedes proceder con confianza.'
-          : '⚠ Esta marca ya existe registrada en Chile. No es registrable. Considera un nombre alternativo.',
+        conflictos_reales: todasLasMarcas.length,
+        recomendacion,
       }
     }
 
-    // Búsqueda 2: Por nombre en clase Niza principal — llamada directa sin HTTP loop
+    // Búsqueda 2: Por nombre en clase Niza principal
     if (nizaClases.length > 0) {
+      const clasePrincipal = nizaClases.find(c => c.tipo === 'principal')?.numero ?? nizaClases[0].numero
       const conflictosClase = await searchInapi({
-        query: nombreMarca,
+        query: String(clasePrincipal),
         type: 'clase_niza',
         matchMode: '2',
       })
@@ -284,7 +327,7 @@ Responde ÚNICAMENTE con JSON válido:
         return {
           disponible: false,
           conflictos_reales: conflictosClase.length,
-          recomendacion: `⚠ Se encontraron ${conflictosClase.length} marca(s) similar(es) en la misma clase Niza. Riesgo moderado. Consulta con un abogado de PI.`,
+          recomendacion: `⚠ Se encontraron ${conflictosClase.length} marca(s) en la misma clase Niza ${clasePrincipal}. Riesgo moderado. Consulta con un abogado de PI.`,
         }
       }
     }
@@ -293,7 +336,7 @@ Responde ÚNICAMENTE con JSON válido:
     return {
       disponible: true,
       conflictos_reales: 0,
-      recomendacion: '✓ No se encontraron conflictos en el registro de INAPI. Marca disponible para registrar en Chile.',
+      recomendacion: 'No se encontraron antecedentes en el registro de INAPI para las búsquedas realizadas. Resultado referencial — INAPI determina la registrabilidad final.',
     }
   }
 }
