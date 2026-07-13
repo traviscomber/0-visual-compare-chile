@@ -1,3 +1,9 @@
+import {
+  tryGetSupabaseAnonKey,
+  tryGetSupabaseServiceRoleKey,
+  tryGetSupabaseUrl,
+} from "@/lib/supabase/env"
+
 type RuntimeConfigSummary = {
   supabase_public_env: boolean
   supabase_service_env: boolean
@@ -58,7 +64,7 @@ function resolveConfiguredOrigin(requestHost: string) {
 }
 
 export function buildRuntimeConfigSummary(requestHost: string): RuntimeConfigSummary {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseUrl = tryGetSupabaseUrl()
   const supabaseUrlHost = parseSupabaseHost(supabaseUrl)
   const siteOrigin = resolveConfiguredOrigin(requestHost)
   const callbackUrls = dedupe([
@@ -69,8 +75,8 @@ export function buildRuntimeConfigSummary(requestHost: string): RuntimeConfigSum
   ])
 
   return {
-    supabase_public_env: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
-    supabase_service_env: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+    supabase_public_env: Boolean(tryGetSupabaseUrl() && tryGetSupabaseAnonKey()),
+    supabase_service_env: Boolean(tryGetSupabaseServiceRoleKey()),
     supabase_url_host: supabaseUrlHost,
     supabase_project_ref: parseSupabaseProjectRef(supabaseUrlHost),
     auth_callback_path: AUTH_CALLBACK_PATH,

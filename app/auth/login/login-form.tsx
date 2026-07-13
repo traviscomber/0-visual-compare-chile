@@ -2,9 +2,8 @@
 
 import type { ChangeEvent, FormEvent } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Eye } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -13,13 +12,36 @@ import { safeInternalRedirect } from "@/lib/redirect"
 
 export function LoginForm({ redirectTo }: { redirectTo: string }) {
   const next = safeInternalRedirect(redirectTo)
-  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   })
+
+  useEffect(() => {
+    let active = true
+
+    const recoverExistingSession = async () => {
+      const supabase = await createClientAsync()
+      if (!active || !supabase) return
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (active && user) {
+        // Force a document navigation so the server-side auth guard sees fresh auth cookies.
+        window.location.assign(next)
+      }
+    }
+
+    void recoverExistingSession()
+
+    return () => {
+      active = false
+    }
+  }, [next])
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -54,8 +76,9 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
         throw signInError
       }
 
-      router.replace(next)
-      router.refresh()
+      // A full reload is more reliable here than client-side navigation because
+      // the protected app routes read auth from server cookies immediately.
+      window.location.assign(next)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al iniciar sesion. Verifica tus datos.")
     } finally {

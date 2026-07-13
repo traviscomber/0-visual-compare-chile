@@ -56,6 +56,16 @@ function resolveEnv(base: string): string {
     }
   }
 
+  if (base === "SUPABASE_SERVICE_ROLE_KEY") {
+    for (let i = 2; i <= 8; i++) {
+      const v = process.env[`SUPABASE_SERVICE_ROLE_KEY_${i}`]
+      if (v?.trim()) return v.trim()
+    }
+
+    const secretKey = process.env["SUPABASE_SECRET_KEY"]
+    if (secretKey?.trim()) return secretKey.trim()
+  }
+
   return ""
 }
 
@@ -88,4 +98,18 @@ export function tryGetSupabaseUrl(): string | null {
 
 export function tryGetSupabaseAnonKey(): string | null {
   return resolveEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY") || null
+}
+
+export function getSupabaseServiceRoleKey(): string {
+  const key = resolveEnv("SUPABASE_SERVICE_ROLE_KEY")
+  if (!key) {
+    throw new Error(
+      "Missing Supabase service role key. Add SUPABASE_SERVICE_ROLE_KEY to your environment variables."
+    )
+  }
+  return key
+}
+
+export function tryGetSupabaseServiceRoleKey(): string | null {
+  return resolveEnv("SUPABASE_SERVICE_ROLE_KEY") || null
 }
