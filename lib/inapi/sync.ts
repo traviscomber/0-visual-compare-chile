@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { searchInapi, type InapiMatchMode, type InapiSearchType } from "@/lib/inapi/client"
 import { buildInapiPresetJobs, type InapiPresetKey, type InapiSyncJob } from "@/lib/inapi/presets"
-import { toStoredTrademarkRecord } from "@/lib/trademark-records"
+import { clearTrademarkRecordsCache, toStoredTrademarkRecord } from "@/lib/trademark-records"
 
 export interface InapiSyncInput {
   query: string
@@ -163,6 +163,8 @@ export async function runInapiSync({
         error_message: null,
       })
       .eq("id", run.id)
+
+    clearTrademarkRecordsCache()
 
     return {
       runId: run.id,

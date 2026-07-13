@@ -18,6 +18,7 @@
     "plan:inapi": "node scripts/plan-inapi-window.mjs",
     "monitor:inapi": "node scripts/monitor-inapi-window.mjs",
     "advance:inapi": "node scripts/advance-inapi-window.mjs",
+    "backfill:viena": "node scripts/backfill-inapi-viena.mjs",
     "gate:phase1": "node scripts/phase1-gate.mjs",
     "verify:quota": "node scripts/verify-api-quota.mjs",
     "audit:deploy": "node scripts/audit-deployment.mjs",

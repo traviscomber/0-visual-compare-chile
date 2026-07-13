@@ -45,6 +45,14 @@ export interface TrademarkStats {
 }
 
 const FALLBACK_ENGINE = resetSearchEngine(API_PORTAL_MARCAS)
+const TRADEMARK_SELECT =
+  "id, source, source_record_id, nombre, solicitante, numero_registro, numero_solicitud, estado, fecha_presentacion, fecha_registro, fecha_resolucion, pais, source_url, metadata, trademark_record_niza(code), trademark_record_viena(code)"
+const SUPABASE_BATCH_SIZE = 1000
+const SUPABASE_CACHE_TTL_MS = 60_000
+
+let cachedSupabaseRecords: Marca[] | null = null
+let cachedSupabaseRecordsFetchedAt = 0
+let supabaseRecordsPromise: Promise<Marca[]> | null = null
 
 export async function searchTrademarkRecords({
   query,
@@ -96,12 +104,18 @@ export async function getTrademarkRecordById(id: string): Promise<{ result: Marc
 }
 
 export async function getTrademarkStats(): Promise<TrademarkStats> {
-  const supabaseRecords = await loadTrademarkRecordsFromSupabase()
-  if (supabaseRecords.length > 0) {
-    return { totalRecords: supabaseRecords.length, source: "supabase" }
+  const supabaseCount = await countTrademarkRecordsInSupabase()
+  if (supabaseCount > 0) {
+    return { totalRecords: supabaseCount, source: "supabase" }
   }
 
   return { totalRecords: API_PORTAL_MARCAS.length, source: "seed" }
+}
+
+export function clearTrademarkRecordsCache() {
+  cachedSupabaseRecords = null
+  cachedSupabaseRecordsFetchedAt = 0
+  supabaseRecordsPromise = null
 }
 
 export function toStoredTrademarkRecord(marca: Marca) {
@@ -131,22 +145,57 @@ export function toStoredTrademarkRecord(marca: Marca) {
 }
 
 async function loadTrademarkRecordsFromSupabase(): Promise<Marca[]> {
+  const now = Date.now()
+  if (cachedSupabaseRecords && now - cachedSupabaseRecordsFetchedAt < SUPABASE_CACHE_TTL_MS) {
+    return cachedSupabaseRecords
+  }
+
+  if (supabaseRecordsPromise) {
+    return supabaseRecordsPromise
+  }
+
+  supabaseRecordsPromise = loadTrademarkRecordsFromSupabaseUncached()
+
+  try {
+    const records = await supabaseRecordsPromise
+    cachedSupabaseRecords = records
+    cachedSupabaseRecordsFetchedAt = Date.now()
+    return records
+  } finally {
+    supabaseRecordsPromise = null
+  }
+}
+
+async function loadTrademarkRecordsFromSupabaseUncached(): Promise<Marca[]> {
   try {
     const admin = createAdminClient()
-    const { data, error } = await admin
-      .from("trademark_records")
-      .select(
-        "id, source, source_record_id, nombre, solicitante, numero_registro, numero_solicitud, estado, fecha_presentacion, fecha_registro, fecha_resolucion, pais, source_url, metadata, trademark_record_niza(code), trademark_record_viena(code)",
-      )
-      .order("updated_at", { ascending: false })
-      .limit(5000)
+    const results: Marca[] = []
+    let from = 0
 
-    if (error) {
-      console.error("[v0] load trademark records error", error)
-      return []
+    while (true) {
+      const to = from + SUPABASE_BATCH_SIZE - 1
+      const { data, error } = await admin
+        .from("trademark_records")
+        .select(TRADEMARK_SELECT)
+        .order("updated_at", { ascending: false })
+        .range(from, to)
+
+      if (error) {
+        console.error("[v0] load trademark records error", error)
+        return []
+      }
+
+      const rows = (data ?? []).map((row) => mapRowToMarca(row as unknown as TrademarkRecordRow))
+      results.push(...rows)
+
+      if (rows.length < SUPABASE_BATCH_SIZE) {
+        break
+      }
+
+      from += SUPABASE_BATCH_SIZE
     }
 
-    return (data ?? []).map((row) => mapRowToMarca(row as unknown as TrademarkRecordRow))
+    return results
   } catch (error) {
     console.error("[v0] load trademark records exception", error)
     return []
@@ -158,9 +207,7 @@ async function loadTrademarkRecordByIdFromSupabase(id: string): Promise<Marca | 
     const admin = createAdminClient()
     const { data, error } = await admin
       .from("trademark_records")
-      .select(
-        "id, source, source_record_id, nombre, solicitante, numero_registro, numero_solicitud, estado, fecha_presentacion, fecha_registro, fecha_resolucion, pais, source_url, metadata, trademark_record_niza(code), trademark_record_viena(code)",
-      )
+      .select(TRADEMARK_SELECT)
       .eq("id", id)
       .maybeSingle()
 
@@ -172,6 +219,22 @@ async function loadTrademarkRecordByIdFromSupabase(id: string): Promise<Marca | 
   } catch (error) {
     console.error("[v0] load trademark record by id exception", error)
     return null
+  }
+}
+
+async function countTrademarkRecordsInSupabase(): Promise<number> {
+  try {
+    const admin = createAdminClient()
+    const { count, error } = await admin.from("trademark_records").select("id", { count: "exact", head: true })
+    if (error) {
+      console.error("[v0] count trademark records error", error)
+      return 0
+    }
+
+    return count ?? 0
+  } catch (error) {
+    console.error("[v0] count trademark records exception", error)
+    return 0
   }
 }
 
