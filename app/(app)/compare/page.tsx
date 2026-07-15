@@ -1,4 +1,5 @@
 import { CompareWorkbench } from "@/components/app/compare-workbench"
+import { CompareTrademarkBrief } from "@/components/app/compare-trademark-brief"
 
 export const metadata = {
   title: "Comparar imagenes - Visual Compare Chile",
@@ -14,7 +15,10 @@ export default function ComparePage() {
           el flujo de revision del MVP.
         </p>
       </div>
-      <CompareWorkbench />
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <CompareWorkbench />
+        <CompareTrademarkBrief />
+      </div>
     </div>
   )
 }

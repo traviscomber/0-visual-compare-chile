@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/run-production-command.mjs node ./node_modules/next/dist/bin/next build",
+    "build:raw": "next build",
     "start": "next start",
     "lint": "eslint .",
     "check:env": "node scripts/verify-env.mjs",
@@ -12,7 +13,7 @@
     "sync:inapi": "node scripts/run-inapi-sync.mjs",
     "vercel:pull": "pnpm dlx vercel env pull .env.vercel.production --environment=production --yes",
     "run:prod": "node scripts/run-production-command.mjs",
-    "sync:inapi:prod": "node scripts/run-production-command.mjs node scripts/run-inapi-sync.mjs",
+    "sync:inapi:prod": "node scripts/run-production-command.mjs node scripts/run-inapi-sync-pg.mjs",
     "fixture:api-key": "node scripts/create-api-key-fixture.mjs",
     "evidence:inapi": "node scripts/inapi-sync-evidence.mjs",
     "plan:inapi": "node scripts/plan-inapi-window.mjs",

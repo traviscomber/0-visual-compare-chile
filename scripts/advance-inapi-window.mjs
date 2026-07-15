@@ -1,10 +1,13 @@
+import fs from "node:fs"
+import path from "node:path"
 import { spawn } from "node:child_process"
-import { createClient } from "@supabase/supabase-js"
 
 const DEFAULT_DELAY_MS = 400
 const DEFAULT_MAX_JOBS = 3
+const LOG_FILE = path.resolve(process.cwd(), "tmp", "advance-inapi-window.log")
 
 await main().catch((error) => {
+  writeLog(`fatal ${error.stack ?? error.message}`)
   console.error(error)
   process.exitCode = 1
 })
@@ -25,24 +28,12 @@ async function main() {
     throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
   }
 
-  const supabase = createClient(supabaseUrl, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-
-  const { data: runs, error } = await supabase
-    .from("inapi_sync_runs")
-    .select("id, status, query, search_type, started_at, finished_at, metadata")
-    .order("started_at", { ascending: false, nullsFirst: false })
-    .limit(50)
-
-  if (error) {
-    throw error
-  }
-
-  const latestRuns = runs ?? []
+  writeLog(`start pid=${process.pid} cwd=${process.cwd()} dryRun=${dryRun}`)
+  const latestRuns = await selectLatestRuns(supabaseUrl, serviceKey)
   const activeRun = latestRuns.find((run) => run.status === "running") ?? null
 
   if (activeRun) {
+    writeLog(`wait activeRun=${activeRun.id}`)
     console.log(
       JSON.stringify(
         {
@@ -63,29 +54,28 @@ async function main() {
     throw new Error("No completed phase1-10k run found. Seed the first useful window manually.")
   }
 
-  const startIndex = readMetadataNumber(latestPhaseRun.metadata, "batch_start_index", "batchStartIndex")
-  const maxJobs =
-    readMetadataNumber(latestPhaseRun.metadata, "batch_window_size", "batchWindowSize") ?? DEFAULT_MAX_JOBS
-  const delayMs = readMetadataNumber(latestPhaseRun.metadata, "delayMs") ?? DEFAULT_DELAY_MS
-
-  if (startIndex === null) {
+  const continueWindow = buildContinueWindow(latestPhaseRun)
+  if (!continueWindow) {
     throw new Error("Could not resolve batch start index from the latest phase1-10k run.")
   }
 
-  const nextStartIndex = startIndex + Math.max(maxJobs, 1)
   const commandArgs = [
     "scripts/run-production-command.mjs",
     "node",
-    "scripts/run-inapi-sync.mjs",
+    "scripts/run-inapi-sync-pg.mjs",
     "--preset",
     "phase1-10k",
     "--startIndex",
-    String(nextStartIndex),
+    String(continueWindow.startIndex),
     "--maxJobs",
-    String(maxJobs),
+    String(continueWindow.maxJobs),
     "--delayMs",
-    String(delayMs),
+    String(continueWindow.delayMs),
   ]
+
+  writeLog(
+    `nextWindow startIndex=${continueWindow.startIndex} maxJobs=${continueWindow.maxJobs} delayMs=${continueWindow.delayMs} retry=${continueWindow.retry} command=${process.execPath} ${commandArgs.join(" ")}`,
+  )
 
   if (dryRun) {
     console.log(
@@ -94,11 +84,7 @@ async function main() {
           ok: true,
           action: "launch_next_window",
           dryRun: true,
-          nextWindow: {
-            startIndex: nextStartIndex,
-            maxJobs,
-            delayMs,
-          },
+          nextWindow: continueWindow,
           command: `${process.execPath} ${commandArgs.join(" ")}`,
           basedOn: latestPhaseRun,
         },
@@ -115,11 +101,7 @@ async function main() {
         ok: true,
         action: "launch_next_window",
         dryRun: false,
-        nextWindow: {
-          startIndex: nextStartIndex,
-          maxJobs,
-          delayMs,
-        },
+        nextWindow: continueWindow,
         basedOn: latestPhaseRun,
       },
       null,
@@ -128,6 +110,28 @@ async function main() {
   )
 
   await runCommand(process.execPath, commandArgs)
+}
+
+async function selectLatestRuns(supabaseUrl, serviceKey) {
+  const url = new URL(`${supabaseUrl}/rest/v1/inapi_sync_runs`)
+  url.searchParams.set("select", "id,status,query,search_type,started_at,finished_at,metadata")
+  url.searchParams.set("order", "started_at.desc.nullslast")
+  url.searchParams.set("limit", "50")
+
+  const response = await fetch(url, {
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      Accept: "application/json",
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error(`Failed to load inapi_sync_runs: ${response.status} ${await response.text()}`)
+  }
+
+  const payload = await response.json()
+  return Array.isArray(payload) ? payload : []
 }
 
 function readMetadataNumber(metadata, ...keys) {
@@ -177,7 +181,10 @@ function runCommand(command, commandArgs) {
       shell: false,
     })
 
+    writeLog(`spawned child pid=${child.pid ?? "unknown"}`)
+
     child.on("exit", (code, signal) => {
+      writeLog(`child_exit code=${code ?? "null"} signal=${signal ?? "null"}`)
       if (signal) {
         reject(new Error(`Command terminated with signal ${signal}`))
         return
@@ -191,6 +198,44 @@ function runCommand(command, commandArgs) {
       reject(new Error(`Command exited with code ${code ?? 1}`))
     })
 
-    child.on("error", reject)
+    child.on("error", (error) => {
+      writeLog(`child_error ${error.stack ?? error.message}`)
+      reject(error)
+    })
   })
+}
+
+function writeLog(message) {
+  fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true })
+  fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] ${message}\n`)
+}
+
+function buildContinueWindow(referenceRun) {
+  const referenceStartIndex = readMetadataNumber(referenceRun?.metadata, "batch_start_index", "batchStartIndex")
+  if (referenceStartIndex === null) {
+    return null
+  }
+
+  const referenceWindowSize =
+    readMetadataNumber(referenceRun?.metadata, "batch_window_size", "batchWindowSize") ?? DEFAULT_MAX_JOBS
+  const referenceDelayMs = readMetadataNumber(referenceRun?.metadata, "delayMs") ?? DEFAULT_DELAY_MS
+  const retry = referenceRun?.status === "failed"
+  const windowSize = Math.max(referenceWindowSize, 1)
+  const windowEndIndexExclusive = referenceStartIndex + windowSize
+  const failedPosition = readMetadataNumber(referenceRun?.metadata, "position")
+  const retryStartIndex = retry && failedPosition !== null
+    ? Math.max(failedPosition - 1, referenceStartIndex)
+    : referenceStartIndex
+  const safeRetryStartIndex = Math.min(retryStartIndex, windowEndIndexExclusive - 1)
+
+  return {
+    startIndex: retry
+      ? safeRetryStartIndex
+      : Math.max(referenceStartIndex + windowSize, 0),
+    maxJobs: retry
+      ? Math.max(windowEndIndexExclusive - safeRetryStartIndex, 1)
+      : windowSize,
+    delayMs: referenceDelayMs,
+    retry,
+  }
 }

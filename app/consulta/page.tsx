@@ -3,10 +3,11 @@
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { Shield, ArrowLeft, Database, Search, Tags } from 'lucide-react'
+import { AlertTriangle, Shield, ArrowLeft, Database, Search, Tags } from 'lucide-react'
 import { SearchResult, SearchFilters } from '@/types/marca'
 import { useSearch } from '@/hooks/useSearch'
 import { buildClassificationKnowledgeDigest, searchClassificationCatalog } from '@/lib/classification-knowledge'
+import { buildResultReason, buildResultRiskLevel, buildSearchExecutiveSummary, formatRiskLabel } from '@/lib/trademark-insights'
 import {
   ExportDialog,
   FilterPanel,
@@ -176,6 +177,10 @@ function ConsultaPageContent() {
   }
 
   const activeResultCount = filteredResults.length
+  const executiveSummary = useMemo(
+    () => buildSearchExecutiveSummary(activeQuery, searchType, filteredResults),
+    [activeQuery, filteredResults, searchType],
+  )
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.18),_transparent_35%),linear-gradient(135deg,_#020617_0%,_#0f172a_40%,_#111827_100%)] text-white">
@@ -261,6 +266,16 @@ function ConsultaPageContent() {
           }}
         />
 
+        <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+          <ExecutiveSummaryCard
+            query={activeQuery}
+            searchType={searchType}
+            summary={executiveSummary}
+            topResults={filteredResults.slice(0, 3)}
+          />
+          <DecisionGuideCard summary={executiveSummary} />
+        </section>
+
         <ResultsTable
           results={currentPageResults}
           isLoading={cargando}
@@ -269,6 +284,8 @@ function ConsultaPageContent() {
             total: filteredResults.length,
             limit: PAGE_SIZE
           }}
+          query={activeQuery}
+          searchType={searchType}
           onPageChange={setPage}
           onSelectMarca={setSelectedResult}
         />
@@ -277,6 +294,8 @@ function ConsultaPageContent() {
       {selectedResult && (
         <MarcaCard
           result={selectedResult}
+          query={activeQuery}
+          searchType={searchType}
           onClose={() => setSelectedResult(null)}
           onCopyId={async (id) => {
             await navigator.clipboard.writeText(id)
@@ -292,6 +311,139 @@ function ConsultaPageContent() {
       />
     </div>
   )
+}
+
+function ExecutiveSummaryCard({
+  query,
+  searchType,
+  summary,
+  topResults,
+}: {
+  query: string
+  searchType: 'nombre' | 'niza' | 'viena'
+  summary: ReturnType<typeof buildSearchExecutiveSummary>
+  topResults: SearchResult[]
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-sm uppercase tracking-[0.24em] text-slate-400">Resumen ejecutivo</p>
+          <h2 className="mt-2 text-2xl font-semibold text-white">{summary.title}</h2>
+          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300">{summary.recommendation}</p>
+        </div>
+        <div className={riskPanelClassName(summary.risk)}>
+          <p className="text-xs uppercase tracking-[0.2em]">Riesgo</p>
+          <p className="mt-2 text-2xl font-semibold">{summary.riskLabel}</p>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-3 md:grid-cols-4">
+        <SummaryMetric label="Conflictos altos" value={String(summary.criticalCount)} />
+        <SummaryMetric label="Registradas" value={String(summary.registeredCount)} />
+        <SummaryMetric label="Clases expuestas" value={summary.topNiza.join(', ') || 'Sin dato'} />
+        <SummaryMetric label="Estados" value={summary.topStates.join(' · ') || 'Sin dato'} />
+      </div>
+
+      <div className="mt-6 space-y-3">
+        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-slate-400">
+          <AlertTriangle className="h-3.5 w-3.5" />
+          Prioridad de revision
+        </div>
+        {topResults.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/40 p-4 text-sm text-slate-300">
+            No hay coincidencias directas para esta consulta. El paso siguiente es validar clases y, si aplica, comparar el logo.
+          </div>
+        ) : (
+          topResults.map((result) => {
+            const risk = buildResultRiskLevel(result, query, searchType)
+            const reason = buildResultReason(result, query, searchType)
+            return (
+              <Link
+                key={result.marca.id}
+                href={`/marca/${result.marca.id}`}
+                className="block rounded-2xl border border-white/10 bg-slate-950/45 p-4 transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-white">{result.marca.nombre}</p>
+                    <p className="mt-1 text-sm text-slate-300">{reason}</p>
+                  </div>
+                  <span className={resultRiskClassName(risk)}>{formatRiskLabel(risk)}</span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
+                  <span>{result.marca.estado}</span>
+                  <span>Relevancia {result.relevancia}%</span>
+                  <span>Niza {result.marca.niza.slice(0, 2).join(', ') || 'sin dato'}</span>
+                </div>
+              </Link>
+            )
+          })
+        )}
+      </div>
+    </div>
+  )
+}
+
+function DecisionGuideCard({ summary }: { summary: ReturnType<typeof buildSearchExecutiveSummary> }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+      <p className="text-sm uppercase tracking-[0.24em] text-slate-400">Que hacer ahora</p>
+      <div className="mt-4 space-y-4">
+        <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4">
+          <p className="text-sm font-medium text-white">1. Resolver la parte legal</p>
+          <p className="mt-2 text-sm text-slate-300">
+            {summary.risk === 'high'
+              ? 'Hay señales suficientes para frenar el registro hasta revisar el caso principal.'
+              : summary.risk === 'medium'
+                ? 'Conviene revisar coexistencia y clases antes de presentar.'
+                : 'No hay bloqueo directo visible, pero igual hay que dejar evidencia de la revision.'}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4">
+          <p className="text-sm font-medium text-white">2. Abrir la ficha correcta</p>
+          <p className="mt-2 text-sm text-slate-300">
+            Desde cada resultado puedes abrir la ficha con numero de solicitud, clases, metadata y conflictos relacionados.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4">
+          <p className="text-sm font-medium text-white">3. Cruzar el logo si aplica</p>
+          <p className="mt-2 text-sm text-slate-300">
+            La parte visual vive en Compare. El nombre y el logo deben coincidir en la misma decision.
+          </p>
+          <div className="mt-3">
+            <Link
+              href={`/compare?brand=${encodeURIComponent(summary.primaryResult?.marca.nombre ?? '')}`}
+              className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-100 transition hover:bg-white/10"
+            >
+              Abrir Compare
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SummaryMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4">
+      <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{label}</p>
+      <p className="mt-2 text-sm font-medium text-white">{value}</p>
+    </div>
+  )
+}
+
+function riskPanelClassName(risk: 'high' | 'medium' | 'low') {
+  if (risk === 'high') return 'rounded-2xl border border-red-400/30 bg-red-500/15 px-4 py-3 text-red-100'
+  if (risk === 'medium') return 'rounded-2xl border border-amber-400/30 bg-amber-500/15 px-4 py-3 text-amber-100'
+  return 'rounded-2xl border border-emerald-400/30 bg-emerald-500/15 px-4 py-3 text-emerald-100'
+}
+
+function resultRiskClassName(risk: 'high' | 'medium' | 'low') {
+  if (risk === 'high') return 'rounded-full border border-red-400/30 bg-red-500/15 px-3 py-1 text-xs text-red-100'
+  if (risk === 'medium') return 'rounded-full border border-amber-400/30 bg-amber-500/15 px-3 py-1 text-xs text-amber-100'
+  return 'rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-1 text-xs text-emerald-100'
 }
 
 function ConsultaLoadingState() {
