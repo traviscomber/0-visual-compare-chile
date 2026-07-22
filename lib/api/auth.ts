@@ -5,7 +5,6 @@ export interface ApiKeyContext {
   api_key_id: string
   organization_id: string
   user_id: string
-  api_key: string
   quota_daily: number
   quota_monthly: number
   usage_today: number
@@ -91,7 +90,6 @@ export async function authenticateApiKey(apiKey: string): Promise<ApiKeyAuthResu
         api_key_id: data.id,
         organization_id: data.organization_id,
         user_id: data.user_id,
-        api_key: apiKey,
         quota_daily: dailyQuota,
         quota_monthly: monthlyQuota,
         usage_today: todayCount,
