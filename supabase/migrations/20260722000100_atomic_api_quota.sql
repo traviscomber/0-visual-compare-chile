@@ -1,12 +1,25 @@
 -- Atomic API quota reservation.
--- This migration adds a transactional RPC used before expensive API work.
--- It does not modify or delete historical usage data.
+-- Counters are stored separately from usage_logs so audit events never double-count requests.
+-- This migration does not modify or delete historical usage data.
+
+create table if not exists public.api_quota_counters (
+  api_key_id uuid not null references public.api_keys(id) on delete cascade,
+  period_type text not null check (period_type in ('day', 'month')),
+  period_start date not null,
+  usage_count bigint not null default 0 check (usage_count >= 0),
+  updated_at timestamptz not null default now(),
+  primary key (api_key_id, period_type, period_start)
+);
+
+alter table public.api_quota_counters enable row level security;
+
+revoke all on table public.api_quota_counters from public, anon, authenticated;
+grant select, insert, update, delete on table public.api_quota_counters to service_role;
 
 create or replace function public.reserve_api_quota(
   p_api_key_id uuid,
   p_organization_id uuid,
-  p_user_id uuid,
-  p_action text default 'api.request.reserved'
+  p_user_id uuid
 )
 returns table (
   allowed boolean,
@@ -22,13 +35,12 @@ as $$
 declare
   v_daily_quota integer;
   v_monthly_quota integer;
+  v_today date := current_date;
+  v_month date := date_trunc('month', current_date)::date;
   v_today_count bigint;
   v_month_count bigint;
-  v_now timestamptz := now();
-  v_today timestamptz := date_trunc('day', v_now);
-  v_month timestamptz := date_trunc('month', v_now);
 begin
-  -- Serialize reservations for one API key without locking unrelated tenants.
+  -- Serialize reservations for one API key while leaving other tenants independent.
   perform pg_advisory_xact_lock(hashtextextended(p_api_key_id::text, 0));
 
   select
@@ -40,7 +52,7 @@ begin
     and ak.organization_id = p_organization_id
     and ak.user_id = p_user_id
     and ak.is_active = true
-    and (ak.expires_at is null or ak.expires_at > v_now)
+    and (ak.expires_at is null or ak.expires_at > now())
   for update;
 
   if not found then
@@ -48,48 +60,57 @@ begin
     return;
   end if;
 
-  select count(*)
+  select coalesce(aqc.usage_count, 0)
   into v_today_count
-  from public.usage_logs ul
-  where ul.organization_id = p_organization_id
-    and ul.metadata @> jsonb_build_object('api_key_id', p_api_key_id::text)
-    and ul.created_at >= v_today;
+  from public.api_quota_counters aqc
+  where aqc.api_key_id = p_api_key_id
+    and aqc.period_type = 'day'
+    and aqc.period_start = v_today;
 
-  select count(*)
+  if not found then
+    v_today_count := 0;
+  end if;
+
+  select coalesce(aqc.usage_count, 0)
   into v_month_count
-  from public.usage_logs ul
-  where ul.organization_id = p_organization_id
-    and ul.metadata @> jsonb_build_object('api_key_id', p_api_key_id::text)
-    and ul.created_at >= v_month;
+  from public.api_quota_counters aqc
+  where aqc.api_key_id = p_api_key_id
+    and aqc.period_type = 'month'
+    and aqc.period_start = v_month;
+
+  if not found then
+    v_month_count := 0;
+  end if;
 
   if v_today_count >= v_daily_quota or v_month_count >= v_monthly_quota then
     return query select false, v_daily_quota, v_monthly_quota, v_today_count, v_month_count;
     return;
   end if;
 
-  insert into public.usage_logs (
-    user_id,
-    organization_id,
-    action,
-    metadata
-  ) values (
-    p_user_id,
-    p_organization_id,
-    p_action,
-    jsonb_build_object(
-      'api_key_id', p_api_key_id::text,
-      'reservation', true
-    )
-  );
+  insert into public.api_quota_counters (api_key_id, period_type, period_start, usage_count, updated_at)
+  values (p_api_key_id, 'day', v_today, 1, now())
+  on conflict (api_key_id, period_type, period_start)
+  do update set
+    usage_count = public.api_quota_counters.usage_count + 1,
+    updated_at = now()
+  returning usage_count into v_today_count;
+
+  insert into public.api_quota_counters (api_key_id, period_type, period_start, usage_count, updated_at)
+  values (p_api_key_id, 'month', v_month, 1, now())
+  on conflict (api_key_id, period_type, period_start)
+  do update set
+    usage_count = public.api_quota_counters.usage_count + 1,
+    updated_at = now()
+  returning usage_count into v_month_count;
 
   update public.api_keys
-  set last_used_at = v_now
+  set last_used_at = now()
   where id = p_api_key_id;
 
   return query
-  select true, v_daily_quota, v_monthly_quota, v_today_count + 1, v_month_count + 1;
+  select true, v_daily_quota, v_monthly_quota, v_today_count, v_month_count;
 end;
 $$;
 
-revoke all on function public.reserve_api_quota(uuid, uuid, uuid, text) from public;
-grant execute on function public.reserve_api_quota(uuid, uuid, uuid, text) to service_role;
+revoke all on function public.reserve_api_quota(uuid, uuid, uuid) from public, anon, authenticated;
+grant execute on function public.reserve_api_quota(uuid, uuid, uuid) to service_role;
