@@ -3,7 +3,12 @@ import type { Marca } from "@/types/marca"
 const INAPI_BASE = "https://buscadormarcas.inapi.cl/Marca"
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-const SESSION_TTL_MS = 25 * 60 * 1000
+
+const SESSION_TTL_MS = readPositiveInt("INAPI_SESSION_TTL_MS", 20 * 60 * 1000)
+const MIN_INTERVAL_MS = readPositiveInt("INAPI_MIN_INTERVAL_MS", 4_000)
+const JITTER_MS = readPositiveInt("INAPI_JITTER_MS", 2_000)
+const REQUEST_TIMEOUT_MS = readPositiveInt("INAPI_REQUEST_TIMEOUT_MS", 15_000)
+const MAX_RETRIES = Math.min(readPositiveInt("INAPI_MAX_RETRIES", 1), 1)
 
 export type InapiSearchType = "nombre" | "solicitante" | "clase" | "clase_niza" | "solicitud" | "registro"
 export type InapiMatchMode = "1" | "2" | "3" | "4"
@@ -27,6 +32,9 @@ interface InapiFindMarcasPayload {
 
 let cachedSession: string | null = null
 let sessionFetchedAt = 0
+let sessionPromise: Promise<string> | null = null
+let requestChain: Promise<void> = Promise.resolve()
+let lastRequestAt = 0
 
 export async function searchInapi({
   query,
@@ -36,12 +44,30 @@ export async function searchInapi({
   const trimmedQuery = query.trim()
   if (!trimmedQuery) return []
 
-  const sessionId = await getSession()
-  const payload = await requestInapi({
-    query: trimmedQuery,
-    type,
-    matchMode,
-    sessionId,
+  const payload = await enqueueRequest(async () => {
+    let attempt = 0
+
+    while (true) {
+      const sessionId = await getSession()
+
+      try {
+        return await requestInapi({
+          query: trimmedQuery,
+          type,
+          matchMode,
+          sessionId,
+        })
+      } catch (error) {
+        invalidateSession()
+
+        if (attempt >= MAX_RETRIES || !isRetryableError(error)) {
+          throw error
+        }
+
+        attempt += 1
+        await sleep(10_000 + Math.floor(Math.random() * 10_001))
+      }
+    }
   })
 
   return (payload.Marcas ?? []).map((item) => cellToMarca(item.cell, item.id))
@@ -62,12 +88,12 @@ async function requestInapi({
     LastNumSol: "0",
     Hash: "",
     IDW: "",
-    responseCaptcha: "skip-captcha-for-agent-sync",
+    responseCaptcha: "",
     param1: type === "solicitud" ? query : "",
     param2: type === "registro" ? query : "",
     param3: type === "nombre" ? query : "",
     param4: type === "solicitante" ? query : "",
-    param5: (type === "clase" || type === "clase_niza") ? query : "",
+    param5: type === "clase" || type === "clase_niza" ? query : "",
     param6: "",
     param7: "",
     param8: "",
@@ -82,7 +108,7 @@ async function requestInapi({
     param17: matchMode,
   }
 
-  const response = await fetch(`${INAPI_BASE}/BuscarMarca.aspx/FindMarcas`, {
+  const response = await fetchWithTimeout(`${INAPI_BASE}/BuscarMarca.aspx/FindMarcas`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json; charset=utf-8",
@@ -97,8 +123,12 @@ async function requestInapi({
   })
 
   if (!response.ok) {
-    cachedSession = null
     throw new Error(`INAPI responded with HTTP ${response.status}`)
+  }
+
+  const contentType = response.headers.get("content-type") ?? ""
+  if (!contentType.toLowerCase().includes("application/json")) {
+    throw new Error("INAPI returned an unexpected non-JSON response")
   }
 
   const json = await response.json()
@@ -117,10 +147,28 @@ async function getSession(): Promise<string> {
     return cachedSession
   }
 
-  const response = await fetch(`${INAPI_BASE}/BuscarMarca.aspx`, {
+  if (sessionPromise) {
+    return sessionPromise
+  }
+
+  sessionPromise = fetchSession()
+
+  try {
+    return await sessionPromise
+  } finally {
+    sessionPromise = null
+  }
+}
+
+async function fetchSession(): Promise<string> {
+  const response = await fetchWithTimeout(`${INAPI_BASE}/BuscarMarca.aspx`, {
     headers: { "User-Agent": USER_AGENT },
     cache: "no-store",
   })
+
+  if (!response.ok) {
+    throw new Error(`Could not obtain INAPI session (status ${response.status})`)
+  }
 
   let sessionId: string | null = null
 
@@ -148,8 +196,67 @@ async function getSession(): Promise<string> {
   }
 
   cachedSession = sessionId
-  sessionFetchedAt = now
+  sessionFetchedAt = Date.now()
   return sessionId
+}
+
+function invalidateSession() {
+  cachedSession = null
+  sessionFetchedAt = 0
+}
+
+async function enqueueRequest<T>(operation: () => Promise<T>): Promise<T> {
+  let release: (() => void) | undefined
+  const previous = requestChain
+  requestChain = new Promise<void>((resolve) => {
+    release = resolve
+  })
+
+  await previous
+
+  try {
+    const elapsed = Date.now() - lastRequestAt
+    const jitter = JITTER_MS > 0 ? Math.floor(Math.random() * (JITTER_MS + 1)) : 0
+    const waitMs = Math.max(MIN_INTERVAL_MS + jitter - elapsed, 0)
+    if (waitMs > 0) {
+      await sleep(waitMs)
+    }
+
+    lastRequestAt = Date.now()
+    return await operation()
+  } finally {
+    release?.()
+  }
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit) {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal })
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`INAPI request timed out after ${REQUEST_TIMEOUT_MS}ms`)
+    }
+    throw error
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+function isRetryableError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error)
+  return /HTTP (401|408|429|500|502|503|504)|timed out|session|unexpected non-JSON/i.test(message)
+}
+
+function readPositiveInt(name: string, fallback: number) {
+  const parsed = Number(process.env[name])
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : fallback
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 function cellToMarca(cell: string[], id: string): Marca {
@@ -159,11 +266,17 @@ function cellToMarca(cell: string[], id: string): Marca {
     .filter(Boolean)
 
   const estadoOriginal = normalizeText(cell[5] ?? "")
-  const estado = estadoOriginal === "En Tramite" || estadoOriginal === "Pendiente"
-    ? "Pendiente"
-    : estadoOriginal === "Registrada"
-      ? "Registrada"
-      : "Denegada"
+  const estado =
+    estadoOriginal === "En Tramite" || estadoOriginal === "Pendiente"
+      ? "Pendiente"
+      : estadoOriginal === "Registrada"
+        ? "Registrada"
+        : estadoOriginal === "Tenida por no presentada" ||
+            estadoOriginal === "Caducada" ||
+            estadoOriginal === "Cancelada" ||
+            estadoOriginal === "No Vigente"
+          ? "No Vigente"
+          : "Denegada"
 
   return {
     id,
