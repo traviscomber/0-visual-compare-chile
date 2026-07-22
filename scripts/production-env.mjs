@@ -5,12 +5,9 @@ const DEFAULT_ENV_FILE = ".env.vercel.production"
 
 export function loadProductionEnv(envFile = DEFAULT_ENV_FILE) {
   const resolvedPath = path.resolve(process.cwd(), envFile)
-  if (!fs.existsSync(resolvedPath)) {
-    throw new Error(`Missing production env file: ${resolvedPath}`)
-  }
-
-  const raw = fs.readFileSync(resolvedPath, "utf8")
-  const parsed = parseDotEnv(raw)
+  const parsed = fs.existsSync(resolvedPath)
+    ? parseDotEnv(fs.readFileSync(resolvedPath, "utf8"))
+    : {}
 
   applyEnv(parsed)
   applyFallback("NEXT_PUBLIC_SUPABASE_URL", parsed, ["SUPABASE_URL_2", "SUPABASE_URL_3"])
@@ -26,7 +23,7 @@ export function loadProductionEnv(envFile = DEFAULT_ENV_FILE) {
   ])
 
   return {
-    envFile: resolvedPath,
+    envFile: fs.existsSync(resolvedPath) ? resolvedPath : "platform environment",
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
     hasServiceRoleKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
     hasPostgresUrl: Boolean(process.env.POSTGRES_URL),
@@ -60,7 +57,7 @@ function parseDotEnv(raw) {
 
 function applyEnv(parsed) {
   for (const [key, value] of Object.entries(parsed)) {
-    process.env[key] = value
+    if (!process.env[key]) process.env[key] = value
   }
 }
 
@@ -69,7 +66,7 @@ function applyFallback(targetKey, parsed, candidates) {
   if (current) return
 
   for (const candidate of candidates) {
-    const value = parsed[candidate]?.trim()
+    const value = process.env[candidate]?.trim() || parsed[candidate]?.trim()
     if (value) {
       process.env[targetKey] = value
       return
