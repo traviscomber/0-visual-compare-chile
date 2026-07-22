@@ -1,12 +1,19 @@
 "use client"
-import { useAuth } from "@/lib/auth-context"
+
+import { useAuth, type UserRole } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { DashboardPhase1Card } from "@/components/app/dashboard-phase1-card"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { ArrowRight, Home, Search, Settings, Zap, CheckCircle, Clock } from "lucide-react"
+import { ArrowRight, Search, Settings, Zap, CheckCircle, Clock } from "lucide-react"
 import Link from "next/link"
+
+const roleLabels: Record<UserRole, string> = {
+  admin: "Administrador",
+  analista: "Analista",
+  auditor: "Auditor",
+}
 
 export default function DashboardPage() {
   const { user, logout, isLoading } = useAuth()
@@ -39,7 +46,7 @@ export default function DashboardPage() {
           </Link>
           <div className="flex items-center gap-4">
             <span className="text-sm text-slate-400">
-              {user.name.split("@")[0]} • <span className="font-medium text-blue-400">Abogado</span>
+              {user.name} · <span className="font-medium text-blue-400">{roleLabels[user.role]}</span>
             </span>
             <Button
               onClick={handleLogout}
@@ -54,25 +61,22 @@ export default function DashboardPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-12">
-        {/* Welcome Section */}
         <div className="text-center mb-16 animate-fade-in">
           <h1 className="text-5xl font-bold text-white mb-3">
-            Bienvenido,<br/><span className="gradient-text">{user.name.split("@")[0]}</span>
+            Bienvenido,<br/><span className="gradient-text">{user.name}</span>
           </h1>
-          <p className="text-slate-400 text-lg">Continúa registrando marcas en Chile</p>
+          <p className="text-slate-400 text-lg">Revisa antecedentes y prepara una evaluación preliminar de marca.</p>
         </div>
 
-        {/* Main CTA Card */}
         <Link href="/agente">
           <div className="group bg-gradient-to-br from-blue-600 via-blue-600 to-purple-600 rounded-3xl border border-blue-400/40 p-8 md:p-12 cursor-pointer hover-lift smooth-transition mb-12 overflow-hidden relative">
-            {/* Background glow effect */}
             <div className="absolute top-0 right-0 w-96 h-96 bg-blue-400/20 blur-3xl -z-10 group-hover:blur-2xl smooth-transition" />
-            
+
             <div className="flex items-start justify-between gap-8">
               <div className="flex-1">
-                <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">Analizar mi marca</h2>
+                <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">Analizar una marca</h2>
                 <p className="text-blue-100 text-lg leading-relaxed max-w-2xl">
-                  Sube tu logo, ingresa el nombre y obtén análisis completo en menos de 3 minutos: disponibilidad real en INAPI, conflictos detectados y clasificación automática.
+                  Sube un signo, describe los productos o servicios y obtén una evaluación preliminar de clasificaciones, antecedentes y similitudes relevantes.
                 </p>
               </div>
               <div className="hidden md:flex flex-shrink-0 animate-float">
@@ -80,16 +84,15 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Features grid */}
             <div className="grid md:grid-cols-3 gap-4 mt-8 mb-8">
               {[
-                { icon: CheckCircle, label: 'Disponible', desc: 'Verifica INAPI real' },
-                { icon: Zap, label: 'Clasificaciones', desc: 'Viena + Niza' },
-                { icon: Clock, label: 'Instantáneo', desc: '<3 minutos' }
-              ].map((item, i) => {
+                { icon: CheckCircle, label: "Antecedentes", desc: "Consulta de registros disponibles" },
+                { icon: Zap, label: "Clasificaciones", desc: "Sugerencias Viena y Niza" },
+                { icon: Clock, label: "Tiempo estimado", desc: "La mayoría: 1–3 minutos" },
+              ].map((item) => {
                 const Icon = item.icon
                 return (
-                  <div key={i} className="bg-blue-500/20 rounded-xl p-4 border border-blue-300/30 backdrop-blur-sm group-hover:bg-blue-500/30 smooth-transition">
+                  <div key={item.label} className="bg-blue-500/20 rounded-xl p-4 border border-blue-300/30 backdrop-blur-sm group-hover:bg-blue-500/30 smooth-transition">
                     <div className="flex items-center gap-2 mb-2">
                       <Icon className="w-5 h-5 text-blue-100" />
                       <div className="font-semibold text-blue-100">{item.label}</div>
@@ -107,15 +110,14 @@ export default function DashboardPage() {
           </div>
         </Link>
 
-        {/* Quick Actions Grid */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           {[
-            { href: '/settings', icon: Settings, title: 'Configuración', desc: 'Perfil, cuenta y preferencias' },
-            { href: '/consulta', icon: Search, title: 'Consulta de marcas', desc: 'Busca marcas registradas en Chile' }
-          ].map((item, i) => {
+            { href: "/settings", icon: Settings, title: "Configuración", desc: "Perfil, cuenta y preferencias" },
+            { href: "/consulta", icon: Search, title: "Consulta de marcas", desc: "Busca antecedentes marcarios disponibles en Chile" },
+          ].map((item) => {
             const Icon = item.icon
             return (
-              <Link key={i} href={item.href}>
+              <Link key={item.href} href={item.href}>
                 <Card className="border-white/10 bg-gradient-to-br from-slate-800/40 to-slate-800/20 hover:from-slate-800/60 hover:to-slate-800/40 p-6 cursor-pointer smooth-transition hover-lift group">
                   <div className="flex items-start justify-between mb-3">
                     <Icon className="w-8 h-8 text-blue-400 group-hover:scale-110 smooth-transition" />
@@ -133,20 +135,8 @@ export default function DashboardPage() {
           <DashboardPhase1Card />
         </div>
 
-        {/* Info stats */}
-        <div className="grid grid-cols-3 gap-4 text-center text-sm text-slate-400">
-          <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-            <div className="text-2xl font-bold text-blue-400">0</div>
-            <div>Análisis completados</div>
-          </div>
-          <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-            <div className="text-2xl font-bold text-purple-400">∞</div>
-            <div>Análisis disponibles</div>
-          </div>
-          <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-            <div className="text-2xl font-bold text-green-400">100%</div>
-            <div>Confidencialidad</div>
-          </div>
+        <div className="rounded-xl border border-white/10 bg-slate-900/40 p-5 text-sm leading-relaxed text-slate-400">
+          Los resultados son orientativos y dependen de la disponibilidad de las fuentes consultadas. No constituyen una decisión de registrabilidad ni reemplazan una revisión jurídica.
         </div>
       </main>
     </div>
