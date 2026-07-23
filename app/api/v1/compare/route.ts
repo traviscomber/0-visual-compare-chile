@@ -72,10 +72,12 @@ export async function POST(request: Request) {
     const apiKey = authHeader.slice(7)
     const auth = await authenticateApiKey(apiKey)
     if (!auth.ok) {
+      const status = auth.reason === "quota_exceeded" ? 429 : auth.reason === "unavailable" ? 503 : 401
+
       return NextResponse.json(
         { error: auth.message, reason: auth.reason },
         {
-          status: auth.reason === "quota_exceeded" ? 429 : 401,
+          status,
           headers:
             auth.reason === "quota_exceeded" &&
             auth.quota_daily !== undefined &&
@@ -326,7 +328,6 @@ export async function POST(request: Request) {
           quota_monthly: context.quota_monthly,
           usage_today: context.usage_today,
           usage_month: context.usage_month,
-          increment: 1,
         }),
       },
     )
