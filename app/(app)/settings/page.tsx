@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 import { ApiKeyManager } from "@/components/app/api-key-manager"
+import { InapiOperationsCard } from "@/components/app/inapi-operations-card"
 import { InapiRecordsCard } from "@/components/app/inapi-records-card"
 import { InapiSyncManager } from "@/components/app/inapi-sync-manager"
 import { Phase1StatusCard } from "@/components/app/phase1-status-card"
@@ -90,6 +91,7 @@ export default async function SettingsPage() {
       <Phase1StatusCard organizationId={user.id} />
 
       <ApiKeyManager />
+      <InapiOperationsCard />
       <InapiSyncManager />
       <InapiRecordsCard />
     </div>
