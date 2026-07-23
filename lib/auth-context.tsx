@@ -15,18 +15,37 @@ interface User {
 interface AuthContextType {
   user: User | null
   isLoading: boolean
-  login: (email: string, password: string, role: UserRole) => Promise<void>
+  login: (email: string, password: string, role?: UserRole) => Promise<void>
   logout: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-function roleFromMetadata(value: unknown): UserRole {
+function roleFromAppMetadata(value: unknown): UserRole {
   return value === "admin" || value === "auditor" ? value : "analista"
 }
 
 function buildDisplayName(email: string, fullName?: string | null): string {
   return fullName || email.split("@")[0] || "Usuario"
+}
+
+function buildUser(sessionUser: {
+  id: string
+  email?: string | null
+  app_metadata?: Record<string, unknown>
+  user_metadata?: Record<string, unknown>
+}, fullName?: string | null): User {
+  const email = sessionUser.email ?? ""
+  const metadataName = typeof sessionUser.user_metadata?.full_name === "string"
+    ? sessionUser.user_metadata.full_name
+    : null
+
+  return {
+    id: sessionUser.id,
+    email,
+    name: buildDisplayName(email, fullName ?? metadataName),
+    role: roleFromAppMetadata(sessionUser.app_metadata?.role),
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -41,41 +60,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const supabase = await createClientAsync()
 
       if (!active) return
-
       if (!supabase) {
+        setUser(null)
         setIsLoading(false)
         return
       }
 
-      // Set up auth state change listener
       const { data } = supabase.auth.onAuthStateChange((_event, session) => {
         if (!active) return
-        if (!session?.user) {
-          setUser(null)
-          setIsLoading(false)
-          return
-        }
-        const metadata = session.user.user_metadata ?? {}
-        const email = session.user.email ?? ""
-        setUser({
-          id: session.user.id,
-          email,
-          name: buildDisplayName(
-            email,
-            typeof metadata.full_name === "string" ? metadata.full_name : null,
-          ),
-          role: roleFromMetadata(metadata.role),
-        })
+        setUser(session?.user ? buildUser(session.user) : null)
         setIsLoading(false)
       })
       unsubscribe = () => data.subscription.unsubscribe()
 
-      // Sync current session immediately
       try {
-        const {
-          data: { user: sessionUser },
-        } = await supabase.auth.getUser()
-
+        const { data: { user: sessionUser } } = await supabase.auth.getUser()
         if (!active) return
 
         if (!sessionUser) {
@@ -86,25 +85,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const { data: profile } = await supabase
           .from("profiles")
-          .select("full_name, company_name")
+          .select("full_name")
           .eq("id", sessionUser.id)
           .maybeSingle()
 
         if (!active) return
-
-        const metadata = sessionUser.user_metadata ?? {}
-        const email = sessionUser.email ?? ""
-
-        setUser({
-          id: sessionUser.id,
-          email,
-          name: buildDisplayName(
-            email,
-            profile?.full_name ??
-              (typeof metadata.full_name === "string" ? metadata.full_name : null),
-          ),
-          role: roleFromMetadata(metadata.role),
-        })
+        setUser(buildUser(sessionUser, profile?.full_name ?? null))
         setIsLoading(false)
       } catch {
         if (active) {
@@ -115,14 +101,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     void init()
-
     return () => {
       active = false
       unsubscribe?.()
     }
   }, [])
 
-  const login = async (email: string, password: string, role: UserRole) => {
+  const login = async (email: string, password: string) => {
     setIsLoading(true)
     const supabase = await createClientAsync()
 
@@ -132,20 +117,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-
     if (error) {
       setIsLoading(false)
       throw error
     }
 
-    setUser((current) => (current ? { ...current, role } : current))
+    const { data: { user: sessionUser } } = await supabase.auth.getUser()
+    setUser(sessionUser ? buildUser(sessionUser) : null)
     setIsLoading(false)
   }
 
   const logout = async () => {
     setUser(null)
     const supabase = await createClientAsync()
-    if (supabase) void supabase.auth.signOut()
+    if (supabase) await supabase.auth.signOut()
   }
 
   return (
