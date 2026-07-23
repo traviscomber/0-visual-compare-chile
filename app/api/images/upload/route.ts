@@ -14,6 +14,8 @@ import { validateImageFile } from "@/lib/validations"
 export const runtime = "nodejs"
 export const maxDuration = 60
 
+const PRIVATE_HEADERS = { "Cache-Control": "private, no-store" }
+
 function extensionFromMime(mime: string): string {
   if (mime === "image/jpeg") return "jpg"
   if (mime === "image/png") return "png"
@@ -30,23 +32,22 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: "No autorizado." }, { status: 401 })
+      return NextResponse.json({ error: "No autorizado." }, { status: 401, headers: PRIVATE_HEADERS })
     }
 
     const formData = await request.formData()
     const file = formData.get("file")
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: "No se recibio ningun archivo." }, { status: 400 })
+      return NextResponse.json({ error: "No se recibió ningún archivo." }, { status: 400, headers: PRIVATE_HEADERS })
     }
 
     const validation = validateImageFile(file)
     if (!validation.ok) {
-      return NextResponse.json({ error: validation.error }, { status: 400 })
+      return NextResponse.json({ error: validation.error }, { status: 400, headers: PRIVATE_HEADERS })
     }
 
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
+    const buffer = Buffer.from(await file.arrayBuffer())
     const sha256 = calculateSha256(buffer)
 
     const { data: existing } = await supabase
@@ -59,30 +60,26 @@ export async function POST(request: Request) {
 
     if (existing) {
       const signedUrl = await createSignedUrl(existing.storage_path, 60 * 60)
-
-      return NextResponse.json({
-        id: existing.id,
-        filename: existing.filename,
-        size_bytes: existing.size_bytes,
-        width: existing.width,
-        height: existing.height,
-        mime_type: existing.mime_type,
-        url: signedUrl,
-        deduplicated: true,
-      })
+      return NextResponse.json(
+        {
+          id: existing.id,
+          filename: existing.filename,
+          size_bytes: existing.size_bytes,
+          width: existing.width,
+          height: existing.height,
+          mime_type: existing.mime_type,
+          url: signedUrl,
+          deduplicated: true,
+        },
+        { headers: PRIVATE_HEADERS },
+      )
     }
 
     const [phash, meta, exif, ela, ocr] = await Promise.all([
-      calculatePerceptualHash(buffer).catch((error) => {
-        console.error("[v0] phash failed", error)
-        return null
-      }),
+      calculatePerceptualHash(buffer).catch(() => null),
       extractMetadata(buffer),
       extractExif(buffer),
-      computeEla(buffer).catch((error) => {
-        console.error("[v0] ela failed", error)
-        return null
-      }),
+      computeEla(buffer).catch(() => null),
       extractImageText(buffer),
     ])
 
@@ -97,7 +94,10 @@ export async function POST(request: Request) {
     })
 
     if (uploadError) {
-      return NextResponse.json({ error: "No pudimos subir la imagen al almacenamiento." }, { status: 500 })
+      return NextResponse.json(
+        { error: "No pudimos subir la imagen al almacenamiento." },
+        { status: 500, headers: PRIVATE_HEADERS },
+      )
     }
 
     let elaPath: string | null = null
@@ -106,10 +106,7 @@ export async function POST(request: Request) {
       const { error: elaUploadError } = await admin.storage
         .from(BUCKET)
         .upload(candidate, ela.png, { contentType: "image/png", upsert: true })
-
-      if (!elaUploadError) {
-        elaPath = candidate
-      }
+      if (!elaUploadError) elaPath = candidate
     }
 
     const { data: imageRow, error: insertError } = await supabase
@@ -143,22 +140,18 @@ export async function POST(request: Request) {
             taken_at: exif.taken_at,
             modified_at: exif.modified_at,
             orientation: exif.orientation,
-            gps: exif.gps,
-            exposure: exif.exposure,
             was_edited: exif.was_edited,
-            raw: exif.raw,
+            has_gps: Boolean(exif.gps),
           },
           ela: ela ? { score: ela.tampering_score, storage_path: elaPath } : null,
         },
       })
-      .select()
+      .select("id, filename, size_bytes, width, height, mime_type")
       .single()
 
     if (insertError || !imageRow) {
       await admin.storage.from(BUCKET).remove([storagePath])
-      if (elaPath) {
-        await admin.storage.from(BUCKET).remove([elaPath])
-      }
+      if (elaPath) await admin.storage.from(BUCKET).remove([elaPath])
 
       const { data: raceWinner } = await supabase
         .from("images")
@@ -170,25 +163,30 @@ export async function POST(request: Request) {
 
       if (raceWinner) {
         const signedUrl = await createSignedUrl(raceWinner.storage_path, 60 * 60)
-
-        return NextResponse.json({
-          id: raceWinner.id,
-          filename: raceWinner.filename,
-          size_bytes: raceWinner.size_bytes,
-          width: raceWinner.width,
-          height: raceWinner.height,
-          mime_type: raceWinner.mime_type,
-          url: signedUrl,
-          deduplicated: true,
-        })
+        return NextResponse.json(
+          {
+            id: raceWinner.id,
+            filename: raceWinner.filename,
+            size_bytes: raceWinner.size_bytes,
+            width: raceWinner.width,
+            height: raceWinner.height,
+            mime_type: raceWinner.mime_type,
+            url: signedUrl,
+            deduplicated: true,
+          },
+          { headers: PRIVATE_HEADERS },
+        )
       }
 
-      return NextResponse.json({ error: "No pudimos registrar la imagen en la base de datos." }, { status: 500 })
+      return NextResponse.json(
+        { error: "No pudimos registrar la imagen en la base de datos." },
+        { status: 500, headers: PRIVATE_HEADERS },
+      )
     }
 
     await supabase.from("usage_logs").insert({
       user_id: user.id,
-      organization_id: user.id,
+      organization_id: null,
       action: "image.uploaded",
       metadata: {
         image_id: imageId,
@@ -202,18 +200,12 @@ export async function POST(request: Request) {
     })
 
     const signedUrl = await createSignedUrl(storagePath, 60 * 60)
-
-    return NextResponse.json({
-      id: imageRow.id,
-      filename: imageRow.filename,
-      size_bytes: imageRow.size_bytes,
-      width: imageRow.width,
-      height: imageRow.height,
-      mime_type: imageRow.mime_type,
-      url: signedUrl,
-    })
+    return NextResponse.json({ ...imageRow, url: signedUrl }, { headers: PRIVATE_HEADERS })
   } catch (error) {
-    console.error("[v0] upload error", error)
-    return NextResponse.json({ error: "Error interno al procesar la imagen." }, { status: 500 })
+    console.error("[image-upload] failed", error instanceof Error ? error.name : "unknown")
+    return NextResponse.json(
+      { error: "Error interno al procesar la imagen." },
+      { status: 500, headers: PRIVATE_HEADERS },
+    )
   }
 }
