@@ -1,6 +1,5 @@
 import { createHash, randomBytes } from "crypto"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { DEFAULT_API_KEY_DAILY_QUOTA, DEFAULT_API_KEY_MONTHLY_QUOTA } from "@/lib/api/quotas"
 
 export interface ApiKeyContext {
   api_key_id: string
@@ -10,14 +9,14 @@ export interface ApiKeyContext {
   quota_monthly: number
   usage_today: number
   usage_month: number
-  quota_reserved: boolean
+  quota_reserved: true
 }
 
 export type ApiKeyAuthResult =
   | { ok: true; context: ApiKeyContext }
   | {
       ok: false
-      reason: "invalid" | "quota_exceeded"
+      reason: "invalid" | "quota_exceeded" | "unavailable"
       message: string
       quota_daily?: number
       quota_monthly?: number
@@ -33,61 +32,27 @@ interface QuotaReservationRow {
   usage_month: number
 }
 
-async function getLegacyQuotaUsage(input: {
-  admin: ReturnType<typeof createAdminClient>
-  apiKeyId: string
-  organizationId: string
-}) {
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-
-  const [{ count: usageToday }, { count: usageMonth }] = await Promise.all([
-    input.admin
-      .from("usage_logs")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", input.organizationId)
-      .contains("metadata", { api_key_id: input.apiKeyId })
-      .gte("created_at", today),
-    input.admin
-      .from("usage_logs")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", input.organizationId)
-      .contains("metadata", { api_key_id: input.apiKeyId })
-      .gte("created_at", monthStart),
-  ])
-
-  return {
-    usageToday: usageToday ?? 0,
-    usageMonth: usageMonth ?? 0,
-  }
-}
-
 export async function authenticateApiKey(apiKey: string): Promise<ApiKeyAuthResult> {
-  if (!apiKey) {
+  if (!apiKey || apiKey.length > 100 || !/^sc_[a-f0-9]{64}$/.test(apiKey)) {
     return { ok: false, reason: "invalid", message: "Invalid API key" }
   }
 
   try {
     const admin = createAdminClient()
-
     const { data, error } = await admin
       .from("api_keys")
-      .select("id, organization_id, user_id, expires_at, quota_daily, quota_monthly")
+      .select("id, organization_id, user_id, expires_at")
       .eq("key_hash", hashApiKey(apiKey))
       .eq("is_active", true)
-      .single()
+      .maybeSingle()
 
     if (error || !data) {
       return { ok: false, reason: "invalid", message: "Invalid API key" }
     }
 
-    if (data.expires_at && new Date(data.expires_at) < new Date()) {
+    if (data.expires_at && new Date(data.expires_at).getTime() <= Date.now()) {
       return { ok: false, reason: "invalid", message: "API key expired" }
     }
-
-    const dailyQuota = data.quota_daily ?? DEFAULT_API_KEY_DAILY_QUOTA
-    const monthlyQuota = data.quota_monthly ?? DEFAULT_API_KEY_MONTHLY_QUOTA
 
     const { data: reservationData, error: reservationError } = await admin.rpc("reserve_api_quota", {
       p_api_key_id: data.id,
@@ -99,55 +64,26 @@ export async function authenticateApiKey(apiKey: string): Promise<ApiKeyAuthResu
       ? (reservationData[0] as QuotaReservationRow | undefined)
       : (reservationData as QuotaReservationRow | null)
 
-    if (!reservationError && reservation) {
-      if (!reservation.allowed) {
-        return {
-          ok: false,
-          reason: "quota_exceeded",
-          message: "API key quota exceeded",
-          quota_daily: reservation.quota_daily,
-          quota_monthly: reservation.quota_monthly,
-          usage_today: reservation.usage_today,
-          usage_month: reservation.usage_month,
-        }
-      }
-
+    if (reservationError || !reservation) {
+      console.error("[api-auth] quota reservation unavailable", reservationError?.code ?? "missing-result")
       return {
-        ok: true,
-        context: {
-          api_key_id: data.id,
-          organization_id: data.organization_id,
-          user_id: data.user_id,
-          quota_daily: reservation.quota_daily,
-          quota_monthly: reservation.quota_monthly,
-          usage_today: reservation.usage_today,
-          usage_month: reservation.usage_month,
-          quota_reserved: true,
-        },
+        ok: false,
+        reason: "unavailable",
+        message: "API quota service temporarily unavailable",
       }
     }
 
-    // Compatibility fallback while the database migration is being applied.
-    // Once reserve_api_quota exists, all requests use the atomic path above.
-    const legacy = await getLegacyQuotaUsage({
-      admin,
-      apiKeyId: data.id,
-      organizationId: data.organization_id,
-    })
-
-    if (legacy.usageToday >= dailyQuota || legacy.usageMonth >= monthlyQuota) {
+    if (!reservation.allowed) {
       return {
         ok: false,
         reason: "quota_exceeded",
         message: "API key quota exceeded",
-        quota_daily: dailyQuota,
-        quota_monthly: monthlyQuota,
-        usage_today: legacy.usageToday,
-        usage_month: legacy.usageMonth,
+        quota_daily: reservation.quota_daily,
+        quota_monthly: reservation.quota_monthly,
+        usage_today: reservation.usage_today,
+        usage_month: reservation.usage_month,
       }
     }
-
-    await admin.from("api_keys").update({ last_used_at: new Date().toISOString() }).eq("id", data.id)
 
     return {
       ok: true,
@@ -155,16 +91,16 @@ export async function authenticateApiKey(apiKey: string): Promise<ApiKeyAuthResu
         api_key_id: data.id,
         organization_id: data.organization_id,
         user_id: data.user_id,
-        quota_daily: dailyQuota,
-        quota_monthly: monthlyQuota,
-        usage_today: legacy.usageToday,
-        usage_month: legacy.usageMonth,
-        quota_reserved: false,
+        quota_daily: reservation.quota_daily,
+        quota_monthly: reservation.quota_monthly,
+        usage_today: reservation.usage_today,
+        usage_month: reservation.usage_month,
+        quota_reserved: true,
       },
     }
   } catch (error) {
-    console.error("[api] API key authentication error", error)
-    return { ok: false, reason: "invalid", message: "Invalid API key" }
+    console.error("[api-auth] authentication failed", error instanceof Error ? error.name : "unknown")
+    return { ok: false, reason: "unavailable", message: "API authentication temporarily unavailable" }
   }
 }
 
@@ -180,19 +116,11 @@ export async function logApiKeyUsage(input: {
     user_id: input.user_id,
     organization_id: input.organization_id,
     action: input.action,
-    metadata: {
-      api_key_id: input.api_key_id,
-      ...input.metadata,
-    },
+    metadata: { api_key_id: input.api_key_id, ...input.metadata },
   })
 
   if (error) {
-    console.error("[api] usage log insert failed", {
-      action: input.action,
-      organization_id: input.organization_id,
-      api_key_id: input.api_key_id,
-      error: error.message,
-    })
+    console.error("[api-auth] usage log insert failed", error.code)
   }
 }
 
