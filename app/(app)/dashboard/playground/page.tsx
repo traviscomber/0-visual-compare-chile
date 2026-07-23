@@ -1,14 +1,10 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
-import { Terminal, Play, Copy, CheckCheck, ChevronDown, ChevronRight, Zap, Shield, BarChart3, Search } from "lucide-react"
+import { Terminal, Play, Copy, CheckCheck, ChevronDown, ChevronRight, Zap, Shield, BarChart3, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 type HttpMethod = "GET" | "POST"
 
@@ -32,10 +28,6 @@ interface RequestResult {
   duration: number
   timestamp: string
 }
-
-// ---------------------------------------------------------------------------
-// Endpoint catalog
-// ---------------------------------------------------------------------------
 
 const ENDPOINTS: Endpoint[] = [
   {
@@ -111,10 +103,6 @@ const METHOD_COLORS: Record<HttpMethod, string> = {
   POST: "bg-blue-500/15 text-blue-400 border-blue-500/30",
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function statusColor(status: number) {
   if (status >= 200 && status < 300) return "text-emerald-400"
   if (status >= 400 && status < 500) return "text-amber-400"
@@ -128,10 +116,6 @@ function formatJson(data: unknown) {
     return String(data)
   }
 }
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
 
 function EndpointCard({
   endpoint,
@@ -156,9 +140,7 @@ function EndpointCard({
           {endpoint.method}
         </span>
         <span className="text-xs font-medium text-foreground">{endpoint.label}</span>
-        {endpoint.requiresAuth && (
-          <Shield className="ml-auto h-3 w-3 text-muted-foreground" />
-        )}
+        {endpoint.requiresAuth && <Shield className="ml-auto h-3 w-3 text-muted-foreground" />}
       </div>
       <p className="mt-1 text-xs text-muted-foreground leading-snug line-clamp-1">{endpoint.description}</p>
     </button>
@@ -186,7 +168,6 @@ function ResultPanel({ result }: { result: RequestResult | null; loading: boolea
 
   return (
     <div className="flex h-full flex-col">
-      {/* Response meta */}
       <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
         <div className="flex items-center gap-3">
           <span className={`text-sm font-semibold font-mono ${statusColor(result.status)}`}>
@@ -201,7 +182,6 @@ function ResultPanel({ result }: { result: RequestResult | null; loading: boolea
         </Button>
       </div>
 
-      {/* Headers summary */}
       {Object.keys(result.headers).length > 0 && (
         <div className="border-b border-border bg-secondary/30 px-4 py-2">
           <div className="flex flex-wrap gap-x-4 gap-y-1">
@@ -214,7 +194,6 @@ function ResultPanel({ result }: { result: RequestResult | null; loading: boolea
         </div>
       )}
 
-      {/* JSON body */}
       <div className="flex-1 overflow-auto px-4 py-3">
         <pre className="text-xs leading-relaxed text-emerald-300/90 font-mono whitespace-pre-wrap break-words">
           {formatJson(result.data)}
@@ -224,21 +203,17 @@ function ResultPanel({ result }: { result: RequestResult | null; loading: boolea
   )
 }
 
-// ---------------------------------------------------------------------------
-// Main page
-// ---------------------------------------------------------------------------
-
 export default function PlaygroundPage() {
   const [apiKey, setApiKey] = useState("")
   const [apiKeyName, setApiKeyName] = useState("")
   const [loadingKey, setLoadingKey] = useState(true)
+  const [keyError, setKeyError] = useState("")
   const [selectedId, setSelectedId] = useState<string>("health")
   const [params, setParams] = useState<Record<string, Record<string, string>>>({})
   const [result, setResult] = useState<RequestResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["infra", "datos", "api"]))
 
-  // On mount: check sessionStorage for a previously-generated playground key
   useEffect(() => {
     const stored = sessionStorage.getItem("playground_api_key")
     const storedName = sessionStorage.getItem("playground_api_key_name")
@@ -251,33 +226,38 @@ export default function PlaygroundPage() {
 
   const handleGenerateKey = useCallback(async () => {
     setLoadingKey(true)
+    setKeyError("")
+
     try {
-      // Delete any existing playground key first (ignore errors)
-      const listRes = await fetch("/api/account/api-keys")
-      if (listRes.ok) {
-        const data = await listRes.json()
-        const existing = (data.keys ?? []).find(
-          (k: { name: string; id: string }) => k.name === "API Playground Test"
-        )
-        if (existing) {
-          await fetch(`/api/account/api-keys?id=${existing.id}`, { method: "DELETE" })
-        }
-      }
-      // Create a fresh playground key and receive plaintext
       const createRes = await fetch("/api/account/api-keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: "API Playground Test", planId: "mvp-base" }),
       })
-      if (createRes.ok) {
-        const { key } = await createRes.json()
-        sessionStorage.setItem("playground_api_key", key)
-        sessionStorage.setItem("playground_api_key_name", "API Playground Test")
-        setApiKey(key)
-        setApiKeyName("API Playground Test")
+      const payload = await createRes.json().catch(() => null)
+
+      if (!createRes.ok) {
+        throw new Error(
+          typeof payload?.error === "string"
+            ? payload.error
+            : "No fue posible generar la clave de Playground.",
+        )
       }
-    } catch {
-      // silent
+
+      if (typeof payload?.key !== "string" || !payload.key) {
+        throw new Error("El servidor no devolvio una clave API valida.")
+      }
+
+      sessionStorage.setItem("playground_api_key", payload.key)
+      sessionStorage.setItem("playground_api_key_name", "API Playground Test")
+      setApiKey(payload.key)
+      setApiKeyName("API Playground Test")
+    } catch (error) {
+      setKeyError(
+        error instanceof Error
+          ? error.message
+          : "No fue posible conectar con el servidor para generar la clave.",
+      )
     } finally {
       setLoadingKey(false)
     }
@@ -285,9 +265,7 @@ export default function PlaygroundPage() {
 
   const selected = ENDPOINTS.find((e) => e.id === selectedId)!
 
-  const getParam = (endpointId: string, key: string) => {
-    return params[endpointId]?.[key] ?? ""
-  }
+  const getParam = (endpointId: string, key: string) => params[endpointId]?.[key] ?? ""
 
   const setParam = (endpointId: string, key: string, value: string) => {
     setParams((prev) => ({
@@ -298,9 +276,7 @@ export default function PlaygroundPage() {
 
   const resolvedParams = (ep: Endpoint) => {
     if (!ep.params) return {}
-    return Object.fromEntries(
-      ep.params.map((p) => [p.key, getParam(ep.id, p.key) || p.default])
-    )
+    return Object.fromEntries(ep.params.map((p) => [p.key, getParam(ep.id, p.key) || p.default]))
   }
 
   const buildUrl = (ep: Endpoint) => {
@@ -332,12 +308,8 @@ export default function PlaygroundPage() {
     try {
       const url = buildUrl(selected)
       const headers: Record<string, string> = {}
-      if (selected.requiresAuth && apiKey) {
-        headers["Authorization"] = `Bearer ${apiKey}`
-      }
-      if (selected.method === "POST") {
-        headers["Content-Type"] = "application/json"
-      }
+      if (selected.requiresAuth && apiKey) headers["Authorization"] = `Bearer ${apiKey}`
+      if (selected.method === "POST") headers["Content-Type"] = "application/json"
 
       const controller = new AbortController()
       const timeout = setTimeout(() => controller.abort(), 60000)
@@ -361,9 +333,13 @@ export default function PlaygroundPage() {
         data = await res.text()
       }
 
-      // Extract relevant rate-limit headers
       const rateLimitHeaders: Record<string, string> = {}
-      const rlKeys = ["x-ratelimit-limit-daily", "x-ratelimit-remaining-daily", "x-ratelimit-limit-monthly", "x-ratelimit-remaining-monthly"]
+      const rlKeys = [
+        "x-ratelimit-limit-daily",
+        "x-ratelimit-remaining-daily",
+        "x-ratelimit-limit-monthly",
+        "x-ratelimit-remaining-monthly",
+      ]
       rlKeys.forEach((k) => {
         const v = res.headers.get(k)
         if (v) rateLimitHeaders[k] = v
@@ -405,7 +381,6 @@ export default function PlaygroundPage() {
 
   return (
     <div className="flex h-[calc(100svh-4rem)] flex-col bg-background">
-      {/* Top bar */}
       <div className="flex items-center gap-3 border-b border-border bg-card px-4 py-3">
         <Terminal className="h-4 w-4 text-primary" />
         <h1 className="text-sm font-semibold text-foreground">API Playground</h1>
@@ -427,6 +402,7 @@ export default function PlaygroundPage() {
                   sessionStorage.removeItem("playground_api_key_name")
                   setApiKey("")
                   setApiKeyName("")
+                  setKeyError("")
                 }}
               >
                 Cambiar
@@ -437,7 +413,10 @@ export default function PlaygroundPage() {
               <Shield className="h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
+                onChange={(e) => {
+                  setApiKey(e.target.value)
+                  setKeyError("")
+                }}
                 placeholder="sc_... (pega tu API key)"
                 className="h-7 w-56 font-mono text-xs"
               />
@@ -459,8 +438,14 @@ export default function PlaygroundPage() {
         </div>
       </div>
 
+      {keyError && (
+        <div className="flex items-center gap-2 border-b border-red-500/20 bg-red-500/10 px-4 py-2 text-xs text-red-400" role="alert">
+          <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+          <span>{keyError}</span>
+        </div>
+      )}
+
       <div className="flex flex-1 overflow-hidden">
-        {/* Left sidebar — endpoint list */}
         <aside className="w-64 flex-shrink-0 overflow-y-auto border-r border-border bg-card/50">
           <div className="p-3 space-y-4">
             {categories.map((cat) => {
@@ -493,10 +478,8 @@ export default function PlaygroundPage() {
           </div>
         </aside>
 
-        {/* Center — request config */}
         <div className="flex w-80 flex-shrink-0 flex-col border-r border-border overflow-y-auto">
           <div className="p-4 space-y-4">
-            {/* Endpoint header */}
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className={`rounded border px-1.5 py-0.5 text-xs font-mono font-semibold ${METHOD_COLORS[selected.method]}`}>
@@ -510,7 +493,6 @@ export default function PlaygroundPage() {
               </code>
             </div>
 
-            {/* Auth warning */}
             {selected.requiresAuth && !apiKey && (
               <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2">
                 <p className="text-xs text-amber-400 flex items-center gap-1.5">
@@ -520,7 +502,6 @@ export default function PlaygroundPage() {
               </div>
             )}
 
-            {/* Params */}
             {selected.params && selected.params.length > 0 && (
               <div className="space-y-3">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Parametros</p>
@@ -539,7 +520,6 @@ export default function PlaygroundPage() {
               </div>
             )}
 
-            {/* cURL preview */}
             <div className="space-y-1.5">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">cURL</p>
               <pre className="rounded-lg bg-secondary/60 p-3 text-xs font-mono text-muted-foreground whitespace-pre-wrap break-all leading-relaxed">
@@ -547,13 +527,7 @@ export default function PlaygroundPage() {
               </pre>
             </div>
 
-            {/* Run button */}
-            <Button
-              onClick={handleRun}
-              disabled={loading}
-              className="w-full gap-2"
-              size="sm"
-            >
+            <Button onClick={handleRun} disabled={loading} className="w-full gap-2" size="sm">
               {loading ? (
                 <>
                   <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground" />
@@ -569,16 +543,12 @@ export default function PlaygroundPage() {
           </div>
         </div>
 
-        {/* Right — response */}
         <div className="flex flex-1 flex-col overflow-hidden bg-slate-950/60">
           <div className="flex items-center gap-2 border-b border-border px-4 py-2.5 bg-card/30">
             <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Respuesta</span>
             {result && (
-              <Badge
-                variant="outline"
-                className={`ml-auto text-xs font-mono ${statusColor(result.status)}`}
-              >
+              <Badge variant="outline" className={`ml-auto text-xs font-mono ${statusColor(result.status)}`}>
                 {result.status}
               </Badge>
             )}
