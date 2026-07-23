@@ -5,15 +5,22 @@ import { createClient } from "@/lib/supabase/server"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
+const NO_STORE_HEADERS = { "Cache-Control": "private, no-store" }
+
 export async function GET() {
   try {
     const supabase = await createClient()
     const {
       data: { user },
+      error: authError,
     } = await supabase.auth.getUser()
 
-    if (!user) {
-      return NextResponse.json({ error: "No autorizado." }, { status: 401 })
+    if (authError || !user) {
+      return NextResponse.json({ error: "No autorizado." }, { status: 401, headers: NO_STORE_HEADERS })
+    }
+
+    if (user.app_metadata?.role !== "admin") {
+      return NextResponse.json({ error: "Acceso restringido a administradores." }, { status: 403, headers: NO_STORE_HEADERS })
     }
 
     const admin = createAdminClient()
@@ -40,20 +47,12 @@ export async function GET() {
       admin.from("inapi_remote_requests").select("id", { count: "exact", head: true }).gte("requested_at", dayStart.toISOString()),
       admin.from("inapi_remote_requests").select("id", { count: "exact", head: true }).gte("requested_at", hourStart.toISOString()),
       admin.from("inapi_remote_requests").select("id", { count: "exact", head: true }).gte("requested_at", minuteStart.toISOString()),
-      admin
-        .from("inapi_remote_requests")
-        .select("id", { count: "exact", head: true })
-        .eq("success", false)
-        .gte("requested_at", dayAgo.toISOString()),
+      admin.from("inapi_remote_requests").select("id", { count: "exact", head: true }).eq("success", false).gte("requested_at", dayAgo.toISOString()),
       admin.from("inapi_jobs").select("id", { count: "exact", head: true }).in("status", ["queued", "running"]),
       admin.from("inapi_jobs").select("id", { count: "exact", head: true }).eq("status", "queued"),
       admin.from("inapi_jobs").select("id", { count: "exact", head: true }).eq("status", "running"),
       admin.from("inapi_query_cache").select("cache_key", { count: "exact", head: true }).gt("expires_at", now.toISOString()),
-      admin
-        .from("inapi_remote_requests")
-        .select("id, cache_key, requested_at, finished_at, success, status_code, duration_ms, error_code")
-        .order("requested_at", { ascending: false })
-        .limit(12),
+      admin.from("inapi_remote_requests").select("id, cache_key, requested_at, finished_at, success, status_code, duration_ms, error_code").order("requested_at", { ascending: false }).limit(12),
     ])
 
     if (stateResponse.error) throw stateResponse.error
@@ -80,9 +79,7 @@ export async function GET() {
           queued: queuedJobsResponse.count ?? 0,
           running: runningJobsResponse.count ?? 0,
         },
-        cache: {
-          activeEntries: cacheResponse.count ?? 0,
-        },
+        cache: { activeEntries: cacheResponse.count ?? 0 },
         health: {
           failures24h: failuresResponse.count ?? 0,
           averageDurationMs,
@@ -90,13 +87,13 @@ export async function GET() {
         recent,
         generatedAt: now.toISOString(),
       },
-      {
-        status: 200,
-        headers: { "Cache-Control": "no-store" },
-      },
+      { status: 200, headers: NO_STORE_HEADERS },
     )
   } catch (error) {
     console.error("[inapi-operations] metrics error", error)
-    return NextResponse.json({ error: "No fue posible cargar la operacion INAPI." }, { status: 500 })
+    return NextResponse.json(
+      { error: "No fue posible cargar la operación INAPI." },
+      { status: 500, headers: NO_STORE_HEADERS },
+    )
   }
 }
