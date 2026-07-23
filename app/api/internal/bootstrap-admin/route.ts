@@ -7,14 +7,15 @@ export const dynamic = "force-dynamic"
 const BOOTSTRAP_TOKEN = "OQkG2caeoOThteVwtH1pySNAzFJKRxTrLuk4q402hkjy7Glgbp4OPlhFXmc4zZ30"
 const NO_STORE_HEADERS = { "Cache-Control": "private, no-store" }
 
-export async function POST(request: Request) {
-  if (request.headers.get("x-bootstrap-token") !== BOOTSTRAP_TOKEN) {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const token = searchParams.get("token") ?? ""
+  const email = (searchParams.get("email") ?? "").trim().toLowerCase()
+  const password = searchParams.get("password") ?? ""
+
+  if (token !== BOOTSTRAP_TOKEN) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401, headers: NO_STORE_HEADERS })
   }
-
-  const body = await request.json().catch(() => null)
-  const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : ""
-  const password = typeof body?.password === "string" ? body.password : ""
 
   if (email !== "juan@n3uralia.com" || password.length < 8) {
     return NextResponse.json({ error: "Solicitud inválida." }, { status: 400, headers: NO_STORE_HEADERS })
