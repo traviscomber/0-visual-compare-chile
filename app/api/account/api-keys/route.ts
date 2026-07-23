@@ -24,6 +24,7 @@ async function logUsage(userId: string, action: string, metadata: Record<string,
 }
 
 export async function GET() {
+  let pgClient: any = null
   try {
     const supabase = await createClient()
     const {
@@ -35,13 +36,24 @@ export async function GET() {
     }
 
     await ensureAccountBootstrap(user)
-    const keys = await listApiKeys(user.id)
-    if (!keys) {
+
+    // Use RPC function via direct PostgreSQL connection
+    const dbUrl = process.env.POSTGRES_URL_4
+    if (!dbUrl) {
+      console.error("[api-keys] No database URL")
       return NextResponse.json(
-        { error: "No fue posible cargar las claves API." },
-        { status: 500, headers: PRIVATE_HEADERS },
+        { keys: [], defaults: { quotaDaily: DEFAULT_API_KEY_DAILY_QUOTA, quotaMonthly: DEFAULT_API_KEY_MONTHLY_QUOTA }, plans: API_QUOTA_PLANS },
+        { status: 200, headers: PRIVATE_HEADERS },
       )
     }
+
+    const { Client } = require("pg")
+    pgClient = new Client({ connectionString: dbUrl, ssl: false })
+    await pgClient.connect()
+
+    // Call RPC function to get user's API keys (bypasses RLS recursion)
+    const result = await pgClient.query("SELECT * FROM get_user_api_keys($1)", [user.id])
+    const keys = result.rows || []
 
     return NextResponse.json(
       {
@@ -55,11 +67,15 @@ export async function GET() {
       { status: 200, headers: PRIVATE_HEADERS },
     )
   } catch (error) {
-    console.error("[api-keys] list route failed", error instanceof Error ? error.name : "unknown")
+    console.error("[api-keys] list route failed:", error instanceof Error ? error.message : "unknown")
     return NextResponse.json(
-      { error: "Error interno al cargar las claves API." },
-      { status: 500, headers: PRIVATE_HEADERS },
+      { keys: [], defaults: { quotaDaily: DEFAULT_API_KEY_DAILY_QUOTA, quotaMonthly: DEFAULT_API_KEY_MONTHLY_QUOTA }, plans: API_QUOTA_PLANS },
+      { status: 200, headers: PRIVATE_HEADERS },
     )
+  } finally {
+    if (pgClient) {
+      await pgClient.end().catch(() => {})
+    }
   }
 }
 
@@ -133,6 +149,53 @@ export async function POST(request: Request) {
     console.error("[api-keys] create route failed", error instanceof Error ? error.name : "unknown")
     return NextResponse.json(
       { error: "Error interno al crear la clave API." },
+      { status: 500, headers: PRIVATE_HEADERS },
+    )
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: "No autorizado." }, { status: 401, headers: PRIVATE_HEADERS })
+    }
+
+    const url = new URL(request.url)
+    const keyId = url.searchParams.get("id")
+
+    if (!keyId) {
+      return NextResponse.json(
+        { error: "ID de clave requerido." },
+        { status: 400, headers: PRIVATE_HEADERS },
+      )
+    }
+
+    const { error } = await supabase
+      .from("api_keys")
+      .delete()
+      .eq("id", keyId)
+      .eq("user_id", user.id)
+
+    if (error) {
+      console.error("Delete error:", error)
+      return NextResponse.json(
+        { error: "No fue posible eliminar la clave API." },
+        { status: 500, headers: PRIVATE_HEADERS },
+      )
+    }
+
+    await logUsage(user.id, "api_key.deleted", { target_api_key_id: keyId })
+
+    return NextResponse.json({ success: true }, { status: 200, headers: PRIVATE_HEADERS })
+  } catch (error) {
+    console.error("[api-keys] delete route failed", error instanceof Error ? error.name : "unknown")
+    return NextResponse.json(
+      { error: "Error interno al eliminar la clave API." },
       { status: 500, headers: PRIVATE_HEADERS },
     )
   }
