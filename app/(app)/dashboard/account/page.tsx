@@ -11,11 +11,12 @@ import Link from "next/link"
 interface ApiKey {
   id: string
   name: string
-  key: string
-  plan_id: string
   created_at: string
-  last_used_at?: string
+  last_used_at?: string | null
+  expires_at?: string | null
   is_active: boolean
+  quota_daily: number
+  quota_monthly: number
 }
 
 export default function AccountPage() {
@@ -120,53 +121,57 @@ export default function AccountPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {apiKeys.map((keyItem) => (
-                <div
-                  key={keyItem.id}
-                  className="bg-slate-800/40 border border-slate-700 rounded-lg p-4 flex items-center justify-between"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-2 flex-wrap">
-                      <span className="font-medium text-white">{keyItem.name}</span>
-                      {keyItem.is_active && (
-                        <span className="text-xs bg-green-900/40 text-green-300 px-2 py-1 rounded border border-green-500/20">
-                          Activa
-                        </span>
-                      )}
-                      <span className="text-xs bg-purple-900/40 text-purple-300 px-2 py-1 rounded border border-purple-500/20">
-                        {keyItem.plan_id.toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                      <code className="text-xs text-slate-400 bg-slate-900/50 px-3 py-2 rounded font-mono whitespace-nowrap flex-shrink-0">
-                        {visibleKeys.has(keyItem.id) ? keyItem.key : "sc_" + "*".repeat(32)}
-                      </code>
-                      <button
-                        onClick={() => toggleKeyVisibility(keyItem.id)}
-                        className="text-slate-500 hover:text-slate-300 transition p-1 flex-shrink-0"
-                        title={visibleKeys.has(keyItem.id) ? "Ocultar" : "Mostrar"}
-                      >
-                        {visibleKeys.has(keyItem.id) ? (
-                          <EyeOff className="h-4 w-4" />
+              {apiKeys.map((keyItem) => {
+                // Derive plan name from quota values
+                const getPlanName = () => {
+                  if (keyItem.quota_daily === 500 && keyItem.quota_monthly === 5000) return "MVP Base"
+                  if (keyItem.quota_daily === 100 && keyItem.quota_monthly === 1000) return "MVP Base"
+                  if (keyItem.quota_daily === 2 && keyItem.quota_monthly === 10) return "Testing"
+                  return "Custom"
+                }
+
+                return (
+                  <div
+                    key={keyItem.id}
+                    className="bg-slate-800/40 border border-slate-700 rounded-lg p-4 flex items-center justify-between"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <span className="font-medium text-white">{keyItem.name}</span>
+                        {keyItem.is_active ? (
+                          <span className="text-xs bg-green-900/40 text-green-300 px-2 py-1 rounded border border-green-500/20">
+                            Activa
+                          </span>
                         ) : (
-                          <Eye className="h-4 w-4" />
+                          <span className="text-xs bg-red-900/40 text-red-300 px-2 py-1 rounded border border-red-500/20">
+                            Inactiva
+                          </span>
                         )}
-                      </button>
-                      <button
-                        onClick={() => copyToClipboard(keyItem.key)}
-                        className="text-slate-500 hover:text-slate-300 transition p-1 flex-shrink-0"
-                        title="Copiar"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </button>
+                        <span className="text-xs bg-purple-900/40 text-purple-300 px-2 py-1 rounded border border-purple-500/20">
+                          {keyItem.quota_daily}/{keyItem.quota_monthly}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                        <code className="text-xs text-slate-400 bg-slate-900/50 px-3 py-2 rounded font-mono whitespace-nowrap flex-shrink-0">
+                          {"sc_" + "*".repeat(32)}
+                        </code>
+                        <button
+                          className="text-slate-500 hover:text-slate-300 transition p-1 flex-shrink-0"
+                          title="La clave está protegida"
+                          disabled
+                        >
+                          <Eye className="h-4 w-4 opacity-50" />
+                        </button>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-2">
+                        Creada: {new Date(keyItem.created_at).toLocaleDateString("es-CL")}
+                        {keyItem.last_used_at && ` • Última vez: ${new Date(keyItem.last_used_at).toLocaleDateString("es-CL")}`}
+                        {keyItem.expires_at && ` • Caduca: ${new Date(keyItem.expires_at).toLocaleDateString("es-CL")}`}
+                      </p>
                     </div>
-                    <p className="text-xs text-slate-500 mt-2">
-                      Creada: {new Date(keyItem.created_at).toLocaleDateString("es-CL")}
-                      {keyItem.last_used_at && ` • Última vez: ${new Date(keyItem.last_used_at).toLocaleDateString("es-CL")}`}
-                    </p>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </Card>

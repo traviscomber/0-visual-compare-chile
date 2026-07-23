@@ -24,6 +24,7 @@ async function logUsage(userId: string, action: string, metadata: Record<string,
 }
 
 export async function GET() {
+  let pgClient: any = null
   try {
     const supabase = await createClient()
     const {
@@ -36,41 +37,27 @@ export async function GET() {
 
     await ensureAccountBootstrap(user)
 
-    // Get user's organizations
-    const { data: orgsData, error: orgsError } = await supabase
-      .from("organization_members")
-      .select("organization_id")
-      .eq("user_id", user.id)
-
-    if (orgsError || !orgsData || orgsData.length === 0) {
-      console.log("[api-keys] No organizations found for user", user.id)
+    // Use RPC function via direct PostgreSQL connection
+    const dbUrl = process.env.POSTGRES_URL_4
+    if (!dbUrl) {
+      console.error("[api-keys] No database URL")
       return NextResponse.json(
         { keys: [], defaults: { quotaDaily: DEFAULT_API_KEY_DAILY_QUOTA, quotaMonthly: DEFAULT_API_KEY_MONTHLY_QUOTA }, plans: API_QUOTA_PLANS },
         { status: 200, headers: PRIVATE_HEADERS },
       )
     }
 
-    // Get keys from first organization
-    const organizationId = orgsData[0].organization_id
-    
-    // Query keys directly with only existing columns
-    const { data: keys, error: keysError } = await supabase
-      .from("api_keys")
-      .select("id, name, is_active, created_at, last_used_at, expires_at")
-      .eq("organization_id", organizationId)
-      .order("created_at", { ascending: false })
+    const { Client } = require("pg")
+    pgClient = new Client({ connectionString: dbUrl, ssl: false })
+    await pgClient.connect()
 
-    if (keysError) {
-      console.error("[api-keys] keys query failed", keysError)
-      return NextResponse.json(
-        { keys: [], defaults: { quotaDaily: DEFAULT_API_KEY_DAILY_QUOTA, quotaMonthly: DEFAULT_API_KEY_MONTHLY_QUOTA }, plans: API_QUOTA_PLANS },
-        { status: 200, headers: PRIVATE_HEADERS },
-      )
-    }
-    
+    // Call RPC function to get user's API keys (bypasses RLS recursion)
+    const result = await pgClient.query("SELECT * FROM get_user_api_keys($1)", [user.id])
+    const keys = result.rows || []
+
     return NextResponse.json(
       {
-        keys: keys || [],
+        keys,
         defaults: {
           quotaDaily: DEFAULT_API_KEY_DAILY_QUOTA,
           quotaMonthly: DEFAULT_API_KEY_MONTHLY_QUOTA,
@@ -80,11 +67,15 @@ export async function GET() {
       { status: 200, headers: PRIVATE_HEADERS },
     )
   } catch (error) {
-    console.error("[api-keys] list route failed", error instanceof Error ? error.message : "unknown")
+    console.error("[api-keys] list route failed:", error instanceof Error ? error.message : "unknown")
     return NextResponse.json(
       { keys: [], defaults: { quotaDaily: DEFAULT_API_KEY_DAILY_QUOTA, quotaMonthly: DEFAULT_API_KEY_MONTHLY_QUOTA }, plans: API_QUOTA_PLANS },
       { status: 200, headers: PRIVATE_HEADERS },
     )
+  } finally {
+    if (pgClient) {
+      await pgClient.end().catch(() => {})
+    }
   }
 }
 
