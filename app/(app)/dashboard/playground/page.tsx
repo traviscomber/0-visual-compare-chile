@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Terminal, Play, Copy, CheckCheck, ChevronDown, ChevronRight, Zap, Shield, BarChart3, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -230,11 +230,58 @@ function ResultPanel({ result }: { result: RequestResult | null; loading: boolea
 
 export default function PlaygroundPage() {
   const [apiKey, setApiKey] = useState("")
+  const [apiKeyName, setApiKeyName] = useState("")
+  const [loadingKey, setLoadingKey] = useState(true)
   const [selectedId, setSelectedId] = useState<string>("health")
   const [params, setParams] = useState<Record<string, Record<string, string>>>({})
   const [result, setResult] = useState<RequestResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["infra", "datos", "api"]))
+
+  // On mount: check sessionStorage for a previously-generated playground key
+  useEffect(() => {
+    const stored = sessionStorage.getItem("playground_api_key")
+    const storedName = sessionStorage.getItem("playground_api_key_name")
+    if (stored) {
+      setApiKey(stored)
+      setApiKeyName(storedName ?? "API Playground Test")
+    }
+    setLoadingKey(false)
+  }, [])
+
+  const handleGenerateKey = useCallback(async () => {
+    setLoadingKey(true)
+    try {
+      // Delete any existing playground key first (ignore errors)
+      const listRes = await fetch("/api/account/api-keys")
+      if (listRes.ok) {
+        const data = await listRes.json()
+        const existing = (data.keys ?? []).find(
+          (k: { name: string; id: string }) => k.name === "API Playground Test"
+        )
+        if (existing) {
+          await fetch(`/api/account/api-keys?id=${existing.id}`, { method: "DELETE" })
+        }
+      }
+      // Create a fresh playground key and receive plaintext
+      const createRes = await fetch("/api/account/api-keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "API Playground Test", planId: "mvp-base" }),
+      })
+      if (createRes.ok) {
+        const { key } = await createRes.json()
+        sessionStorage.setItem("playground_api_key", key)
+        sessionStorage.setItem("playground_api_key_name", "API Playground Test")
+        setApiKey(key)
+        setApiKeyName("API Playground Test")
+      }
+    } catch {
+      // silent
+    } finally {
+      setLoadingKey(false)
+    }
+  }, [])
 
   const selected = ENDPOINTS.find((e) => e.id === selectedId)!
 
@@ -364,13 +411,51 @@ export default function PlaygroundPage() {
         <h1 className="text-sm font-semibold text-foreground">API Playground</h1>
         <span className="text-xs text-muted-foreground">v1</span>
         <div className="ml-auto flex items-center gap-2">
-          <Shield className="h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="sc_... (pega tu API key)"
-            className="h-7 w-72 font-mono text-xs"
-          />
+          {apiKey ? (
+            <>
+              <Shield className="h-3.5 w-3.5 text-emerald-400" />
+              <span className="text-xs text-emerald-400 font-mono">{apiKeyName}</span>
+              <code className="rounded bg-secondary/60 px-2 py-0.5 text-xs font-mono text-muted-foreground">
+                {apiKey.slice(0, 8)}...{apiKey.slice(-6)}
+              </code>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs text-muted-foreground"
+                onClick={() => {
+                  sessionStorage.removeItem("playground_api_key")
+                  sessionStorage.removeItem("playground_api_key_name")
+                  setApiKey("")
+                  setApiKeyName("")
+                }}
+              >
+                Cambiar
+              </Button>
+            </>
+          ) : (
+            <>
+              <Shield className="h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="sc_... (pega tu API key)"
+                className="h-7 w-56 font-mono text-xs"
+              />
+              <Button
+                size="sm"
+                className="h-7 text-xs gap-1.5"
+                onClick={handleGenerateKey}
+                disabled={loadingKey}
+              >
+                {loadingKey ? (
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground" />
+                ) : (
+                  <Zap className="h-3 w-3" />
+                )}
+                Generar clave de prueba
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
