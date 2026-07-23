@@ -9,7 +9,13 @@ import { extractImageText } from "@/lib/image/ocr"
 import { calculatePerceptualHash } from "@/lib/image/phash"
 import { BUCKET, createSignedUrl } from "@/lib/storage"
 import { createClient } from "@/lib/supabase/server"
-import { validateImageFile } from "@/lib/validations"
+import {
+  detectImageMime,
+  sanitizeFilename,
+  validateDetectedImageMime,
+  validateImageDimensions,
+  validateImageFile,
+} from "@/lib/validations"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -48,6 +54,35 @@ export async function POST(request: Request) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer())
+    const detectedMimeValidation = validateDetectedImageMime(file.type, detectImageMime(buffer))
+    if (!detectedMimeValidation.ok) {
+      return NextResponse.json(
+        { error: detectedMimeValidation.error },
+        { status: 400, headers: PRIVATE_HEADERS },
+      )
+    }
+
+    const verifiedMime = detectedMimeValidation.mime
+    const safeFilename = sanitizeFilename(file.name)
+
+    let meta
+    try {
+      meta = await extractMetadata(buffer)
+    } catch {
+      return NextResponse.json(
+        { error: "El archivo está corrupto o no contiene una imagen válida." },
+        { status: 400, headers: PRIVATE_HEADERS },
+      )
+    }
+
+    const dimensionsValidation = validateImageDimensions(meta.width, meta.height)
+    if (!dimensionsValidation.ok) {
+      return NextResponse.json(
+        { error: dimensionsValidation.error },
+        { status: 400, headers: PRIVATE_HEADERS },
+      )
+    }
+
     const sha256 = calculateSha256(buffer)
 
     const { data: existing } = await supabase
@@ -75,21 +110,20 @@ export async function POST(request: Request) {
       )
     }
 
-    const [phash, meta, exif, ela, ocr] = await Promise.all([
+    const [phash, exif, ela, ocr] = await Promise.all([
       calculatePerceptualHash(buffer).catch(() => null),
-      extractMetadata(buffer),
       extractExif(buffer),
       computeEla(buffer).catch(() => null),
       extractImageText(buffer),
     ])
 
     const imageId = randomUUID()
-    const ext = extensionFromMime(file.type)
+    const ext = extensionFromMime(verifiedMime)
     const storagePath = `${user.id}/${imageId}/original.${ext}`
 
     const admin = createAdminClient()
     const { error: uploadError } = await admin.storage.from(BUCKET).upload(storagePath, buffer, {
-      contentType: file.type,
+      contentType: verifiedMime,
       upsert: false,
     })
 
@@ -114,11 +148,11 @@ export async function POST(request: Request) {
       .insert({
         id: imageId,
         user_id: user.id,
-        filename: file.name,
+        filename: safeFilename,
         storage_bucket: BUCKET,
         storage_path: storagePath,
-        mime_type: file.type,
-        size_bytes: file.size,
+        mime_type: verifiedMime,
+        size_bytes: buffer.byteLength,
         width: meta.width,
         height: meta.height,
         sha256,
@@ -190,8 +224,8 @@ export async function POST(request: Request) {
       action: "image.uploaded",
       metadata: {
         image_id: imageId,
-        size_bytes: file.size,
-        mime_type: file.type,
+        size_bytes: buffer.byteLength,
+        mime_type: verifiedMime,
         ela_score: ela?.tampering_score ?? null,
         had_exif: Object.keys(exif.raw).length > 0,
         had_ocr: Boolean(ocr.text),
