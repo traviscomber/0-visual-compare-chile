@@ -22,49 +22,30 @@ function stripLocalePrefix(pathname: string) {
   return stripped === "/" || stripped === "" ? "/" : stripped
 }
 
+function isProtectedPath(pathname: string) {
+  return PROTECTED_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))
+}
+
+function configurationUnavailableResponse(request: NextRequest) {
+  if (!isProtectedPath(request.nextUrl.pathname)) {
+    return NextResponse.next({ request })
+  }
+
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.json(
+      { error: "Servicio de autenticacion no disponible." },
+      { status: 503, headers: { "Cache-Control": "private, no-store" } },
+    )
+  }
+
+  const url = request.nextUrl.clone()
+  url.pathname = "/auth/login"
+  url.search = ""
+  url.searchParams.set("error", "configuration")
+  return NextResponse.redirect(url)
+}
+
 export async function updateSession(request: NextRequest) {
-  // Use the same tolerant env resolution as the rest of the app so Vercel's
-  // suffixed Supabase vars still enable SSR auth/session handling.
-  if (!tryGetSupabaseUrl() || !tryGetSupabaseAnonKey()) {
-    return NextResponse.next({ request })
-  }
-
-  let supabaseUrl: string
-  let supabaseAnonKey: string
-  try {
-    supabaseUrl = getSupabaseUrl()
-    supabaseAnonKey = getSupabaseAnonKey()
-  } catch {
-    return NextResponse.next({ request })
-  }
-
-  let supabaseResponse = NextResponse.next({ request })
-
-  const supabase = createServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
-        },
-      },
-    },
-  )
-
-  let user = null
-  try {
-    const result = await supabase.auth.getUser()
-    user = result.data.user
-  } catch {
-    user = null
-  }
-
   const pathname = request.nextUrl.pathname
   const canonicalPath = stripLocalePrefix(pathname)
   if (canonicalPath) {
@@ -73,9 +54,59 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  const isProtected = PROTECTED_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+  const supabaseUrl = tryGetSupabaseUrl()
+  const supabaseAnonKey = tryGetSupabaseAnonKey()
 
-  if (isProtected && !user) {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    if (process.env.NODE_ENV === "production") {
+      console.error("[auth] Supabase configuration is unavailable in production")
+      return configurationUnavailableResponse(request)
+    }
+
+    return NextResponse.next({ request })
+  }
+
+  let resolvedSupabaseUrl: string
+  let resolvedSupabaseAnonKey: string
+  try {
+    resolvedSupabaseUrl = getSupabaseUrl()
+    resolvedSupabaseAnonKey = getSupabaseAnonKey()
+  } catch (error) {
+    if (process.env.NODE_ENV === "production") {
+      console.error("[auth] Supabase configuration could not be resolved", error)
+      return configurationUnavailableResponse(request)
+    }
+
+    return NextResponse.next({ request })
+  }
+
+  let supabaseResponse = NextResponse.next({ request })
+
+  const supabase = createServerClient(resolvedSupabaseUrl, resolvedSupabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll()
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+        supabaseResponse = NextResponse.next({ request })
+        cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
+      },
+    },
+  })
+
+  let user = null
+  try {
+    const result = await supabase.auth.getUser()
+    user = result.data.user
+  } catch (error) {
+    console.error("[auth] Could not validate the user session", error)
+    user = null
+  }
+
+  const protectedPath = isProtectedPath(pathname)
+
+  if (protectedPath && !user) {
     const url = request.nextUrl.clone()
     url.pathname = "/auth/login"
     url.searchParams.set("redirectTo", pathname)

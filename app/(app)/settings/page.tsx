@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation"
 import { ApiKeyManager } from "@/components/app/api-key-manager"
+import { InapiOperationsCard } from "@/components/app/inapi-operations-card"
+import { InapiRecordsCard } from "@/components/app/inapi-records-card"
 import { InapiSyncManager } from "@/components/app/inapi-sync-manager"
 import { Phase1StatusCard } from "@/components/app/phase1-status-card"
 import { ProfileForm } from "@/components/app/profile-form"
@@ -9,6 +11,12 @@ import { ensureAccountBootstrap } from "@/lib/supabase/bootstrap-account"
 import { createClient } from "@/lib/supabase/server"
 
 export const dynamic = "force-dynamic"
+
+function roleLabel(value: unknown) {
+  if (value === "admin") return "Administrador"
+  if (value === "auditor") return "Auditor"
+  return "Analista"
+}
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -28,7 +36,7 @@ export default async function SettingsPage() {
   try {
     await ensureAccountBootstrap(user)
   } catch (bootstrapError) {
-    console.error("[v0] settings bootstrap error", bootstrapError)
+    console.error("[settings] account bootstrap error", bootstrapError)
   }
 
   const { data: profile } = await supabase
@@ -37,24 +45,27 @@ export default async function SettingsPage() {
     .eq("id", user.id)
     .maybeSingle()
 
+  const role = user.app_metadata?.role
+  const isAdmin = role === "admin"
+
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-10">
       <div>
-        <h1 className="font-serif text-3xl text-foreground">Configuracion</h1>
-        <p className="mt-1 text-muted-foreground">Gestiona los datos de tu cuenta y empresa.</p>
+        <h1 className="font-serif text-3xl text-foreground">Configuración</h1>
+        <p className="mt-1 text-muted-foreground">Gestiona tu perfil, credenciales y controles habilitados para tu rol.</p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="font-serif text-lg">Cuenta</CardTitle>
-          <CardDescription>Resumen de identidad y alcance de tu sesion.</CardDescription>
+          <CardDescription>Identidad y alcance de la sesión actual.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3 text-sm">
           <Badge variant="outline" className="border-slate-200/20 bg-slate-100/5 text-foreground">
             Usuario: {user.email ?? ""}
           </Badge>
           <Badge variant="outline" className="border-slate-200/20 bg-slate-100/5 text-foreground">
-            Organization ID: {user.id}
+            Rol: {roleLabel(role)}
           </Badge>
         </CardContent>
       </Card>
@@ -62,7 +73,7 @@ export default async function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-serif text-lg">Perfil</CardTitle>
-          <CardDescription>Tus datos identificativos para reportes y exportaciones.</CardDescription>
+          <CardDescription>Datos identificativos utilizados en reportes y exportaciones.</CardDescription>
         </CardHeader>
         <CardContent>
           <ProfileForm
@@ -76,20 +87,36 @@ export default async function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-serif text-lg">Seguridad</CardTitle>
-          <CardDescription>Tu sesion esta protegida con autenticacion de Supabase.</CardDescription>
+          <CardDescription>La sesión está protegida con autenticación de Supabase.</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Para cambiar tu contrasena, cierra sesion e inicia el flujo de recuperacion desde la pantalla de inicio de
-            sesion. Proximamente podras hacerlo directamente desde aqui.
+            Para cambiar tu contraseña, cierra sesión e inicia el flujo de recuperación desde la pantalla de acceso.
           </p>
         </CardContent>
       </Card>
 
-      <Phase1StatusCard organizationId={user.id} />
-
       <ApiKeyManager />
-      <InapiSyncManager />
+
+      {isAdmin ? (
+        <section className="space-y-6" aria-labelledby="admin-controls-title">
+          <div>
+            <h2 id="admin-controls-title" className="font-serif text-2xl text-foreground">Operación administrativa</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Controles restringidos para supervisar y ejecutar procesos INAPI.</p>
+          </div>
+          <Phase1StatusCard organizationId={user.id} />
+          <InapiOperationsCard />
+          <InapiSyncManager />
+          <InapiRecordsCard />
+        </section>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-serif text-lg">Operación INAPI</CardTitle>
+            <CardDescription>Los controles de sincronización y operación están restringidos a administradores.</CardDescription>
+          </CardHeader>
+        </Card>
+      )}
     </div>
   )
 }

@@ -1,106 +1,141 @@
 /**
  * POST /api/v1/agent/analyze
- *
- * Endpoint principal del Agente Marca Intelligence.
- * Corre el pipeline completo: Viena → Niza → Conflictos → Informe IA
- *
- * Body (multipart/form-data o JSON):
- *   image       string  Base64 del logo (sin prefijo data:…)
- *   nombre      string  Nombre de la marca
- *   descripcion string  Descripción del negocio (opcional)
- *   industria   string  Sector o industria (opcional)
- *   visualScore number  Score 0-100 del motor SHA/pHash si ya se calculó (opcional)
+ * Pipeline interno: Viena → Niza → conflictos → INAPI → informe ejecutivo.
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { TrademarkAgent } from '@/lib/agent/trademark-agent'
+import { NextRequest, NextResponse } from "next/server"
+import { TrademarkAgent } from "@/lib/agent/trademark-agent"
+import { createClient } from "@/lib/supabase/server"
 
-export const runtime = 'nodejs'
-export const maxDuration = 60 // GPT-4o vision puede tardar hasta 30s
+export const runtime = "nodejs"
+export const maxDuration = 60
+export const dynamic = "force-dynamic"
+
+const MAX_NAME_LENGTH = 120
+const MAX_DESCRIPTION_LENGTH = 2_000
+const MAX_IMAGE_BASE64_LENGTH = 6 * 1024 * 1024
+const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"])
 
 export async function POST(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return NextResponse.json({ error: "No autorizado." }, { status: 401, headers: noStoreHeaders() })
+  }
+
   try {
-    // Verificar OPENAI_API_KEY
     if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json(
-        { error: 'OPENAI_API_KEY no configurada. Agrega la variable de entorno.' },
-        { status: 503 }
-      )
+      console.error("[trademark-agent] OPENAI_API_KEY missing")
+      return NextResponse.json({ error: "Servicio de análisis no disponible." }, { status: 503, headers: noStoreHeaders() })
     }
 
-    const contentType = request.headers.get('content-type') ?? ''
-    let image = ''
-    let nombre = ''
-    let descripcion = ''
-    let industria = ''
-    let visualScore: number | undefined
+    const payload = await readPayload(request)
+    const nombre = payload.nombre.trim()
+    const descripcion = payload.descripcion.trim()
+    const industria = payload.industria.trim()
 
-    if (contentType.includes('multipart/form-data')) {
-      const form = await request.formData()
-      image       = (form.get('image')       as string) ?? ''
-      nombre      = (form.get('nombre')      as string) ?? ''
-      descripcion = (form.get('descripcion') as string) ?? ''
-      industria   = (form.get('industria')   as string) ?? ''
-      const vs    =  form.get('visualScore')
-      if (vs) visualScore = parseFloat(vs as string)
-    } else {
-      const body = await request.json()
-      image       = body.image       ?? ''
-      nombre      = body.nombre      ?? ''
-      descripcion = body.descripcion ?? ''
-      industria   = body.industria   ?? ''
-      if (body.visualScore !== undefined) visualScore = Number(body.visualScore)
+    if (!nombre) {
+      return NextResponse.json({ error: "El campo nombre es requerido." }, { status: 400, headers: noStoreHeaders() })
+    }
+    if (nombre.length > MAX_NAME_LENGTH) {
+      return NextResponse.json({ error: `El nombre no puede superar ${MAX_NAME_LENGTH} caracteres.` }, { status: 400, headers: noStoreHeaders() })
+    }
+    if (!payload.image.trim()) {
+      return NextResponse.json({ error: "La imagen es requerida." }, { status: 400, headers: noStoreHeaders() })
+    }
+    if (descripcion.length > MAX_DESCRIPTION_LENGTH || industria.length > 240) {
+      return NextResponse.json({ error: "Los campos de contexto exceden el largo permitido." }, { status: 400, headers: noStoreHeaders() })
     }
 
-    // Validaciones
-    if (!nombre?.trim()) {
-      return NextResponse.json({ error: 'El campo "nombre" es requerido.' }, { status: 400 })
-    }
-    if (!image?.trim()) {
-      return NextResponse.json({ error: 'El campo "image" (base64) es requerido.' }, { status: 400 })
+    const mimeMatch = payload.image.match(/^data:(image\/[a-z0-9.+-]+);base64,/i)
+    const imageMimeType = (mimeMatch?.[1] ?? "image/png").toLowerCase()
+    if (!ALLOWED_IMAGE_TYPES.has(imageMimeType)) {
+      return NextResponse.json({ error: "Formato de imagen no soportado." }, { status: 415, headers: noStoreHeaders() })
     }
 
-    // Extraer MIME type del data URI si viene incluido
-    const mimeMatch = image.match(/^data:(image\/[a-z+]+);base64,/)
-    const imageMimeType = mimeMatch ? mimeMatch[1] : 'image/png'
-    const cleanImage = image.replace(/^data:image\/[a-z+]+;base64,/, '')
-
-    if (cleanImage.length > 6 * 1024 * 1024) {
-      return NextResponse.json({ error: 'Imagen demasiado grande. Máximo 4.5 MB.' }, { status: 413 })
+    const cleanImage = payload.image.replace(/^data:image\/[a-z0-9.+-]+;base64,/i, "")
+    if (!/^[a-z0-9+/=\r\n]+$/i.test(cleanImage)) {
+      return NextResponse.json({ error: "La imagen no contiene base64 válido." }, { status: 400, headers: noStoreHeaders() })
     }
-
-    console.log(`[v0] TrademarkAgent.analyze: "${nombre}" — imagen ${Math.round(cleanImage.length / 1024)}KB tipo ${imageMimeType}`)
+    if (cleanImage.length > MAX_IMAGE_BASE64_LENGTH) {
+      return NextResponse.json({ error: "Imagen demasiado grande. Máximo aproximado: 4,5 MB." }, { status: 413, headers: noStoreHeaders() })
+    }
 
     const agent = new TrademarkAgent()
     const report = await agent.analyze({
       imageBase64: cleanImage,
       imageMimeType,
-      nombreMarca: nombre.trim(),
-      descripcion: descripcion.trim() || undefined,
-      industria:   industria.trim()   || undefined,
-      visualScore,
+      nombreMarca: nombre,
+      descripcion: descripcion || undefined,
+      industria: industria || undefined,
+      visualScore: payload.visualScore,
     })
 
-    console.log(`[v0] TrademarkAgent done: ${report.pipeline_ms}ms — riesgo ${report.informe.nivel_riesgo_global} — tokens ${report.tokens_totales}`)
+    console.info("[trademark-agent] completed", {
+      userId: user.id,
+      durationMs: report.pipeline_ms,
+      risk: report.informe.nivel_riesgo_global,
+      inapiConfidence: report.registrabilidad?.calidad?.confianza ?? "no-disponible",
+    })
 
-    return NextResponse.json(report, { status: 200 })
+    return NextResponse.json(report, { status: 200, headers: noStoreHeaders() })
   } catch (error) {
-    console.error('[v0] TrademarkAgent error:', error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Error interno del servidor' },
-      { status: 500 }
-    )
+    console.error("[trademark-agent] failed", {
+      userId: user.id,
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return NextResponse.json({ error: "No fue posible completar el análisis." }, { status: 500, headers: noStoreHeaders() })
   }
 }
 
-// GET para verificar disponibilidad del endpoint
 export async function GET() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: "No autorizado." }, { status: 401, headers: noStoreHeaders() })
+  }
+
   return NextResponse.json({
-    endpoint: 'POST /api/v1/agent/analyze',
-    status: 'available',
-    openai_configured: !!process.env.OPENAI_API_KEY,
-    pipeline: ['viena-classifier (GPT-4o Vision)', 'niza-classifier (GPT-4o)', 'conflict-engine', 'report-generator (GPT-4o)'],
-    estimated_cost_per_call: '$0.03–$0.06 USD',
-    max_duration_seconds: 60,
-  })
+    endpoint: "POST /api/v1/agent/analyze",
+    status: process.env.OPENAI_API_KEY ? "available" : "unavailable",
+    pipeline: ["viena", "niza", "conflictos", "inapi", "informe"],
+    maxDurationSeconds: 60,
+  }, { headers: noStoreHeaders() })
+}
+
+async function readPayload(request: NextRequest) {
+  const contentType = request.headers.get("content-type") ?? ""
+  let image = ""
+  let nombre = ""
+  let descripcion = ""
+  let industria = ""
+  let visualScore: number | undefined
+
+  if (contentType.includes("multipart/form-data")) {
+    const form = await request.formData()
+    image = String(form.get("image") ?? "")
+    nombre = String(form.get("nombre") ?? "")
+    descripcion = String(form.get("descripcion") ?? "")
+    industria = String(form.get("industria") ?? "")
+    const rawScore = form.get("visualScore")
+    if (rawScore !== null && rawScore !== "") visualScore = Number(rawScore)
+  } else {
+    const body = await request.json()
+    image = typeof body.image === "string" ? body.image : ""
+    nombre = typeof body.nombre === "string" ? body.nombre : ""
+    descripcion = typeof body.descripcion === "string" ? body.descripcion : ""
+    industria = typeof body.industria === "string" ? body.industria : ""
+    if (body.visualScore !== undefined) visualScore = Number(body.visualScore)
+  }
+
+  if (visualScore !== undefined && (!Number.isFinite(visualScore) || visualScore < 0 || visualScore > 100)) {
+    throw new Error("Invalid visual score")
+  }
+
+  return { image, nombre, descripcion, industria, visualScore }
+}
+
+function noStoreHeaders() {
+  return { "Cache-Control": "private, no-store" }
 }

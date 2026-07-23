@@ -5,6 +5,8 @@ import { BUCKET } from "@/lib/storage"
 
 export const runtime = "nodejs"
 
+const PRIVATE_HEADERS = { "Cache-Control": "private, no-store" }
+
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
@@ -13,7 +15,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 401 })
+    return NextResponse.json({ error: "No autorizado." }, { status: 401, headers: PRIVATE_HEADERS })
   }
 
   const { data, error } = await supabase
@@ -24,10 +26,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     .single()
 
   if (error || !data) {
-    return NextResponse.json({ error: "Comparacion no encontrada." }, { status: 404 })
+    return NextResponse.json({ error: "Comparación no encontrada." }, { status: 404, headers: PRIVATE_HEADERS })
   }
 
-  return NextResponse.json({ comparison: data })
+  return NextResponse.json({ comparison: data }, { headers: PRIVATE_HEADERS })
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -39,7 +41,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: "No autorizado." }, { status: 401 })
+      return NextResponse.json({ error: "No autorizado." }, { status: 401, headers: PRIVATE_HEADERS })
     }
 
     const { data: comparison, error: fetchError } = await supabase
@@ -50,12 +52,20 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       .single()
 
     if (fetchError || !comparison) {
-      return NextResponse.json({ error: "Comparacion no encontrada." }, { status: 404 })
+      return NextResponse.json({ error: "Comparación no encontrada." }, { status: 404, headers: PRIVATE_HEADERS })
     }
 
-    const { error: deleteError } = await supabase.from("comparisons").delete().eq("id", id)
+    const { error: deleteError } = await supabase
+      .from("comparisons")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id)
+
     if (deleteError) {
-      return NextResponse.json({ error: "No pudimos eliminar la comparacion." }, { status: 500 })
+      return NextResponse.json(
+        { error: "No pudimos eliminar la comparación." },
+        { status: 500, headers: PRIVATE_HEADERS },
+      )
     }
 
     if (comparison.diff_storage_path) {
@@ -65,14 +75,14 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
     await supabase.from("usage_logs").insert({
       user_id: user.id,
-      organization_id: user.id,
+      organization_id: null,
       action: "comparison.deleted",
       metadata: { comparison_id: id },
     })
 
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true }, { headers: PRIVATE_HEADERS })
   } catch (error) {
-    console.error("[v0] comparison delete error", error)
-    return NextResponse.json({ error: "Error interno." }, { status: 500 })
+    console.error("[comparison-delete] failed", error instanceof Error ? error.name : "unknown")
+    return NextResponse.json({ error: "Error interno." }, { status: 500, headers: PRIVATE_HEADERS })
   }
 }

@@ -44,7 +44,48 @@ export interface TrademarkStats {
   source: "supabase" | "seed"
 }
 
+export interface TrademarkOperationalStats {
+  totalRecords: number
+  source: "supabase" | "seed"
+  registeredRecords: number
+  pendingRecords: number
+  deniedRecords: number
+  topNiza: Array<{ code: string; count: number }>
+  topViena: Array<{ code: string; count: number }>
+  latestRecordDate: string | null
+  completedSyncRuns: number
+  failedSyncRuns: number
+  lastCompletedSync: {
+    id: string
+    createdAt: string
+    finishedAt: string | null
+    totalFetched: number
+    insertedCount: number
+    updatedCount: number
+    preset: string | null
+    startIndex: number | null
+  } | null
+}
+
 const FALLBACK_ENGINE = resetSearchEngine(API_PORTAL_MARCAS)
+const TRADEMARK_SELECT =
+  "id, source, source_record_id, nombre, solicitante, numero_registro, numero_solicitud, estado, fecha_presentacion, fecha_registro, fecha_resolucion, pais, source_url, metadata, trademark_record_niza(code), trademark_record_viena(code)"
+const SUPABASE_BATCH_SIZE = 1000
+const SUPABASE_CACHE_TTL_MS = 60_000
+
+let cachedSupabaseRecords: Marca[] | null = null
+let cachedSupabaseRecordsFetchedAt = 0
+let supabaseRecordsPromise: Promise<Marca[]> | null = null
+
+interface InapiSyncRunRow {
+  id: string
+  created_at: string
+  finished_at: string | null
+  total_fetched: number | null
+  inserted_count: number | null
+  updated_count: number | null
+  metadata: Record<string, unknown> | null
+}
 
 export async function searchTrademarkRecords({
   query,
@@ -96,12 +137,41 @@ export async function getTrademarkRecordById(id: string): Promise<{ result: Marc
 }
 
 export async function getTrademarkStats(): Promise<TrademarkStats> {
-  const supabaseRecords = await loadTrademarkRecordsFromSupabase()
-  if (supabaseRecords.length > 0) {
-    return { totalRecords: supabaseRecords.length, source: "supabase" }
+  const supabaseCount = await countTrademarkRecordsInSupabase()
+  if (supabaseCount > 0) {
+    return { totalRecords: supabaseCount, source: "supabase" }
   }
 
   return { totalRecords: API_PORTAL_MARCAS.length, source: "seed" }
+}
+
+export async function getTrademarkOperationalStats(): Promise<TrademarkOperationalStats> {
+  const supabaseStats = await loadTrademarkOperationalStatsFromSupabase()
+  if (supabaseStats) {
+    return supabaseStats
+  }
+
+  const records = API_PORTAL_MARCAS
+
+  return {
+    totalRecords: records.length,
+    source: "seed",
+    registeredRecords: records.filter((record) => record.estado === "Registrada").length,
+    pendingRecords: records.filter((record) => record.estado === "Pendiente").length,
+    deniedRecords: records.filter((record) => record.estado === "Denegada").length,
+    topNiza: countTopCodes(records.flatMap((record) => record.niza)),
+    topViena: countTopCodes(records.flatMap((record) => record.viena)),
+    latestRecordDate: getLatestTrademarkDate(records),
+    completedSyncRuns: 0,
+    failedSyncRuns: 0,
+    lastCompletedSync: null,
+  }
+}
+
+export function clearTrademarkRecordsCache() {
+  cachedSupabaseRecords = null
+  cachedSupabaseRecordsFetchedAt = 0
+  supabaseRecordsPromise = null
 }
 
 export function toStoredTrademarkRecord(marca: Marca) {
@@ -131,22 +201,57 @@ export function toStoredTrademarkRecord(marca: Marca) {
 }
 
 async function loadTrademarkRecordsFromSupabase(): Promise<Marca[]> {
+  const now = Date.now()
+  if (cachedSupabaseRecords && now - cachedSupabaseRecordsFetchedAt < SUPABASE_CACHE_TTL_MS) {
+    return cachedSupabaseRecords
+  }
+
+  if (supabaseRecordsPromise) {
+    return supabaseRecordsPromise
+  }
+
+  supabaseRecordsPromise = loadTrademarkRecordsFromSupabaseUncached()
+
+  try {
+    const records = await supabaseRecordsPromise
+    cachedSupabaseRecords = records
+    cachedSupabaseRecordsFetchedAt = Date.now()
+    return records
+  } finally {
+    supabaseRecordsPromise = null
+  }
+}
+
+async function loadTrademarkRecordsFromSupabaseUncached(): Promise<Marca[]> {
   try {
     const admin = createAdminClient()
-    const { data, error } = await admin
-      .from("trademark_records")
-      .select(
-        "id, source, source_record_id, nombre, solicitante, numero_registro, numero_solicitud, estado, fecha_presentacion, fecha_registro, fecha_resolucion, pais, source_url, metadata, trademark_record_niza(code), trademark_record_viena(code)",
-      )
-      .order("updated_at", { ascending: false })
-      .limit(5000)
+    const results: Marca[] = []
+    let from = 0
 
-    if (error) {
-      console.error("[v0] load trademark records error", error)
-      return []
+    while (true) {
+      const to = from + SUPABASE_BATCH_SIZE - 1
+      const { data, error } = await admin
+        .from("trademark_records")
+        .select(TRADEMARK_SELECT)
+        .order("updated_at", { ascending: false })
+        .range(from, to)
+
+      if (error) {
+        console.error("[v0] load trademark records error", error)
+        return []
+      }
+
+      const rows = (data ?? []).map((row) => mapRowToMarca(row as unknown as TrademarkRecordRow))
+      results.push(...rows)
+
+      if (rows.length < SUPABASE_BATCH_SIZE) {
+        break
+      }
+
+      from += SUPABASE_BATCH_SIZE
     }
 
-    return (data ?? []).map((row) => mapRowToMarca(row as unknown as TrademarkRecordRow))
+    return results
   } catch (error) {
     console.error("[v0] load trademark records exception", error)
     return []
@@ -158,9 +263,7 @@ async function loadTrademarkRecordByIdFromSupabase(id: string): Promise<Marca | 
     const admin = createAdminClient()
     const { data, error } = await admin
       .from("trademark_records")
-      .select(
-        "id, source, source_record_id, nombre, solicitante, numero_registro, numero_solicitud, estado, fecha_presentacion, fecha_registro, fecha_resolucion, pais, source_url, metadata, trademark_record_niza(code), trademark_record_viena(code)",
-      )
+      .select(TRADEMARK_SELECT)
       .eq("id", id)
       .maybeSingle()
 
@@ -172,6 +275,177 @@ async function loadTrademarkRecordByIdFromSupabase(id: string): Promise<Marca | 
   } catch (error) {
     console.error("[v0] load trademark record by id exception", error)
     return null
+  }
+}
+
+async function countTrademarkRecordsInSupabase(state?: Marca["estado"]): Promise<number> {
+  try {
+    const admin = createAdminClient()
+    let query = admin.from("trademark_records").select("id", { count: "exact", head: true })
+
+    if (state) {
+      query = query.eq("estado", state)
+    }
+
+    const { count, error } = await query
+    if (error) {
+      return 0
+    }
+
+    return count ?? 0
+  } catch {
+    return 0
+  }
+}
+
+async function loadTrademarkOperationalStatsFromSupabase(): Promise<TrademarkOperationalStats | null> {
+  try {
+    const admin = createAdminClient()
+    const [
+      totalRecords,
+      registeredRecords,
+      pendingRecords,
+      deniedRecords,
+      latestRecordResponse,
+      topNiza,
+      topViena,
+      syncOverview,
+    ] = await Promise.all([
+      countTrademarkRecordsInSupabase(),
+      countTrademarkRecordsInSupabase("Registrada"),
+      countTrademarkRecordsInSupabase("Pendiente"),
+      countTrademarkRecordsInSupabase("Denegada"),
+      admin
+        .from("trademark_records")
+        .select("fecha_registro, fecha_presentacion, fecha_resolucion")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      loadTopCodesFromSupabase("trademark_record_niza"),
+      loadTopCodesFromSupabase("trademark_record_viena"),
+      loadInapiSyncOverview(),
+    ])
+
+    if (totalRecords <= 0) {
+      return null
+    }
+
+    const latestRow = latestRecordResponse.data as
+      | {
+          fecha_registro: string | null
+          fecha_presentacion: string | null
+          fecha_resolucion: string | null
+        }
+      | null
+
+    return {
+      totalRecords,
+      source: "supabase",
+      registeredRecords,
+      pendingRecords,
+      deniedRecords,
+      topNiza,
+      topViena,
+      latestRecordDate:
+        latestRow?.fecha_registro ?? latestRow?.fecha_presentacion ?? latestRow?.fecha_resolucion ?? null,
+      completedSyncRuns: syncOverview?.completedSyncRuns ?? 0,
+      failedSyncRuns: syncOverview?.failedSyncRuns ?? 0,
+      lastCompletedSync: syncOverview?.lastCompletedSync ?? null,
+    }
+  } catch (error) {
+    console.error("[v0] load trademark operational stats exception", error)
+    return null
+  }
+}
+
+async function loadInapiSyncOverview(): Promise<{
+  completedSyncRuns: number
+  failedSyncRuns: number
+  lastCompletedSync: TrademarkOperationalStats["lastCompletedSync"]
+} | null> {
+  try {
+    const admin = createAdminClient()
+    const [completedResponse, failedResponse, lastCompletedResponse] = await Promise.all([
+      admin.from("inapi_sync_runs").select("id", { count: "exact", head: true }).eq("status", "completed"),
+      admin.from("inapi_sync_runs").select("id", { count: "exact", head: true }).eq("status", "failed"),
+      admin
+        .from("inapi_sync_runs")
+        .select("id, created_at, finished_at, total_fetched, inserted_count, updated_count, metadata")
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ])
+
+    if (completedResponse.error || failedResponse.error || lastCompletedResponse.error) {
+      return null
+    }
+
+    const row = lastCompletedResponse.data as InapiSyncRunRow | null
+
+    return {
+      completedSyncRuns: completedResponse.count ?? 0,
+      failedSyncRuns: failedResponse.count ?? 0,
+      lastCompletedSync: row
+        ? {
+            id: row.id,
+            createdAt: row.created_at,
+            finishedAt: row.finished_at,
+            totalFetched: row.total_fetched ?? 0,
+            insertedCount: row.inserted_count ?? 0,
+            updatedCount: row.updated_count ?? 0,
+            preset: typeof row.metadata?.preset === "string" ? row.metadata.preset : null,
+            startIndex: typeof row.metadata?.startIndex === "number" ? row.metadata.startIndex : null,
+          }
+        : null,
+    }
+  } catch (error) {
+    console.error("[v0] load inapi sync overview exception", error)
+    return null
+  }
+}
+
+async function loadTopCodesFromSupabase(
+  table: "trademark_record_niza" | "trademark_record_viena",
+  limit = 5,
+): Promise<Array<{ code: string; count: number }>> {
+  try {
+    const admin = createAdminClient()
+    const counts = new Map<string, number>()
+    let from = 0
+    const batchSize = 5000
+
+    while (true) {
+      const to = from + batchSize - 1
+      const { data, error } = await admin
+        .from(table)
+        .select("code")
+        .order("code", { ascending: true })
+        .range(from, to)
+
+      if (error) {
+        return []
+      }
+
+      const rows = (data ?? []) as Array<{ code: string | null }>
+      for (const row of rows) {
+        if (!row.code) continue
+        counts.set(row.code, (counts.get(row.code) ?? 0) + 1)
+      }
+
+      if (rows.length < batchSize) {
+        break
+      }
+
+      from += batchSize
+    }
+
+    return Array.from(counts.entries())
+      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .slice(0, limit)
+      .map(([code, count]) => ({ code, count }))
+  } catch {
+    return []
   }
 }
 
@@ -240,4 +514,29 @@ function matchesFilters(marca: Marca, filters: SearchFilters) {
   if (filters.niza?.length && !filters.niza.some((item) => marca.niza.includes(item))) return false
   if (filters.viena?.length && !filters.viena.some((item) => marca.viena.includes(item))) return false
   return true
+}
+
+function countTopCodes(values: string[], limit = 5) {
+  const counts = new Map<string, number>()
+
+  for (const value of values.filter(Boolean)) {
+    counts.set(value, (counts.get(value) ?? 0) + 1)
+  }
+
+  return Array.from(counts.entries())
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    .slice(0, limit)
+    .map(([code, count]) => ({ code, count }))
+}
+
+function getLatestTrademarkDate(records: Marca[]) {
+  const timestamps = records
+    .map((record) => new Date(record.fecha).getTime())
+    .filter((value) => Number.isFinite(value))
+
+  if (!timestamps.length) {
+    return null
+  }
+
+  return new Date(Math.max(...timestamps)).toISOString()
 }
