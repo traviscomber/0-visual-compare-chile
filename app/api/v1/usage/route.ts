@@ -36,10 +36,12 @@ export async function GET(request: Request) {
     const apiKey = authHeader.slice(7)
     const auth = await authenticateApiKey(apiKey)
     if (!auth.ok) {
+      const status = auth.reason === "quota_exceeded" ? 429 : auth.reason === "unavailable" ? 503 : 401
+
       return NextResponse.json(
         { error: auth.message, reason: auth.reason },
         {
-          status: auth.reason === "quota_exceeded" ? 429 : 401,
+          status,
           headers:
             auth.reason === "quota_exceeded" &&
             auth.quota_daily !== undefined &&
@@ -124,10 +126,10 @@ export async function GET(request: Request) {
       current_key: {
         quota_daily: context.quota_daily,
         quota_monthly: context.quota_monthly,
-        usage_today: context.usage_today + 1,
-        usage_month: context.usage_month + 1,
-        remaining_daily: Math.max(context.quota_daily - (context.usage_today + 1), 0),
-        remaining_monthly: Math.max(context.quota_monthly - (context.usage_month + 1), 0),
+        usage_today: context.usage_today,
+        usage_month: context.usage_month,
+        remaining_daily: Math.max(context.quota_daily - context.usage_today, 0),
+        remaining_monthly: Math.max(context.quota_monthly - context.usage_month, 0),
       },
     }
 
@@ -137,8 +139,8 @@ export async function GET(request: Request) {
       api_key_id: context.api_key_id,
       action: "api.usage.read",
       metadata: {
-        usage_today: context.usage_today + 1,
-        usage_month: context.usage_month + 1,
+        usage_today: context.usage_today,
+        usage_month: context.usage_month,
       },
     })
 
@@ -149,7 +151,6 @@ export async function GET(request: Request) {
         quota_monthly: context.quota_monthly,
         usage_today: context.usage_today,
         usage_month: context.usage_month,
-        increment: 1,
       }),
     })
   } catch (error) {
