@@ -198,7 +198,8 @@ export function generateStatisticsReport(resultados: SearchResult[]): string {
   const estados = {
     Registrada: 0,
     Pendiente: 0,
-    Denegada: 0
+    Denegada: 0,
+    "No Vigente": 0
   }
 
   const paises = new Map<string, number>()

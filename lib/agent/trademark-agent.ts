@@ -299,7 +299,7 @@ Responde ÚNICAMENTE con JSON válido:
         consultado_en: consultedAt,
       },
       calidad: {
-        confianza,
+        confianza: confidence,
         cobertura_clases: coverage,
         resultados_totales: marcasEncontradas.length,
         resultados_activos: active.length,
@@ -329,132 +329,6 @@ Responde ÚNICAMENTE con JSON válido:
       recomendacion: ranked.length > 0
         ? "No se detectaron antecedentes activos entre los resultados priorizados; existen registros históricos que deben conservarse como contexto."
         : "No se detectaron coincidencias en esta consulta por nombre. Verifique variantes, titulares y clases antes de decidir.",
-    }
-  }
-}
-=======
-    nizaClases: NizaClassification["clases"],
-  ): Promise<TrademarkInsightReport["registrabilidad"]> {
-    const consultedAt = new Date().toISOString()
-    const marcasEncontradas = await searchInapi({
-      query: nombreMarca,
-      type: "nombre",
-      matchMode: "2",
-    })
-
-    const requestedClasses = new Set(nizaClases.map((clase) => String(clase.numero)))
-    const ranked = marcasEncontradas
-      .map((marca) => rankInapiResult(marca, nombreMarca, requestedClasses))
-      .sort((a, b) => b.score - a.score)
->>>>>>> 2f0e65f9bf3a74124305c14e6708572e319fe56f
-
-    const active = ranked.filter(({ marca }) => marca.estado === "Registrada" || marca.estado === "Pendiente")
-    const sameClassActive = active.filter(({ marca }) => marca.niza.some((code) => requestedClasses.has(String(code))))
-    const relevantActive = sameClassActive.length > 0 ? sameClassActive : active
-    const top = relevantActive[0] ?? ranked[0]
-    const coverage = calculateClassCoverage(ranked.map(({ marca }) => marca), requestedClasses)
-    const confidence = determineConfidence(marcasEncontradas.length, coverage, requestedClasses.size)
-    const warnings: string[] = []
-
-    if (requestedClasses.size === 0) warnings.push("No se determinó una clase Niza para contrastar.")
-    if (coverage < 100 && requestedClasses.size > 0) warnings.push("La consulta por nombre no cubrió todas las clases sugeridas.")
-    if (marcasEncontradas.length === 0) warnings.push("Una búsqueda sin coincidencias no garantiza ausencia de conflicto.")
-
-    const antecedentes = ranked.slice(0, 12).map(({ marca, score, reasons }) => ({
-      id: marca.id,
-      nombre: marca.nombre,
-      solicitante: marca.solicitante,
-      estado: marca.estado,
-      clases: marca.niza,
-      numero_registro: marca.numeroRegistro,
-      numero_solicitud: String(marca.metadata?.numSolicitud ?? ""),
-      puntaje_relevancia: score,
-      razones: reasons,
-    }))
-
-    const base = {
-      antecedentes,
-      fuente: {
-        nombre: "INAPI" as const,
-        modo: "consulta-live" as const,
-        consulta: nombreMarca,
-        tipo: "nombre" as const,
-        match: "contiene" as const,
-        consultado_en: consultedAt,
-      },
-      calidad: {
-        confianza,
-        cobertura_clases: coverage,
-        resultados_totales: marcasEncontradas.length,
-        resultados_activos: active.length,
-        advertencias: warnings,
-      },
-    }
-
-    if (relevantActive.length > 0 && top) {
-      return {
-<<<<<<< HEAD
-        disponible,
-        marca_encontrada: {
-          nombre: marca.nombre,
-          solicitante: marca.solicitante || 'Desconocido',
-          clase_niza: marca.niza?.join(', ') || 'N/A',
-          estado: marca.estado,
-          fecha_registro: marca.metadata?.numSolicitud
-            ? `Solicitud ${marca.metadata.numSolicitud}`
-            : '',
-          pais: 'Chile',
-        },
-        conflictos_reales: todasLasMarcas.length,
-        recomendacion,
-      }
-    }
-
-    // Búsqueda 2: Por nombre en clase Niza principal
-    if (nizaClases.length > 0) {
-      const clasePrincipal = nizaClases.find(c => c.tipo === 'principal')?.numero ?? nizaClases[0].numero
-      const conflictosClase = await searchInapi({
-        query: String(clasePrincipal),
-        type: 'clase_niza',
-        matchMode: '2',
-      })
-
-      if (conflictosClase.length > 0) {
-        return {
-          disponible: false,
-          conflictos_reales: conflictosClase.length,
-          recomendacion: `⚠ Se encontraron ${conflictosClase.length} marca(s) en la misma clase Niza ${clasePrincipal}. Riesgo moderado. Consulta con un abogado de PI.`,
-        }
-      }
-    }
-
-    // Sin conflictos encontrados en INAPI
-=======
-        ...base,
-        disponible: false,
-        decision: "REVISAR",
-        marca_encontrada: toPrimaryReference(top.marca),
-        conflictos_reales: relevantActive.length,
-        recomendacion: sameClassActive.length > 0
-          ? `Revisión prioritaria: existen ${sameClassActive.length} antecedentes activos en clases Niza relacionadas.`
-          : `Revisión necesaria: existen ${active.length} antecedentes activos por nombre, aunque no se confirmó coincidencia de clase en esta consulta.`,
-      }
-    }
-
->>>>>>> 2f0e65f9bf3a74124305c14e6708572e319fe56f
-    return {
-      ...base,
-      disponible: true,
-      decision: "SIN_ANTECEDENTES_ACTIVOS",
-      marca_encontrada: top ? toPrimaryReference(top.marca) : undefined,
-      conflictos_reales: 0,
-<<<<<<< HEAD
-      recomendacion: 'No se encontraron antecedentes en el registro de INAPI para las búsquedas realizadas. Resultado referencial — INAPI determina la registrabilidad final.',
-=======
-      recomendacion: ranked.length > 0
-        ? "No se detectaron antecedentes activos entre los resultados priorizados; existen registros históricos que deben conservarse como contexto."
-        : "No se detectaron coincidencias en esta consulta por nombre. Verifique variantes, titulares y clases antes de decidir.",
->>>>>>> 2f0e65f9bf3a74124305c14e6708572e319fe56f
     }
   }
 }
