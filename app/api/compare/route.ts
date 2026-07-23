@@ -18,19 +18,18 @@ import type {
 export const runtime = "nodejs"
 export const maxDuration = 60
 
+const PRIVATE_HEADERS = { "Cache-Control": "private, no-store" }
+
 interface ImageMetadataJson {
   format?: string | null
-  aspect_ratio?: number | null
   avg_color?: { r: number; g: number; b: number } | null
-  brightness?: number | null
   ocr?: { text?: string | null; confidence?: number | null; language?: string | null } | null
   exif?: Partial<ExifData> | null
   ela?: { score?: number | null; storage_path?: string | null } | null
 }
 
-function exifFromMetadata(meta: ImageMetadataJson | null): ExifData {
+function safeExifFromMetadata(meta: ImageMetadataJson | null): ExifData {
   const e = meta?.exif
-
   return {
     camera_make: e?.camera_make ?? null,
     camera_model: e?.camera_model ?? null,
@@ -38,23 +37,25 @@ function exifFromMetadata(meta: ImageMetadataJson | null): ExifData {
     taken_at: e?.taken_at ?? null,
     modified_at: e?.modified_at ?? null,
     orientation: e?.orientation ?? null,
-    gps: e?.gps ?? null,
+    gps: null,
     exposure: e?.exposure ?? { iso: null, fnumber: null, exposure_time: null, focal_length: null },
     was_edited: Boolean(e?.was_edited),
-    raw: e?.raw ?? {},
+    raw: {},
   }
 }
 
 function exifSummary(exif: ExifData): ExifSummary {
-  const camera = [exif.camera_make, exif.camera_model].filter(Boolean).join(" ").trim() || null
-
   return {
-    camera,
+    camera: [exif.camera_make, exif.camera_model].filter(Boolean).join(" ").trim() || null,
     software: exif.software,
     taken_at: exif.taken_at,
-    gps: exif.gps,
+    gps: null,
     was_edited: exif.was_edited,
   }
+}
+
+function json(body: unknown, status = 200) {
+  return NextResponse.json(body, { status, headers: PRIVATE_HEADERS })
 }
 
 export async function POST(request: Request) {
@@ -64,76 +65,63 @@ export async function POST(request: Request) {
       data: { user },
     } = await supabase.auth.getUser()
 
-    if (!user) {
-      return NextResponse.json({ error: "No autorizado." }, { status: 401 })
-    }
+    if (!user) return json({ error: "No autorizado." }, 401)
 
-    const body = await request.json()
+    const body = await request.json().catch(() => null)
     const parse = compareRequestSchema.safeParse(body)
-    if (!parse.success) {
-      return NextResponse.json({ error: "Solicitud invalida." }, { status: 400 })
-    }
+    if (!parse.success) return json({ error: "Solicitud inválida." }, 400)
 
     const { image_a_id, image_b_id } = parse.data
-    if (image_a_id === image_b_id) {
-      return NextResponse.json({ error: "Selecciona dos imagenes distintas." }, { status: 400 })
-    }
+    if (image_a_id === image_b_id) return json({ error: "Selecciona dos imágenes distintas." }, 400)
 
     const { data: images, error } = await supabase
       .from("images")
-      .select("*")
+      .select("id, user_id, filename, storage_path, width, height, mime_type, size_bytes, sha256, phash, metadata")
       .in("id", [image_a_id, image_b_id])
       .eq("status", "active")
 
-    if (error || !images || images.length !== 2) {
-      return NextResponse.json({ error: "Imagenes no encontradas." }, { status: 404 })
-    }
+    if (error || !images || images.length !== 2) return json({ error: "Imágenes no encontradas." }, 404)
 
     const imageA = images.find((image) => image.id === image_a_id)
     const imageB = images.find((image) => image.id === image_b_id)
-
     if (!imageA || !imageB || imageA.user_id !== user.id || imageB.user_id !== user.id) {
-      return NextResponse.json({ error: "No tienes acceso a estas imagenes." }, { status: 403 })
+      return json({ error: "No tienes acceso a estas imágenes." }, 403)
     }
 
     const metaA = (imageA.metadata as ImageMetadataJson | null) ?? null
     const metaB = (imageB.metadata as ImageMetadataJson | null) ?? null
-    const exifA = exifFromMetadata(metaA)
-    const exifB = exifFromMetadata(metaB)
+    const exifA = safeExifFromMetadata(metaA)
+    const exifB = safeExifFromMetadata(metaB)
     const exifCompare = compareExif(exifA, exifB)
-
     const elaScoreA = metaA?.ela?.score ?? null
     const elaScoreB = metaB?.ela?.score ?? null
     const elaPathA = metaA?.ela?.storage_path ?? null
     const elaPathB = metaB?.ela?.storage_path ?? null
-    const elaAlert = (elaScoreA ?? 0) > 40 || (elaScoreB ?? 0) > 40
 
     const forensics: ForensicSignals = {
       camera_match: exifCompare.camera_match,
       software_match: exifCompare.software_match,
       any_edited: exifCompare.any_edited,
       timestamp_delta_seconds: exifCompare.timestamp_delta_seconds,
-      gps_distance_meters: exifCompare.gps_distance_meters,
+      gps_distance_meters: null,
       ela_score_a: elaScoreA,
       ela_score_b: elaScoreB,
-      ela_alert: elaAlert,
+      ela_alert: (elaScoreA ?? 0) > 40 || (elaScoreB ?? 0) > 40,
     }
 
-    const brandContextA = buildBrandTaxonomyContext({
-      image_id: imageA.id,
-      filename: imageA.filename,
-      metadata_hint: [metaA?.ocr?.text, metaA?.format, exifA.camera_make, exifA.camera_model, exifA.software]
-        .filter(Boolean)
-        .join(" "),
-    })
-    const brandContextB = buildBrandTaxonomyContext({
-      image_id: imageB.id,
-      filename: imageB.filename,
-      metadata_hint: [metaB?.ocr?.text, metaB?.format, exifB.camera_make, exifB.camera_model, exifB.software]
-        .filter(Boolean)
-        .join(" "),
-    })
-    const brandContext: BrandTaxonomyContext | null = mergeBrandTaxonomyContext(brandContextA, brandContextB)
+    const contextFor = (image: typeof imageA, meta: ImageMetadataJson | null, exif: ExifData) =>
+      buildBrandTaxonomyContext({
+        image_id: image.id,
+        filename: image.filename,
+        metadata_hint: [meta?.ocr?.text, meta?.format, exif.camera_make, exif.camera_model, exif.software]
+          .filter(Boolean)
+          .join(" "),
+      })
+
+    const brandContext: BrandTaxonomyContext | null = mergeBrandTaxonomyContext(
+      contextFor(imageA, metaA, exifA),
+      contextFor(imageB, metaB, exifB),
+    )
 
     const admin = createAdminClient()
     const [downloadA, downloadB] = await Promise.all([
@@ -142,31 +130,24 @@ export async function POST(request: Request) {
     ])
 
     if (downloadA.error || !downloadA.data || downloadB.error || !downloadB.data) {
-      return NextResponse.json({ error: "No pudimos cargar las imagenes para comparar." }, { status: 500 })
+      return json({ error: "No pudimos cargar las imágenes para comparar." }, 500)
     }
 
     const bufferA = Buffer.from(await downloadA.data.arrayBuffer())
     const bufferB = Buffer.from(await downloadB.data.arrayBuffer())
-
     let pixelSimilarity: number | null = null
     let diffStoragePath: string | null = null
 
     try {
       const overlay = await generateDiffOverlay(bufferA, bufferB)
       pixelSimilarity = overlay.pixelSimilarity
-
-      // Persist the overlay PNG so the result page and detail page can render it.
-      const tempId = crypto.randomUUID()
-      const candidatePath = `${user.id}/diffs/${tempId}.png`
-      const { error: diffUploadError } = await admin.storage
+      const candidatePath = `${user.id}/diffs/${crypto.randomUUID()}.png`
+      const { error: uploadError } = await admin.storage
         .from(BUCKET)
         .upload(candidatePath, overlay.png, { contentType: "image/png", upsert: false })
-
-      if (!diffUploadError) {
-        diffStoragePath = candidatePath
-      }
-    } catch (err) {
-      console.error("[v0] diff overlay generation failed", err)
+      if (!uploadError) diffStoragePath = candidatePath
+    } catch (error) {
+      console.error("[compare] diff generation failed", error instanceof Error ? error.name : "unknown")
     }
 
     const result = calculateFinalScore({
@@ -199,12 +180,12 @@ export async function POST(request: Request) {
       classification: result.classification,
       signals: result.signals,
       recommendation: result.recommendation,
-      ocr: {
-        a: metaA?.ocr ?? null,
-        b: metaB?.ocr ?? null,
+      ocr: { a: metaA?.ocr ?? null, b: metaB?.ocr ?? null },
+      exif: { a: exifSummary(exifA), b: exifSummary(exifB) },
+      ela: {
+        a: { score: elaScoreA, storage_path: elaPathA },
+        b: { score: elaScoreB, storage_path: elaPathB },
       },
-      exif: { a: exifA, b: exifB },
-      ela: { a: { score: elaScoreA, storage_path: elaPathA }, b: { score: elaScoreB, storage_path: elaPathB } },
       brand_context: brandContext,
       images: {
         a: {
@@ -244,16 +225,13 @@ export async function POST(request: Request) {
     })
 
     if (insertError || !comparison) {
-      if (diffStoragePath) {
-        await admin.storage.from(BUCKET).remove([diffStoragePath])
-      }
-
-      return NextResponse.json({ error: "No pudimos guardar la comparacion." }, { status: 500 })
+      if (diffStoragePath) await admin.storage.from(BUCKET).remove([diffStoragePath])
+      return json({ error: "No pudimos guardar la comparación." }, 500)
     }
 
     await supabase.from("usage_logs").insert({
       user_id: user.id,
-      organization_id: user.id,
+      organization_id: null,
       action: "comparison.created",
       metadata: {
         comparison_id: comparison.id,
@@ -287,9 +265,9 @@ export async function POST(request: Request) {
       created_at: comparison.created_at,
     }
 
-    return NextResponse.json(payload)
+    return json(payload)
   } catch (error) {
-    console.error("[v0] compare error", error)
-    return NextResponse.json({ error: "Error interno al comparar." }, { status: 500 })
+    console.error("[compare] request failed", error instanceof Error ? error.name : "unknown")
+    return json({ error: "Error interno al comparar." }, 500)
   }
 }
