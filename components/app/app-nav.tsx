@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { Logo } from "@/components/brand/logo"
 import { createClient } from "@/lib/supabase/client"
@@ -13,14 +14,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LayoutDashboard, GitCompareArrows, History, Settings, LogOut, Menu, Search, Cpu, Database } from "lucide-react"
+import { LayoutDashboard, GitCompareArrows, History, Settings, LogOut, Menu, Search, Cpu, Database, Terminal } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useState } from "react"
 
 const navItems = [
   { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
   { href: "/consulta-inapi", label: "Buscar en INAPI", icon: Database },
   { href: "/agente", label: "Analizar con logo", icon: Cpu },
+  { href: "/dashboard/playground", label: "API Playground", icon: Terminal },
 ]
 
 const secondaryNavItems = [
