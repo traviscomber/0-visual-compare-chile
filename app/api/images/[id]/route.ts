@@ -3,11 +3,8 @@ import { createClient } from "@/lib/supabase/server"
 
 export const runtime = "nodejs"
 
-/**
- * Soft delete an image. We keep the underlying storage object and the row so
- * any historical comparison referencing this image can still be displayed.
- * Status is flipped to "deleted" so it stops appearing in the user's library.
- */
+const PRIVATE_HEADERS = { "Cache-Control": "private, no-store" }
+
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
@@ -17,7 +14,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: "No autorizado." }, { status: 401 })
+      return NextResponse.json({ error: "No autorizado." }, { status: 401, headers: PRIVATE_HEADERS })
     }
 
     const { data: image, error: fetchError } = await supabase
@@ -27,28 +24,32 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       .single()
 
     if (fetchError || !image || image.user_id !== user.id) {
-      return NextResponse.json({ error: "Imagen no encontrada." }, { status: 404 })
+      return NextResponse.json({ error: "Imagen no encontrada." }, { status: 404, headers: PRIVATE_HEADERS })
     }
 
     const { error: updateError } = await supabase
       .from("images")
       .update({ status: "deleted", deleted_at: new Date().toISOString() })
       .eq("id", id)
+      .eq("user_id", user.id)
 
     if (updateError) {
-      return NextResponse.json({ error: "No pudimos eliminar la imagen." }, { status: 500 })
+      return NextResponse.json(
+        { error: "No pudimos eliminar la imagen." },
+        { status: 500, headers: PRIVATE_HEADERS },
+      )
     }
 
     await supabase.from("usage_logs").insert({
       user_id: user.id,
-      organization_id: user.id,
+      organization_id: null,
       action: "image.deleted",
       metadata: { image_id: id },
     })
 
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true }, { headers: PRIVATE_HEADERS })
   } catch (error) {
-    console.error("[v0] image delete error", error)
-    return NextResponse.json({ error: "Error interno." }, { status: 500 })
+    console.error("[image-delete] failed", error instanceof Error ? error.name : "unknown")
+    return NextResponse.json({ error: "Error interno." }, { status: 500, headers: PRIVATE_HEADERS })
   }
 }
