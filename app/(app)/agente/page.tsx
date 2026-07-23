@@ -1,38 +1,53 @@
 "use client"
 
-import { useState, useRef } from "react"
-import Link from "next/link"
+import { useRef, useState } from "react"
 import type { TrademarkInsightReport } from "@/lib/agent/trademark-agent"
 import {
-  Upload, Loader2, AlertTriangle, CheckCircle2, ShieldAlert,
-  FileText, Cpu, Search, BarChart3, Download, Zap, HelpCircle
+  Activity,
+  AlertTriangle,
+  BarChart3,
+  CheckCircle2,
+  Database,
+  FileText,
+  HelpCircle,
+  Loader2,
+  Search,
+  ShieldAlert,
+  ShieldCheck,
+  Upload,
+  Zap,
 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import { ConceptModal } from "@/components/concept-modal"
-import { useState as useStateHelp } from "react"
 
-// Risk badge helper
+const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"]
+const MAX_FILE_BYTES = 4_500_000
+
 function RiskBadge({ nivel }: { nivel: string }) {
-  const n = nivel?.toUpperCase()
-  if (n === "ALTO")
-    return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-red-500/20 text-red-300 border border-red-500/40">
-        <AlertTriangle className="w-4 h-4" /> RIESGO ALTO
-      </span>
-    )
-  if (n === "MEDIO")
-    return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
-        <ShieldAlert className="w-4 h-4" /> RIESGO MEDIO
-      </span>
-    )
-  return (
-    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-green-500/20 text-green-300 border border-green-500/40">
-      <CheckCircle2 className="w-4 h-4" /> RIESGO BAJO
-    </span>
-  )
+  const normalized = nivel?.toUpperCase()
+  if (normalized === "ALTO") {
+    return <Badge className="border-red-500/40 bg-red-500/15 text-red-300"><AlertTriangle className="mr-1 h-3.5 w-3.5" />Riesgo alto</Badge>
+  }
+  if (normalized === "MEDIO") {
+    return <Badge className="border-amber-500/40 bg-amber-500/15 text-amber-300"><ShieldAlert className="mr-1 h-3.5 w-3.5" />Riesgo medio</Badge>
+  }
+  return <Badge className="border-emerald-500/40 bg-emerald-500/15 text-emerald-300"><ShieldCheck className="mr-1 h-3.5 w-3.5" />Riesgo bajo</Badge>
+}
+
+function DecisionBadge({ decision }: { decision: NonNullable<TrademarkInsightReport["registrabilidad"]>["decision"] }) {
+  if (decision === "REVISAR") {
+    return <Badge className="border-amber-500/40 bg-amber-500/15 text-amber-200">Revisión requerida</Badge>
+  }
+  if (decision === "FUENTE_NO_DISPONIBLE") {
+    return <Badge className="border-slate-500/40 bg-slate-500/15 text-slate-300">Fuente no disponible</Badge>
+  }
+  return <Badge className="border-blue-500/40 bg-blue-500/15 text-blue-200">Sin antecedentes activos detectados</Badge>
+}
+
+function confidenceLabel(value: "alta" | "media" | "baja") {
+  return value === "alta" ? "Alta" : value === "media" ? "Media" : "Baja"
 }
 
 export default function AgentePage() {
@@ -43,393 +58,189 @@ export default function AgentePage() {
   const [report, setReport] = useState<TrademarkInsightReport | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [activeHelp, setActiveHelp] = useState<string | null>(null)
-  const [conceptModal, setConceptModal] = useState<'viena' | 'niza' | 'disponible' | 'conflictos' | null>(null)
+  const [conceptModal, setConceptModal] = useState<"viena" | "niza" | "disponible" | "conflictos" | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  // Compute step progress
-  const stepComplete = {
-    imagen: !!image,
-    nombre: !!nombre.trim(),
-    resultados: !!report
-  }
-  const progress = (Object.values(stepComplete).filter(Boolean).length / 3) * 100
+  const progress = ([Boolean(image), Boolean(nombre.trim()), Boolean(report)].filter(Boolean).length / 3) * 100
+  const canAnalyze = Boolean(image && nombre.trim() && !loading)
 
   const handleFile = (file: File) => {
-    if (!file.type.startsWith("image/")) return
-    const reader = new FileReader()
-    reader.onload = e => {
-      const dataUrl = e.target?.result as string
-      setImagePreview(dataUrl)
-      setImage(dataUrl.replace(/^data:image\/[a-z]+;base64,/, ""))
+    setError(null)
+    setReport(null)
+
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      setError("Formato no compatible. Usa PNG, JPEG, WebP o GIF.")
+      return
     }
+    if (file.size > MAX_FILE_BYTES) {
+      setError("La imagen supera el máximo de 4,5 MB.")
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result
+      if (typeof dataUrl !== "string") {
+        setError("No fue posible leer la imagen seleccionada.")
+        return
+      }
+      setImagePreview(dataUrl)
+      setImage(dataUrl)
+    }
+    reader.onerror = () => setError("No fue posible leer la imagen seleccionada.")
     reader.readAsDataURL(file)
   }
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    const file = e.dataTransfer.files[0]
-    if (file) handleFile(file)
-  }
-
   const handleAnalyze = async () => {
-    if (!image || !nombre.trim()) return
+    if (!canAnalyze || !image) return
     setLoading(true)
     setError(null)
     setReport(null)
 
     try {
-      const res = await fetch("/api/v1/agent/analyze", {
+      const response = await fetch("/api/v1/agent/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image, nombre: nombre.trim(), descripcion: "", industria: "" }),
+        body: JSON.stringify({ image, nombre: nombre.trim() }),
       })
+      const data = await response.json().catch(() => ({}))
 
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.error ?? "Error al analizar la marca")
+      if (!response.ok) {
+        setError(response.status === 401 ? "Tu sesión expiró. Vuelve a iniciar sesión." : data.error ?? "No fue posible completar el análisis.")
         return
       }
-
       setReport(data as TrademarkInsightReport)
-    } catch (err) {
-      setError("Error de conexión. Intenta nuevamente.")
+    } catch {
+      setError("No fue posible conectar con el servicio. Intenta nuevamente.")
     } finally {
       setLoading(false)
     }
   }
 
-  const canAnalyze = !!image && !!nombre.trim() && !loading
-
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-purple-950 py-12 px-4">
-      <div className="max-w-5xl mx-auto">
-        {/* Progress bar */}
-        <div className="mb-8 animate-fade-in">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-slate-300">Progreso del análisis</h3>
-            <span className="text-xs text-slate-500">{Math.round(progress)}%</span>
+    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 px-4 py-10">
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-8">
+          <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
+            <span>Progreso del análisis</span><span>{Math.round(progress)}%</span>
           </div>
-          <div className="w-full h-2.5 bg-slate-700/50 rounded-full overflow-hidden border border-white/10">
-            <div
-              className={`h-full bg-gradient-to-r from-blue-500 via-cyan-400 to-blue-500 smooth-transition rounded-full ${progress > 0 ? 'animate-glow' : ''}`}
-              style={{ width: `${progress}%` }}
-            />
+          <div className="h-2 overflow-hidden rounded-full border border-white/10 bg-slate-800">
+            <div className="h-full rounded-full bg-blue-500 transition-all" style={{ width: `${progress}%` }} />
           </div>
         </div>
 
-        {/* Header */}
-        <div className="text-center space-y-3 mb-8">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 text-sm font-medium">
-            <Zap className="w-4 h-4" />
-            Agente IA — Análisis de Marcas
+        <header className="mb-8 text-center">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-1.5 text-sm text-blue-300">
+            <Zap className="h-4 w-4" /> Inteligencia interna de marcas
           </div>
-          <h1 className="text-4xl font-bold text-white text-balance">
-            Analiza tu marca en segundos
-          </h1>
-          <p className="text-slate-400 max-w-2xl mx-auto">
-            Sube tu logo, ingresa el nombre y obtén clasificación Viena + Niza + detección de conflictos
-          </p>
-        </div>
+          <h1 className="text-4xl font-semibold text-white">Evaluación preliminar de marca</h1>
+          <p className="mx-auto mt-3 max-w-2xl text-slate-400">Clasificación Viena y Niza, antecedentes INAPI trazables y una lectura ejecutiva de riesgo.</p>
+        </header>
 
-        {/* Input form */}
-        <div className="grid gap-6 mb-8">
-          {/* Step 1: Image upload */}
+        <section className="mb-8 grid gap-6 rounded-2xl border border-white/10 bg-slate-900/45 p-6">
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${stepComplete.imagen ? 'bg-green-500/20 text-green-300 border border-green-500/40' : 'bg-blue-500/20 text-blue-300 border border-blue-500/40'}`}>
-                {stepComplete.imagen ? '✓' : '1'}
-              </div>
-              <h3 className="font-semibold text-white">Paso 1: Sube tu logo</h3>
-              <button
-                onClick={() => setActiveHelp(activeHelp === 'image' ? null : 'image')}
-                className="ml-auto text-slate-400 hover:text-slate-300"
-              >
-                <HelpCircle className="w-4 h-4" />
-              </button>
+            <div className="mb-3 flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full border border-blue-500/40 bg-blue-500/15 text-xs text-blue-300">1</span>
+              <h2 className="font-medium text-white">Logo o signo gráfico</h2>
+              <button onClick={() => setActiveHelp(activeHelp === "image" ? null : "image")} className="ml-auto text-slate-400 hover:text-white" aria-label="Ayuda sobre la imagen"><HelpCircle className="h-4 w-4" /></button>
             </div>
-            
-            {activeHelp === 'image' && (
-              <div className="text-xs text-slate-300 bg-blue-500/10 p-3 rounded border border-blue-500/20 mb-3 flex gap-2">
-                <span className="text-blue-400 shrink-0">💡</span>
-                <span>Usa una imagen clara y de alta resolución. PNG, JPG o SVG funcionan bien. La imagen puede ser el logo solo o con nombre de marca.</span>
-              </div>
-            )}
-
-            <div
-              onDrop={handleDrop}
-              onDragOver={e => e.preventDefault()}
-              onClick={() => fileRef.current?.click()}
-              className="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-blue-500/60 hover:bg-blue-500/10 smooth-transition bg-slate-900/30 hover-lift group"
-            >
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
-              />
-              {imagePreview ? (
-                <div className="flex flex-col items-center gap-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={imagePreview} alt="Logo" className="max-h-24 max-w-xs rounded-lg object-contain" />
-                  <p className="text-xs text-slate-400">Haz clic para cambiar</p>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-2 text-slate-400 group-hover:text-slate-300 smooth-transition">
-                  <Upload className="w-8 h-8 opacity-50 group-hover:opacity-100 group-hover:scale-110 group-hover:animate-float smooth-transition" />
-                  <p className="text-sm font-medium text-slate-300">Arrastra tu logo aquí</p>
-                  <p className="text-xs">o haz clic para seleccionar</p>
-                </div>
-              )}
-            </div>
+            {activeHelp === "image" && <p className="mb-3 rounded-lg border border-blue-500/20 bg-blue-500/10 p-3 text-xs text-slate-300">Usa PNG, JPEG, WebP o GIF, con fondo limpio y un máximo de 4,5 MB.</p>}
+            <button type="button" onClick={() => fileRef.current?.click()} onDrop={(event) => { event.preventDefault(); const file = event.dataTransfer.files[0]; if (file) handleFile(file) }} onDragOver={(event) => event.preventDefault()} className="w-full rounded-xl border-2 border-dashed border-slate-700 bg-slate-950/35 p-8 text-center hover:border-blue-500/50">
+              <input ref={fileRef} type="file" accept={ACCEPTED_IMAGE_TYPES.join(",")} className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) handleFile(file) }} />
+              {imagePreview ? <div className="flex flex-col items-center gap-2"><img src={imagePreview} alt="Signo a analizar" className="max-h-28 max-w-xs rounded-lg object-contain" /><span className="text-xs text-slate-400">Seleccionar otra imagen</span></div> : <div className="flex flex-col items-center gap-2 text-slate-400"><Upload className="h-8 w-8" /><span className="text-sm">Arrastra o selecciona una imagen</span></div>}
+            </button>
           </div>
 
-          {/* Step 2: Nombre */}
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${stepComplete.nombre ? 'bg-green-500/20 text-green-300 border border-green-500/40' : 'bg-blue-500/20 text-blue-300 border border-blue-500/40'}`}>
-                {stepComplete.nombre ? '✓' : '2'}
-              </div>
-              <h3 className="font-semibold text-white">Paso 2: Nombre de la marca</h3>
-              <button
-                onClick={() => setActiveHelp(activeHelp === 'nombre' ? null : 'nombre')}
-                className="ml-auto text-slate-400 hover:text-slate-300"
-              >
-                <HelpCircle className="w-4 h-4" />
-              </button>
+            <div className="mb-3 flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full border border-blue-500/40 bg-blue-500/15 text-xs text-blue-300">2</span>
+              <h2 className="font-medium text-white">Nombre a evaluar</h2>
             </div>
-
-            {activeHelp === 'nombre' && (
-              <div className="text-xs text-slate-300 bg-blue-500/10 p-3 rounded border border-blue-500/20 mb-3 flex gap-2">
-                <span className="text-blue-400 shrink-0">💡</span>
-                <span>Escribe exactamente cómo quieres registrar tu marca en INAPI. Usa mayúsculas, caracteres especiales si los tiene. Ejemplo: "VISUAL COMPARE®" o "La Marca™"</span>
-              </div>
-            )}
-
-            <Input
-              value={nombre}
-              onChange={e => setNombre(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && canAnalyze && handleAnalyze()}
-              placeholder="Nombre de la marca (ej: VISUAL COMPARE)"
-              className="bg-slate-900/60 border-slate-600 text-white placeholder:text-slate-500 h-11"
-            />
+            <Input value={nombre} onChange={(event) => { setNombre(event.target.value); setReport(null) }} onKeyDown={(event) => event.key === "Enter" && canAnalyze && void handleAnalyze()} maxLength={120} placeholder="Ejemplo: FALABELLA" className="border-slate-700 bg-slate-950/50 text-white" />
           </div>
 
-          {/* Step 3: Analyze */}
-          <div>
-            <Button
-              onClick={handleAnalyze}
-              disabled={!canAnalyze}
-              className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold h-12 gap-2 text-base"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <div className="text-left">
-                    <div className="text-sm">Analizando...</div>
-                    <div className="text-xs opacity-75">Viena • Niza • INAPI</div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <Search className="w-5 h-5" />
-                  <div className="text-left">
-                    <div className="text-sm">Analizar marca</div>
-                    <div className="text-xs opacity-75">Paso 3 de 3</div>
-                  </div>
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
+          <Button onClick={() => void handleAnalyze()} disabled={!canAnalyze} className="h-12 w-full bg-blue-600 hover:bg-blue-500">
+            {loading ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Consultando clasificadores e INAPI</> : <><Search className="mr-2 h-5 w-5" />Ejecutar evaluación</>}
+          </Button>
+        </section>
 
-        {/* Error */}
-        {error && (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-300 text-sm flex items-start gap-2 mb-6">
-            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
+        {error && <div role="alert" className="mb-6 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}
 
-        {/* Report */}
         {report && (
           <div className="space-y-4">
-            {/* Summary */}
-            <div className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-5">
-              <div className="flex items-start justify-between mb-3 gap-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-white">{report.marca}</h2>
-                  <p className="text-xs text-slate-400 mt-1">{report.pipeline_ms}ms · {report.tokens_totales} tokens</p>
-                </div>
+            <section className="rounded-xl border border-white/10 bg-slate-900/55 p-5">
+              <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                <div><h2 className="text-2xl font-semibold text-white">{report.marca}</h2><p className="mt-1 text-xs text-slate-500">Generado {new Date(report.timestamp).toLocaleString("es-CL")} · {(report.pipeline_ms / 1000).toFixed(1)} s</p></div>
                 <RiskBadge nivel={report.informe.nivel_riesgo_global} />
               </div>
-              <p className="text-slate-200 text-sm leading-relaxed">{report.informe.resumen_ejecutivo}</p>
-              {report.informe.analisis_conflictos && (
-                <p className="text-slate-300 text-xs mt-3">{report.informe.analisis_conflictos}</p>
-              )}
-            </div>
+              <p className="text-sm leading-relaxed text-slate-200">{report.informe.resumen_ejecutivo}</p>
+              {report.informe.analisis_conflictos && <p className="mt-3 text-xs leading-relaxed text-slate-400">{report.informe.analisis_conflictos}</p>}
+            </section>
 
-            {/* INAPI Registrabilidad — verificación real en Chile */}
             {report.registrabilidad && (
-              <div className={`rounded-lg p-4 border ${
-                report.registrabilidad.disponible
-                  ? 'bg-green-500/10 border-green-500/30'
-                  : 'bg-red-500/10 border-red-500/30'
-              }`}>
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <h3 className={`font-semibold flex items-center gap-1.5 ${report.registrabilidad.disponible ? 'text-green-300' : 'text-red-300'}`}>
-                    <CheckCircle2 className="w-4 h-4" />
-                    {report.registrabilidad.disponible ? 'Disponible en Chile' : 'No disponible'}
-                  </h3>
-                  <button
-                    onClick={() => setConceptModal('disponible')}
-                    className="text-slate-400 hover:text-slate-300 transition-colors"
-                    title="¿Qué significa disponible?"
-                  >
-                    <HelpCircle className="w-4 h-4" />
-                  </button>
+              <section className="rounded-xl border border-blue-500/25 bg-blue-950/25 p-5">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2"><Database className="h-5 w-5 text-blue-300" /><h3 className="font-semibold text-white">Evidencia INAPI</h3></div>
+                  <DecisionBadge decision={report.registrabilidad.decision} />
                 </div>
-                <p className={`text-sm ${report.registrabilidad.disponible ? 'text-green-200' : 'text-red-200'}`}>
-                  {report.registrabilidad.recomendacion}
-                </p>
-                {report.registrabilidad.marca_encontrada && (
-                  <div className="text-xs text-slate-300 bg-slate-900/50 rounded p-2 mt-2 space-y-1">
-                    <p className="font-semibold text-slate-200">{report.registrabilidad.marca_encontrada.nombre}</p>
-                    <p className="text-slate-400">Solicitante: {report.registrabilidad.marca_encontrada.solicitante}</p>
-                    <p className="text-slate-400">Estado: {report.registrabilidad.marca_encontrada.estado}</p>
+                <p className="text-sm leading-relaxed text-slate-200">{report.registrabilidad.recomendacion}</p>
+
+                <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+                  <div className="rounded-lg border border-white/10 bg-slate-950/40 p-3"><p className="text-xs text-slate-500">Confianza</p><p className="mt-1 font-medium text-white">{confidenceLabel(report.registrabilidad.calidad.confianza)}</p></div>
+                  <div className="rounded-lg border border-white/10 bg-slate-950/40 p-3"><p className="text-xs text-slate-500">Cobertura Niza</p><p className="mt-1 font-medium text-white">{Math.round(report.registrabilidad.calidad.cobertura_clases * 100)}%</p></div>
+                  <div className="rounded-lg border border-white/10 bg-slate-950/40 p-3"><p className="text-xs text-slate-500">Resultados</p><p className="mt-1 font-medium text-white">{report.registrabilidad.calidad.resultados_totales}</p></div>
+                  <div className="rounded-lg border border-white/10 bg-slate-950/40 p-3"><p className="text-xs text-slate-500">Activos</p><p className="mt-1 font-medium text-white">{report.registrabilidad.calidad.resultados_activos}</p></div>
+                </div>
+
+                <div className="mt-4 rounded-lg border border-white/10 bg-slate-950/30 p-3 text-xs text-slate-400">
+                  <p>Fuente: {report.registrabilidad.fuente.nombre} · consulta “{report.registrabilidad.fuente.consulta}” · modo {report.registrabilidad.fuente.match}</p>
+                  <p className="mt-1">Consultado: {new Date(report.registrabilidad.fuente.consultado_en).toLocaleString("es-CL")}</p>
+                </div>
+
+                {report.registrabilidad.calidad.advertencias.length > 0 && <div className="mt-4 space-y-2">{report.registrabilidad.calidad.advertencias.map((warning) => <p key={warning} className="flex items-start gap-2 text-xs text-amber-200"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />{warning}</p>)}</div>}
+
+                {report.registrabilidad.antecedentes.length > 0 && (
+                  <div className="mt-5">
+                    <h4 className="mb-2 text-sm font-medium text-slate-200">Antecedentes priorizados</h4>
+                    <div className="space-y-2">
+                      {report.registrabilidad.antecedentes.slice(0, 6).map((item) => (
+                        <div key={item.id} className="rounded-lg border border-white/10 bg-slate-950/35 p-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="font-medium text-white">{item.nombre}</p><p className="text-xs text-slate-500">{item.solicitante || "Titular no informado"}</p></div><Badge variant="outline" className="border-slate-600 text-slate-300">{item.estado}</Badge></div>
+                          <p className="mt-2 text-xs text-slate-400">Niza: {item.clases.join(", ") || "Sin clase"} · Registro: {item.numero_registro || "—"} · Solicitud: {item.numero_solicitud || "—"}</p>
+                          <p className="mt-1 text-xs text-blue-300">Relevancia {item.puntaje_relevancia}: {item.razones.join(" · ")}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
-                {report.registrabilidad.conflictos_reales > 0 && (
-                  <p className="text-xs text-slate-300 mt-2">Conflictos en INAPI: <span className="font-semibold text-slate-200">{report.registrabilidad.conflictos_reales}</span></p>
-                )}
-              </div>
+              </section>
             )}
 
-            {/* Stats — Conflictos */}
-            <div className="mb-2 flex items-center gap-2 px-1">
-              <h3 className="font-semibold text-slate-300 text-sm">Conflictos detectados</h3>
-              <button
-                onClick={() => setConceptModal('conflictos')}
-                className="text-slate-400 hover:text-slate-300 transition-colors"
-                title="¿Qué son conflictos?"
-              >
-                <HelpCircle className="w-3.5 h-3.5" />
-              </button>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-center">
-                <p className="text-lg font-bold text-red-300">{report.conflictos.breakdown.alto}</p>
-                <p className="text-xs text-red-300 opacity-70">Alto</p>
+            <section className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-xl border border-white/10 bg-slate-900/50 p-4">
+                <div className="mb-3 flex items-center gap-2 text-purple-300"><BarChart3 className="h-4 w-4" /><h3 className="text-sm font-medium">Clasificación Viena</h3><button onClick={() => setConceptModal("viena")} className="ml-auto text-slate-500 hover:text-white"><HelpCircle className="h-4 w-4" /></button></div>
+                <div className="mb-3 flex flex-wrap gap-1">{report.viena.elementos_detectados.slice(0, 4).map((element) => <Badge key={element} variant="outline" className="border-purple-500/30 text-purple-300">{element}</Badge>)}</div>
+                <ul className="space-y-2 text-xs text-slate-300">{Array.from(new Map(report.viena.codes.map((code) => [code.code, code])).values()).slice(0, 5).map((code) => <li key={code.code} className="flex justify-between gap-3"><span>{code.code} · {code.titulo}</span><span className="text-purple-300">{Math.round(code.confidence * 100)}%</span></li>)}</ul>
               </div>
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-center">
-                <p className="text-lg font-bold text-amber-300">{report.conflictos.breakdown.medio}</p>
-                <p className="text-xs text-amber-300 opacity-70">Medio</p>
+              <div className="rounded-xl border border-white/10 bg-slate-900/50 p-4">
+                <div className="mb-3 flex items-center gap-2 text-blue-300"><FileText className="h-4 w-4" /><h3 className="text-sm font-medium">Clasificación Niza</h3><button onClick={() => setConceptModal("niza")} className="ml-auto text-slate-500 hover:text-white"><HelpCircle className="h-4 w-4" /></button></div>
+                <ul className="space-y-2 text-xs text-slate-300">{report.niza.clases.slice(0, 6).map((item) => <li key={item.numero} className="flex justify-between gap-3"><span>Clase {item.numero} · {item.titulo}</span><span className={item.tipo === "principal" ? "text-blue-300" : "text-slate-500"}>{item.tipo}</span></li>)}</ul>
               </div>
-              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-center">
-                <p className="text-lg font-bold text-green-300">{report.conflictos.breakdown.bajo}</p>
-                <p className="text-xs text-green-300 opacity-70">Bajo</p>
-              </div>
-              <div className="bg-slate-700/30 border border-slate-600/50 rounded-lg p-3 text-center">
-                <p className="text-lg font-bold text-slate-200">{report.viena.codes.length + report.niza.clases.length}</p>
-                <p className="text-xs text-slate-400">Clasificaciones</p>
-              </div>
-            </div>
+            </section>
 
-            {/* Classifications grid */}
-            <div className="grid md:grid-cols-2 gap-4">
-              {/* Viena */}
-              <div className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-4">
-                <h3 className="font-semibold text-purple-300 text-sm mb-2 flex items-center gap-1.5">
-                  <BarChart3 className="w-4 h-4" /> Viena ({report.viena.codes.length})
-                  <button
-                    onClick={() => setConceptModal('viena')}
-                    className="ml-auto text-slate-400 hover:text-slate-300 transition-colors"
-                    title="¿Qué es Viena?"
-                  >
-                    <HelpCircle className="w-3.5 h-3.5" />
-                  </button>
-                </h3>
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {report.viena.elementos_detectados.slice(0, 3).map((e, i) => (
-                    <Badge key={i} variant="outline" className="text-xs border-purple-500/30 text-purple-300 bg-purple-500/10">{e}</Badge>
-                  ))}
-                </div>
-                <ul className="space-y-1.5 text-xs">
-                  {Array.from(new Map(report.viena.codes.map(c => [c.code, c])).values()).slice(0, 3).map(c => (
-                    <li key={c.code} className="flex items-center justify-between text-slate-300">
-                      <span>{c.code} • {c.titulo.substring(0, 30)}</span>
-                      <span className="text-purple-300">{Math.round(c.confidence * 100)}%</span>
-                    </li>
-                  ))}
-                  {report.viena.codes.length > 3 && (
-                    <li className="text-slate-500">+{report.viena.codes.length - 3} más</li>
-                  )}
-                </ul>
-              </div>
+            <section className="rounded-xl border border-white/10 bg-slate-900/50 p-4">
+              <div className="mb-3 flex items-center gap-2"><Activity className="h-4 w-4 text-slate-300" /><h3 className="text-sm font-medium text-white">Acciones recomendadas</h3></div>
+              <ol className="space-y-2 text-sm text-slate-300">{report.informe.recomendaciones.map((item, index) => <li key={`${index}-${item}`} className="flex gap-3"><span className="text-blue-300">{index + 1}.</span><span>{item}</span></li>)}</ol>
+            </section>
 
-              {/* Niza */}
-              <div className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-4">
-                <h3 className="font-semibold text-blue-300 text-sm mb-2 flex items-center gap-1.5">
-                  <FileText className="w-4 h-4" /> Niza ({report.niza.clases.length})
-                  <button
-                    onClick={() => setConceptModal('niza')}
-                    className="ml-auto text-slate-400 hover:text-slate-300 transition-colors"
-                    title="¿Qué es Niza?"
-                  >
-                    <HelpCircle className="w-3.5 h-3.5" />
-                  </button>
-                </h3>
-                <ul className="space-y-1.5 text-xs">
-                  {report.niza.clases.slice(0, 4).map(c => (
-                    <li key={c.numero} className="flex items-center justify-between text-slate-300">
-                      <span>Clase {c.numero} • {c.titulo.substring(0, 24)}</span>
-                      <span className={`text-xs ${c.tipo === "principal" ? "text-blue-300 font-semibold" : "text-slate-500"}`}>
-                        {c.tipo === "principal" ? "P" : "S"}
-                      </span>
-                    </li>
-                  ))}
-                  {report.niza.clases.length > 4 && (
-                    <li className="text-slate-500">+{report.niza.clases.length - 4} más</li>
-                  )}
-                </ul>
-              </div>
-            </div>
-
-            {/* Conflictos */}
-            {report.conflictos.conflictos.length > 0 && (
-              <div className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-4">
-                <h3 className="font-semibold text-amber-300 text-sm mb-3 flex items-center gap-1.5">
-                  <ShieldAlert className="w-4 h-4" /> Conflictos ({report.conflictos.conflictos.length})
-                </h3>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {report.conflictos.conflictos.slice(0, 3).map((c, i) => (
-                    <div key={i} className={`text-xs p-2 rounded border ${
-                      c.nivel_riesgo === "alto" ? "bg-red-500/10 border-red-500/20 text-red-300" :
-                      c.nivel_riesgo === "medio" ? "bg-amber-500/10 border-amber-500/20 text-amber-300" :
-                      "bg-green-500/10 border-green-500/20 text-green-300"
-                    }`}>
-                      <p className="font-semibold">{c.marca.nombre}</p>
-                      <p className="opacity-80 mt-0.5">{c.razon_conflicto.substring(0, 80)}...</p>
-                    </div>
-                  ))}
-                  {report.conflictos.conflictos.length > 3 && (
-                    <p className="text-slate-500 text-xs">+{report.conflictos.conflictos.length - 3} conflictos más</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Footer */}
-            <p className="text-xs text-center text-slate-500">{report.informe.disclaimer}</p>
+            <p className="px-4 text-center text-xs leading-relaxed text-slate-500">{report.informe.disclaimer}</p>
           </div>
         )}
 
-        {/* Concept modals */}
-        <ConceptModal concept="viena" isOpen={conceptModal === 'viena'} onClose={() => setConceptModal(null)} />
-        <ConceptModal concept="niza" isOpen={conceptModal === 'niza'} onClose={() => setConceptModal(null)} />
-        <ConceptModal concept="disponible" isOpen={conceptModal === 'disponible'} onClose={() => setConceptModal(null)} />
-        <ConceptModal concept="conflictos" isOpen={conceptModal === 'conflictos'} onClose={() => setConceptModal(null)} />
+        <ConceptModal concept="viena" isOpen={conceptModal === "viena"} onClose={() => setConceptModal(null)} />
+        <ConceptModal concept="niza" isOpen={conceptModal === "niza"} onClose={() => setConceptModal(null)} />
+        <ConceptModal concept="disponible" isOpen={conceptModal === "disponible"} onClose={() => setConceptModal(null)} />
+        <ConceptModal concept="conflictos" isOpen={conceptModal === "conflictos"} onClose={() => setConceptModal(null)} />
       </div>
     </main>
   )
