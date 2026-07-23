@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { searchInapi, type InapiMatchMode, type InapiSearchType } from "@/lib/inapi/client"
+import type { Marca } from "@/types/marca"
 
 export const runtime = "nodejs"
 
@@ -25,11 +26,11 @@ export async function GET(request: Request) {
   }
 
   try {
-    const results = await searchInapi({
+    const results = (await searchInapi({
       query,
       type: rawType,
       matchMode: rawMatchMode,
-    })
+    })).map(normalizeInapiStatus)
 
     return NextResponse.json(
       {
@@ -55,4 +56,51 @@ export async function GET(request: Request) {
       { status: 502 },
     )
   }
+}
+
+function normalizeInapiStatus(marca: Marca): Marca {
+  const original = normalizeStatusText(String(marca.metadata?.estadoOriginal ?? marca.estado ?? ""))
+
+  if (["REGISTRADA", "CONCEDIDA"].includes(original)) {
+    return { ...marca, estado: "Registrada" }
+  }
+
+  if (["EN TRAMITE", "PENDIENTE", "SOLICITADA"].includes(original)) {
+    return { ...marca, estado: "Pendiente" }
+  }
+
+  if (
+    [
+      "CADUCADO",
+      "CADUCADA",
+      "CANCELADO",
+      "CANCELADA",
+      "ANULADO",
+      "ANULADA",
+      "ABANDONADO",
+      "ABANDONADA",
+      "EXPIRADO",
+      "EXPIRADA",
+      "NO VIGENTE",
+      "TENIDA POR NO PRESENTADA",
+      "DESISTIDA",
+    ].includes(original)
+  ) {
+    return { ...marca, estado: "No Vigente" }
+  }
+
+  if (["DENEGADA", "RECHAZADA"].includes(original)) {
+    return { ...marca, estado: "Denegada" }
+  }
+
+  return marca
+}
+
+function normalizeStatusText(value: string) {
+  return value
+    .trim()
+    .toUpperCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
 }
