@@ -137,3 +137,50 @@ export async function POST(request: Request) {
     )
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: "No autorizado." }, { status: 401, headers: PRIVATE_HEADERS })
+    }
+
+    const url = new URL(request.url)
+    const keyId = url.searchParams.get("id")
+
+    if (!keyId) {
+      return NextResponse.json(
+        { error: "ID de clave requerido." },
+        { status: 400, headers: PRIVATE_HEADERS },
+      )
+    }
+
+    const { error } = await supabase
+      .from("api_keys")
+      .delete()
+      .eq("id", keyId)
+      .eq("user_id", user.id)
+
+    if (error) {
+      console.error("Delete error:", error)
+      return NextResponse.json(
+        { error: "No fue posible eliminar la clave API." },
+        { status: 500, headers: PRIVATE_HEADERS },
+      )
+    }
+
+    await logUsage(user.id, "api_key.deleted", { target_api_key_id: keyId })
+
+    return NextResponse.json({ success: true }, { status: 200, headers: PRIVATE_HEADERS })
+  } catch (error) {
+    console.error("[api-keys] delete route failed", error instanceof Error ? error.name : "unknown")
+    return NextResponse.json(
+      { error: "Error interno al eliminar la clave API." },
+      { status: 500, headers: PRIVATE_HEADERS },
+    )
+  }
+}
