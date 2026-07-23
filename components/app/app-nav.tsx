@@ -13,19 +13,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LayoutDashboard, GitCompareArrows, History, Settings, LogOut, Menu, Search, Cpu } from "lucide-react"
+import { LayoutDashboard, GitCompareArrows, History, Settings, LogOut, Menu, Search, Cpu, Database } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
 
-// Main navigation: only essential items visible
 const navItems = [
-  { href: "/dashboard", label: "Inicio", icon: LayoutDashboard, primary: true },
-  { href: "/agente", label: "Analizar Marca", icon: Cpu, primary: true },
+  { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
+  { href: "/consulta-inapi", label: "Buscar en INAPI", icon: Database },
+  { href: "/agente", label: "Analizar con logo", icon: Cpu },
 ]
 
-// Secondary items hidden in user menu
 const secondaryNavItems = [
-  { href: "/consulta", label: "Consulta de marcas", icon: Search },
+  { href: "/consulta", label: "Explorar base indexada", icon: Search },
   { href: "/history", label: "Historial", icon: History },
   { href: "/compare", label: "Comparar imágenes", icon: GitCompareArrows },
 ]
@@ -124,10 +123,9 @@ export function AppNav({
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              
-              {/* Secondary navigation items */}
+
               <div className="px-1 py-1">
-                <p className="text-xs font-medium text-muted-foreground px-2 py-1">Herramientas</p>
+                <p className="px-2 py-1 text-xs font-medium text-muted-foreground">Herramientas</p>
                 {secondaryNavItems.map((item) => {
                   const Icon = item.icon
                   return (
@@ -140,7 +138,7 @@ export function AppNav({
                   )
                 })}
               </div>
-              
+
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href="/settings">
@@ -160,7 +158,6 @@ export function AppNav({
       {mobileOpen && (
         <nav className="border-t border-border bg-background md:hidden">
           <div className="mx-auto flex max-w-7xl flex-col px-2 py-2">
-            {/* Main items */}
             {navItems.map((item) => {
               const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
               const Icon = item.icon
@@ -182,12 +179,10 @@ export function AppNav({
                 </Link>
               )
             })}
-            
-            {/* Secondary items separator */}
+
             <div className="my-2 border-t border-border" />
-            <p className="text-xs font-medium text-muted-foreground px-3 py-1">Más herramientas</p>
-            
-            {/* Secondary items */}
+            <p className="px-3 py-1 text-xs font-medium text-muted-foreground">Más herramientas</p>
+
             {secondaryNavItems.map((item) => {
               const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
               const Icon = item.icon
