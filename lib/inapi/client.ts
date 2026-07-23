@@ -415,17 +415,23 @@ function sleep(ms: number) {
 function cellToMarca(cell: string[], id: string): Marca {
   const niza = (cell[2] ?? "").split(",").map((entry) => entry.trim()).filter(Boolean)
   const estadoOriginal = normalizeText(cell[5] ?? "")
-  const estado =
-    estadoOriginal === "En Tramite" || estadoOriginal === "Pendiente"
-      ? "Pendiente"
-      : estadoOriginal === "Registrada"
-        ? "Registrada"
+  const estadoLower = estadoOriginal.toLowerCase()
+  // Map INAPI states to canonical values — explicit matches first, then substring fallback
+  const estado: "Registrada" | "Pendiente" | "Denegada" | "No Vigente" =
+    estadoOriginal === "Registrada"
+      ? "Registrada"
+      : estadoOriginal === "En Tramite" || estadoOriginal === "Pendiente" ||
+        estadoLower.includes("tramite") || estadoLower.includes("pendiente")
+        ? "Pendiente"
         : estadoOriginal === "Tenida por no presentada" ||
-            estadoOriginal === "Caducada" ||
-            estadoOriginal === "Cancelada" ||
-            estadoOriginal === "No Vigente"
+          estadoOriginal === "Caducada" ||
+          estadoOriginal === "Cancelada" ||
+          estadoOriginal === "No Vigente" ||
+          estadoLower.includes("caducad") || estadoLower.includes("cancelad") || estadoLower.includes("no vigente")
           ? "No Vigente"
-          : "Denegada"
+          : estadoLower.includes("denegad") || estadoLower.includes("rechazad") || estadoLower.includes("abandonad")
+            ? "Denegada"
+            : "No Vigente" // safe fallback — unknown states are non-blocking
 
   return {
     id,

@@ -10,7 +10,7 @@ export interface Marca {
   nombre: string
   solicitante: string
   numeroRegistro: string
-  estado: 'Registrada' | 'Pendiente' | 'Denegada'
+  estado: 'Registrada' | 'Pendiente' | 'Denegada' | 'No Vigente'
   fecha: string
   pais: string
   niza: string[]
@@ -48,7 +48,7 @@ export interface SearchParams {
 }
 
 export interface SearchFilters {
-  estado?: 'Registrada' | 'Pendiente' | 'Denegada'
+  estado?: 'Registrada' | 'Pendiente' | 'Denegada' | 'No Vigente'
   pais?: string
   fechaDesde?: string
   fechaHasta?: string
