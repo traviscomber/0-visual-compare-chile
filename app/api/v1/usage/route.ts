@@ -58,67 +58,110 @@ export async function GET(request: Request) {
         },
       )
     }
-    const context = auth.context
 
+    const context = auth.context
     const admin = createAdminClient()
     const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+    const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999))
 
-    const { count: uploadsToday } = await admin
-      .from("images")
-      .select("*", { count: "exact" })
-      .eq("organization_id", context.organization_id)
-      .gte("created_at", today.toISOString())
+    // Register this request before calculating organization-wide API totals so the
+    // response includes the request currently being served.
+    await logApiKeyUsage({
+      user_id: context.user_id,
+      organization_id: context.organization_id,
+      api_key_id: context.api_key_id,
+      action: "api.usage.read",
+      metadata: {
+        usage_today: context.usage_today,
+        usage_month: context.usage_month,
+      },
+    })
 
-    const { count: uploadsMonth } = await admin
-      .from("images")
-      .select("*", { count: "exact" })
-      .eq("organization_id", context.organization_id)
-      .gte("created_at", monthStart.toISOString())
+    const [
+      uploadsTodayResult,
+      uploadsMonthResult,
+      comparisonsTodayResult,
+      comparisonsMonthResult,
+      imagesResult,
+      apiCallsTodayResult,
+      apiCallsMonthResult,
+    ] = await Promise.all([
+      admin
+        .from("images")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", context.organization_id)
+        .gte("created_at", today.toISOString()),
+      admin
+        .from("images")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", context.organization_id)
+        .gte("created_at", monthStart.toISOString()),
+      admin
+        .from("comparisons")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", context.organization_id)
+        .gte("created_at", today.toISOString()),
+      admin
+        .from("comparisons")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", context.organization_id)
+        .gte("created_at", monthStart.toISOString()),
+      admin.from("images").select("size_bytes").eq("organization_id", context.organization_id),
+      admin
+        .from("usage_logs")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", context.organization_id)
+        .gte("created_at", today.toISOString()),
+      admin
+        .from("usage_logs")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", context.organization_id)
+        .gte("created_at", monthStart.toISOString()),
+    ])
 
-    const { count: comparisonsToday } = await admin
-      .from("comparisons")
-      .select("*", { count: "exact" })
-      .eq("organization_id", context.organization_id)
-      .gte("created_at", today.toISOString())
+    const queryErrors = [
+      uploadsTodayResult.error,
+      uploadsMonthResult.error,
+      comparisonsTodayResult.error,
+      comparisonsMonthResult.error,
+      imagesResult.error,
+      apiCallsTodayResult.error,
+      apiCallsMonthResult.error,
+    ].filter(Boolean)
 
-    const { count: comparisonsMonth } = await admin
-      .from("comparisons")
-      .select("*", { count: "exact" })
-      .eq("organization_id", context.organization_id)
-      .gte("created_at", monthStart.toISOString())
+    if (queryErrors.length > 0) {
+      console.error(
+        "[v0] usage database query failed",
+        queryErrors.map((error) => error?.code ?? "unknown"),
+      )
+      return NextResponse.json(
+        { error: "Usage statistics are temporarily unavailable" },
+        {
+          status: 503,
+          headers: getQuotaHeaders({
+            quota_daily: context.quota_daily,
+            quota_monthly: context.quota_monthly,
+            usage_today: context.usage_today,
+            usage_month: context.usage_month,
+          }),
+        },
+      )
+    }
 
-    const { data: images } = await admin
-      .from("images")
-      .select("size_bytes")
-      .eq("organization_id", context.organization_id)
-
-    const storageBytes = images?.reduce((sum, image) => sum + (image.size_bytes || 0), 0) || 0
+    const storageBytes =
+      imagesResult.data?.reduce((sum, image) => sum + (Number(image.size_bytes) || 0), 0) ?? 0
     const storageGb = storageBytes / (1024 * 1024 * 1024)
 
-    const { count: apiCallsToday } = await admin
-      .from("usage_logs")
-      .select("*", { count: "exact" })
-      .eq("organization_id", context.organization_id)
-      .gte("created_at", today.toISOString())
-
-    const { count: apiCallsMonth } = await admin
-      .from("usage_logs")
-      .select("*", { count: "exact" })
-      .eq("organization_id", context.organization_id)
-      .gte("created_at", monthStart.toISOString())
-
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-
     const stats: UsageStats = {
-      uploads_today: uploadsToday || 0,
-      uploads_month: uploadsMonth || 0,
-      comparisons_today: comparisonsToday || 0,
-      comparisons_month: comparisonsMonth || 0,
+      uploads_today: uploadsTodayResult.count ?? 0,
+      uploads_month: uploadsMonthResult.count ?? 0,
+      comparisons_today: comparisonsTodayResult.count ?? 0,
+      comparisons_month: comparisonsMonthResult.count ?? 0,
       storage_gb: Math.round(storageGb * 100) / 100,
-      api_calls_today: apiCallsToday || 0,
-      api_calls_month: apiCallsMonth || 0,
+      api_calls_today: apiCallsTodayResult.count ?? 0,
+      api_calls_month: apiCallsMonthResult.count ?? 0,
       period: {
         start_date: monthStart.toISOString(),
         end_date: monthEnd.toISOString(),
@@ -132,17 +175,6 @@ export async function GET(request: Request) {
         remaining_monthly: Math.max(context.quota_monthly - context.usage_month, 0),
       },
     }
-
-    await logApiKeyUsage({
-      user_id: context.user_id,
-      organization_id: context.organization_id,
-      api_key_id: context.api_key_id,
-      action: "api.usage.read",
-      metadata: {
-        usage_today: context.usage_today,
-        usage_month: context.usage_month,
-      },
-    })
 
     return NextResponse.json(stats, {
       status: 200,
