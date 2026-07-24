@@ -14,6 +14,19 @@ const ANALYSIS_TIMEOUT_MS = 10_000
 const OCR_TIMEOUT_MS = 15_000
 const PRIVATE_HEADERS = { "Cache-Control": "private, no-store" }
 
+function readBoundedInteger(name: string, fallback: number, minimum: number, maximum: number): number {
+  const raw = process.env[name]
+  if (!raw) return fallback
+
+  const parsed = Number.parseInt(raw, 10)
+  if (!Number.isFinite(parsed)) return fallback
+
+  return Math.min(maximum, Math.max(minimum, parsed))
+}
+
+const WORKER_BATCH_SIZE = readBoundedInteger("IMAGE_WORKER_BATCH_SIZE", 4, 1, 10)
+const WORKER_CONCURRENCY = readBoundedInteger("IMAGE_WORKER_CONCURRENCY", 2, 1, 5)
+
 const EMPTY_EXIF: ExifData = {
   camera_make: null,
   camera_model: null,
@@ -38,6 +51,11 @@ type ClaimedJob = {
   image_id: string
   user_id: string
   attempts: number
+}
+
+type JobResult = {
+  job_id: string
+  status: string
 }
 
 function isAuthorized(request: Request): boolean {
@@ -155,16 +173,51 @@ async function processJob(job: ClaimedJob): Promise<void> {
   if (completeError) throw new Error("Job completion failed")
 }
 
+async function executeJob(job: ClaimedJob): Promise<JobResult> {
+  try {
+    await processJob(job)
+    return { job_id: job.job_id, status: "completed" }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown processing error"
+    console.error("[image-worker] job failed", job.job_id, message)
+
+    const admin = createAdminClient()
+    const { data: nextStatus, error: failError } = await admin.rpc("fail_image_processing_job", {
+      p_job_id: job.job_id,
+      p_error: message,
+    })
+
+    if (failError) {
+      console.error("[image-worker] failure persistence failed", job.job_id, failError.code)
+      return { job_id: job.job_id, status: "failure-persistence-error" }
+    }
+
+    return { job_id: job.job_id, status: String(nextStatus ?? "failed") }
+  }
+}
+
+async function processWithConcurrency(jobs: ClaimedJob[], concurrency: number): Promise<JobResult[]> {
+  const results: JobResult[] = []
+
+  for (let index = 0; index < jobs.length; index += concurrency) {
+    const chunk = jobs.slice(index, index + concurrency)
+    results.push(...(await Promise.all(chunk.map(executeJob))))
+  }
+
+  return results
+}
+
 async function runWorker(request: Request) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401, headers: PRIVATE_HEADERS })
   }
 
+  const startedAt = Date.now()
   const admin = createAdminClient()
   const workerId = `vercel-${randomUUID()}`
   const { data, error } = await admin.rpc("claim_image_processing_jobs", {
     p_worker_id: workerId,
-    p_limit: 2,
+    p_limit: WORKER_BATCH_SIZE,
   })
 
   if (error) {
@@ -173,25 +226,17 @@ async function runWorker(request: Request) {
   }
 
   const jobs = (data ?? []) as ClaimedJob[]
-  const results: Array<{ job_id: string; status: string }> = []
-
-  for (const job of jobs) {
-    try {
-      await processJob(job)
-      results.push({ job_id: job.job_id, status: "completed" })
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown processing error"
-      console.error("[image-worker] job failed", job.job_id, message)
-      const { data: nextStatus } = await admin.rpc("fail_image_processing_job", {
-        p_job_id: job.job_id,
-        p_error: message,
-      })
-      results.push({ job_id: job.job_id, status: String(nextStatus ?? "failed") })
-    }
-  }
+  const results = await processWithConcurrency(jobs, WORKER_CONCURRENCY)
 
   return NextResponse.json(
-    { worker_id: workerId, claimed: jobs.length, results },
+    {
+      worker_id: workerId,
+      claimed: jobs.length,
+      concurrency: WORKER_CONCURRENCY,
+      batch_size: WORKER_BATCH_SIZE,
+      duration_ms: Date.now() - startedAt,
+      results,
+    },
     { headers: PRIVATE_HEADERS },
   )
 }
