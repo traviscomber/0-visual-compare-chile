@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto"
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { extractExif } from "@/lib/image/exif"
+import { extractExif, type ExifData } from "@/lib/image/exif"
 import { calculateSha256 } from "@/lib/image/hash"
 import { computeEla } from "@/lib/image/ela"
 import { extractMetadata } from "@/lib/image/metadata"
-import { extractImageText } from "@/lib/image/ocr"
+import { extractImageText, type OcrResult } from "@/lib/image/ocr"
 import { calculatePerceptualHash } from "@/lib/image/phash"
 import { BUCKET, createSignedUrl } from "@/lib/storage"
 import { createClient } from "@/lib/supabase/server"
@@ -21,6 +21,27 @@ export const runtime = "nodejs"
 export const maxDuration = 60
 
 const PRIVATE_HEADERS = { "Cache-Control": "private, no-store" }
+const ANALYSIS_TIMEOUT_MS = 8_000
+const OCR_TIMEOUT_MS = 12_000
+
+const EMPTY_EXIF: ExifData = {
+  camera_make: null,
+  camera_model: null,
+  software: null,
+  taken_at: null,
+  modified_at: null,
+  orientation: null,
+  gps: null,
+  exposure: { iso: null, fnumber: null, exposure_time: null, focal_length: null },
+  was_edited: false,
+  raw: {},
+}
+
+const EMPTY_OCR: OcrResult = {
+  text: null,
+  confidence: null,
+  language: "eng+spa",
+}
 
 function extensionFromMime(mime: string): string {
   if (mime === "image/jpeg") return "jpg"
@@ -28,6 +49,33 @@ function extensionFromMime(mime: string): string {
   if (mime === "image/webp") return "webp"
   if (mime === "image/tiff") return "tiff"
   return "bin"
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((resolve) => {
+        timeout = setTimeout(() => resolve(fallback), timeoutMs)
+      }),
+    ])
+  } finally {
+    if (timeout) clearTimeout(timeout)
+  }
+}
+
+async function cleanupStoragePaths(
+  admin: ReturnType<typeof createAdminClient>,
+  paths: string[],
+): Promise<void> {
+  if (paths.length === 0) return
+
+  const { error } = await admin.storage.from(BUCKET).remove(paths)
+  if (error) {
+    console.error("[image-upload] cleanup failed", error.name)
+  }
 }
 
 export async function POST(request: Request) {
@@ -110,131 +158,153 @@ export async function POST(request: Request) {
       )
     }
 
-    const [phash, exif, ela, ocr] = await Promise.all([
-      calculatePerceptualHash(buffer).catch(() => null),
-      extractExif(buffer),
-      computeEla(buffer).catch(() => null),
-      extractImageText(buffer),
+    const [phash, exif, ela] = await Promise.all([
+      withTimeout(calculatePerceptualHash(buffer).catch(() => null), ANALYSIS_TIMEOUT_MS, null),
+      withTimeout(extractExif(buffer).catch(() => EMPTY_EXIF), ANALYSIS_TIMEOUT_MS, EMPTY_EXIF),
+      withTimeout(computeEla(buffer).catch(() => null), ANALYSIS_TIMEOUT_MS, null),
     ])
+
+    // OCR is deliberately run after the Sharp-based analyses so the invocation
+    // does not decode the same large image in every subsystem simultaneously.
+    const ocr = await withTimeout(extractImageText(buffer).catch(() => EMPTY_OCR), OCR_TIMEOUT_MS, EMPTY_OCR)
 
     const imageId = randomUUID()
     const ext = extensionFromMime(verifiedMime)
     const storagePath = `${user.id}/${imageId}/original.${ext}`
-
     const admin = createAdminClient()
-    const { error: uploadError } = await admin.storage.from(BUCKET).upload(storagePath, buffer, {
-      contentType: verifiedMime,
-      upsert: false,
-    })
+    const uploadedPaths: string[] = []
+    let imagePersisted = false
 
-    if (uploadError) {
-      return NextResponse.json(
-        { error: "No pudimos subir la imagen al almacenamiento." },
-        { status: 500, headers: PRIVATE_HEADERS },
-      )
-    }
-
-    let elaPath: string | null = null
-    if (ela && ela.png.length > 0) {
-      const candidate = `${user.id}/${imageId}/ela.png`
-      const { error: elaUploadError } = await admin.storage
-        .from(BUCKET)
-        .upload(candidate, ela.png, { contentType: "image/png", upsert: true })
-      if (!elaUploadError) elaPath = candidate
-    }
-
-    const { data: imageRow, error: insertError } = await supabase
-      .from("images")
-      .insert({
-        id: imageId,
-        user_id: user.id,
-        filename: safeFilename,
-        storage_bucket: BUCKET,
-        storage_path: storagePath,
-        mime_type: verifiedMime,
-        size_bytes: buffer.byteLength,
-        width: meta.width,
-        height: meta.height,
-        sha256,
-        phash,
-        metadata: {
-          format: meta.format,
-          aspect_ratio: meta.aspect_ratio,
-          avg_color: meta.avg_color,
-          brightness: meta.brightness,
-          ocr: {
-            text: ocr.text,
-            confidence: ocr.confidence,
-            language: ocr.language,
-          },
-          exif: {
-            camera_make: exif.camera_make,
-            camera_model: exif.camera_model,
-            software: exif.software,
-            taken_at: exif.taken_at,
-            modified_at: exif.modified_at,
-            orientation: exif.orientation,
-            was_edited: exif.was_edited,
-            has_gps: Boolean(exif.gps),
-          },
-          ela: ela ? { score: ela.tampering_score, storage_path: elaPath } : null,
-        },
+    try {
+      const { error: uploadError } = await admin.storage.from(BUCKET).upload(storagePath, buffer, {
+        contentType: verifiedMime,
+        upsert: false,
       })
-      .select("id, filename, size_bytes, width, height, mime_type")
-      .single()
 
-    if (insertError || !imageRow) {
-      await admin.storage.from(BUCKET).remove([storagePath])
-      if (elaPath) await admin.storage.from(BUCKET).remove([elaPath])
-
-      const { data: raceWinner } = await supabase
-        .from("images")
-        .select("id, filename, size_bytes, width, height, mime_type, storage_path")
-        .eq("user_id", user.id)
-        .eq("sha256", sha256)
-        .eq("status", "active")
-        .maybeSingle()
-
-      if (raceWinner) {
-        const signedUrl = await createSignedUrl(raceWinner.storage_path, 60 * 60)
+      if (uploadError) {
         return NextResponse.json(
-          {
-            id: raceWinner.id,
-            filename: raceWinner.filename,
-            size_bytes: raceWinner.size_bytes,
-            width: raceWinner.width,
-            height: raceWinner.height,
-            mime_type: raceWinner.mime_type,
-            url: signedUrl,
-            deduplicated: true,
+          { error: "No pudimos subir la imagen al almacenamiento." },
+          { status: 500, headers: PRIVATE_HEADERS },
+        )
+      }
+      uploadedPaths.push(storagePath)
+
+      let elaPath: string | null = null
+      if (ela && ela.png.length > 0) {
+        const candidate = `${user.id}/${imageId}/ela.png`
+        const { error: elaUploadError } = await admin.storage
+          .from(BUCKET)
+          .upload(candidate, ela.png, { contentType: "image/png", upsert: false })
+        if (!elaUploadError) {
+          elaPath = candidate
+          uploadedPaths.push(candidate)
+        }
+      }
+
+      const { data: imageRow, error: insertError } = await supabase
+        .from("images")
+        .insert({
+          id: imageId,
+          user_id: user.id,
+          filename: safeFilename,
+          storage_bucket: BUCKET,
+          storage_path: storagePath,
+          mime_type: verifiedMime,
+          size_bytes: buffer.byteLength,
+          width: meta.width,
+          height: meta.height,
+          sha256,
+          phash,
+          metadata: {
+            format: meta.format,
+            aspect_ratio: meta.aspect_ratio,
+            avg_color: meta.avg_color,
+            brightness: meta.brightness,
+            ocr: {
+              text: ocr.text,
+              confidence: ocr.confidence,
+              language: ocr.language,
+            },
+            exif: {
+              camera_make: exif.camera_make,
+              camera_model: exif.camera_model,
+              software: exif.software,
+              taken_at: exif.taken_at,
+              modified_at: exif.modified_at,
+              orientation: exif.orientation,
+              was_edited: exif.was_edited,
+              has_gps: Boolean(exif.gps),
+            },
+            ela: ela ? { score: ela.tampering_score, storage_path: elaPath } : null,
           },
-          { headers: PRIVATE_HEADERS },
+        })
+        .select("id, filename, size_bytes, width, height, mime_type")
+        .single()
+
+      if (insertError || !imageRow) {
+        await cleanupStoragePaths(admin, uploadedPaths)
+        uploadedPaths.length = 0
+
+        const { data: raceWinner } = await supabase
+          .from("images")
+          .select("id, filename, size_bytes, width, height, mime_type, storage_path")
+          .eq("user_id", user.id)
+          .eq("sha256", sha256)
+          .eq("status", "active")
+          .maybeSingle()
+
+        if (raceWinner) {
+          const signedUrl = await createSignedUrl(raceWinner.storage_path, 60 * 60)
+          return NextResponse.json(
+            {
+              id: raceWinner.id,
+              filename: raceWinner.filename,
+              size_bytes: raceWinner.size_bytes,
+              width: raceWinner.width,
+              height: raceWinner.height,
+              mime_type: raceWinner.mime_type,
+              url: signedUrl,
+              deduplicated: true,
+            },
+            { headers: PRIVATE_HEADERS },
+          )
+        }
+
+        return NextResponse.json(
+          { error: "No pudimos registrar la imagen en la base de datos." },
+          { status: 500, headers: PRIVATE_HEADERS },
         )
       }
 
-      return NextResponse.json(
-        { error: "No pudimos registrar la imagen en la base de datos." },
-        { status: 500, headers: PRIVATE_HEADERS },
-      )
+      imagePersisted = true
+
+      const { error: usageError } = await supabase.from("usage_logs").insert({
+        user_id: user.id,
+        organization_id: null,
+        action: "image.uploaded",
+        metadata: {
+          image_id: imageId,
+          size_bytes: buffer.byteLength,
+          mime_type: verifiedMime,
+          ela_score: ela?.tampering_score ?? null,
+          had_exif: Object.keys(exif.raw).length > 0,
+          had_ocr: Boolean(ocr.text),
+          ocr_confidence: ocr.confidence,
+        },
+      })
+
+      if (usageError) {
+        console.error("[image-upload] usage log failed", usageError.code)
+      }
+
+      const signedUrl = await createSignedUrl(storagePath, 60 * 60)
+      return NextResponse.json({ ...imageRow, url: signedUrl }, { headers: PRIVATE_HEADERS })
+    } catch (error) {
+      if (!imagePersisted) {
+        await cleanupStoragePaths(admin, uploadedPaths)
+      }
+      throw error
     }
-
-    await supabase.from("usage_logs").insert({
-      user_id: user.id,
-      organization_id: null,
-      action: "image.uploaded",
-      metadata: {
-        image_id: imageId,
-        size_bytes: buffer.byteLength,
-        mime_type: verifiedMime,
-        ela_score: ela?.tampering_score ?? null,
-        had_exif: Object.keys(exif.raw).length > 0,
-        had_ocr: Boolean(ocr.text),
-        ocr_confidence: ocr.confidence,
-      },
-    })
-
-    const signedUrl = await createSignedUrl(storagePath, 60 * 60)
-    return NextResponse.json({ ...imageRow, url: signedUrl }, { headers: PRIVATE_HEADERS })
   } catch (error) {
     console.error("[image-upload] failed", error instanceof Error ? error.name : "unknown")
     return NextResponse.json(
