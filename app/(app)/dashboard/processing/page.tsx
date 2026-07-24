@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Activity,
   AlertTriangle,
@@ -12,6 +12,8 @@ import {
   RotateCcw,
   ServerCog,
   TimerReset,
+  Wifi,
+  WifiOff,
   XCircle,
 } from "lucide-react"
 import {
@@ -25,6 +27,7 @@ import {
 } from "recharts"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { createClientAsync } from "@/lib/supabase/client"
 
 interface ProcessingJob {
   id: string
@@ -75,6 +78,8 @@ interface Snapshot {
   failed: number
 }
 
+type RealtimeState = "connecting" | "connected" | "fallback" | "unavailable"
+
 const EMPTY_METRICS: Metrics = {
   queued: 0,
   processing: 0,
@@ -116,6 +121,19 @@ function healthPresentation(status: Health["status"]) {
     return { label: "Critical", className: "border-red-500/30 bg-red-500/10 text-red-400", icon: XCircle }
   }
   return { label: "Unknown", className: "border-border bg-secondary text-muted-foreground", icon: Activity }
+}
+
+function realtimePresentation(status: RealtimeState) {
+  if (status === "connected") {
+    return { label: "Realtime", className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400", icon: Wifi }
+  }
+  if (status === "connecting") {
+    return { label: "Conectando", className: "border-blue-500/30 bg-blue-500/10 text-blue-400", icon: Loader2 }
+  }
+  if (status === "fallback") {
+    return { label: "Polling fallback", className: "border-amber-500/30 bg-amber-500/10 text-amber-400", icon: WifiOff }
+  }
+  return { label: "Realtime no disponible", className: "border-border bg-secondary text-muted-foreground", icon: WifiOff }
 }
 
 function statusBadge(status: ProcessingJob["status"]) {
@@ -161,8 +179,10 @@ export default function ProcessingDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [retrying, setRetrying] = useState(false)
+  const [realtimeState, setRealtimeState] = useState<RealtimeState>("connecting")
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
+  const realtimeRefreshTimer = useRef<number | null>(null)
 
   const loadMetrics = useCallback(async (manual = false) => {
     if (manual) setRefreshing(true)
@@ -198,8 +218,53 @@ export default function ProcessingDashboardPage() {
 
   useEffect(() => {
     void loadMetrics()
-    const interval = window.setInterval(() => void loadMetrics(), 15000)
-    return () => window.clearInterval(interval)
+
+    let active = true
+    let channel: ReturnType<NonNullable<Awaited<ReturnType<typeof createClientAsync>>>["channel"]> | null = null
+
+    const connectRealtime = async () => {
+      const supabase = await createClientAsync()
+      if (!active) return
+
+      if (!supabase) {
+        setRealtimeState("unavailable")
+        return
+      }
+
+      channel = supabase
+        .channel("processing-dashboard-jobs")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "image_processing_jobs",
+          },
+          () => {
+            if (realtimeRefreshTimer.current) window.clearTimeout(realtimeRefreshTimer.current)
+            realtimeRefreshTimer.current = window.setTimeout(() => void loadMetrics(), 350)
+          },
+        )
+        .subscribe((status) => {
+          if (!active) return
+          if (status === "SUBSCRIBED") setRealtimeState("connected")
+          else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+            setRealtimeState("fallback")
+          }
+        })
+    }
+
+    void connectRealtime()
+
+    // Low-frequency safety net for temporary websocket failures or suspended tabs.
+    const interval = window.setInterval(() => void loadMetrics(), 60000)
+
+    return () => {
+      active = false
+      window.clearInterval(interval)
+      if (realtimeRefreshTimer.current) window.clearTimeout(realtimeRefreshTimer.current)
+      if (channel) void channel.unsubscribe()
+    }
   }, [loadMetrics])
 
   const retryFailed = async () => {
@@ -222,6 +287,8 @@ export default function ProcessingDashboardPage() {
   const health = data?.health ?? ({ status: "unknown" } as Health)
   const healthUi = healthPresentation(health.status)
   const HealthIcon = healthUi.icon
+  const realtimeUi = realtimePresentation(realtimeState)
+  const RealtimeIcon = realtimeUi.icon
 
   const totalJobs = useMemo(
     () => metrics.queued + metrics.processing + metrics.completed + metrics.failed,
@@ -249,9 +316,13 @@ export default function ProcessingDashboardPage() {
               <HealthIcon className="mr-1.5 h-3.5 w-3.5" />
               {healthUi.label}
             </Badge>
+            <Badge variant="outline" className={realtimeUi.className}>
+              <RealtimeIcon className={`mr-1.5 h-3.5 w-3.5 ${realtimeState === "connecting" ? "animate-spin" : ""}`} />
+              {realtimeUi.label}
+            </Badge>
           </div>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Estado de la cola, workers, rendimiento y errores del pipeline de imágenes. Actualización automática cada 15 segundos.
+            Estado de la cola, workers, rendimiento y errores del pipeline de imágenes. Realtime con respaldo automático cada 60 segundos.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
