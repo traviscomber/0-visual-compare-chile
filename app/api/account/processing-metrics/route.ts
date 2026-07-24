@@ -6,13 +6,25 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 const PRIVATE_HEADERS = { "Cache-Control": "private, no-store" }
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+async function getAuthenticatedClient() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  return { supabase, user }
+}
+
+async function readJobId(request: Request) {
+  const body = (await request.json().catch(() => null)) as { job_id?: unknown } | null
+  return typeof body?.job_id === "string" ? body.job_id.trim() : ""
+}
 
 export async function GET() {
   try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const { supabase, user } = await getAuthenticatedClient()
 
     if (!user) {
       return NextResponse.json({ error: "No autorizado." }, { status: 401, headers: PRIVATE_HEADERS })
@@ -65,10 +77,7 @@ export async function GET() {
 
 export async function POST() {
   try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const { supabase, user } = await getAuthenticatedClient()
 
     if (!user) {
       return NextResponse.json({ error: "No autorizado." }, { status: 401, headers: PRIVATE_HEADERS })
@@ -94,21 +103,67 @@ export async function POST() {
   }
 }
 
-export async function DELETE(request: Request) {
+export async function PATCH(request: Request) {
   try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const { supabase, user } = await getAuthenticatedClient()
 
     if (!user) {
       return NextResponse.json({ error: "No autorizado." }, { status: 401, headers: PRIVATE_HEADERS })
     }
 
-    const body = (await request.json().catch(() => null)) as { job_id?: unknown } | null
-    const jobId = typeof body?.job_id === "string" ? body.job_id.trim() : ""
+    const jobId = await readJobId(request)
 
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(jobId)) {
+    if (!UUID_PATTERN.test(jobId)) {
+      return NextResponse.json(
+        { error: "El identificador del trabajo no es válido." },
+        { status: 400, headers: PRIVATE_HEADERS },
+      )
+    }
+
+    const { data, error } = await supabase.rpc("retry_my_image_processing_job", { p_job_id: jobId })
+
+    if (error) {
+      console.error("[processing-metrics] individual retry failed", error.code)
+      return NextResponse.json(
+        { error: "No fue posible reintentar el trabajo." },
+        { status: 503, headers: PRIVATE_HEADERS },
+      )
+    }
+
+    const result = (data ?? {}) as { retried?: boolean; reason?: string; status?: string }
+
+    if (!result.retried) {
+      if (result.reason === "not_found") {
+        return NextResponse.json({ error: "Trabajo no encontrado." }, { status: 404, headers: PRIVATE_HEADERS })
+      }
+
+      return NextResponse.json(
+        { error: `El trabajo no se puede reintentar${result.status ? ` (${result.status})` : ""}.` },
+        { status: 409, headers: PRIVATE_HEADERS },
+      )
+    }
+
+    return NextResponse.json(result, { status: 200, headers: PRIVATE_HEADERS })
+  } catch (error) {
+    console.error("[processing-metrics] individual retry route failed", error instanceof Error ? error.name : "unknown")
+    return NextResponse.json(
+      { error: "Error interno al reintentar el trabajo." },
+      { status: 500, headers: PRIVATE_HEADERS },
+    )
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { supabase, user } = await getAuthenticatedClient()
+
+    if (!user) {
+      return NextResponse.json({ error: "No autorizado." }, { status: 401, headers: PRIVATE_HEADERS })
+    }
+
+    const jobId = await readJobId(request)
+
+    if (!UUID_PATTERN.test(jobId)) {
       return NextResponse.json(
         { error: "El identificador del trabajo no es válido." },
         { status: 400, headers: PRIVATE_HEADERS },
