@@ -8,17 +8,42 @@ import sharp, { type Sharp } from "sharp"
 export const MAX_PROCESSING_DIMENSION = 2400
 
 /**
+ * Reject images whose decoded pixel count exceeds the upload policy before
+ * libvips allocates a potentially unbounded raster. This is the primary guard
+ * against decompression bombs.
+ */
+export const MAX_INPUT_PIXELS = 64_000_000
+
+/**
+ * Serverless-safe libvips defaults. A single invocation may create several
+ * analysis pipelines, so keep native worker and cache growth bounded.
+ */
+sharp.concurrency(1)
+sharp.cache({ memory: 32, files: 0, items: 20 })
+
+/**
  * Returns a sharp pipeline that:
- *  - is tolerant of partially-corrupt JPEGs (failOn: "none")
+ *  - rejects malformed/truncated input instead of attempting permissive decode
+ *  - rejects decompression bombs above MAX_INPUT_PIXELS
+ *  - decodes only the first page/frame of multipage or animated input
+ *  - reads sequentially to reduce peak memory pressure
  *  - applies EXIF orientation so portrait photos compare correctly
  *  - is downscaled to MAX_PROCESSING_DIMENSION on its longest side
  *
  * Always use this instead of `sharp(buffer)` directly when running pHash,
- * pixel-diff, ELA, or any other heavy analysis. The original buffer is left
- * untouched so EXIF and forensic signals can still be read from it.
+ * pixel-diff, ELA, metadata extraction, or any other heavy analysis. The
+ * original buffer is left untouched so EXIF and forensic signals can still be
+ * read from it.
  */
 export function safeSharp(buffer: Buffer): Sharp {
-  return sharp(buffer, { failOn: "none" })
+  return sharp(buffer, {
+    failOn: "error",
+    limitInputPixels: MAX_INPUT_PIXELS,
+    pages: 1,
+    animated: false,
+    sequentialRead: true,
+    unlimited: false,
+  })
     .rotate()
     .resize({
       width: MAX_PROCESSING_DIMENSION,
