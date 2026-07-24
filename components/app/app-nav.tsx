@@ -14,7 +14,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LayoutDashboard, GitCompareArrows, History, Settings, LogOut, Menu, Search, Cpu, Database, Terminal } from "lucide-react"
+import {
+  Activity,
+  LayoutDashboard,
+  GitCompareArrows,
+  History,
+  Settings,
+  LogOut,
+  Menu,
+  Search,
+  Cpu,
+  Database,
+  Terminal,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
@@ -25,6 +37,7 @@ const navItems = [
 ]
 
 const secondaryNavItems = [
+  { href: "/dashboard/processing", label: "Operaciones de procesamiento", icon: Activity },
   { href: "/consulta", label: "Explorar base indexada", icon: Search },
   { href: "/history", label: "Historial", icon: History },
   { href: "/compare", label: "Comparar imágenes", icon: GitCompareArrows },
@@ -42,6 +55,9 @@ export function AppNav({
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  const isActive = (href: string) =>
+    pathname === href || (href !== "/dashboard" && pathname.startsWith(`${href}/`))
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -72,7 +88,7 @@ export function AppNav({
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
             {navItems.map((item) => {
-              const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+              const active = isActive(item.href)
               const Icon = item.icon
 
               return (
@@ -116,7 +132,7 @@ export function AppNav({
                 </span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-64">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col">
                   <span className="text-sm text-foreground">{fullName ?? "Usuario"}</span>
@@ -160,7 +176,7 @@ export function AppNav({
         <nav className="border-t border-border bg-background md:hidden">
           <div className="mx-auto flex max-w-7xl flex-col px-2 py-2">
             {navItems.map((item) => {
-              const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+              const active = isActive(item.href)
               const Icon = item.icon
 
               return (
@@ -185,7 +201,7 @@ export function AppNav({
             <p className="px-3 py-1 text-xs font-medium text-muted-foreground">Más herramientas</p>
 
             {secondaryNavItems.map((item) => {
-              const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+              const active = isActive(item.href)
               const Icon = item.icon
 
               return (
