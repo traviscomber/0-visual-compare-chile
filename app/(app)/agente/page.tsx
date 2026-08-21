@@ -149,6 +149,18 @@ export default function AgentePage() {
           <p className="mx-auto mt-3 max-w-2xl text-slate-400">Clasificación Viena y Niza, antecedentes INAPI trazables y una lectura ejecutiva de riesgo.</p>
         </header>
 
+        <section aria-labelledby="products-title" className="mb-8 rounded-2xl border border-blue-500/20 bg-blue-950/20 p-5">
+          <div className="mb-4 flex items-start justify-between gap-4">
+            <div><h2 id="products-title" className="text-sm font-semibold uppercase tracking-[0.16em] text-blue-200">Qué entrega esta evaluación</h2><p className="mt-1 text-sm text-slate-400">Elige el nivel de revisión que necesita el estudio.</p></div>
+            <Badge variant="outline" className="border-blue-500/30 text-blue-300">Datos trazables</Badge>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-xl border border-white/10 bg-slate-950/30 p-3"><p className="text-sm font-medium text-white">Búsqueda denominativa</p><p className="mt-1 text-xs leading-relaxed text-slate-400">Nombre, antecedentes INAPI, titulares, estados y clases Niza.</p></div>
+            <div className="rounded-xl border border-white/10 bg-slate-950/30 p-3"><p className="text-sm font-medium text-white">Análisis completo</p><p className="mt-1 text-xs leading-relaxed text-slate-400">Nombre más logo: agrega similitud visual y clasificación Viena.</p></div>
+            <div className="rounded-xl border border-white/10 bg-slate-950/30 p-3"><p className="text-sm font-medium text-white">Auditoría y reutilización</p><p className="mt-1 text-xs leading-relaxed text-slate-400">Guarda resultados, etiquetas y consultas para evitar llamadas repetidas.</p></div>
+          </div>
+        </section>
+
         <section className="mb-8 grid gap-6 rounded-2xl border border-white/10 bg-slate-900/45 p-6">
           <div>
             <div className="mb-3 flex items-center gap-2">
