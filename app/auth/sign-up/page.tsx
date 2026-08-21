@@ -1,10 +1,11 @@
 import { SignUpForm } from "./sign-up-form"
 import { safeInternalRedirect } from "@/lib/redirect"
 
-export default function SignUpPage({
+export default async function SignUpPage({
   searchParams,
 }: {
-  searchParams?: { redirectTo?: string }
+  searchParams?: Promise<{ redirectTo?: string }>
 }) {
-  return <SignUpForm redirectTo={safeInternalRedirect(searchParams?.redirectTo)} />
+  const params = await searchParams
+  return <SignUpForm redirectTo={safeInternalRedirect(params?.redirectTo)} />
 }

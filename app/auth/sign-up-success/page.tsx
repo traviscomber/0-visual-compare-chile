@@ -4,12 +4,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { safeInternalRedirect } from "@/lib/redirect"
 
-export default function SignUpSuccessPage({
+export default async function SignUpSuccessPage({
   searchParams,
 }: {
-  searchParams?: { next?: string }
+  searchParams?: Promise<{ next?: string }>
 }) {
-  const next = safeInternalRedirect(searchParams?.next)
+  const params = await searchParams
+  const next = safeInternalRedirect(params?.next)
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center bg-background p-6">
