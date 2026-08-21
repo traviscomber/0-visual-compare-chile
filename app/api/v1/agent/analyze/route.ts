@@ -45,6 +45,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Los campos de contexto exceden el largo permitido." }, { status: 400, headers: noStoreHeaders() })
     }
 
+    const { data: cachedComparison } = !payload.image.trim()
+      ? await supabase
+          .from("comparisons")
+          .select("id, result_json")
+          .eq("user_id", user.id)
+          .eq("result_json->>marca", nombre)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : { data: null }
+
+    if (cachedComparison?.result_json) {
+      return NextResponse.json(
+        { ...cachedComparison.result_json, comparison_id: cachedComparison.id, cached: true },
+        { status: 200, headers: noStoreHeaders() },
+      )
+    }
+
     let cleanImage: string | undefined
     let imageMimeType: string | undefined
     if (payload.image.trim()) {

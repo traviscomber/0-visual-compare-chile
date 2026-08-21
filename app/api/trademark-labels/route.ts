@@ -24,9 +24,9 @@ export async function POST(request: NextRequest) {
   const { data: comparison } = await supabase.from("comparisons").select("id").eq("id", comparisonId).eq("user_id", user.id).maybeSingle()
   if (!comparison) return NextResponse.json({ error: "La comparación no existe o no pertenece al usuario." }, { status: 404 })
 
-  const rows = labelIds.map((labelId) => ({ comparison_id: comparisonId, label_id: labelId, user_id: user.id, source: "manual" }))
+  const rows = labelIds.map((labelId: string) => ({ comparison_id: comparisonId, label_id: labelId, user_id: user.id, source: "manual" }))
   const { error } = await supabase.from("trademark_comparison_labels").upsert(rows, { onConflict: "comparison_id,label_id" })
   if (error) return NextResponse.json({ error: "No fue posible registrar las etiquetas." }, { status: 500 })
-  await supabase.from("trademark_label_audit_log").insert(labelIds.map((labelId) => ({ comparison_id: comparisonId, label_id: labelId, user_id: user.id, action: "assigned", reason: "Asignación manual desde el análisis" })))
+  await supabase.from("trademark_label_audit_log").insert(labelIds.map((labelId: string) => ({ comparison_id: comparisonId, label_id: labelId, user_id: user.id, action: "assigned", reason: "Asignación manual desde el análisis" })))
   return NextResponse.json({ ok: true, comparisonId, labelIds })
 }
