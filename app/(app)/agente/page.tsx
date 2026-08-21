@@ -78,16 +78,25 @@ export default function AgentePage() {
     }
 
     const reader = new FileReader()
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result
-      if (typeof dataUrl !== "string") {
+    reader.onload = () => {
+      const dataUrl = reader.result
+      if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) {
         setError("No fue posible leer la imagen seleccionada.")
         return
       }
       setImagePreview(dataUrl)
       setImage(dataUrl)
     }
-    reader.onerror = () => setError("No fue posible leer la imagen seleccionada.")
+    reader.onerror = () => {
+      setImage(null)
+      setImagePreview(null)
+      setError("No fue posible leer la imagen seleccionada.")
+    }
+    reader.onabort = () => {
+      setImage(null)
+      setImagePreview(null)
+      setError("La lectura de la imagen fue cancelada. Intenta nuevamente.")
+    }
     reader.readAsDataURL(file)
   }
 
