@@ -48,17 +48,17 @@ export async function POST(request: NextRequest) {
     const { data: cachedComparison } = !payload.image.trim()
       ? await supabase
           .from("comparisons")
-          .select("id, result_json")
+          .select("id, result_data")
           .eq("user_id", user.id)
-          .eq("result_json->>marca", nombre)
+          .eq("result_data->>marca", nombre)
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle()
       : { data: null }
 
-    if (cachedComparison?.result_json) {
+    if (cachedComparison?.result_data) {
       return NextResponse.json(
-        { ...cachedComparison.result_json, comparison_id: cachedComparison.id, cached: true },
+        { ...cachedComparison.result_data, comparison_id: cachedComparison.id, cached: true },
         { status: 200, headers: noStoreHeaders() },
       )
     }
@@ -94,11 +94,13 @@ export async function POST(request: NextRequest) {
       .from("comparisons")
       .insert({
         user_id: user.id,
-        similarity_score: report.registrabilidad?.calidad?.confianza ?? 0,
+        similarity_score: typeof report.registrabilidad?.calidad?.confianza === "number" ? report.registrabilidad.calidad.confianza : 0,
         classification: report.informe.nivel_riesgo_global,
         signals: { source: "trademark-agent", pipeline_ms: report.pipeline_ms },
         recommendation: report.registrabilidad?.recomendacion ?? report.informe.recomendaciones?.[0] ?? null,
-        result_json: report,
+        result_data: { ...report, marca: nombre },
+        result_json: { ...report, marca: nombre },
+        brand_context: { marca: nombre, descripcion: descripcion || null, industria: industria || null, source: "trademark-agent" },
       })
       .select("id")
       .single()
