@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ConceptModal } from "@/components/concept-modal"
+import { AnalysisWorkflowControls } from "@/components/app/analysis-workflow-controls"
 
 const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"]
 const MAX_FILE_BYTES = 4_500_000
@@ -243,6 +244,12 @@ export default function AgentePage() {
             </section>
 
             <p className="px-4 text-center text-xs leading-relaxed text-slate-500">{report.informe.disclaimer}</p>
+
+            <AnalysisWorkflowControls
+              marca={report.marca}
+              risk={report.informe.nivel_riesgo_global}
+              resultCount={report.registrabilidad?.calidad.resultados_totales ?? 0}
+            />
           </div>
         )}
 
