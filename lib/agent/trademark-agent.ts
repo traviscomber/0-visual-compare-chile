@@ -10,7 +10,7 @@ import { searchInapi } from "@/lib/inapi/client"
 import type { Marca } from "@/types/marca"
 
 export interface TrademarkAgentRequest {
-  imageBase64: string
+  imageBase64?: string
   imageMimeType?: string
   nombreMarca: string
   descripcion?: string

@@ -64,8 +64,8 @@ export default function AgentePage() {
   const [conceptModal, setConceptModal] = useState<"viena" | "niza" | "disponible" | "conflictos" | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const progress = ([Boolean(image), Boolean(nombre.trim()), Boolean(report)].filter(Boolean).length / 3) * 100
-  const canAnalyze = Boolean(image && nombre.trim() && !loading)
+  const progress = ([Boolean(nombre.trim()), Boolean(report)].filter(Boolean).length / 2) * 100
+  const canAnalyze = Boolean(nombre.trim() && !loading)
 
   const handleFile = (file: File) => {
     setError(null)
@@ -104,7 +104,7 @@ export default function AgentePage() {
   }
 
   const handleAnalyze = async () => {
-    if (!canAnalyze || !image) return
+    if (!canAnalyze) return
     setLoading(true)
     setError(null)
     setReport(null)
@@ -113,7 +113,7 @@ export default function AgentePage() {
       const response = await fetch("/api/v1/agent/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image, nombre: nombre.trim() }),
+        body: JSON.stringify({ ...(image ? { image } : {}), nombre: nombre.trim() }),
       })
       const data = await response.json().catch(() => ({}))
 
@@ -121,7 +121,7 @@ export default function AgentePage() {
         setError(response.status === 401 ? "Tu sesión expiró. Vuelve a iniciar sesión." : data.error ?? "No fue posible completar el análisis.")
         return
       }
-      setReport(data as TrademarkInsightReport)
+      setReport(data as PersistedTrademarkReport)
     } catch {
       setError("No fue posible conectar con el servicio. Intenta nuevamente.")
     } finally {
@@ -153,13 +153,13 @@ export default function AgentePage() {
           <div>
             <div className="mb-3 flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full border border-blue-500/40 bg-blue-500/15 text-xs text-blue-300">1</span>
-              <h2 className="font-medium text-white">Logo o signo gráfico</h2>
+              <h2 className="font-medium text-white">Logo o signo gráfico <span className="text-xs font-normal text-slate-500">(opcional)</span></h2>
               <button onClick={() => setActiveHelp(activeHelp === "image" ? null : "image")} className="ml-auto text-slate-400 hover:text-white" aria-label="Ayuda sobre la imagen"><HelpCircle className="h-4 w-4" /></button>
             </div>
             {activeHelp === "image" && <p className="mb-3 rounded-lg border border-blue-500/20 bg-blue-500/10 p-3 text-xs text-slate-300">Usa PNG, JPEG, WebP o GIF, con fondo limpio y un máximo de 4,5 MB.</p>}
             <button type="button" onClick={() => fileRef.current?.click()} onDrop={(event) => { event.preventDefault(); const file = event.dataTransfer.files[0]; if (file) handleFile(file) }} onDragOver={(event) => event.preventDefault()} className="w-full rounded-xl border-2 border-dashed border-slate-700 bg-slate-950/35 p-8 text-center hover:border-blue-500/50">
               <input ref={fileRef} type="file" accept={ACCEPTED_IMAGE_TYPES.join(",")} className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) handleFile(file) }} />
-              {imagePreview ? <div className="flex flex-col items-center gap-2"><img src={imagePreview} alt="Signo a analizar" className="max-h-28 max-w-xs rounded-lg object-contain" /><span className="text-xs text-slate-400">Seleccionar otra imagen</span></div> : <div className="flex flex-col items-center gap-2 text-slate-400"><Upload className="h-8 w-8" /><span className="text-sm">Arrastra o selecciona una imagen</span></div>}
+              {imagePreview ? <div className="flex flex-col items-center gap-2"><img src={imagePreview} alt="Signo a analizar" className="max-h-28 max-w-xs rounded-lg object-contain" /><span className="text-xs text-slate-400">Seleccionar otra imagen</span></div> : <div className="flex flex-col items-center gap-2 text-slate-400"><Upload className="h-8 w-8" /><span className="text-sm">Arrastra o selecciona una imagen (opcional)</span></div>}
             </button>
           </div>
 

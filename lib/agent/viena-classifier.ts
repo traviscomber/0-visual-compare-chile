@@ -46,7 +46,11 @@ export class VienaClassifier {
     this.client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   }
 
-  async classify(imageBase64: string, mimeType?: string): Promise<VienaClassification> {
+  async classify(imageBase64?: string, mimeType?: string): Promise<VienaClassification> {
+    if (!imageBase64) {
+      return { codes: [], elementos_detectados: [], colores_dominantes: [], estilo_general: 'No aplica: análisis denominativo sin logo', raw_response: '', model_used: 'not-used', tokens_used: 0 }
+    }
+
     const userPrompt = `Analiza este logo y asigna los códigos Viena correspondientes.
 
 Responde ÚNICAMENTE con JSON válido (sin markdown, sin texto extra):
