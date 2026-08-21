@@ -41,25 +41,43 @@ export async function POST(request: NextRequest) {
     if (nombre.length > MAX_NAME_LENGTH) {
       return NextResponse.json({ error: `El nombre no puede superar ${MAX_NAME_LENGTH} caracteres.` }, { status: 400, headers: noStoreHeaders() })
     }
-    if (!payload.image.trim()) {
-      return NextResponse.json({ error: "La imagen es requerida." }, { status: 400, headers: noStoreHeaders() })
-    }
     if (descripcion.length > MAX_DESCRIPTION_LENGTH || industria.length > 240) {
       return NextResponse.json({ error: "Los campos de contexto exceden el largo permitido." }, { status: 400, headers: noStoreHeaders() })
     }
 
-    const mimeMatch = payload.image.match(/^data:(image\/[a-z0-9.+-]+);base64,/i)
-    const imageMimeType = (mimeMatch?.[1] ?? "image/png").toLowerCase()
-    if (!ALLOWED_IMAGE_TYPES.has(imageMimeType)) {
-      return NextResponse.json({ error: "Formato de imagen no soportado." }, { status: 415, headers: noStoreHeaders() })
+    const { data: cachedComparison } = !payload.image.trim()
+      ? await supabase
+          .from("comparisons")
+          .select("id, result_data")
+          .eq("user_id", user.id)
+          .eq("result_data->>marca", nombre)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : { data: null }
+
+    if (cachedComparison?.result_data) {
+      return NextResponse.json(
+        { ...cachedComparison.result_data, comparison_id: cachedComparison.id, cached: true },
+        { status: 200, headers: noStoreHeaders() },
+      )
     }
 
-    const cleanImage = payload.image.replace(/^data:image\/[a-z0-9.+-]+;base64,/i, "")
-    if (!/^[a-z0-9+/=\r\n]+$/i.test(cleanImage)) {
-      return NextResponse.json({ error: "La imagen no contiene base64 válido." }, { status: 400, headers: noStoreHeaders() })
-    }
-    if (cleanImage.length > MAX_IMAGE_BASE64_LENGTH) {
-      return NextResponse.json({ error: "Imagen demasiado grande. Máximo aproximado: 4,5 MB." }, { status: 413, headers: noStoreHeaders() })
+    let cleanImage: string | undefined
+    let imageMimeType: string | undefined
+    if (payload.image.trim()) {
+      const mimeMatch = payload.image.match(/^data:(image\/[a-z0-9.+-]+);base64,/i)
+      imageMimeType = (mimeMatch?.[1] ?? "image/png").toLowerCase()
+      if (!ALLOWED_IMAGE_TYPES.has(imageMimeType)) {
+        return NextResponse.json({ error: "Formato de imagen no soportado." }, { status: 415, headers: noStoreHeaders() })
+      }
+      cleanImage = payload.image.replace(/^data:image\/[a-z0-9.+-]+;base64,/i, "")
+      if (!/^[a-z0-9+/=\r\n]+$/i.test(cleanImage)) {
+        return NextResponse.json({ error: "La imagen no contiene base64 válido." }, { status: 400, headers: noStoreHeaders() })
+      }
+      if (cleanImage.length > MAX_IMAGE_BASE64_LENGTH) {
+        return NextResponse.json({ error: "Imagen demasiado grande. Máximo aproximado: 4,5 MB." }, { status: 413, headers: noStoreHeaders() })
+      }
     }
 
     const agent = new TrademarkAgent()
@@ -76,11 +94,13 @@ export async function POST(request: NextRequest) {
       .from("comparisons")
       .insert({
         user_id: user.id,
-        similarity_score: report.registrabilidad?.calidad?.confianza ?? 0,
+        similarity_score: typeof report.registrabilidad?.calidad?.confianza === "number" ? report.registrabilidad.calidad.confianza : 0,
         classification: report.informe.nivel_riesgo_global,
         signals: { source: "trademark-agent", pipeline_ms: report.pipeline_ms },
         recommendation: report.registrabilidad?.recomendacion ?? report.informe.recomendaciones?.[0] ?? null,
-        result_json: report,
+        result_data: { ...report, marca: nombre },
+        result_json: { ...report, marca: nombre },
+        brand_context: { marca: nombre, descripcion: descripcion || null, industria: industria || null, source: "trademark-agent" },
       })
       .select("id")
       .single()

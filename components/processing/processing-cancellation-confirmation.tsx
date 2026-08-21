@@ -7,16 +7,23 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 interface ProcessingCancellationConfirmationProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onConfirm: () => void
+  jobId: string
+  onConfirmed?: () => void
   loading?: boolean
 }
 
 export function ProcessingCancellationConfirmation({
   open,
   onOpenChange,
-  onConfirm,
+  jobId,
+  onConfirmed,
   loading = false,
 }: ProcessingCancellationConfirmationProps) {
+  const handleConfirm = async () => {
+    const response = await fetch("/api/account/processing-metrics", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ job_id: jobId }) })
+    if (response.ok) { onOpenChange(false); onConfirmed?.() }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -33,7 +40,7 @@ export function ProcessingCancellationConfirmation({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Continuar procesamiento
           </Button>
-          <Button type="button" variant="destructive" onClick={onConfirm} disabled={loading}>
+          <Button type="button" variant="destructive" onClick={() => void handleConfirm()} disabled={loading}>
             {loading ? "Cancelando..." : "Cancelar procesamiento"}
           </Button>
         </DialogFooter>
