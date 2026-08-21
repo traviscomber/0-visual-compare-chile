@@ -26,6 +26,8 @@ import { AnalysisWorkflowControls } from "@/components/app/analysis-workflow-con
 const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"]
 const MAX_FILE_BYTES = 4_500_000
 
+type PersistedTrademarkReport = TrademarkInsightReport & { comparison_id: string }
+
 function RiskBadge({ nivel }: { nivel: string }) {
   const normalized = nivel?.toUpperCase()
   if (normalized === "ALTO") {
@@ -56,7 +58,7 @@ export default function AgentePage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [nombre, setNombre] = useState("")
   const [loading, setLoading] = useState(false)
-  const [report, setReport] = useState<TrademarkInsightReport | null>(null)
+  const [report, setReport] = useState<PersistedTrademarkReport | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [activeHelp, setActiveHelp] = useState<string | null>(null)
   const [conceptModal, setConceptModal] = useState<"viena" | "niza" | "disponible" | "conflictos" | null>(null)
@@ -246,6 +248,7 @@ export default function AgentePage() {
             <p className="px-4 text-center text-xs leading-relaxed text-slate-500">{report.informe.disclaimer}</p>
 
             <AnalysisWorkflowControls
+              comparisonId={report.comparison_id}
               marca={report.marca}
               risk={report.informe.nivel_riesgo_global}
               resultCount={report.registrabilidad?.calidad.resultados_totales ?? 0}

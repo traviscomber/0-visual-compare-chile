@@ -72,14 +72,33 @@ export async function POST(request: NextRequest) {
       visualScore: payload.visualScore,
     })
 
+    const { data: savedComparison, error: saveError } = await supabase
+      .from("comparisons")
+      .insert({
+        user_id: user.id,
+        similarity_score: report.registrabilidad?.calidad?.confianza ?? 0,
+        classification: report.informe.nivel_riesgo_global,
+        signals: { source: "trademark-agent", pipeline_ms: report.pipeline_ms },
+        recommendation: report.registrabilidad?.recomendacion ?? report.informe.recomendaciones?.[0] ?? null,
+        result_json: report,
+      })
+      .select("id")
+      .single()
+
+    if (saveError || !savedComparison) {
+      console.error("[trademark-agent] persistence failed", saveError)
+      return NextResponse.json({ error: "El análisis terminó, pero no pudo registrarse en la base de datos." }, { status: 503, headers: noStoreHeaders() })
+    }
+
     console.info("[trademark-agent] completed", {
       userId: user.id,
+      comparisonId: savedComparison.id,
       durationMs: report.pipeline_ms,
       risk: report.informe.nivel_riesgo_global,
       inapiConfidence: report.registrabilidad?.calidad?.confianza ?? "no-disponible",
     })
 
-    return NextResponse.json(report, { status: 200, headers: noStoreHeaders() })
+    return NextResponse.json({ ...report, comparison_id: savedComparison.id }, { status: 200, headers: noStoreHeaders() })
   } catch (error) {
     console.error("[trademark-agent] failed", {
       userId: user.id,
