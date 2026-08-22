@@ -26,12 +26,14 @@ import {
   Cpu,
   Database,
   Terminal,
+  FlaskConical,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
   { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
-  { href: "/consulta-inapi", label: "Buscar en INAPI", icon: Database },
+  { href: "/consulta-inapi", label: "Marcas INAPI", icon: Database },
+  { href: "/patentes", label: "Patentes", icon: FlaskConical },
   { href: "/agente", label: "Analizar con logo", icon: Cpu },
   { href: "/dashboard/playground", label: "API Playground", icon: Terminal },
 ]
