@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/inapi-open-data",
+      "schedule": "10 8 * * *"
+    }
+  ]
+}
