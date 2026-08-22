@@ -6,8 +6,17 @@ __v0_jsx-dev-runtime.ts
 .v0-trash/
 .vercel/
 
-# Environment variables
-.env*.local
+# Supabase local CLI state (canonical config/migrations live in supabase/)
+.supabase/
+
+# Environment variables — never commit secrets
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Generated build state
+*.tsbuildinfo
 
 # Common ignores
 node_modules
@@ -16,5 +25,3 @@ artifacts/
 .DS_Store
 .vercel
 *.log
-
-.env.vercel.production
