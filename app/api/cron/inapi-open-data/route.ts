@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { syncCurrentYearInapiOpenData } from "@/lib/inapi/open-data-sync"
+import { syncCurrentYearPatentOpenData } from "@/lib/inapi/patent-open-data-sync"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -15,11 +16,16 @@ export async function GET(request: Request) {
 
   const startedAt = Date.now()
   try {
-    const summary = await syncCurrentYearInapiOpenData()
+    const [trademarks, patents] = await Promise.all([
+      syncCurrentYearInapiOpenData(),
+      syncCurrentYearPatentOpenData(),
+    ])
+
     return NextResponse.json({
       ok: true,
       durationMs: Date.now() - startedAt,
-      ...summary,
+      trademarks,
+      patents,
     })
   } catch (error) {
     console.error("[cron/inapi-open-data] sync failed", error)
