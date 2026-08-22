@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { searchInapi, type InapiMatchMode, type InapiSearchType } from "@/lib/inapi/client"
+import { searchInapiLocal, shouldVerifyInapiLive } from "@/lib/inapi/local-search"
 import { PRIVATE_NO_STORE_HEADERS, requireUser } from "@/lib/auth/server"
 import type { Marca } from "@/types/marca"
 
@@ -24,131 +25,134 @@ export async function GET(request: Request) {
   const validationError = validateSearch(query, rawType, rawMatchMode)
   if (validationError) return validationError
 
-  try {
-    const allResults = (await searchInapi({ query, type: rawType, matchMode: rawMatchMode })).map(normalizeInapiStatus)
-    const results = allResults.slice(0, MAX_RESULTS)
-    const durationMs = Date.now() - startedAt
+  if (rawType === "nombre") {
+    try {
+      const niza = searchParams.getAll("niza").flatMap((value) => value.split(",")).map((value) => value.trim()).filter(Boolean)
+      const local = await searchInapiLocal(query, niza, Math.min(MAX_RESULTS, 50))
+      const verifyLive = shouldVerifyInapiLive(local)
+      let liveResults: Marca[] | null = null
+      let liveError: string | null = null
 
-    await recordSearch({
-      supabase: auth.supabase,
-      userId: auth.user.id,
-      query,
-      type: rawType,
-      matchMode: rawMatchMode,
-      resultsCount: allResults.length,
-      durationMs,
-      status: "success",
-      metadata: { truncated: allResults.length > MAX_RESULTS, returned_count: results.length },
-    })
+      if (verifyLive) {
+        try {
+          liveResults = (await searchInapi({ query, type: rawType, matchMode: rawMatchMode })).map(normalizeInapiStatus)
+        } catch (error) {
+          liveError = classifyError(error)
+        }
+      }
 
-    return NextResponse.json(
-      {
-        results,
-        total: allResults.length,
-        returned: results.length,
-        truncated: allResults.length > MAX_RESULTS,
-        source: "inapi-live",
-        cached: false,
+      const durationMs = Date.now() - startedAt
+      const source = liveResults ? "inapi-local+live" : "inapi-local"
+      const results = liveResults ?? local.hits.map(localHitToMarca)
+
+      await recordSearch({
+        supabase: auth.supabase,
+        userId: auth.user.id,
+        query,
+        type: rawType,
+        matchMode: rawMatchMode,
+        resultsCount: results.length,
+        durationMs,
+        status: "success",
+        metadata: {
+          source,
+          local_count: local.hits.length,
+          live_verified: Boolean(liveResults),
+          live_error: liveError,
+          freshness: local.freshness,
+        },
+      })
+
+      return NextResponse.json({
+        results: results.slice(0, MAX_RESULTS),
+        total: results.length,
+        returned: Math.min(results.length, MAX_RESULTS),
+        truncated: results.length > MAX_RESULTS,
+        source,
+        liveVerified: Boolean(liveResults),
+        liveVerificationError: liveError,
+        freshness: local.freshness,
         query,
         type: rawType,
         matchMode: rawMatchMode,
         durationMs,
         generatedAt: new Date().toISOString(),
-      },
-      { headers: PRIVATE_NO_STORE_HEADERS },
-    )
+      }, { headers: PRIVATE_NO_STORE_HEADERS })
+    } catch (localError) {
+      console.error("[inapi/search] local layer failed, falling back live", localError)
+    }
+  }
+
+  try {
+    const allResults = (await searchInapi({ query, type: rawType, matchMode: rawMatchMode })).map(normalizeInapiStatus)
+    const results = allResults.slice(0, MAX_RESULTS)
+    const durationMs = Date.now() - startedAt
+
+    await recordSearch({ supabase: auth.supabase, userId: auth.user.id, query, type: rawType, matchMode: rawMatchMode,
+      resultsCount: allResults.length, durationMs, status: "success", metadata: { source: "inapi-live", truncated: allResults.length > MAX_RESULTS } })
+
+    return NextResponse.json({ results, total: allResults.length, returned: results.length, truncated: allResults.length > MAX_RESULTS,
+      source: "inapi-live", query, type: rawType, matchMode: rawMatchMode, durationMs, generatedAt: new Date().toISOString() },
+      { headers: PRIVATE_NO_STORE_HEADERS })
   } catch (error) {
     const durationMs = Date.now() - startedAt
     const errorCode = classifyError(error)
-
-    await recordSearch({
-      supabase: auth.supabase,
-      userId: auth.user.id,
-      query,
-      type: rawType,
-      matchMode: rawMatchMode,
-      resultsCount: 0,
-      durationMs,
-      status: "failed",
-      errorCode,
-      metadata: {},
-    })
-
-    console.error("[inapi/search] error", {
-      userId: auth.user.id,
-      type: rawType,
-      matchMode: rawMatchMode,
-      errorCode,
-      error: error instanceof Error ? error.message : String(error),
-    })
-
-    return NextResponse.json(
-      {
-        error: "INAPI no respondió correctamente. Intenta nuevamente más tarde.",
-        code: errorCode,
-        source: "inapi-live",
-      },
-      { status: 502, headers: PRIVATE_NO_STORE_HEADERS },
-    )
+    await recordSearch({ supabase: auth.supabase, userId: auth.user.id, query, type: rawType, matchMode: rawMatchMode,
+      resultsCount: 0, durationMs, status: "failed", errorCode, metadata: {} })
+    return NextResponse.json({ error: "INAPI no respondió correctamente. Intenta nuevamente más tarde.", code: errorCode, source: "inapi-live" },
+      { status: 502, headers: PRIVATE_NO_STORE_HEADERS })
   }
+}
+
+function localHitToMarca(hit: Awaited<ReturnType<typeof searchInapiLocal>>["hits"][number]): Marca {
+  return {
+    id: hit.sourceRecordId ?? hit.id,
+    nombre: hit.nombre,
+    solicitante: hit.solicitante ?? "",
+    numeroRegistro: hit.numeroRegistro ?? "",
+    estado: normalizeCanonicalStatus(hit.estado),
+    fecha: hit.fechaPresentacion ?? hit.fechaRegistro ?? "",
+    niza: hit.niza,
+    viena: [],
+    pais: "CL",
+    metadata: {
+      numSolicitud: hit.numeroSolicitud,
+      source: "inapi-local",
+      sourceUrl: hit.sourceUrl,
+      lastSyncedAt: hit.lastSyncedAt,
+      nameSimilarity: hit.nameSimilarity,
+      classOverlap: hit.classOverlap,
+      relevanceScore: hit.relevanceScore,
+    },
+  }
+}
+
+function normalizeCanonicalStatus(value: string | null): Marca["estado"] {
+  const normalized = normalizeStatusText(value ?? "")
+  if (["REGISTRADA", "CONCEDIDA"].includes(normalized)) return "Registrada"
+  if (["EN TRAMITE", "PENDIENTE", "SOLICITADA"].includes(normalized)) return "Pendiente"
+  if (["DENEGADA", "RECHAZADA"].includes(normalized)) return "Denegada"
+  return "No Vigente" as Marca["estado"]
 }
 
 function validateSearch(query: string, type: InapiSearchType, matchMode: InapiMatchMode) {
-  if (!query) {
-    return NextResponse.json({ error: "Debes ingresar un término de búsqueda.", code: "MISSING_QUERY" }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
-  }
-  if (query.length > MAX_QUERY_LENGTH) {
-    return NextResponse.json({ error: `La consulta no puede superar ${MAX_QUERY_LENGTH} caracteres.`, code: "QUERY_TOO_LONG" }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
-  }
-  if (!ALLOWED_TYPES.has(type)) {
-    return NextResponse.json({ error: "Tipo de consulta INAPI inválido.", code: "INVALID_TYPE" }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
-  }
-  if (!ALLOWED_MATCH_MODES.has(matchMode)) {
-    return NextResponse.json({ error: "Modo de coincidencia inválido.", code: "INVALID_MATCH_MODE" }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
-  }
-  if ((type === "solicitud" || type === "registro" || type === "clase" || type === "clase_niza") && !/^\d+$/.test(query)) {
+  if (!query) return NextResponse.json({ error: "Debes ingresar un término de búsqueda.", code: "MISSING_QUERY" }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
+  if (query.length > MAX_QUERY_LENGTH) return NextResponse.json({ error: `La consulta no puede superar ${MAX_QUERY_LENGTH} caracteres.`, code: "QUERY_TOO_LONG" }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
+  if (!ALLOWED_TYPES.has(type)) return NextResponse.json({ error: "Tipo de consulta INAPI inválido.", code: "INVALID_TYPE" }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
+  if (!ALLOWED_MATCH_MODES.has(matchMode)) return NextResponse.json({ error: "Modo de coincidencia inválido.", code: "INVALID_MATCH_MODE" }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
+  if ((type === "solicitud" || type === "registro" || type === "clase" || type === "clase_niza") && !/^\d+$/.test(query))
     return NextResponse.json({ error: "Este tipo de consulta acepta únicamente números.", code: "NUMERIC_QUERY_REQUIRED" }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
-  }
   return null
 }
 
-async function recordSearch({
-  supabase,
-  userId,
-  query,
-  type,
-  matchMode,
-  resultsCount,
-  durationMs,
-  status,
-  errorCode,
-  metadata,
-}: {
+async function recordSearch({ supabase, userId, query, type, matchMode, resultsCount, durationMs, status, errorCode, metadata }: {
   supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createClient>>
-  userId: string
-  query: string
-  type: InapiSearchType
-  matchMode: InapiMatchMode
-  resultsCount: number
-  durationMs: number
-  status: "success" | "failed"
-  errorCode?: string
-  metadata: Record<string, unknown>
+  userId: string; query: string; type: InapiSearchType; matchMode: InapiMatchMode; resultsCount: number; durationMs: number
+  status: "success" | "failed"; errorCode?: string; metadata: Record<string, unknown>
 }) {
-  const { error } = await supabase.from("search_history").insert({
-    user_id: userId,
-    query,
-    search_type: type,
-    results_count: resultsCount,
-    source: "inapi-live",
-    match_mode: matchMode,
-    status,
-    duration_ms: durationMs,
-    error_code: errorCode ?? null,
-    cached: false,
-    metadata,
-  })
-
+  const { error } = await supabase.from("search_history").insert({ user_id: userId, query, search_type: type, results_count: resultsCount,
+    source: String(metadata.source ?? "inapi-live"), match_mode: matchMode, status, duration_ms: durationMs, error_code: errorCode ?? null,
+    cached: String(metadata.source ?? "").startsWith("inapi-local"), metadata })
   if (error) console.error("[inapi/search] history insert error", error.message)
 }
 
@@ -161,12 +165,7 @@ function classifyError(error: unknown) {
 }
 
 function normalizeInapiStatus(marca: Marca): Marca {
-  const original = normalizeStatusText(String(marca.metadata?.estadoOriginal ?? marca.estado ?? ""))
-  if (["REGISTRADA", "CONCEDIDA"].includes(original)) return { ...marca, estado: "Registrada" }
-  if (["EN TRAMITE", "PENDIENTE", "SOLICITADA"].includes(original)) return { ...marca, estado: "Pendiente" }
-  if (["CADUCADO", "CADUCADA", "CANCELADO", "CANCELADA", "ANULADO", "ANULADA", "ABANDONADO", "ABANDONADA", "EXPIRADO", "EXPIRADA", "NO VIGENTE", "TENIDA POR NO PRESENTADA", "DESISTIDA"].includes(original)) return { ...marca, estado: "No Vigente" as Marca["estado"] }
-  if (["DENEGADA", "RECHAZADA"].includes(original)) return { ...marca, estado: "Denegada" }
-  return marca
+  return { ...marca, estado: normalizeCanonicalStatus(String(marca.metadata?.estadoOriginal ?? marca.estado ?? "")) }
 }
 
 function normalizeStatusText(value: string) {
