@@ -1,7 +1,8 @@
 "use client"
 
+import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
-import { Check, Loader2, Save, Tags } from "lucide-react"
+import { ArrowRight, Check, Loader2, Save, Search, Tags } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -55,11 +56,17 @@ export function AnalysisWorkflowControls({ comparisonId, marca, risk, resultCoun
   return <Card className="border-primary/20 bg-card/80">
     <CardHeader>
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div><CardTitle className="flex items-center gap-2 font-serif text-lg"><Tags className="size-4 text-primary" />Clasificación interna</CardTitle><CardDescription>Etiquetas reales para gestionar el caso de {marca}. Niza y Viena permanecen como datos registrales.</CardDescription></div>
+        <div><CardTitle className="flex items-center gap-2 font-serif text-lg"><Tags className="size-4 text-primary" />Seguimiento de la evaluación</CardTitle><CardDescription>Clasifica el caso o continúa investigando la misma marca sin volver a escribir el contexto.</CardDescription></div>
         <Badge variant="outline">ID real: {comparisonId.slice(0, 8)}</Badge>
       </div>
     </CardHeader>
     <CardContent className="flex flex-col gap-5">
+      <div className="rounded-xl border border-border bg-secondary/20 p-4">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <div><p className="text-sm font-medium text-foreground">Continuar con “{marca}”</p><p className="mt-1 text-xs text-muted-foreground">Abre Investigar en modo marca y ejecuta la búsqueda automáticamente.</p></div>
+          <Button asChild><Link href={`/investigar?mode=brand&q=${encodeURIComponent(marca)}&autorun=1`}><Search className="mr-2 h-4 w-4" />Investigar contexto <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+        </div>
+      </div>
       <div className="grid gap-3 md:grid-cols-4">{[["Capturar", true], ["Validar", true], ["Analizar", true], ["Registrar", saved]].map(([label, complete]) => <div key={String(label)} className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm"><span className="flex size-6 items-center justify-center rounded-full bg-muted text-muted-foreground">{complete ? <Check className="size-4" /> : "·"}</span><span className={complete ? "text-foreground" : "text-muted-foreground"}>{String(label)}</span></div>)}</div>
       {loading ? <p className="text-sm text-muted-foreground">Cargando catálogo desde la base de datos…</p> : <div className="flex flex-col gap-5">{Object.entries(grouped).map(([category, categoryLabels]) => <div key={category} className="flex flex-col gap-2"><p className="text-sm font-medium">{CATEGORY_LABELS[category] ?? category}</p><div className="flex flex-wrap gap-2">{categoryLabels.map((label) => <Button key={label.id} type="button" size="sm" variant={selected.includes(label.id) ? "default" : "outline"} title={label.description} onClick={() => toggle(label.id)}>{label.name}{suggested.has(label.name) && <span className="ml-1 text-xs opacity-70">Sugerida</span>}</Button>)}</div></div>)}</div>}
       <div className="flex flex-wrap items-center gap-3"><Button type="button" onClick={save} disabled={saving || selected.length === 0}>{saving ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Save data-icon="inline-start" />}Registrar etiquetas reales</Button>{saved && <Badge variant="secondary">Registrado en Supabase</Badge>}</div>
