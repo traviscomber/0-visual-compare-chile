@@ -1,61 +1,192 @@
 # Visual Compare Chile
 
-Plataforma de inteligencia marcaria para Chile con comparacion visual, consulta operativa, auth Supabase, historial, API v1 y base para organizaciones y monetizacion por API.
+Plataforma de inteligencia de propiedad industrial para Chile. Combina comparación visual de marcas, clasificación Niza/Viena, consulta INAPI, Patent Intelligence, Competitive Intelligence, alertas y una API protegida sobre Supabase + Vercel.
 
 ## Estado actual
 
-- Fase 0 completada.
-- Fase 1 en curso: datos reales, API keys, multi-tenant, audit log, rate limiting y exportacion masiva.
-- Cuota base actual del MVP API: `5,000` analisis de imagen por mes por API key.
-- Auth Supabase integrada.
-- Upload soporta JPG, PNG, WebP y TIFF hasta 50 MB.
-- La comparacion persiste score, clasificacion, recomendacion y senales forenses.
-- Historial y detalle estan protegidos por sesion.
-- Build de produccion y smoke local pasan.
-- En Vercel, el dominio canonico y el health endpoint responden correctamente.
+Producción corre en Vercel con Supabase como base de datos y autenticación. El sistema ya incluye:
 
-## Roadmap operativo
+- comparación visual de imágenes y persistencia de resultados;
+- clasificación Niza y Viena con OpenAI Structured Outputs;
+- router multimodelo `Luna -> Terra -> Sol` según confianza/costo;
+- tracking de tokens, tier utilizado, escalamiento y costo estimado por análisis;
+- mirror local de datos oficiales INAPI para marcas;
+- búsqueda local fuzzy/accent-insensitive con verificación live selectiva;
+- sincronización diaria de Datos Abiertos INAPI desde `datos.gob.cl`;
+- Patent Intelligence con solicitudes, registros e IPC;
+- Competitive Intelligence por empresa, inventores, concentración IPC y actividad reciente;
+- backfill autónomo de solicitudes históricas de patentes 2009-2025;
+- alertas competitivas por empresa o prefijo IPC;
+- health checks de revisión, configuración y frescura de datos;
+- API v1, auth Supabase, API keys, cuotas y rate limiting.
 
-La fuente de verdad del desarrollo es `ROADMAP.md`.
+## Arquitectura completa
 
-Resumen de fases:
+```mermaid
+flowchart TD
+    U[Usuario Web / Cliente API] --> AUTH[Supabase Auth / API Key]
+    AUTH --> WEB[Next.js App en Vercel]
 
-- Fase 0 - Completada: landing, dashboard, motor de comparacion, API v1, auth, historial y PDF report
-- Fase 1 - En curso: INAPI, API keys self-service, organizaciones, audit log, quotas y exportacion
-- Fase 2 - Planificada: registrabilidad IA, vigilancia, batch compare, webhooks, analytics, SDK
-- Fase 3 - Planificada: expansion LATAM, motor multimodal, white-label, marketplace juridico
+    WEB --> IMG[Upload de imágenes]
+    IMG --> CMP[Pipeline de comparación]
+    CMP --> VISION[Análisis visual / features]
+    CMP --> CLASS[Niza + Viena]
+    CLASS --> ROUTER{Router multimodelo}
+    ROUTER -->|default| LUNA[GPT-5.6 Luna]
+    ROUTER -->|baja confianza| TERRA[GPT-5.6 Terra]
+    ROUTER -->|caso crítico| SOL[GPT-5.6 Sol]
+    LUNA --> SO[Structured Outputs + Zod]
+    TERRA --> SO
+    SOL --> SO
+    SO --> REPORT[Informe / recomendación]
+    REPORT --> DB[(Supabase Postgres)]
+    VISION --> DB
+    CMP --> DB
 
-Criterio de salida de Fase 1:
+    WEB --> TM[Consulta de marcas]
+    TM --> LOCALTM[search_inapi_local / pg_trgm]
+    LOCALTM --> DB
+    TM -->|verificación selectiva| LIVE[Buscador INAPI live]
+    LIVE --> TM
 
-1. Sync INAPI con al menos 10K marcas reales
-2. Portal de API keys con emision, revocacion y uso en tiempo real
-3. Rate limiting efectivo sobre el limite configurado
+    WEB --> PAT[Patent Intelligence]
+    PAT --> PSEARCH[Búsqueda por título / solicitante / IPC]
+    PAT --> COMP[Competitive Intelligence]
+    PSEARCH --> DB
+    COMP --> DB
 
-## Flujo principal
+    WEB --> ALERTS[Alertas competitivas]
+    ALERTS --> WATCH[Watches por empresa / IPC]
+    WATCH --> DB
 
-1. Crear cuenta o iniciar sesion.
-2. Subir dos imagenes desde `/compare`.
-3. Revisar score, clasificacion y diff.
-4. Consultar historial en `/history`.
-5. Abrir detalle de cada comparacion en `/comparisons/[id]`.
+    CRON[Vercel Cron diario] --> CKAN[Datos Abiertos INAPI / datos.gob.cl]
+    CKAN --> SYNC_TM[Sync marcas año actual]
+    CKAN --> SYNC_PAT[Sync patentes año actual]
+    SYNC_TM --> DB
+    SYNC_PAT --> DB
+    SYNC_PAT --> DETECT[Detector de nuevas coincidencias]
+    DETECT --> DB
+    DETECT --> ALERTS
+    SYNC_PAT --> BACKFILL[Backfill histórico 2009-2025]
+    BACKFILL --> DB
+
+    DB --> HEALTH[/api/v1/health]
+    HEALTH --> OBS[Observabilidad / freshness / revisión]
+
+    WEB --> PDF[Reportes PDF]
+    WEB --> HISTORY[Historial y detalle]
+    PDF --> DB
+    HISTORY --> DB
+```
+
+## Flujo de análisis visual
+
+1. El usuario inicia sesión o usa una API key válida.
+2. Sube una o dos imágenes.
+3. El backend valida formato, tamaño y permisos.
+4. El pipeline extrae señales visuales y ejecuta clasificación Niza/Viena.
+5. Luna resuelve por defecto los casos de menor costo.
+6. Si la confianza cae bajo el umbral configurado, el caso escala a Terra.
+7. Sol se reserva para casos realmente ambiguos o de alto riesgo.
+8. Las respuestas pasan por schemas Zod/Structured Outputs; no se depende de parsing regex de JSON.
+9. Se guarda resultado, modelo, tier máximo, tokens, escalamiento, costo estimado y señales.
+10. El usuario recibe score, clasificación, recomendación, evidencia e historial.
+
+## Flujo de datos INAPI
+
+### Marcas
+
+La fuente primaria operacional es el mirror local en Supabase. El buscador live se usa sólo para verificación selectiva o fallback.
+
+```text
+Datos Abiertos INAPI -> Supabase -> búsqueda local fuzzy -> candidatos -> verificación live opcional
+```
+
+La búsqueda local usa `pg_trgm`, normalización de tildes y ranking por:
+
+- similitud de nombre;
+- nombre exacto normalizado;
+- overlap de clases Niza;
+- estado del expediente;
+- frescura del dato.
+
+### Patentes
+
+Patent Intelligence sincroniza solicitudes y registros oficiales y normaliza:
+
+- número de solicitud/registro;
+- título;
+- solicitantes;
+- inventores;
+- IPC;
+- país/región;
+- estado;
+- fechas de presentación, publicación, registro y expiración;
+- PCT y prioridades cuando existen.
+
+Competitive Intelligence agrega cartera observada, actividad reciente, IPC dominantes, inventores recurrentes y últimos movimientos.
+
+El crecimiento interanual sólo se habilita cuando la cobertura histórica oficial 2009-2025 está completa. Antes de eso el sistema devuelve `yearOverYearPct = null` para evitar conclusiones sobre un corpus incompleto.
+
+## Sincronización diaria
+
+Vercel ejecuta `/api/cron/inapi-open-data` una vez al día con `CRON_SECRET`.
+
+Orden operativo:
+
+1. refrescar marcas del año actual;
+2. refrescar patentes del año actual;
+3. detectar eventos para watches competitivos;
+4. ejecutar un batch acotado del histórico 2009-2025;
+5. registrar cada corrida en `inapi_sync_runs`.
+
+El orden evita que una patente histórica importada durante el backfill se presente falsamente como una solicitud nueva.
+
+## Alertas competitivas
+
+En `/patentes/alertas` cada usuario puede vigilar:
+
+- nombre de empresa/solicitante;
+- prefijo IPC.
+
+Los eventos son idempotentes por `watch + expediente`, están protegidos por RLS y sólo consideran registros incorporados después de crear la vigilancia y con fecha de presentación compatible con esa vigilancia.
+
+## Seguridad
+
+Principios actuales:
+
+- Supabase Auth para sesiones;
+- RLS en datos de usuario, watches y alertas;
+- `SUPABASE_SERVICE_ROLE_KEY` sólo en runtime server-side;
+- cron protegido con `Authorization: Bearer CRON_SECRET`;
+- APIs privadas con `no-store`;
+- Structured Outputs + Zod para contratos de IA;
+- endpoints administrativos separados de rutas públicas;
+- health sin exponer secretos;
+- datos históricos y sincronizaciones idempotentes;
+- ninguna credencial debe commitearse al repositorio.
+
+Controles versionados bajo `.github/`:
+
+- CI de TypeScript + build de producción sin secretos;
+- CodeQL;
+- Dependabot;
+- CODEOWNERS;
+- política `SECURITY.md`.
+
+GitHub Settings debe además mantener `main` protegido con PR obligatorio, checks requeridos y bloqueo de force-push/delete.
 
 ## Rutas principales
 
-- `/`
-- `/auth/login`
-- `/auth/sign-up`
-- `/dashboard`
-- `/compare`
-- `/history`
-- `/settings`
-- `/consulta`
-- `/panel`
-
-## Requisitos locales
-
-- Node.js 18+
-- pnpm
-- Variables de Supabase en `.env.local`
+- `/dashboard` — inicio operativo
+- `/compare` — comparación visual
+- `/history` — historial de comparaciones
+- `/consulta-inapi` — búsqueda de marcas INAPI
+- `/patentes` — Patent + Competitive Intelligence
+- `/patentes/alertas` — vigilancia competitiva
+- `/settings` — cuenta/configuración
+- `/dashboard/playground` — API Playground
+- `/api/v1/health` — health y frescura
 
 ## Variables de entorno
 
@@ -64,190 +195,102 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 NEXT_PUBLIC_SITE_URL=https://your-production-domain.vercel.app
+CRON_SECRET=long-random-secret
+OPENAI_API_KEY=your-openai-key
 ```
 
-`NEXT_PUBLIC_SITE_URL` no es secreto. Se usa para que `/api/health` y `/api/v1/health` publiquen el origen esperado y la URL exacta de callback que debe existir tambien en Supabase Auth.
+Opcionales para routing IA:
 
-## Instalar y correr
+```bash
+OPENAI_CLASSIFIER_MODEL=gpt-5.6-luna
+OPENAI_NIZA_MODEL=gpt-5.6-luna
+OPENAI_VIENA_MODEL=gpt-5.6-luna
+```
+
+Nunca usar valores reales de producción en archivos versionados.
+
+## Desarrollo local
+
+Requisitos:
+
+- Node.js 18+
+- pnpm
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-## Validacion local
+Validación reproducible sin secretos:
 
 ```bash
-pnpm check:env
-pnpm build
+pnpm exec tsc --noEmit
+pnpm build:raw
+```
+
+Validaciones operativas con entorno configurado:
+
+```bash
 pnpm smoke
-```
-
-## Gate de Fase 1
-
-Para validar el estado tecnico actual del roadmap sin depender de memoria del operador:
-
-```bash
 pnpm gate:phase1
+pnpm release:gate
 ```
 
-Ese gate ejecuta:
+## Operación INAPI
 
-1. `tsc --noEmit`
-2. `next build`
-3. Evidencia INAPI si existen `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`
-4. Verificacion de quota/429 si existe `QUOTA_VERIFY_API_KEY`
-5. Si no existe `QUOTA_VERIFY_API_KEY`, intenta crear una key fixture automaticamente cuando existen `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` y `FIXTURE_ORGANIZATION_ID`
-
-Las verificaciones 1 y 2 son requeridas.
-Las verificaciones 3 y 4 se marcan como `SKIP` cuando faltan credenciales del entorno.
-
-El gate escribe ademas un reporte JSON local en `artifacts/phase1-gate.json`.
-
-### Verificacion de quota en deploy
-
-Primero puedes crear una key de prueba con cuota baja:
+Sync oficial de marcas:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co \
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key \
-pnpm fixture:api-key --organizationId <uuid> --userId <uuid> --quotaDaily 2 --quotaMonthly 10
+pnpm sync:inapi:open-data
 ```
 
-Luego usa la `api_key` devuelta por ese comando:
+Herramientas existentes:
 
 ```bash
-QUOTA_VERIFY_API_KEY=sc_xxx \
-QUOTA_VERIFY_BASE_URL=https://v0-visual-compare-chile.vercel.app \
-pnpm verify:quota
-```
-
-### Evidencia de sync INAPI
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co \
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key \
 pnpm evidence:inapi
-```
-
-Para empujar volumen de manera repetible hacia el objetivo de `10K`, existe el preset:
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co \
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key \
-pnpm sync:inapi --preset phase1-10k --delayMs 400
-```
-
-Tambien puedes correrlo por ventanas para campañas largas:
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co \
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key \
-pnpm sync:inapi --preset phase1-10k --startIndex 0 --maxJobs 25 --delayMs 400
-```
-
-Y puedes pedir al repo que te sugiera la siguiente ventana pendiente segun `inapi_sync_runs`:
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co \
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key \
 pnpm plan:inapi --maxJobs 25
+pnpm monitor:inapi
+pnpm canary:inapi
 ```
-
-Desde `/settings`, el manager INAPI ahora tambien muestra:
-
-- cobertura de jobs `phase1-10k`
-- porcentaje completado del batch
-- siguiente ventana sugerida (`startIndex` / `maxJobs`)
-- accion rapida para aplicar esa ventana al formulario antes de correr el preset
-
-Ese preset mezcla:
-
-- clases Niza `01-45`
-- semillas nominales por alfabeto
-- semillas de solicitante frecuentes en Chile
-
-El resultado incluye:
-
-- `totalRecords`
-- `progressPct`
-- `reachedTarget`
-- cobertura en `trademark_record_niza`
-- cobertura en `trademark_record_viena`
-- ultima corrida de `inapi_sync_runs`
-
-## Smoke contra despliegue
-
-```bash
-SMOKE_BASE_URL=https://your-active-deployment.vercel.app pnpm smoke
-```
-
-Usa la URL exacta del deployment publico que quieras validar.
-
-## Auditoria de revision del deploy
-
-```bash
-ACTIVE_DEPLOYMENT_URL=https://your-active-deployment.vercel.app \
-CANONICAL_DEPLOYMENT_URL=https://your-canonical-domain.vercel.app \
-EXPECTED_REVISION=<git-sha> \
-EXPECTED_SUPABASE_PROJECT_REF=<supabase-ref> \
-EXPECTED_SITE_ORIGIN=https://your-canonical-domain.vercel.app \
-EXPECTED_CALLBACK_URL=https://your-canonical-domain.vercel.app/auth/callback \
-pnpm audit:deploy
-```
-
-Usa estas variables para verificar que el dominio publico realmente este sirviendo:
-
-- el commit esperado (`EXPECTED_REVISION`)
-- el proyecto Supabase correcto (`EXPECTED_SUPABASE_PROJECT_REF`)
-- el origen publico correcto (`EXPECTED_SITE_ORIGIN`)
-- la callback exacta publicada por la app (`EXPECTED_CALLBACK_URL`)
 
 ## Deploy
 
-1. Sube el branch correcto a GitHub.
-2. Configura las variables de entorno en Vercel.
-3. En Supabase, permite como redirect URL `https://<tu-dominio>/auth/callback` y las preview URLs que uses.
-4. Verifica que el dominio de produccion sea publico y no este bloqueado por Vercel SSO.
-5. Ejecuta el smoke sobre la URL publica real.
-6. Verifica login, upload, compare e historial en produccion.
+1. Trabajar en branch.
+2. Abrir PR a `main`.
+3. Esperar CI + CodeQL + preview Vercel.
+4. Revisar migraciones/impacto de datos cuando corresponda.
+5. Mergear sólo con checks verdes.
+6. Esperar deploy de producción.
+7. Validar `/api/v1/health` y flujos críticos.
 
-## Health contract de deploy
+## Health contract
 
-El endpoint `/api/v1/health` debe exponer como minimo:
+`/api/v1/health` permite verificar, sin exponer secretos:
 
-- `revision`
-- `host`
-- `config.supabase_public_env`
-- `config.supabase_service_env`
-- `config.supabase_url_host`
-- `config.supabase_project_ref`
-- `config.site_origin`
-- `config.callback_urls`
+- revisión Git servida;
+- host y origen esperado;
+- configuración de Supabase;
+- callbacks de auth;
+- frescura del mirror INAPI de marcas;
+- frescura del mirror INAPI de patentes.
 
-Eso permite verificar en un solo request:
+Un corpus INAPI fuera del threshold de frescura debe degradar el health para que una falla de sincronización no pase inadvertida.
 
-- que Vercel esta sirviendo el commit correcto
-- que Supabase publico y service role existen
-- que el proyecto Supabase inferido desde `NEXT_PUBLIC_SUPABASE_URL` es el esperado
-- que la callback `/auth/callback` publicada por la app coincide con lo que debe configurarse en Supabase Auth
+## Fuente de datos
 
-## Estado Vercel auditado
+Los mirrors de marcas y patentes usan como fuente masiva los Datos Abiertos oficiales publicados por INAPI en `datos.gob.cl`. El buscador web INAPI no es tratado como API estable ni como fuente primaria para cargas masivas.
 
-Auditado el 22 de agosto de 2026:
+## Política de cambios
 
-- Dominio canonico de produccion:
-  - `https://v0-visual-compare-chile.vercel.app/`
-- Health endpoint canonico:
-  - `https://v0-visual-compare-chile.vercel.app/api/v1/health`
-  - Respuesta verificada: `200 OK`
-- Produccion servia la revision `403a553fb6031e47c29c2fa42157fe6707ae7daa` al momento de la auditoria.
-- Los previews del PR de limpieza se validan por separado antes de mergear a `main`.
+- no hacer cambios directos a `main`;
+- cambios de schema mediante migraciones reproducibles;
+- no marcar un sync como exitoso si quedó parcial;
+- no publicar métricas de precisión/costo sin evidencia observable;
+- mantener fallbacks reversibles para IA e INAPI;
+- todo cambio de runtime debe pasar preview Vercel antes de merge.
 
-## Notas
+## Documentación relacionada
 
-- `app/demo` es una vista comercial de apoyo, no el flujo core.
-- `app/consulta` usa la capa compartida del API Portal (`/api/v1/search`, `/api/v1/search/niza`, `/api/v1/search/viena`).
-- El plan activo vive en `ROADMAP.md`.
-- `auth/signup` redirige a `/auth/sign-up`.
-- El archivo `proxy.ts` mantiene el refresh de sesion y la proteccion de rutas para Next.js 16.
+- `ROADMAP.md`
+- `docs/AI_RND_EVAL_PLAN.md`
+- `SECURITY.md`
