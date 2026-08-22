@@ -32,9 +32,9 @@ import { cn } from "@/lib/utils"
 
 const navItems = [
   { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
-  { href: "/agente", label: "Evaluar", icon: Cpu },
+  { href: "/evaluar", label: "Evaluar", icon: Cpu },
   { href: "/investigar", label: "Investigar", icon: Search },
-  { href: "/patentes/alertas", label: "Monitorear", icon: BellRing },
+  { href: "/monitorear", label: "Monitorear", icon: BellRing },
 ]
 
 const secondaryNavItems = [
