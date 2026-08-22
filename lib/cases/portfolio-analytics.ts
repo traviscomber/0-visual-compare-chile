@@ -1,5 +1,5 @@
 export type PortfolioCase={id:string;title:string;status:string;created_at:string;updated_at:string}
-export type PortfolioReview={id:string;case_id:string;status:"pending"|"approved"|"changes_requested"|"cancelled";created_at:string;responded_at:string|null;deadline_at:string|null;governance_round_id:string|null}
+export type PortfolioReview={id:string;case_id:string;reviewer_id:string;status:"pending"|"approved"|"changes_requested"|"cancelled";created_at:string;responded_at:string|null;deadline_at:string|null;governance_round_id:string|null}
 export type PortfolioEvent={case_id:string;event_type:string;payload:Record<string,unknown>|null;occurred_at:string}
 
 const HOUR=3_600_000
@@ -42,35 +42,10 @@ export function buildPortfolioAnalytics(input:{cases:PortfolioCase[];reviews:Por
   const activeCases=input.cases.filter(c=>c.status!=="decided"&&c.status!=="archived").length
 
   return {
-    historical:{
-      avgReviewResponseHours:avg(responseHours),
-      medianReviewResponseHours:median(responseHours),
-      responseSample:responseHours.length,
-      slaOnTimeRate:withDeadline.length?onTime.length/withDeadline.length:null,
-      slaSample:withDeadline.length,
-      avgDecisionCycleHours:avg(cycleHours),
-      medianDecisionCycleHours:median(cycleHours),
-      decisionSample:cycleHours.length,
-      decisionsLast30Days:decisions30,
-    },
-    live:{
-      pendingReviews:pending.length,
-      overdueReviews:overduePending.length,
-      avgWaitingHours:avg(pendingHours),
-      medianWaitingHours:median(pendingHours),
-      blockedCases:new Set(unresolvedBlocked.map(r=>r.case_id)).size,
-      avgBlockedHours:avg(blockedHours),
-      activeCases,
-    },
+    historical:{avgReviewResponseHours:avg(responseHours),medianReviewResponseHours:median(responseHours),responseSample:responseHours.length,slaOnTimeRate:withDeadline.length?onTime.length/withDeadline.length:null,slaSample:withDeadline.length,avgDecisionCycleHours:avg(cycleHours),medianDecisionCycleHours:median(cycleHours),decisionSample:cycleHours.length,decisionsLast30Days:decisions30},
+    live:{pendingReviews:pending.length,overdueReviews:overduePending.length,avgWaitingHours:avg(pendingHours),medianWaitingHours:median(pendingHours),blockedCases:new Set(unresolvedBlocked.map(r=>r.case_id)).size,avgBlockedHours:avg(blockedHours),activeCases},
   }
 }
 
-export function formatDuration(hours:number|null){
-  if(hours===null||!Number.isFinite(hours))return "Sin muestra"
-  if(hours<1)return `${Math.max(1,Math.round(hours*60))} min`
-  if(hours<48)return `${hours.toFixed(hours<10?1:0)} h`
-  const days=hours/24
-  return `${days.toFixed(days<10?1:0)} d`
-}
-
+export function formatDuration(hours:number|null){if(hours===null||!Number.isFinite(hours))return "Sin muestra";if(hours<1)return `${Math.max(1,Math.round(hours*60))} min`;if(hours<48)return `${hours.toFixed(hours<10?1:0)} h`;const days=hours/24;return `${days.toFixed(days<10?1:0)} d`}
 export function formatRate(rate:number|null){return rate===null?"Sin muestra":`${Math.round(rate*100)}%`}
