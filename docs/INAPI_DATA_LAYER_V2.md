@@ -26,7 +26,7 @@ On 2026-08-22 the 2026 official INAPI open-data resources were pulled from `dato
 - Duplicate non-null `numero_solicitud` count after reconciliation: 0.
 - INAPI corpus now contains 113,334 records, including 48,220 canonical open-data records.
 
-The official `Solicitudes de Marcas` package declares daily frequency. At refresh time its CKAN package metadata had been modified on 2026-08-21 and the 2026 applications resource on 2026-08-20. This official open-data channel is now the canonical bulk-refresh source; the live trademark search remains the verification channel.
+The official `Solicitudes de Marcas` package declares daily frequency. At refresh time its CKAN package metadata had been modified on 2026-08-21 and the 2026 applications resource on 2026-08-20. This official open-data channel is now the canonical bulk-refresh source; the live trademark search remains the verification channel for high-value or stale evidence.
 
 ## Performance evidence
 
