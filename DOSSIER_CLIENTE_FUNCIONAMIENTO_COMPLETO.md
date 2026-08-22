@@ -1,264 +1,169 @@
 # Visual Compare Chile
-## Dossier de funcionamiento y propuesta de valor
+## Dossier final de funcionamiento, alcance y entrega
 
-**Documento para presentación al cliente**  
-**Versión:** 1.0  
-**Fecha:** 6 de agosto de 2026
+**Documento para entrega al cliente**  
+**Versión:** 2.0  
+**Fecha de corte:** 22 de agosto de 2026
 
 ---
 
 ## 1. Resumen ejecutivo
 
-Visual Compare Chile es una plataforma para apoyar el análisis de marcas mediante dos capacidades complementarias:
+Visual Compare Chile es una plataforma de inteligencia de propiedad industrial para apoyar análisis preliminar de marcas, comparación visual, consulta de antecedentes oficiales, clasificación Niza/Viena, Patent Intelligence, Competitive Intelligence y vigilancia competitiva.
 
-1. **Comparación visual de imágenes:** permite comparar logos, diseños y otros elementos gráficos, identificando coincidencias exactas, duplicados cercanos y similitudes visuales.
-2. **Consulta y explotación de información de marcas:** permite buscar antecedentes de marcas y trabajar sobre una base de datos local sincronizada con información de INAPI, incluyendo clasificaciones Niza y Viena.
+La solución combina una aplicación web, una API v1, una base local sincronizada con fuentes oficiales INAPI, capacidades de IA multimodelo y trazabilidad persistente. Su objetivo es reducir trabajo manual, mejorar velocidad de investigación y conservar evidencia suficiente para revisión humana.
 
-La solución no se limita a mostrar un resultado aislado. Construye un flujo trazable: recibe la imagen o consulta, procesa la información, calcula señales de similitud, conserva el resultado y entrega una recomendación para revisión humana.
-
-El principal diferencial técnico es una **política de consumo inteligente**, denominada internamente *tokenless / smart spend*: el sistema evita gastar llamadas externas, CPU, almacenamiento y cuotas cuando puede reutilizar información ya disponible. No significa que una API externa opere sin autenticación; significa que se consume únicamente cuando es necesario y con controles de costo y rendimiento.
+Los resultados son orientativos. La plataforma no sustituye una decisión de INAPI ni una opinión jurídica profesional.
 
 ---
 
-## 2. Recorrido completo del sitio
+## 2. Capacidades entregadas
 
-### 2.1 Acceso seguro
+### Marcas
 
-El usuario ingresa mediante autenticación de sesión. La plataforma separa:
+- evaluación preliminar por nombre;
+- carga opcional de logo/signo;
+- clasificación Niza;
+- clasificación Viena para elementos figurativos;
+- antecedentes INAPI trazables;
+- resumen ejecutivo y nivel de riesgo;
+- comparación visual de imágenes;
+- historial y detalle persistido.
 
-- La experiencia web para usuarios del portal.
-- Las integraciones externas mediante API keys con cuotas configurables.
-- Las funciones administrativas de sincronización, diagnóstico y operación.
+### Datos oficiales
 
-Las claves API se almacenan protegidas mediante hash, pueden tener expiración, se pueden revocar y mantienen registro de último uso.
+- mirror local de marcas INAPI en Supabase;
+- búsqueda fuzzy y tolerante a tildes;
+- verificación live selectiva;
+- sincronización automática diaria desde Datos Abiertos de INAPI/datos.gob.cl;
+- health de frescura de datos.
 
-### 2.2 Carga de imágenes
+### Patentes
 
-El usuario puede cargar imágenes en formatos habituales como JPEG, PNG, WebP y TIFF, con validación de tipo y tamaño. Durante la carga se generan metadatos técnicos y huellas de imagen que luego permiten evitar procesamiento repetido.
+- búsqueda por título/tecnología;
+- búsqueda por solicitante/empresa;
+- filtros IPC;
+- solicitantes, inventores, estados y fechas;
+- Competitive Intelligence por empresa;
+- backfill histórico autónomo 2009–2025;
+- alertas competitivas por empresa o prefijo IPC.
 
-El sistema contempla controles de acceso, almacenamiento privado, límites de carga y protección contra abusos.
+### Integración y operación
 
-### 2.3 Comparación visual
-
-El motor combina distintas señales:
-
-- Coincidencia exacta mediante SHA-256.
-- Similitud perceptual mediante pHash y distancia de Hamming.
-- Comparación de dimensiones, formato y tamaño.
-- Clasificación del resultado en cinco niveles.
-
-La salida incluye un porcentaje de similitud, señales que explican el resultado y una recomendación operativa:
-
-| Resultado | Interpretación | Recomendación |
-|---|---|---|
-| `exact_match` | Coincidencia exacta o prácticamente idéntica | `REJECT_DUPLICATE` |
-| `near_duplicate` | Copia o variación mínima | `REVIEW` |
-| `visually_similar` | Similitud visual relevante | `REVIEW` |
-| `partially_similar` | Coincidencias parciales | `REVIEW` |
-| `different` | No se observa similitud relevante | `APPROVE` |
-
-La recomendación es una ayuda para el análisis; no reemplaza la revisión jurídica o técnica definitiva.
-
-### 2.4 Consulta de marcas
-
-La plataforma permite consultar antecedentes sobre marcas registradas y solicitudes. La información se normaliza para facilitar búsquedas, filtros y comparación histórica.
-
-El sistema contempla búsquedas por nombre y una estructura preparada para búsquedas por solicitante, registro y clasificación. El estado de cada modalidad debe validarse según la versión desplegada y la configuración de la API.
-
-### 2.5 Resultados, historial y trazabilidad
-
-Cada operación relevante puede conservar:
-
-- Consulta realizada.
-- Fecha y duración.
-- Resultado obtenido.
-- Registros insertados o actualizados.
-- Señales de comparación.
-- Consumo de cuota.
-- Estado final y eventuales errores.
-
-Esta trazabilidad permite explicar cómo se obtuvo un resultado y facilita auditoría, soporte y mejora continua.
+- API v1;
+- API keys, cuotas y rate limiting;
+- health endpoint;
+- Vercel Cron;
+- observabilidad de sync;
+- CI TypeScript + build;
+- CodeQL;
+- Dependabot;
+- CODEOWNERS;
+- política de seguridad versionada.
 
 ---
 
-## 3. Información sincronizada desde INAPI y fuentes oficiales
+## 3. Arquitectura resumida
 
-### 3.1 Qué se construyó
-
-El proyecto incorpora un pipeline de sincronización compuesto por:
-
-- Cliente de consulta a la fuente oficial.
-- Gestión de sesión y límites entre solicitudes.
-- Parser y reparación de problemas de codificación.
-- Normalización de estados.
-- Deduplicación mediante inserción/actualización.
-- Extracción de clasificaciones Niza y Viena.
-- Registro de cada ciclo de sincronización.
-- Reintentos y seguimiento de trabajos.
-
-La documentación técnica del ciclo registra **66.595 registros de marcas** y **177 ejecuciones completadas**, correspondientes a la evidencia disponible al momento de la prueba documentada. Estas cifras deben entenderse como una fotografía del entorno de datos de esa ejecución y no como una promesa de crecimiento automático permanente.
-
-### 3.2 Diario Oficial
-
-El sistema considera el Diario Oficial dentro del flujo de fuentes oficiales y seguimiento de publicaciones relacionadas con marcas. La implementación actual debe presentarse con precisión: el código y la documentación disponible evidencian un pipeline de extracción/sincronización conectado al buscador oficial de INAPI y preparado para el flujo de publicaciones oficiales; no debe comunicarse como una garantía de actualización diaria independiente si esa tarea programada no está habilitada en el entorno productivo.
-
-El beneficio de esta integración es contar con una base operativa propia, normalizada y consultable, en lugar de depender de una llamada remota para cada búsqueda.
-
-### 3.3 Beneficio de haber extraído la data
-
-La extracción y persistencia de datos produce beneficios concretos:
-
-1. **Velocidad:** las búsquedas sobre la base local evitan repetir toda la consulta remota.
-2. **Continuidad:** el portal puede seguir trabajando sobre datos ya sincronizados aunque la fuente externa esté lenta o temporalmente no disponible.
-3. **Histórico:** se puede analizar evolución de marcas, estados, solicitantes y clasificaciones.
-4. **Menor presión sobre INAPI:** se reducen solicitudes repetidas y se respetan pausas entre llamadas.
-5. **Consistencia:** las respuestas se normalizan y se pueden comparar bajo una misma estructura.
-6. **Trazabilidad:** cada ciclo registra cuándo se ejecutó, qué consultó y cuántos registros insertó o actualizó.
-7. **Base para alertas:** la información persistida permite detectar nuevos registros, cambios de estado y posibles conflictos.
-8. **Escalabilidad:** las consultas posteriores se apoyan en índices, paginación y caché en vez de descargar nuevamente el universo de datos.
-
-En la prueba documentada, una consulta local se estimó en el rango de decenas de milisegundos, frente a consultas remotas del orden de cientos o miles de milisegundos. El rendimiento exacto depende de índices, carga y entorno.
-
----
-
-## 4. Política “tokenless / smart spend”
-
-### 4.1 Qué significa
-
-En este proyecto, *tokenless* no significa una API sin seguridad ni una promesa de costo cero. Es el nombre interno de una política de **uso eficiente de recursos**:
-
-> No consumir una llamada externa, un ciclo de CPU, una cuota o un procesamiento costoso si el sistema puede reutilizar un resultado válido que ya posee.
-
-La autenticación de integraciones externas continúa protegida mediante API keys y cuotas. La optimización opera en la cantidad y calidad de las llamadas, no eliminando controles de seguridad.
-
-### 4.2 Ciclo de decisión eficiente
-
-```text
-1. Validar entrada y permisos
-2. Revisar caché vigente
-3. Consultar índices y base local
-4. Reutilizar resultado si está disponible
-5. Consultar fuente externa solo si falta información
-6. Procesar por lotes y respetar pausas
-7. Persistir respuesta, metadatos y huellas
-8. Entregar resultado y actualizar métricas
+```mermaid
+flowchart LR
+  U[Usuario / API] --> A[Auth]
+  A --> V[Next.js / Vercel]
+  V --> M[Marcas + comparación]
+  V --> P[Patentes + inteligencia]
+  M --> AI[IA Luna -> Terra -> Sol]
+  M --> INAPI[INAPI local-first]
+  P --> DB[(Supabase)]
+  AI --> DB
+  INAPI --> DB
+  C[Vercel Cron] --> O[datos.gob.cl / INAPI]
+  O --> DB
+  DB --> H[Health / historial / alertas]
 ```
 
-### 4.3 Controles implementados
+---
 
-- Caché con TTL diferenciado según el tipo de resultado.
-- Consultas locales antes de acudir a INAPI.
-- Deduplicación y actualización incremental.
-- Paginación y límites máximos.
-- Lotes de trabajo para sincronizaciones extensas.
-- Pausas entre solicitudes para no saturar la fuente externa.
-- Cuotas diarias y mensuales por API key.
-- Rate limiting y respuesta `429` cuando corresponde.
-- Reintentos controlados y backoff ante fallos.
-- Cancelación y seguimiento de jobs de procesamiento.
-- Persistencia de hashes y metadatos para no recalcular innecesariamente.
-- Registro de duración, estado y consumo para detectar desperdicio.
+## 4. IA y control de costo
 
-### 4.4 Resultado para el cliente
+El sistema utiliza un router multimodelo orientado a costo/confianza:
 
-Esta política permite:
+1. **Luna** como tier por defecto para volumen;
+2. **Terra** cuando la confianza no alcanza el umbral;
+3. **Sol** sólo para casos ambiguos o críticos.
 
-- Reducir costos variables y consumo de cuotas.
-- Disminuir dependencia de servicios externos.
-- Evitar recalcular imágenes ya procesadas.
-- Mantener tiempos de respuesta previsibles.
-- Proteger la estabilidad de la plataforma.
-- Escalar de forma responsable antes de aumentar infraestructura.
+Las respuestas se validan mediante Structured Outputs y Zod. Se evita depender de JSON libre o parsers regex. El pipeline puede registrar modelo, tier, tokens, escalamiento y costo estimado.
 
-La cifra de ahorro debe medirse continuamente en producción. Por eso el sistema registra uso, tiempos, resultados de caché y ejecuciones de sincronización, en vez de basarse solo en estimaciones.
+Este diseño permite mantener el costo medio bajo sin renunciar a modelos de mayor capacidad cuando realmente agregan valor.
 
 ---
 
-## 5. API y capacidades de integración
+## 5. INAPI y continuidad operacional
 
-La API v1 permite integrar la plataforma con otros sistemas mediante endpoints para:
+La arquitectura de marcas es local-first. La consulta normal se realiza sobre Supabase y sólo verifica INAPI live cuando corresponde. Esto reduce dependencia de un endpoint web no diseñado como API pública estable.
 
-- Health check.
-- Carga de imágenes.
-- Comparación de imágenes.
-- Consulta de comparaciones históricas.
-- Detalle de una comparación.
-- Estadísticas de uso.
-- Búsqueda de marcas.
-- Análisis visual avanzado, según configuración del entorno.
+La sincronización diaria utiliza los Datos Abiertos oficiales. El health marca la frescura de marcas y patentes; si la fuente supera el threshold operativo, el sistema puede reportarse degradado.
 
-Las API keys son por organización, se almacenan como hash, admiten revocación y cuotas configurables. El API Playground permite probar endpoints, observar respuestas, tiempos y encabezados de cuota sin construir primero una integración externa.
-
-La experiencia web no requiere que el usuario copie tokens para realizar su trabajo diario; la complejidad de autenticación y consumo queda encapsulada por la aplicación. Para integraciones máquina a máquina sí se utiliza una API key explícita.
+Para patentes, el cron actualiza el año vigente, detecta alertas y luego avanza el backfill histórico. Ese orden evita presentar patentes antiguas como eventos nuevos.
 
 ---
 
-## 6. Funcionalidades adicionales de valor
+## 6. Seguridad
 
-Además del alcance central, la plataforma cuenta con capacidades que pueden aportar valor operativo:
+La plataforma implementa:
 
-- API v1 documentada y API Playground.
-- Procesamiento en segundo plano con estados de trabajo.
-- Reintentos y cancelación de trabajos.
-- Métricas de procesamiento.
-- Historial de consultas y comparaciones.
-- Auditoría de sincronizaciones.
-- Clasificaciones Niza y Viena.
-- Panel administrativo para operaciones INAPI.
-- Gestión de API keys, cuotas y expiración.
-- Agente para análisis de elementos figurativos, según configuración.
-- Reportes y exportaciones como línea de evolución del producto.
+- Supabase Auth;
+- RLS para datos privados y alertas;
+- service role sólo server-side;
+- `CRON_SECRET` para el job diario;
+- API keys protegidas para integraciones;
+- no exposición de secretos en health;
+- CI y análisis de seguridad del código;
+- validación estructurada de outputs de IA.
 
-Estas capacidades permiten transformar una herramienta de consulta en una plataforma operativa, integrable y medible.
+Las cuentas administrativas de GitHub, Vercel, Supabase, OpenAI y DNS deben quedar bajo control formal del cliente o del responsable acordado.
 
 ---
 
-## 7. Matriz de estado y desviaciones
+## 7. Recorrido recomendado para demostración
 
-| Área | Estado comunicado | Evidencia | Desviación o consideración |
-|---|---|---|---|
-| Autenticación web | Implementada | Sesiones y rutas protegidas | Validar configuración final de producción |
-| Comparación de imágenes | Implementada | SHA-256, pHash y metadatos | La decisión final requiere revisión humana |
-| API de imágenes | Implementada | Upload, compare, historial y usage | Requiere API key para consumo externo |
-| Búsqueda por nombre | Probada | Respuesta HTTP 200 en ciclo documentado | Mantener pruebas de regresión |
-| Búsqueda por solicitante/registro/clase | Parcial según prueba | La prueba documentada devolvió HTTP 400 | Corregir validación o habilitación de tipos |
-| Data sincronizada | Implementada | 66.595 registros en evidencia de ciclo | Actualizar cifras conforme continúe la ingesta |
-| Niza/Viena | Estructura implementada | Tablas y extracción en pipeline | Validar cobertura efectiva por registro |
-| Caché y consumo eficiente | Implementada | TTL, consultas locales, cuotas y jobs | Medir ahorro real en producción |
-| Diario Oficial | Flujo contemplado | Pipeline oficial y documentación de integración | Confirmar job independiente y frecuencia diaria |
-| Dashboard de auditoría | Parcial | Auditoría persistida | Falta visualización completa si el cliente la requiere |
-| Exportación CSV | En evolución | Datos listos para exportar | Agregar interfaz si es requisito contractual |
+1. iniciar sesión;
+2. abrir `/dashboard`;
+3. ejecutar una evaluación por nombre en `/agente`;
+4. repetir con logo para mostrar Viena y análisis visual;
+5. abrir una búsqueda INAPI y explicar local-first + fuente/frescura;
+6. mostrar historial/detalle;
+7. abrir `/patentes` y buscar una tecnología o empresa;
+8. abrir perfil competitivo;
+9. crear una vigilancia en `/patentes/alertas`;
+10. mostrar `/api/v1/health` y explicar sincronización automática;
+11. mostrar API Playground si la entrega incluye integración.
 
 ---
 
-## 8. Guion sugerido para la demostración
+## 8. Estado de producción al corte
 
-1. Ingresar al portal con un usuario autorizado.
-2. Cargar una imagen de marca.
-3. Mostrar validación, metadatos y huellas generadas.
-4. Compararla con otra imagen.
-5. Explicar el porcentaje, clasificación, señales y recomendación.
-6. Buscar una marca en la base local.
-7. Mostrar el resultado y su clasificación Niza/Viena cuando esté disponible.
-8. Abrir el detalle y explicar la trazabilidad.
-9. Mostrar el historial o las métricas de uso.
-10. Abrir API Playground y ejecutar health, usage o search.
-11. Mostrar cómo las cuotas y encabezados hacen visible el consumo.
-12. Explicar el ciclo smart spend: caché, base local, consulta externa solo cuando es necesaria.
-13. Mostrar el panel de sincronización y explicar insertados, actualizados, duración y estado.
+La revisión productiva vigente al cierre de la documentación responde correctamente en Vercel. El health se verificó `200 OK`, con mirrors de marcas y patentes en estado `fresh` y sincronización automática configurada.
+
+El repositorio cuenta además con checks independientes de Vercel para TypeScript y build productivo, y CodeQL para JavaScript/TypeScript.
 
 ---
 
-## 9. Cierre para el cliente
+## 9. Documentación final de entrega
 
-Visual Compare Chile entrega una base tecnológica sólida para comparar imágenes y apoyar la evaluación de marcas con información oficial sincronizada. Su valor no está únicamente en el algoritmo de similitud: está en combinar análisis visual, datos históricos, trazabilidad, API, seguridad y una arquitectura que prioriza el uso responsable de recursos.
+La entrega completa vive en:
 
-La política *tokenless / smart spend* permite crecer gastando bien: reutilizar lo que ya fue calculado, consultar fuentes externas solo cuando agrega valor, procesar en lotes, controlar cuotas y medir cada operación. De esta forma, la plataforma queda preparada para aumentar cobertura y automatización sin convertir cada búsqueda en una llamada costosa o innecesaria.
+- `docs/entrega-cliente/README.md`
+- `docs/entrega-cliente/MANUAL_USUARIO.md`
+- `docs/entrega-cliente/ARQUITECTURA_OPERACION.md`
+- `docs/entrega-cliente/SEGURIDAD_MANTENIMIENTO.md`
+- `docs/entrega-cliente/CHECKLIST_ACEPTACION.md`
 
-**Mensaje principal:** una solución funcional, integrable y orientada a operación real, con datos propios y consumo eficiente como principio de diseño.
+La documentación técnica complementaria incluye `README.md`, `API_V1_DOCUMENTATION.md`, `SECURITY.md`, `ROADMAP.md` y los documentos de arquitectura del repositorio.
 
 ---
 
-## Nota de alcance
+## 10. Cierre
 
-Este documento distingue entre capacidades implementadas, capacidades verificadas en pruebas y capacidades preparadas para evolución. Antes de enviarlo como acta contractual, conviene actualizar las cifras de registros, fecha de última sincronización, frecuencia efectiva del Diario Oficial y estado de los tipos de búsqueda conforme al entorno productivo final.
+Visual Compare Chile se entrega como una plataforma operativa y extensible, no como una demo aislada. La combinación de datos oficiales, búsqueda local, IA estructurada, patentes, alertas, API, sincronización automática, observabilidad y controles de seguridad permite operar el producto con trazabilidad y una base clara para evolución futura.
+
+**Mensaje para el cliente:** la plataforma centraliza investigación de propiedad industrial y convierte procesos repetitivos en un flujo más rápido, auditable y medible, manteniendo siempre la revisión profesional como última instancia.
