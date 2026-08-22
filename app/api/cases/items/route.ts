@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   if (!caseId) return NextResponse.json({ error: "Falta caseId." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
 
   const [{ data: caseRow, error: caseError }, { data: items, error: itemsError }] = await Promise.all([
-    auth.supabase.from("cases").select("id,title,status,priority,context_type,context_query,decision_summary,notes,created_at,updated_at").eq("id", caseId).single(),
+    auth.supabase.from("cases").select("id,title,status,priority,context_type,context_query,decision_summary,notes,last_reviewed_at,created_at,updated_at").eq("id", caseId).single(),
     auth.supabase.from("case_items").select("id,case_id,item_type,source_id,title,metadata,created_at").eq("case_id", caseId).order("created_at", { ascending: false }),
   ])
 
