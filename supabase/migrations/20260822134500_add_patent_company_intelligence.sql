@@ -8,11 +8,11 @@ returns jsonb
 language sql
 stable
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
   with params as (
     select
-      upper(unaccent(trim(coalesce(p_company, '')))) as q,
+      upper(extensions.unaccent(trim(coalesce(p_company, '')))) as q,
       greatest(1, least(coalesce(p_recent_limit, 12), 25)) as recent_limit
   ), matches as (
     select pr.*
@@ -20,14 +20,14 @@ as $$
     cross join params
     where params.q <> ''
       and (
-        upper(unaccent(coalesce(pr.applicants, ''))) like '%' || params.q || '%'
+        upper(extensions.unaccent(coalesce(pr.applicants, ''))) like '%' || params.q || '%'
         or similarity(upper(coalesce(pr.applicants, '')), upper(trim(coalesce(p_company, '')))) >= 0.32
       )
   ), portfolio as (
     select
       count(*)::integer as total_records,
-      count(*) filter (where lower(unaccent(coalesce(status, ''))) like '%registr%')::integer as registered_count,
-      count(*) filter (where lower(unaccent(coalesce(status, ''))) like '%tramite%' or lower(unaccent(coalesce(status, ''))) like '%pend%')::integer as pending_count,
+      count(*) filter (where lower(extensions.unaccent(coalesce(status, ''))) like '%registr%')::integer as registered_count,
+      count(*) filter (where lower(extensions.unaccent(coalesce(status, ''))) like '%tramite%' or lower(extensions.unaccent(coalesce(status, ''))) like '%pend%')::integer as pending_count,
       count(*) filter (where filing_date >= current_date - 90)::integer as recent_filings_90d,
       count(*) filter (where publication_date >= current_date - 90)::integer as recent_publications_90d,
       min(filing_date) as first_filing_date,
