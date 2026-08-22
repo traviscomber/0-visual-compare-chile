@@ -35,9 +35,7 @@ export async function POST(request: NextRequest) {
     const descripcion = payload.descripcion.trim()
     const industria = payload.industria.trim()
 
-    if (!nombre) {
-      return NextResponse.json({ error: "El campo nombre es requerido." }, { status: 400, headers: noStoreHeaders() })
-    }
+    if (!nombre) return NextResponse.json({ error: "El campo nombre es requerido." }, { status: 400, headers: noStoreHeaders() })
     if (nombre.length > MAX_NAME_LENGTH) {
       return NextResponse.json({ error: `El nombre no puede superar ${MAX_NAME_LENGTH} caracteres.` }, { status: 400, headers: noStoreHeaders() })
     }
@@ -94,9 +92,19 @@ export async function POST(request: NextRequest) {
       .from("comparisons")
       .insert({
         user_id: user.id,
-        similarity_score: typeof report.registrabilidad?.calidad?.confianza === "number" ? report.registrabilidad.calidad.confianza : 0,
+        similarity_score: 0,
         classification: report.informe.nivel_riesgo_global,
-        signals: { source: "trademark-agent", pipeline_ms: report.pipeline_ms },
+        signals: {
+          source: "trademark-agent",
+          pipeline_ms: report.pipeline_ms,
+          ai_cost_usd: report.costo_estimado_usd,
+          ai_tokens: report.tokens_totales,
+          ai_max_tier: report.routing.max_tier_used,
+          ai_escalated: report.routing.escalated,
+          niza_model: report.niza.model_used,
+          viena_model: report.viena.model_used,
+          report_model: report.routing.report.final_model,
+        },
         recommendation: report.registrabilidad?.recomendacion ?? report.informe.recomendaciones?.[0] ?? null,
         result_data: { ...report, marca: nombre },
         result_json: { ...report, marca: nombre },
@@ -116,6 +124,10 @@ export async function POST(request: NextRequest) {
       durationMs: report.pipeline_ms,
       risk: report.informe.nivel_riesgo_global,
       inapiConfidence: report.registrabilidad?.calidad?.confianza ?? "no-disponible",
+      aiCostUsd: report.costo_estimado_usd,
+      aiTokens: report.tokens_totales,
+      aiMaxTier: report.routing.max_tier_used,
+      aiEscalated: report.routing.escalated,
     })
 
     return NextResponse.json({ ...report, comparison_id: savedComparison.id }, { status: 200, headers: noStoreHeaders() })
@@ -131,14 +143,13 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 401, headers: noStoreHeaders() })
-  }
+  if (!user) return NextResponse.json({ error: "No autorizado." }, { status: 401, headers: noStoreHeaders() })
 
   return NextResponse.json({
     endpoint: "POST /api/v1/agent/analyze",
     status: process.env.OPENAI_API_KEY ? "available" : "unavailable",
     pipeline: ["viena", "niza", "conflictos", "inapi", "informe"],
+    aiRouting: ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"],
     maxDurationSeconds: 60,
   }, { headers: noStoreHeaders() })
 }
