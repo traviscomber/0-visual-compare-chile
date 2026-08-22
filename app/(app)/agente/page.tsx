@@ -3,10 +3,10 @@
 import { useRef, useState } from "react"
 import type { TrademarkInsightReport } from "@/lib/agent/trademark-agent"
 import {
-  Activity,
   AlertTriangle,
-  BarChart3,
+  ArrowRight,
   CheckCircle2,
+  ChevronDown,
   Database,
   FileText,
   HelpCircle,
@@ -14,8 +14,8 @@ import {
   Search,
   ShieldAlert,
   ShieldCheck,
+  Sparkles,
   Upload,
-  Zap,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -30,23 +30,18 @@ type PersistedTrademarkReport = TrademarkInsightReport & { comparison_id: string
 
 function RiskBadge({ nivel }: { nivel: string }) {
   const normalized = nivel?.toUpperCase()
-  if (normalized === "ALTO") {
-    return <Badge className="border-red-500/40 bg-red-500/15 text-red-300"><AlertTriangle className="mr-1 h-3.5 w-3.5" />Riesgo alto</Badge>
-  }
-  if (normalized === "MEDIO") {
-    return <Badge className="border-amber-500/40 bg-amber-500/15 text-amber-300"><ShieldAlert className="mr-1 h-3.5 w-3.5" />Riesgo medio</Badge>
-  }
-  return <Badge className="border-emerald-500/40 bg-emerald-500/15 text-emerald-300"><ShieldCheck className="mr-1 h-3.5 w-3.5" />Riesgo bajo</Badge>
+  if (normalized === "ALTO") return <Badge className="border-red-500/30 bg-red-500/10 text-red-300"><AlertTriangle className="mr-1 h-3.5 w-3.5" />Riesgo alto</Badge>
+  if (normalized === "MEDIO") return <Badge className="border-amber-500/30 bg-amber-500/10 text-amber-200"><ShieldAlert className="mr-1 h-3.5 w-3.5" />Riesgo medio</Badge>
+  return <Badge className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300"><ShieldCheck className="mr-1 h-3.5 w-3.5" />Riesgo bajo</Badge>
 }
 
-function DecisionBadge({ decision }: { decision: NonNullable<TrademarkInsightReport["registrabilidad"]>["decision"] }) {
-  if (decision === "REVISAR") {
-    return <Badge className="border-amber-500/40 bg-amber-500/15 text-amber-200">Revisión requerida</Badge>
-  }
-  if (decision === "FUENTE_NO_DISPONIBLE") {
-    return <Badge className="border-slate-500/40 bg-slate-500/15 text-slate-300">Fuente no disponible</Badge>
-  }
-  return <Badge className="border-blue-500/40 bg-blue-500/15 text-blue-200">Sin antecedentes activos detectados</Badge>
+function decisionCopy(report: PersistedTrademarkReport) {
+  const decision = report.registrabilidad?.decision
+  const risk = report.informe.nivel_riesgo_global?.toUpperCase()
+  if (decision === "FUENTE_NO_DISPONIBLE") return { eyebrow: "Información insuficiente", title: "No decidas todavía", action: "Repite la consulta cuando la fuente esté disponible o revisa manualmente los antecedentes." }
+  if (decision === "REVISAR" || risk === "ALTO") return { eyebrow: "Revisión necesaria", title: "Avanza con cautela", action: "Revisa los antecedentes priorizados antes de presentar o invertir más en esta marca." }
+  if (risk === "MEDIO") return { eyebrow: "Hay señales que revisar", title: "Puedes seguir evaluando", action: "Valida los antecedentes relevantes y confirma las clases antes de presentar." }
+  return { eyebrow: "Sin bloqueos evidentes", title: "Vale la pena avanzar", action: "Continúa con la revisión de clases y prepara la validación profesional antes de presentar." }
 }
 
 function confidenceLabel(value: "alta" | "media" | "baja") {
@@ -60,46 +55,26 @@ export default function AgentePage() {
   const [loading, setLoading] = useState(false)
   const [report, setReport] = useState<PersistedTrademarkReport | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [activeHelp, setActiveHelp] = useState<string | null>(null)
-  const [conceptModal, setConceptModal] = useState<"viena" | "niza" | "disponible" | "conflictos" | null>(null)
+  const [showLogo, setShowLogo] = useState(false)
+  const [conceptModal, setConceptModal] = useState<"viena" | "niza" | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
-
-  const progress = ([Boolean(nombre.trim()), Boolean(report)].filter(Boolean).length / 2) * 100
   const canAnalyze = Boolean(nombre.trim() && !loading)
 
   const handleFile = (file: File) => {
     setError(null)
     setReport(null)
-
-    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      setError("Formato no compatible. Usa PNG, JPEG, WebP o GIF.")
-      return
-    }
-    if (file.size > MAX_FILE_BYTES) {
-      setError("La imagen supera el máximo de 4,5 MB.")
-      return
-    }
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) return setError("Formato no compatible. Usa PNG, JPEG, WebP o GIF.")
+    if (file.size > MAX_FILE_BYTES) return setError("La imagen supera el máximo de 4,5 MB.")
 
     const reader = new FileReader()
     reader.onload = () => {
       const dataUrl = reader.result
-      if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) {
-        setError("No fue posible leer la imagen seleccionada.")
-        return
-      }
+      if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) return setError("No fue posible leer la imagen seleccionada.")
       setImagePreview(dataUrl)
       setImage(dataUrl)
     }
-    reader.onerror = () => {
-      setImage(null)
-      setImagePreview(null)
-      setError("No fue posible leer la imagen seleccionada.")
-    }
-    reader.onabort = () => {
-      setImage(null)
-      setImagePreview(null)
-      setError("La lectura de la imagen fue cancelada. Intenta nuevamente.")
-    }
+    reader.onerror = () => setError("No fue posible leer la imagen seleccionada.")
+    reader.onabort = () => setError("La lectura de la imagen fue cancelada. Intenta nuevamente.")
     reader.readAsDataURL(file)
   }
 
@@ -108,7 +83,6 @@ export default function AgentePage() {
     setLoading(true)
     setError(null)
     setReport(null)
-
     try {
       const response = await fetch("/api/v1/agent/analyze", {
         method: "POST",
@@ -116,11 +90,7 @@ export default function AgentePage() {
         body: JSON.stringify({ ...(image ? { image } : {}), nombre: nombre.trim() }),
       })
       const data = await response.json().catch(() => ({}))
-
-      if (!response.ok) {
-        setError(response.status === 401 ? "Tu sesión expiró. Vuelve a iniciar sesión." : data.error ?? "No fue posible completar el análisis.")
-        return
-      }
+      if (!response.ok) return setError(response.status === 401 ? "Tu sesión expiró. Vuelve a iniciar sesión." : data.error ?? "No fue posible completar el análisis.")
       setReport(data as PersistedTrademarkReport)
     } catch {
       setError("No fue posible conectar con el servicio. Intenta nuevamente.")
@@ -129,150 +99,135 @@ export default function AgentePage() {
     }
   }
 
-  return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 px-4 py-10">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-8">
-          <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
-            <span>Progreso del análisis</span><span>{Math.round(progress)}%</span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full border border-white/10 bg-slate-800">
-            <div className="h-full rounded-full bg-blue-500 transition-all" style={{ width: `${progress}%` }} />
-          </div>
-        </div>
+  const decision = report ? decisionCopy(report) : null
 
-        <header className="mb-8 text-center">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-1.5 text-sm text-blue-300">
-            <Zap className="h-4 w-4" /> Inteligencia interna de marcas
+  return (
+    <main className="min-h-screen bg-background px-4 py-10">
+      <div className="mx-auto max-w-6xl">
+        <header className="mb-10 max-w-3xl">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-secondary/40 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+            <Sparkles className="h-3.5 w-3.5" /> Evaluar · Marcas
           </div>
-          <h1 className="text-4xl font-semibold text-white">Evaluación preliminar de marca</h1>
-          <p className="mx-auto mt-3 max-w-2xl text-slate-400">Clasificación Viena y Niza, antecedentes INAPI trazables y una lectura ejecutiva de riesgo.</p>
+          <h1 className="font-serif text-4xl tracking-tight text-foreground sm:text-5xl">¿Vale la pena avanzar con esta marca?</h1>
+          <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">Obtén una lectura preliminar de riesgo basada en antecedentes INAPI, clases relevantes y, si agregas un logo, señales visuales.</p>
         </header>
 
-        <section aria-labelledby="products-title" className="mb-8 rounded-2xl border border-blue-500/20 bg-blue-950/20 p-5">
-          <div className="mb-4 flex items-start justify-between gap-4">
-            <div><h2 id="products-title" className="text-sm font-semibold uppercase tracking-[0.16em] text-blue-200">Qué entrega esta evaluación</h2><p className="mt-1 text-sm text-slate-400">Elige el nivel de revisión que necesita el estudio.</p></div>
-            <Badge variant="outline" className="border-blue-500/30 text-blue-300">Datos trazables</Badge>
-          </div>
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-xl border border-white/10 bg-slate-950/30 p-3"><p className="text-sm font-medium text-white">Búsqueda denominativa</p><p className="mt-1 text-xs leading-relaxed text-slate-400">Nombre, antecedentes INAPI, titulares, estados y clases Niza.</p></div>
-            <div className="rounded-xl border border-white/10 bg-slate-950/30 p-3"><p className="text-sm font-medium text-white">Análisis completo</p><p className="mt-1 text-xs leading-relaxed text-slate-400">Nombre más logo: agrega similitud visual y clasificación Viena.</p></div>
-            <div className="rounded-xl border border-white/10 bg-slate-950/30 p-3"><p className="text-sm font-medium text-white">Auditoría y reutilización</p><p className="mt-1 text-xs leading-relaxed text-slate-400">Guarda resultados, etiquetas y consultas para evitar llamadas repetidas.</p></div>
-          </div>
-        </section>
-
-        <section className="mb-8 grid gap-6 rounded-2xl border border-white/10 bg-slate-900/45 p-6">
-          <div>
-            <div className="mb-3 flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full border border-blue-500/40 bg-blue-500/15 text-xs text-blue-300">1</span>
-              <h2 className="font-medium text-white">Logo o signo gráfico <span className="text-xs font-normal text-slate-500">(opcional)</span></h2>
-              <button onClick={() => setActiveHelp(activeHelp === "image" ? null : "image")} className="ml-auto text-slate-400 hover:text-white" aria-label="Ayuda sobre la imagen"><HelpCircle className="h-4 w-4" /></button>
-            </div>
-            {activeHelp === "image" && <p className="mb-3 rounded-lg border border-blue-500/20 bg-blue-500/10 p-3 text-xs text-slate-300">Usa PNG, JPEG, WebP o GIF, con fondo limpio y un máximo de 4,5 MB.</p>}
-            <button type="button" onClick={() => fileRef.current?.click()} onDrop={(event) => { event.preventDefault(); const file = event.dataTransfer.files[0]; if (file) handleFile(file) }} onDragOver={(event) => event.preventDefault()} className="w-full rounded-xl border-2 border-dashed border-slate-700 bg-slate-950/35 p-8 text-center hover:border-blue-500/50">
-              <input ref={fileRef} type="file" accept={ACCEPTED_IMAGE_TYPES.join(",")} className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) handleFile(file) }} />
-              {imagePreview ? <div className="flex flex-col items-center gap-2"><img src={imagePreview} alt="Signo a analizar" className="max-h-28 max-w-xs rounded-lg object-contain" /><span className="text-xs text-slate-400">Seleccionar otra imagen</span></div> : <div className="flex flex-col items-center gap-2 text-slate-400"><Upload className="h-8 w-8" /><span className="text-sm">Arrastra o selecciona una imagen (opcional)</span></div>}
-            </button>
-          </div>
-
-          <div>
-            <div className="mb-3 flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full border border-blue-500/40 bg-blue-500/15 text-xs text-blue-300">2</span>
-              <h2 className="font-medium text-white">Nombre a evaluar</h2>
-            </div>
-            <Input value={nombre} onChange={(event) => { setNombre(event.target.value); setReport(null) }} onKeyDown={(event) => event.key === "Enter" && canAnalyze && void handleAnalyze()} maxLength={120} placeholder="Ejemplo: FALABELLA" className="border-slate-700 bg-slate-950/50 text-white" />
-          </div>
-
-          <Button onClick={() => void handleAnalyze()} disabled={!canAnalyze} className="h-12 w-full bg-blue-600 hover:bg-blue-500">
-            {loading ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Consultando clasificadores e INAPI</> : <><Search className="mr-2 h-5 w-5" />Ejecutar evaluación</>}
-          </Button>
-        </section>
-
-        {error && <div role="alert" className="mb-6 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}
-
-        {report && (
-          <div className="space-y-4">
-            <section className="rounded-xl border border-white/10 bg-slate-900/55 p-5">
-              <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-                <div><h2 className="text-2xl font-semibold text-white">{report.marca}</h2><p className="mt-1 text-xs text-slate-500">Generado {new Date(report.timestamp).toLocaleString("es-CL")} · {(report.pipeline_ms / 1000).toFixed(1)} s</p></div>
-                <RiskBadge nivel={report.informe.nivel_riesgo_global} />
+        {!report && (
+          <section className="grid gap-6 rounded-3xl border border-border bg-card p-6 shadow-sm lg:grid-cols-[1fr_320px] lg:p-8">
+            <div className="space-y-6">
+              <div>
+                <label htmlFor="brand-name" className="mb-2 block text-sm font-medium text-foreground">Nombre de la marca</label>
+                <Input id="brand-name" value={nombre} onChange={(event) => setNombre(event.target.value)} onKeyDown={(event) => event.key === "Enter" && canAnalyze && void handleAnalyze()} maxLength={120} placeholder="Ejemplo: FALABELLA" className="h-12 text-base" autoFocus />
+                <p className="mt-2 text-xs text-muted-foreground">Con sólo el nombre podemos revisar antecedentes denominativos y clases sugeridas.</p>
               </div>
-              <p className="text-sm leading-relaxed text-slate-200">{report.informe.resumen_ejecutivo}</p>
-              {report.informe.analisis_conflictos && <p className="mt-3 text-xs leading-relaxed text-slate-400">{report.informe.analisis_conflictos}</p>}
-            </section>
 
-            {report.registrabilidad && (
-              <section className="rounded-xl border border-blue-500/25 bg-blue-950/25 p-5">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2"><Database className="h-5 w-5 text-blue-300" /><h3 className="font-semibold text-white">Evidencia INAPI</h3></div>
-                  <DecisionBadge decision={report.registrabilidad.decision} />
-                </div>
-                <p className="text-sm leading-relaxed text-slate-200">{report.registrabilidad.recomendacion}</p>
-
-                <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-                  <div className="rounded-lg border border-white/10 bg-slate-950/40 p-3"><p className="text-xs text-slate-500">Confianza</p><p className="mt-1 font-medium text-white">{confidenceLabel(report.registrabilidad.calidad.confianza)}</p></div>
-                  <div className="rounded-lg border border-white/10 bg-slate-950/40 p-3"><p className="text-xs text-slate-500">Cobertura Niza</p><p className="mt-1 font-medium text-white">{Math.round(report.registrabilidad.calidad.cobertura_clases * 100)}%</p></div>
-                  <div className="rounded-lg border border-white/10 bg-slate-950/40 p-3"><p className="text-xs text-slate-500">Resultados</p><p className="mt-1 font-medium text-white">{report.registrabilidad.calidad.resultados_totales}</p></div>
-                  <div className="rounded-lg border border-white/10 bg-slate-950/40 p-3"><p className="text-xs text-slate-500">Activos</p><p className="mt-1 font-medium text-white">{report.registrabilidad.calidad.resultados_activos}</p></div>
-                </div>
-
-                <div className="mt-4 rounded-lg border border-white/10 bg-slate-950/30 p-3 text-xs text-slate-400">
-                  <p>Fuente: {report.registrabilidad.fuente.nombre} · consulta “{report.registrabilidad.fuente.consulta}” · modo {report.registrabilidad.fuente.match}</p>
-                  <p className="mt-1">Consultado: {new Date(report.registrabilidad.fuente.consultado_en).toLocaleString("es-CL")}</p>
-                </div>
-
-                {report.registrabilidad.calidad.advertencias.length > 0 && <div className="mt-4 space-y-2">{report.registrabilidad.calidad.advertencias.map((warning) => <p key={warning} className="flex items-start gap-2 text-xs text-amber-200"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />{warning}</p>)}</div>}
-
-                {report.registrabilidad.antecedentes.length > 0 && (
-                  <div className="mt-5">
-                    <h4 className="mb-2 text-sm font-medium text-slate-200">Antecedentes priorizados</h4>
-                    <div className="space-y-2">
-                      {report.registrabilidad.antecedentes.slice(0, 6).map((item) => (
-                        <div key={item.id} className="rounded-lg border border-white/10 bg-slate-950/35 p-3">
-                          <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="font-medium text-white">{item.nombre}</p><p className="text-xs text-slate-500">{item.solicitante || "Titular no informado"}</p></div><Badge variant="outline" className="border-slate-600 text-slate-300">{item.estado}</Badge></div>
-                          <p className="mt-2 text-xs text-slate-400">Niza: {item.clases.join(", ") || "Sin clase"} · Registro: {item.numero_registro || "—"} · Solicitud: {item.numero_solicitud || "—"}</p>
-                          <p className="mt-1 text-xs text-blue-300">Relevancia {item.puntaje_relevancia}: {item.razones.join(" · ")}</p>
-                        </div>
-                      ))}
-                    </div>
+              <div className="rounded-2xl border border-border bg-secondary/20">
+                <button type="button" onClick={() => setShowLogo((value) => !value)} className="flex w-full items-center justify-between gap-3 p-4 text-left">
+                  <div><p className="text-sm font-medium text-foreground">¿También quieres evaluar el logo?</p><p className="mt-1 text-xs text-muted-foreground">Opcional · agrega análisis visual y clasificación Viena.</p></div>
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showLogo ? "rotate-180" : ""}`} />
+                </button>
+                {showLogo && (
+                  <div className="border-t border-border p-4">
+                    <button type="button" onClick={() => fileRef.current?.click()} onDrop={(event) => { event.preventDefault(); const file = event.dataTransfer.files[0]; if (file) handleFile(file) }} onDragOver={(event) => event.preventDefault()} className="w-full rounded-xl border border-dashed border-border bg-background p-6 text-center transition-colors hover:bg-secondary/30">
+                      <input ref={fileRef} type="file" accept={ACCEPTED_IMAGE_TYPES.join(",")} className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) handleFile(file) }} />
+                      {imagePreview ? <div className="flex flex-col items-center gap-2"><img src={imagePreview} alt="Logo a evaluar" className="max-h-28 max-w-xs rounded-lg object-contain" /><span className="text-xs text-muted-foreground">Cambiar imagen</span></div> : <div className="flex flex-col items-center gap-2 text-muted-foreground"><Upload className="h-6 w-6" /><span className="text-sm">Subir logo o signo gráfico</span><span className="text-xs">PNG, JPEG, WebP o GIF · máx. 4,5 MB</span></div>}
+                    </button>
                   </div>
                 )}
-              </section>
-            )}
-
-            <section className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-xl border border-white/10 bg-slate-900/50 p-4">
-                <div className="mb-3 flex items-center gap-2 text-purple-300"><BarChart3 className="h-4 w-4" /><h3 className="text-sm font-medium">Clasificación Viena</h3><button onClick={() => setConceptModal("viena")} className="ml-auto text-slate-500 hover:text-white"><HelpCircle className="h-4 w-4" /></button></div>
-                <div className="mb-3 flex flex-wrap gap-1">{report.viena.elementos_detectados.slice(0, 4).map((element) => <Badge key={element} variant="outline" className="border-purple-500/30 text-purple-300">{element}</Badge>)}</div>
-                <ul className="space-y-2 text-xs text-slate-300">{Array.from(new Map(report.viena.codes.map((code) => [code.code, code])).values()).slice(0, 5).map((code) => <li key={code.code} className="flex justify-between gap-3"><span>{code.code} · {code.titulo}</span><span className="text-purple-300">{Math.round(code.confidence * 100)}%</span></li>)}</ul>
               </div>
-              <div className="rounded-xl border border-white/10 bg-slate-900/50 p-4">
-                <div className="mb-3 flex items-center gap-2 text-blue-300"><FileText className="h-4 w-4" /><h3 className="text-sm font-medium">Clasificación Niza</h3><button onClick={() => setConceptModal("niza")} className="ml-auto text-slate-500 hover:text-white"><HelpCircle className="h-4 w-4" /></button></div>
-                <ul className="space-y-2 text-xs text-slate-300">{report.niza.clases.slice(0, 6).map((item) => <li key={item.numero} className="flex justify-between gap-3"><span>Clase {item.numero} · {item.titulo}</span><span className={item.tipo === "principal" ? "text-blue-300" : "text-slate-500"}>{item.tipo}</span></li>)}</ul>
+
+              {error && <div role="alert" className="flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/5 p-4 text-sm text-red-600 dark:text-red-300"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}
+
+              <Button onClick={() => void handleAnalyze()} disabled={!canAnalyze} size="lg" className="h-12 w-full sm:w-auto">
+                {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Evaluando antecedentes</> : <><Search className="mr-2 h-4 w-4" />Evaluar marca</>}
+              </Button>
+            </div>
+
+            <aside className="rounded-2xl bg-foreground p-6 text-background">
+              <p className="text-xs font-medium uppercase tracking-[0.16em] opacity-60">Qué vas a obtener</p>
+              <div className="mt-5 space-y-5">
+                {[
+                  ["1", "Una señal clara", "Avanzar, revisar o detenerse antes de invertir más."],
+                  ["2", "Las razones", "Antecedentes y conflictos que explican la evaluación."],
+                  ["3", "El siguiente paso", "Acciones concretas para continuar la revisión."],
+                ].map(([step, title, copy]) => <div key={step} className="flex gap-3"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-background/20 text-xs">{step}</span><div><p className="text-sm font-medium">{title}</p><p className="mt-1 text-xs leading-relaxed opacity-65">{copy}</p></div></div>)}
+              </div>
+            </aside>
+          </section>
+        )}
+
+        {report && decision && (
+          <div className="space-y-6">
+            <section className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+              <div className="grid lg:grid-cols-[1.2fr_0.8fr]">
+                <div className="p-6 sm:p-8">
+                  <div className="flex flex-wrap items-center gap-2"><RiskBadge nivel={report.informe.nivel_riesgo_global} /><Badge variant="outline">{report.marca}</Badge></div>
+                  <p className="mt-7 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">{decision.eyebrow}</p>
+                  <h2 className="mt-2 font-serif text-4xl text-foreground sm:text-5xl">{decision.title}</h2>
+                  <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground">{report.informe.resumen_ejecutivo}</p>
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <Button onClick={() => { setReport(null); setNombre(""); setImage(null); setImagePreview(null) }} variant="outline">Evaluar otra marca</Button>
+                    <Button asChild><a href="#evidencia">Ver evidencia <ArrowRight className="ml-2 h-4 w-4" /></a></Button>
+                  </div>
+                </div>
+                <div className="border-t border-border bg-secondary/25 p-6 sm:p-8 lg:border-l lg:border-t-0">
+                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Siguiente paso recomendado</p>
+                  <p className="mt-3 text-lg font-medium leading-relaxed text-foreground">{decision.action}</p>
+                  <div className="mt-6 grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-xl border border-border bg-background p-3"><p className="text-xs text-muted-foreground">Antecedentes</p><p className="mt-1 text-xl font-semibold text-foreground">{report.registrabilidad?.calidad.resultados_totales ?? 0}</p></div>
+                    <div className="rounded-xl border border-border bg-background p-3"><p className="text-xs text-muted-foreground">Activos</p><p className="mt-1 text-xl font-semibold text-foreground">{report.registrabilidad?.calidad.resultados_activos ?? 0}</p></div>
+                  </div>
+                </div>
               </div>
             </section>
 
-            <section className="rounded-xl border border-white/10 bg-slate-900/50 p-4">
-              <div className="mb-3 flex items-center gap-2"><Activity className="h-4 w-4 text-slate-300" /><h3 className="text-sm font-medium text-white">Acciones recomendadas</h3></div>
-              <ol className="space-y-2 text-sm text-slate-300">{report.informe.recomendaciones.map((item, index) => <li key={`${index}-${item}`} className="flex gap-3"><span className="text-blue-300">{index + 1}.</span><span>{item}</span></li>)}</ol>
+            <section id="evidencia" className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+              <div className="rounded-2xl border border-border bg-card p-6">
+                <div className="mb-5 flex items-center gap-2"><Database className="h-4 w-4 text-muted-foreground" /><h3 className="font-serif text-xl text-foreground">Qué encontramos</h3></div>
+                {report.registrabilidad?.antecedentes.length ? (
+                  <div className="space-y-3">{report.registrabilidad.antecedentes.slice(0, 6).map((item) => (
+                    <div key={item.id} className="rounded-xl border border-border bg-secondary/15 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="font-medium text-foreground">{item.nombre}</p><p className="mt-1 text-xs text-muted-foreground">{item.solicitante || "Titular no informado"}</p></div><Badge variant="outline">{item.estado}</Badge></div>
+                      <p className="mt-3 text-xs text-muted-foreground">Niza {item.clases.join(", ") || "sin clase"} · relevancia {item.puntaje_relevancia}</p>
+                      {item.razones.length > 0 && <p className="mt-1 text-xs text-foreground/75">{item.razones.join(" · ")}</p>}
+                    </div>
+                  ))}</div>
+                ) : <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-5"><CheckCircle2 className="h-5 w-5 text-emerald-500" /><p className="mt-3 font-medium text-foreground">No aparecieron antecedentes priorizados.</p><p className="mt-1 text-sm text-muted-foreground">Esto no garantiza registrabilidad; sólo indica que esta consulta no encontró conflictos relevantes para priorizar.</p></div>}
+              </div>
+
+              <div className="rounded-2xl border border-border bg-card p-6">
+                <h3 className="font-serif text-xl text-foreground">Qué hacer ahora</h3>
+                <ol className="mt-5 space-y-4">{report.informe.recomendaciones.map((item, index) => <li key={`${index}-${item}`} className="flex gap-3"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-medium text-foreground">{index + 1}</span><span className="pt-1 text-sm leading-relaxed text-muted-foreground">{item}</span></li>)}</ol>
+              </div>
             </section>
 
-            <p className="px-4 text-center text-xs leading-relaxed text-slate-500">{report.informe.disclaimer}</p>
+            <details className="group rounded-2xl border border-border bg-card">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5"><div><p className="font-medium text-foreground">Ver fundamentos técnicos</p><p className="mt-1 text-xs text-muted-foreground">Clases Niza, Viena, calidad de la consulta y trazabilidad.</p></div><ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" /></summary>
+              <div className="grid gap-4 border-t border-border p-5 lg:grid-cols-2">
+                <div className="rounded-xl border border-border p-4">
+                  <div className="mb-3 flex items-center gap-2"><FileText className="h-4 w-4" /><p className="text-sm font-medium">Clasificación Niza</p><button onClick={() => setConceptModal("niza")} className="ml-auto text-muted-foreground"><HelpCircle className="h-4 w-4" /></button></div>
+                  <div className="space-y-2">{report.niza.clases.slice(0, 8).map((item) => <div key={item.numero} className="flex justify-between gap-3 text-xs"><span className="text-muted-foreground">Clase {item.numero} · {item.titulo}</span><span className="text-foreground">{item.tipo}</span></div>)}</div>
+                </div>
+                <div className="rounded-xl border border-border p-4">
+                  <div className="mb-3 flex items-center gap-2"><Sparkles className="h-4 w-4" /><p className="text-sm font-medium">Clasificación Viena</p><button onClick={() => setConceptModal("viena")} className="ml-auto text-muted-foreground"><HelpCircle className="h-4 w-4" /></button></div>
+                  {image ? <div className="space-y-2">{Array.from(new Map(report.viena.codes.map((code) => [code.code, code])).values()).slice(0, 6).map((code) => <div key={code.code} className="flex justify-between gap-3 text-xs"><span className="text-muted-foreground">{code.code} · {code.titulo}</span><span>{Math.round(code.confidence * 100)}%</span></div>)}</div> : <p className="text-xs text-muted-foreground">No se cargó un logo en esta evaluación.</p>}
+                </div>
+                {report.registrabilidad && <div className="rounded-xl border border-border p-4 lg:col-span-2"><div className="grid gap-3 sm:grid-cols-4"><Metric label="Confianza" value={confidenceLabel(report.registrabilidad.calidad.confianza)} /><Metric label="Cobertura Niza" value={`${Math.round(report.registrabilidad.calidad.cobertura_clases * 100)}%`} /><Metric label="Resultados" value={String(report.registrabilidad.calidad.resultados_totales)} /><Metric label="Activos" value={String(report.registrabilidad.calidad.resultados_activos)} /></div><p className="mt-4 text-xs leading-relaxed text-muted-foreground">Fuente: {report.registrabilidad.fuente.nombre} · consulta “{report.registrabilidad.fuente.consulta}” · consultado {new Date(report.registrabilidad.fuente.consultado_en).toLocaleString("es-CL")} · proceso {(report.pipeline_ms / 1000).toFixed(1)} s.</p></div>}
+              </div>
+            </details>
 
-            <AnalysisWorkflowControls
-              comparisonId={report.comparison_id}
-              marca={report.marca}
-              risk={report.informe.nivel_riesgo_global}
-              resultCount={report.registrabilidad?.calidad.resultados_totales ?? 0}
-            />
+            <AnalysisWorkflowControls comparisonId={report.comparison_id} marca={report.marca} risk={report.informe.nivel_riesgo_global} resultCount={report.registrabilidad?.calidad.resultados_totales ?? 0} />
+            <p className="text-center text-xs leading-relaxed text-muted-foreground">{report.informe.disclaimer}</p>
           </div>
         )}
 
         <ConceptModal concept="viena" isOpen={conceptModal === "viena"} onClose={() => setConceptModal(null)} />
         <ConceptModal concept="niza" isOpen={conceptModal === "niza"} onClose={() => setConceptModal(null)} />
-        <ConceptModal concept="disponible" isOpen={conceptModal === "disponible"} onClose={() => setConceptModal(null)} />
-        <ConceptModal concept="conflictos" isOpen={conceptModal === "conflictos"} onClose={() => setConceptModal(null)} />
       </div>
     </main>
   )
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return <div><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-sm font-medium text-foreground">{value}</p></div>
 }
