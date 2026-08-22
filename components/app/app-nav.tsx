@@ -7,11 +7,12 @@ import { Logo } from "@/components/brand/logo"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Activity, Bell, BellRing, BriefcaseBusiness, ClipboardCheck, Cpu, History, LayoutDashboard, LogOut, Menu, Search, Settings, Terminal } from "lucide-react"
+import { Activity, Bell, BellRing, BriefcaseBusiness, ClipboardCheck, Cpu, History, LayoutDashboard, LogOut, Menu, Search, Settings, Terminal, Waypoints } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
   { href: "/dashboard", label: "Inicio", icon: LayoutDashboard, aliases: [] },
+  { href: "/portfolio", label: "Portafolio", icon: Waypoints, aliases: [] },
   { href: "/casos", label: "Casos", icon: BriefcaseBusiness, aliases: [] },
   { href: "/evaluar", label: "Evaluar", icon: Cpu, aliases: ["/agente", "/compare", "/comparisons"] },
   { href: "/investigar", label: "Investigar", icon: Search, aliases: ["/consulta-inapi", "/consulta", "/patentes"] },
