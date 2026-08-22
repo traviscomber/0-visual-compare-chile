@@ -7,7 +7,7 @@ import { Logo } from "@/components/brand/logo"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Activity, Bell, BellRing, BriefcaseBusiness, ClipboardCheck, Cpu, History, LayoutDashboard, LogOut, Menu, Search, Settings, Terminal, Waypoints } from "lucide-react"
+import { Activity, BarChart3, Bell, BellRing, BriefcaseBusiness, ClipboardCheck, Cpu, History, LayoutDashboard, LogOut, Menu, Search, Settings, Terminal, Waypoints } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
@@ -20,6 +20,7 @@ const navItems = [
 ]
 
 const secondaryNavItems = [
+  { href: "/portfolio/analytics", label: "Analytics y SLA", icon: BarChart3 },
   { href: "/notificaciones", label: "Notificaciones", icon: Bell },
   { href: "/casos/pendientes", label: "Lo que espera de mí", icon: ClipboardCheck },
   { href: "/history", label: "Actividad e historial", icon: History },
