@@ -73,13 +73,13 @@ async function syncDataset(dataset: (typeof DATASETS)[number], year: number) {
 
   try {
     while (true) {
-      const page = await ckan("datastore_search", { resource_id: resource.id, limit: PAGE_SIZE, offset })
+      const page = await ckan("datastore_search", { resource_id: String(resource.id), limit: PAGE_SIZE, offset })
       total = Number(page.total || total || 0)
-      const records = Array.isArray(page.records) ? page.records : []
+      const records: Record<string, unknown>[] = Array.isArray(page.records) ? page.records : []
       if (!records.length) break
 
       fetched += records.length
-      const rows = records.map((record) => normalizeOpenDataRow(record, dataset)).filter(Boolean) as NormalizedRow[]
+      const rows = records.map((record: Record<string, unknown>) => normalizeOpenDataRow(record, dataset)).filter(Boolean) as NormalizedRow[]
       normalized += rows.length
 
       for (let index = 0; index < rows.length; index += UPSERT_BATCH_SIZE) {
