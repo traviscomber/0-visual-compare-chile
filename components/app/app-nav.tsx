@@ -16,36 +16,34 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
   Activity,
-  LayoutDashboard,
-  GitCompareArrows,
+  BellRing,
+  Cpu,
   History,
-  Settings,
+  LayoutDashboard,
   LogOut,
   Menu,
   Search,
-  Cpu,
-  Database,
+  Settings,
   Terminal,
-  BellRing,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
-  { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
-  { href: "/evaluar", label: "Evaluar", icon: Cpu },
-  { href: "/investigar", label: "Investigar", icon: Search },
-  { href: "/monitorear", label: "Monitorear", icon: BellRing },
+  { href: "/dashboard", label: "Inicio", icon: LayoutDashboard, aliases: [] },
+  { href: "/evaluar", label: "Evaluar", icon: Cpu, aliases: ["/agente", "/compare", "/comparisons"] },
+  { href: "/investigar", label: "Investigar", icon: Search, aliases: ["/consulta-inapi", "/consulta", "/patentes"] },
+  { href: "/monitorear", label: "Monitorear", icon: BellRing, aliases: ["/patentes/alertas"] },
 ]
 
 const secondaryNavItems = [
-  { href: "/consulta-inapi", label: "Búsqueda de marcas", icon: Database },
-  { href: "/patentes", label: "Patentes y empresas", icon: Activity },
-  { href: "/history", label: "Historial de análisis", icon: History },
-  { href: "/compare", label: "Comparar imágenes", icon: GitCompareArrows },
-  { href: "/consulta", label: "Búsqueda avanzada", icon: Search },
+  { href: "/history", label: "Actividad e historial", icon: History },
   { href: "/dashboard/playground", label: "API e integraciones", icon: Terminal },
-  { href: "/dashboard/processing", label: "Operaciones", icon: Activity },
+  { href: "/dashboard/processing", label: "Operación del sistema", icon: Activity },
 ]
+
+function matchesPath(pathname: string, href: string) {
+  return pathname === href || (href !== "/dashboard" && pathname.startsWith(`${href}/`))
+}
 
 export function AppNav({
   userEmail,
@@ -60,24 +58,37 @@ export function AppNav({
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  const isActive = (href: string) => pathname === href || (href !== "/dashboard" && pathname.startsWith(`${href}/`))
+  const isPrimaryActive = (item: (typeof navItems)[number]) =>
+    matchesPath(pathname, item.href) || item.aliases.some((alias) => matchesPath(pathname, alias))
 
   const handleLogout = async () => {
     const supabase = createClient()
-    if (!supabase) { router.push("/"); router.refresh(); return }
-    await supabase.auth.signOut(); router.push("/"); router.refresh()
+    if (!supabase) {
+      router.push("/")
+      router.refresh()
+      return
+    }
+    await supabase.auth.signOut()
+    router.push("/")
+    router.refresh()
   }
 
-  const initials = (fullName ?? userEmail).split(/\s+/).map((part) => part[0]).filter(Boolean).slice(0, 2).join("").toUpperCase()
+  const initials = (fullName ?? userEmail)
+    .split(/\s+/)
+    .map((part) => part[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase()
 
   return (
     <header className="sticky top-0 z-30 border-b border-border/70 bg-background/90 backdrop-blur-xl supports-[backdrop-filter]:bg-background/75">
       <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between gap-4 px-4 lg:px-6">
         <div className="flex min-w-0 items-center gap-6">
-          <Link href="/dashboard" aria-label="Visual Compare Chile" className="shrink-0"><Logo /></Link>
-          <nav className="hidden items-center gap-1 xl:flex">
+          <Link href="/dashboard" aria-label="Visual Compare" className="shrink-0"><Logo /></Link>
+          <nav className="hidden items-center gap-1 xl:flex" aria-label="Navegación principal">
             {navItems.map((item) => {
-              const active = isActive(item.href)
+              const active = isPrimaryActive(item)
               const Icon = item.icon
               return (
                 <Link
@@ -113,7 +124,7 @@ export function AppNav({
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <div className="px-1 py-1">
-                <p className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Herramientas</p>
+                <p className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Cuenta y operación</p>
                 {secondaryNavItems.map((item) => {
                   const Icon = item.icon
                   return <DropdownMenuItem key={item.href} asChild><Link href={item.href} className="cursor-pointer"><Icon className="mr-2 h-4 w-4" />{item.label}</Link></DropdownMenuItem>
@@ -128,18 +139,18 @@ export function AppNav({
       </div>
 
       {mobileOpen && (
-        <nav className="border-t border-border bg-background xl:hidden">
+        <nav className="border-t border-border bg-background xl:hidden" aria-label="Navegación móvil">
           <div className="mx-auto flex max-w-[1440px] flex-col px-2 py-3">
-            <p className="px-3 pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Evaluar · Investigar · Monitorear</p>
+            <p className="px-3 pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Tu flujo de trabajo</p>
             {navItems.map((item) => {
-              const active = isActive(item.href)
+              const active = isPrimaryActive(item)
               const Icon = item.icon
               return <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={cn("flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium", active ? "bg-foreground text-background" : "text-muted-foreground hover:bg-secondary hover:text-foreground")}><Icon className="h-4 w-4" />{item.label}</Link>
             })}
             <div className="my-3 border-t border-border" />
-            <p className="px-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Más herramientas</p>
+            <p className="px-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Cuenta y operación</p>
             {secondaryNavItems.map((item) => {
-              const active = isActive(item.href)
+              const active = matchesPath(pathname, item.href)
               const Icon = item.icon
               return <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground", active && "bg-secondary text-foreground")}><Icon className="h-4 w-4" />{item.label}</Link>
             })}
