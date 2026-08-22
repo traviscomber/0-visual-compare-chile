@@ -12,7 +12,7 @@ Plataforma de inteligencia marcaria para Chile con comparacion visual, consulta 
 - La comparacion persiste score, clasificacion, recomendacion y senales forenses.
 - Historial y detalle estan protegidos por sesion.
 - Build de produccion y smoke local pasan.
-- En Vercel, el preview activo responde y el dominio canonico actual necesita correccion.
+- En Vercel, el dominio canonico y el health endpoint responden correctamente.
 
 ## Roadmap operativo
 
@@ -234,15 +234,15 @@ Eso permite verificar en un solo request:
 
 ## Estado Vercel auditado
 
-Auditado el 11 de julio de 2026:
+Auditado el 22 de agosto de 2026:
 
-- Deployment publico activo:
-  - `https://v0-visual-compare-chile-git-main-travis-projects-c14a785a.vercel.app/`
-- Health endpoint activo:
-  - `https://v0-visual-compare-chile-git-main-travis-projects-c14a785a.vercel.app/api/v1/health`
-- Dominio canonico actualmente roto:
+- Dominio canonico de produccion:
   - `https://v0-visual-compare-chile.vercel.app/`
-  - Respuesta observada: `404 DEPLOYMENT_NOT_FOUND`
+- Health endpoint canonico:
+  - `https://v0-visual-compare-chile.vercel.app/api/v1/health`
+  - Respuesta verificada: `200 OK`
+- Produccion servia la revision `403a553fb6031e47c29c2fa42157fe6707ae7daa` al momento de la auditoria.
+- Los previews del PR de limpieza se validan por separado antes de mergear a `main`.
 
 ## Notas
 
