@@ -39,10 +39,7 @@ as $$
       max(last_synced_at) as newest_sync
     from matches
   ), ipc_ranked as (
-    select
-      pi.code,
-      left(pi.code, 3) as family,
-      count(distinct pi.patent_record_id)::integer as records
+    select pi.code, left(pi.code, 3) as family, count(distinct pi.patent_record_id)::integer as records
     from matches m
     join public.patent_record_ipc pi on pi.patent_record_id = m.id
     group by pi.code
@@ -88,10 +85,8 @@ as $$
           coalesce(m.publication_date, date '1900-01-01'),
           coalesce(m.registration_date, date '1900-01-01')
         ) as activity_date,
-        coalesce(array_agg(distinct pi.code) filter (where pi.code is not null), '{}') as ipc_codes
+        coalesce((select array_agg(pi.code order by pi.code) from public.patent_record_ipc pi where pi.patent_record_id = m.id), '{}') as ipc_codes
       from matches m
-      left join public.patent_record_ipc pi on pi.patent_record_id = m.id
-      group by m.id
       order by activity_date desc nulls last, m.title
       limit (select recent_limit from params)
     ) r
