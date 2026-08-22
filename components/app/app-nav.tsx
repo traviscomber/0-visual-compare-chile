@@ -26,24 +26,24 @@ import {
   Cpu,
   Database,
   Terminal,
-  FlaskConical,
   BellRing,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
   { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
-  { href: "/agente", label: "Evaluar marca", icon: Cpu },
-  { href: "/consulta-inapi", label: "Investigar marcas", icon: Database },
-  { href: "/patentes", label: "Inteligencia de patentes", icon: FlaskConical },
-  { href: "/patentes/alertas", label: "Monitoreo", icon: BellRing },
+  { href: "/agente", label: "Evaluar", icon: Cpu },
+  { href: "/investigar", label: "Investigar", icon: Search },
+  { href: "/patentes/alertas", label: "Monitorear", icon: BellRing },
 ]
 
 const secondaryNavItems = [
+  { href: "/consulta-inapi", label: "Búsqueda de marcas", icon: Database },
+  { href: "/patentes", label: "Patentes y empresas", icon: Activity },
   { href: "/history", label: "Historial de análisis", icon: History },
   { href: "/compare", label: "Comparar imágenes", icon: GitCompareArrows },
-  { href: "/consulta", label: "Explorar base indexada", icon: Search },
-  { href: "/dashboard/playground", label: "API Playground", icon: Terminal },
+  { href: "/consulta", label: "Búsqueda avanzada", icon: Search },
+  { href: "/dashboard/playground", label: "API e integraciones", icon: Terminal },
   { href: "/dashboard/processing", label: "Operaciones", icon: Activity },
 ]
 
@@ -130,7 +130,7 @@ export function AppNav({
       {mobileOpen && (
         <nav className="border-t border-border bg-background xl:hidden">
           <div className="mx-auto flex max-w-[1440px] flex-col px-2 py-3">
-            <p className="px-3 pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Decidir, investigar y monitorear</p>
+            <p className="px-3 pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Evaluar · Investigar · Monitorear</p>
             {navItems.map((item) => {
               const active = isActive(item.href)
               const Icon = item.icon
