@@ -26,13 +26,13 @@ On 2026-08-22 the 2026 official INAPI open-data resources were pulled from `dato
 - Duplicate non-null `numero_solicitud` count after reconciliation: 0.
 - INAPI corpus now contains 113,334 records, including 48,220 canonical open-data records.
 
-The official `Solicitudes de Marcas` dataset declares daily frequency and its package metadata was updated on 2026-08-21. The 2026 applications resource observed during the refresh was modified on 2026-08-20.
+The official `Solicitudes de Marcas` package declares daily frequency. At refresh time its CKAN package metadata had been modified on 2026-08-21 and the 2026 applications resource on 2026-08-20. This official open-data channel is now the canonical bulk-refresh source; the live trademark search remains the verification channel.
 
 ## Performance evidence
 
 On the original 66,595-row corpus, the first fuzzy RPC took ~537 ms for a representative `COCA COLA` query. Bounding the trigram candidate set before Niza joins reduced the same database call to ~29 ms in `EXPLAIN ANALYZE`.
 
-Search is now accent-insensitive. A production-data check for `DEFIENDETE` returns `DefiéndeTE` as `exact_name=true` with `name_similarity=1` and Niza class 45.
+Search is now accent-insensitive. A production-data check for `DEFIENDETE` returns `DefiéndeTE` as `exact_name=true` with `name_similarity=1` and Niza class 45. Empty legacy names and one/two-character partial-name noise are excluded from fuzzy candidates.
 
 ## Freshness policy
 
@@ -51,7 +51,7 @@ Use:
 pnpm sync:inapi:open-data
 ```
 
-The synchronizer discovers CKAN resources dynamically, defaults to the current UTC year, paginates DataStore JSON, upserts by application/registration identity, stores Niza/Vienna relations when supplied, and records runs in `inapi_sync_runs`.
+The synchronizer discovers CKAN resources dynamically, defaults to the current UTC year, paginates DataStore JSON, normalizes the official English field schema (`ApplicationNumber`, `BrandName`, `NizaClasses`, etc.), upserts by application/registration identity, stores Niza/Vienna relations when supplied, and records runs in `inapi_sync_runs`.
 
 Useful controls:
 
@@ -67,6 +67,7 @@ Useful controls:
 - Existing INAPI global rate controls, cache, retries and request logging remain in place for live verification.
 - Live failure degrades to synchronized evidence instead of turning a search into HTTP 502 when local data is available.
 - `pg_net` is enabled for controlled database-side refresh operations; normal application traffic does not depend on it.
+- Sync is idempotent at the canonical application identity and does not fabricate missing classification data.
 
 ## Operational targets
 
