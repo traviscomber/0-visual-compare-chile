@@ -25,7 +25,7 @@ create table if not exists public.case_items (
 );
 
 create index if not exists case_items_case_created_idx on public.case_items(case_id,created_at desc);
-create unique index if not exists case_items_unique_source_idx on public.case_items(case_id,item_type,source_id) where source_id is not null;
+create unique index if not exists case_items_unique_source_idx on public.case_items(case_id,item_type,source_id);
 
 alter table public.cases enable row level security;
 alter table public.case_items enable row level security;
