@@ -11,21 +11,21 @@ import { Card, CardContent } from "@/components/ui/card"
 
 const actions = [
   {
-    href: "/agente",
+    href: "/evaluar",
     label: "Evaluar",
     title: "Evaluar una marca",
     description: "Revisa antecedentes, similitudes y señales que merecen una mirada más profunda antes de avanzar.",
     icon: ShieldCheck,
   },
   {
-    href: "/patentes",
+    href: "/investigar",
     label: "Investigar",
     title: "Investigar una empresa o tecnología",
     description: "Explora patentes, solicitantes, IPC, inventores y actividad histórica desde una misma vista.",
     icon: Search,
   },
   {
-    href: "/patentes/alertas",
+    href: "/monitorear",
     label: "Monitorear",
     title: "Revisar qué cambió",
     description: "Consulta nuevas coincidencias en empresas y áreas tecnológicas que decidiste seguir.",
