@@ -1,144 +1,148 @@
 "use client"
 
-import { useAuth, type UserRole } from "@/lib/auth-context"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
-import { DashboardPhase1Card } from "@/components/app/dashboard-phase1-card"
+import { useAuth } from "@/lib/auth-context"
+import { ArrowRight, BellRing, Building2, Database, History, Search, ShieldCheck, Sparkles } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { ArrowRight, Search, Settings, Zap, CheckCircle, Clock } from "lucide-react"
-import Link from "next/link"
+import { Card, CardContent } from "@/components/ui/card"
 
-const roleLabels: Record<UserRole, string> = {
-  admin: "Administrador",
-  analista: "Analista",
-  auditor: "Auditor",
-}
+const actions = [
+  {
+    href: "/evaluar",
+    label: "Evaluar",
+    title: "Evaluar una marca",
+    description: "Revisa antecedentes, similitudes y señales que merecen una mirada más profunda antes de avanzar.",
+    icon: ShieldCheck,
+  },
+  {
+    href: "/investigar",
+    label: "Investigar",
+    title: "Investigar una empresa o tecnología",
+    description: "Explora patentes, solicitantes, IPC, inventores y actividad histórica desde una misma vista.",
+    icon: Search,
+  },
+  {
+    href: "/monitorear",
+    label: "Monitorear",
+    title: "Revisar qué cambió",
+    description: "Consulta nuevas coincidencias en empresas y áreas tecnológicas que decidiste seguir.",
+    icon: BellRing,
+  },
+]
+
+const shortcuts = [
+  { href: "/consulta-inapi", label: "Buscar marcas", icon: Database },
+  { href: "/patentes", label: "Perfiles de empresa", icon: Building2 },
+  { href: "/history", label: "Historial", icon: History },
+]
 
 export default function DashboardPage() {
-  const { user, logout, isLoading } = useAuth()
+  const { user, isLoading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push("/auth/login")
-    }
+    if (!isLoading && !user) router.push("/auth/login")
   }, [user, isLoading, router])
 
-  if (isLoading || !user) {
-    return null
-  }
-
-  const handleLogout = () => {
-    logout()
-    router.push("/")
-  }
+  if (isLoading || !user) return null
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950">
-      <header className="border-b border-white/10 bg-slate-950/60 backdrop-blur-md sticky top-0 z-50 smooth-transition">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 smooth-transition">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-              <Zap className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Visual Compare</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-slate-400">
-              {user.name} · <span className="font-medium text-blue-400">{roleLabels[user.role]}</span>
-            </span>
-            <Button
-              onClick={handleLogout}
-              size="sm"
-              variant="outline"
-              className="border-white/20 text-slate-200 hover:bg-white/10 smooth-transition"
-            >
-              Salir
-            </Button>
+    <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:py-12">
+      <section className="grid gap-8 border-b border-border pb-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
+        <div>
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-secondary/40 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+            <Sparkles className="h-3.5 w-3.5" /> Centro de inteligencia
           </div>
-        </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto px-6 py-12">
-        <div className="text-center mb-16 animate-fade-in">
-          <h1 className="text-5xl font-bold text-white mb-3">
-            Bienvenido,<br/><span className="gradient-text">{user.name}</span>
+          <h1 className="max-w-3xl text-4xl font-semibold tracking-[-0.035em] text-foreground sm:text-5xl lg:text-6xl">
+            ¿Qué quieres entender hoy?
           </h1>
-          <p className="text-slate-400 text-lg">Revisa antecedentes y prepara una evaluación preliminar de marca.</p>
+          <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
+            Evalúa una decisión, investiga el panorama o vuelve a tus monitoreos. Visual Compare organiza las herramientas según lo que necesitas resolver.
+          </p>
         </div>
 
-        <Link href="/agente">
-          <div className="group bg-gradient-to-br from-blue-600 via-blue-600 to-purple-600 rounded-3xl border border-blue-400/40 p-8 md:p-12 cursor-pointer hover-lift smooth-transition mb-12 overflow-hidden relative">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-blue-400/20 blur-3xl -z-10 group-hover:blur-2xl smooth-transition" />
+        <div className="rounded-2xl border border-border bg-secondary/20 p-5">
+          <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Contexto</p>
+          <p className="mt-2 text-sm font-medium text-foreground">Hola, {user.name}.</p>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">Empieza por una pregunta. Los detalles técnicos, clasificaciones y fuentes aparecen cuando aportan a la decisión.</p>
+        </div>
+      </section>
 
-            <div className="flex items-start justify-between gap-8">
-              <div className="flex-1">
-                <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">Analizar una marca</h2>
-                <p className="text-blue-100 text-lg leading-relaxed max-w-2xl">
-                  Sube un signo, describe los productos o servicios y obtén una evaluación preliminar de clasificaciones, antecedentes y similitudes relevantes.
-                </p>
-              </div>
-              <div className="hidden md:flex flex-shrink-0 animate-float">
-                <Search className="w-20 h-20 text-blue-200 opacity-80 group-hover:opacity-100 smooth-transition" />
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-4 mt-8 mb-8">
-              {[
-                { icon: CheckCircle, label: "Antecedentes", desc: "Consulta de registros disponibles" },
-                { icon: Zap, label: "Clasificaciones", desc: "Sugerencias Viena y Niza" },
-                { icon: Clock, label: "Tiempo estimado", desc: "La mayoría: 1–3 minutos" },
-              ].map((item) => {
-                const Icon = item.icon
-                return (
-                  <div key={item.label} className="bg-blue-500/20 rounded-xl p-4 border border-blue-300/30 backdrop-blur-sm group-hover:bg-blue-500/30 smooth-transition">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Icon className="w-5 h-5 text-blue-100" />
-                      <div className="font-semibold text-blue-100">{item.label}</div>
-                    </div>
-                    <div className="text-sm text-blue-200">{item.desc}</div>
-                  </div>
-                )
-              })}
-            </div>
-
-            <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 font-bold px-8 gap-2 group-hover:translate-x-2 smooth-transition shadow-lg">
-              Comenzar análisis
-              <ArrowRight className="w-5 h-5" />
-            </Button>
+      <section className="py-10">
+        <div className="mb-5 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Acciones principales</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">Evalúa · Investiga · Monitorea</h2>
           </div>
-        </Link>
+        </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          {[
-            { href: "/settings", icon: Settings, title: "Configuración", desc: "Perfil, cuenta y preferencias" },
-            { href: "/consulta", icon: Search, title: "Consulta de marcas", desc: "Busca antecedentes marcarios disponibles en Chile" },
-          ].map((item) => {
-            const Icon = item.icon
+        <div className="grid gap-4 lg:grid-cols-3">
+          {actions.map((action, index) => {
+            const Icon = action.icon
             return (
-              <Link key={item.href} href={item.href}>
-                <Card className="border-white/10 bg-gradient-to-br from-slate-800/40 to-slate-800/20 hover:from-slate-800/60 hover:to-slate-800/40 p-6 cursor-pointer smooth-transition hover-lift group">
-                  <div className="flex items-start justify-between mb-3">
-                    <Icon className="w-8 h-8 text-blue-400 group-hover:scale-110 smooth-transition" />
-                    <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-blue-400 group-hover:translate-x-1 smooth-transition" />
-                  </div>
-                  <h3 className="font-semibold text-white mb-1 text-lg">{item.title}</h3>
-                  <p className="text-sm text-slate-400 group-hover:text-slate-300 smooth-transition">{item.desc}</p>
+              <Link key={action.href} href={action.href} className="group">
+                <Card className="h-full border-border bg-card transition-all hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-lg">
+                  <CardContent className="flex h-full flex-col p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-secondary/50">
+                        <Icon className="h-5 w-5 text-foreground" />
+                      </div>
+                      <span className="text-xs font-medium text-muted-foreground">0{index + 1}</span>
+                    </div>
+                    <p className="mt-8 text-sm font-medium text-muted-foreground">{action.label}</p>
+                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{action.title}</h3>
+                    <p className="mt-3 flex-1 text-sm leading-6 text-muted-foreground">{action.description}</p>
+                    <div className="mt-6 flex items-center gap-2 text-sm font-medium text-foreground">
+                      Abrir <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </div>
+                  </CardContent>
                 </Card>
               </Link>
             )
           })}
         </div>
+      </section>
 
-        <div className="mb-8">
-          <DashboardPhase1Card />
+      <section className="grid gap-6 border-t border-border py-10 lg:grid-cols-[1.35fr_0.65fr]">
+        <div>
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Atajos</p>
+              <h2 className="mt-2 text-xl font-semibold text-foreground">Volver a una investigación</h2>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {shortcuts.map((item) => {
+              const Icon = item.icon
+              return (
+                <Link key={item.href} href={item.href} className="group flex items-center justify-between rounded-xl border border-border bg-card p-4 transition-colors hover:bg-secondary/30">
+                  <span className="flex items-center gap-3 text-sm font-medium text-foreground"><Icon className="h-4 w-4 text-muted-foreground" />{item.label}</span>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                </Link>
+              )
+            })}
+          </div>
         </div>
 
-        <div className="rounded-xl border border-white/10 bg-slate-900/40 p-5 text-sm leading-relaxed text-slate-400">
-          Los resultados son orientativos y dependen de la disponibilidad de las fuentes consultadas. No constituyen una decisión de registrabilidad ni reemplazan una revisión jurídica.
-        </div>
-      </main>
+        <aside className="rounded-2xl border border-border bg-secondary/20 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Fuentes</p>
+            <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300">Operativas</Badge>
+          </div>
+          <h3 className="mt-4 font-semibold text-foreground">INAPI sincronizado</h3>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">La plataforma trabaja sobre el mirror oficial de marcas y patentes y mantiene trazabilidad hacia la evidencia disponible.</p>
+          <Link href="/api/v1/health" target="_blank">
+            <Button variant="ghost" className="mt-3 h-auto p-0 text-sm text-muted-foreground hover:bg-transparent hover:text-foreground">Ver estado técnico <ArrowRight className="ml-1 h-3.5 w-3.5" /></Button>
+          </Link>
+        </aside>
+      </section>
+
+      <div className="border-t border-border pt-6 text-xs leading-5 text-muted-foreground">
+        Los resultados apoyan la investigación y priorización. No constituyen por sí solos una decisión jurídica de registrabilidad, concesión o infracción.
+      </div>
     </div>
   )
 }

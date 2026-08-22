@@ -1,231 +1,149 @@
 'use client'
 
 import Link from 'next/link'
+import { ArrowRight, BellRing, Building2, CheckCircle2, Database, Search, ShieldCheck, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Shield, Zap, CheckCircle, Lock, Clock, Sparkles, ChevronDown } from 'lucide-react'
+
+const journeys = [
+  {
+    eyebrow: 'Evaluar',
+    title: 'Decide si vale la pena avanzar.',
+    description: 'Revisa una marca antes de invertir más tiempo: antecedentes relevantes, similitudes, clases y señales que requieren una mirada más profunda.',
+    icon: ShieldCheck,
+  },
+  {
+    eyebrow: 'Investigar',
+    title: 'Entiende empresas y tecnologías.',
+    description: 'Explora marcas, patentes, solicitantes, inventores e IPC para construir una visión del panorama competitivo y tecnológico en Chile.',
+    icon: Search,
+  },
+  {
+    eyebrow: 'Monitorear',
+    title: 'Mira qué cambió desde ayer.',
+    description: 'Sigue empresas y áreas tecnológicas relevantes y detecta nuevas solicitudes sin repetir manualmente la misma investigación.',
+    icon: BellRing,
+  },
+]
+
+const evidence = [
+  'Datos oficiales de INAPI',
+  'Sincronización automática diaria',
+  'Histórico de patentes 2009–2025',
+  'Resultados y fuentes trazables',
+]
 
 export default function LandingPage() {
   return (
-    <div className="bg-gradient-to-b from-slate-950 via-blue-950 to-slate-950 min-h-screen text-white overflow-hidden">
-      {/* Fixed Navigation */}
-      <nav className="fixed top-0 w-full z-50 border-b border-white/10 backdrop-blur-md bg-slate-950/80 smooth-transition">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="text-2xl font-bold gradient-text">Visual Compare</div>
-          <Link href="/auth/login">
-            <Button className="bg-blue-600 hover:bg-blue-500 gap-2 smooth-transition hover-lift">
-              Inicia sesión <ArrowRight className="w-4 h-4" />
-            </Button>
-          </Link>
+    <main className="min-h-screen bg-slate-950 text-white">
+      <nav className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-slate-950/85 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 lg:px-8">
+          <Link href="/" className="text-lg font-semibold tracking-tight">Visual Compare</Link>
+          <div className="flex items-center gap-2">
+            <Link href="/auth/login"><Button variant="ghost" className="text-slate-300 hover:bg-white/10 hover:text-white">Iniciar sesión</Button></Link>
+            <Link href="/auth/signup"><Button className="gap-2 bg-white text-slate-950 hover:bg-slate-200">Entrar a Visual Compare <ArrowRight className="h-4 w-4" /></Button></Link>
+          </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6">
-        <div className="max-w-5xl mx-auto text-center space-y-8 animate-fade-in">
-          <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full border border-blue-500/30 bg-blue-500/10 backdrop-blur-sm hover-glow smooth-transition cursor-default">
-            <Sparkles className="w-4 h-4 text-blue-400 animate-pulse" />
-            <span className="text-sm text-blue-300">Análisis asistido por IA con consulta de antecedentes INAPI</span>
+      <section className="relative overflow-hidden px-5 pb-24 pt-36 lg:px-8 lg:pb-32 lg:pt-44">
+        <div className="pointer-events-none absolute left-1/2 top-10 h-[520px] w-[760px] -translate-x-1/2 rounded-full bg-blue-600/15 blur-[120px]" />
+        <div className="relative mx-auto max-w-6xl">
+          <div className="max-w-4xl">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-300">
+              <Sparkles className="h-4 w-4 text-blue-300" /> Inteligencia de propiedad industrial en Chile
+            </div>
+            <h1 className="max-w-5xl text-5xl font-semibold leading-[1.02] tracking-[-0.04em] sm:text-6xl lg:text-8xl">
+              Entiende el panorama <span className="text-blue-300">antes de decidir.</span>
+            </h1>
+            <p className="mt-7 max-w-3xl text-lg leading-8 text-slate-300 sm:text-xl">
+              Marcas, patentes e inteligencia competitiva en una sola plataforma, con datos oficiales de INAPI y análisis asistido por IA.
+            </p>
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+              <Link href="/auth/signup"><Button size="lg" className="h-12 gap-2 bg-white px-6 text-slate-950 hover:bg-slate-200">Entrar a Visual Compare <ArrowRight className="h-4 w-4" /></Button></Link>
+              <Link href="#producto"><Button size="lg" variant="outline" className="h-12 border-white/15 bg-transparent px-6 text-white hover:bg-white/10">Ver cómo funciona</Button></Link>
+            </div>
           </div>
 
-          <h1 className="text-6xl md:text-7xl font-bold leading-tight space-y-3">
-            <div>Evalúa tu marca</div>
-            <div className="gradient-text">antes de solicitar su registro en Chile</div>
-          </h1>
-
-          <p className="text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            Analiza elementos visuales, clases relevantes y antecedentes marcarios para obtener una evaluación preliminar que apoye tu decisión.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
-            <Link href="/auth/signup">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-500 gap-2 text-base h-12 smooth-transition hover-lift shadow-lg shadow-blue-500/30">
-                Comenzar análisis <ArrowRight className="w-5 h-5" />
-              </Button>
-            </Link>
-            <Link href="#como-funciona">
-              <Button size="lg" variant="outline" className="border-white/20 hover:bg-white/10 text-white gap-2 text-base h-12 smooth-transition">
-                Conoce cómo funciona <ChevronDown className="w-5 h-5" />
-              </Button>
-            </Link>
-          </div>
-
-          <div className="flex flex-wrap gap-6 justify-center text-sm text-slate-400 pt-4">
-            <div className="flex items-center gap-2 hover:text-white smooth-transition cursor-default">
-              <Lock className="w-4 h-4 text-green-400" />
-              <span>Acceso autenticado</span>
-            </div>
-            <div className="flex items-center gap-2 hover:text-white smooth-transition cursor-default">
-              <Clock className="w-4 h-4 text-blue-400" />
-              <span>Tiempo estimado: 1–3 minutos</span>
-            </div>
-            <div className="flex items-center gap-2 hover:text-white smooth-transition cursor-default">
-              <CheckCircle className="w-4 h-4 text-purple-400" />
-              <span>Resultado orientativo</span>
-            </div>
+          <div className="mt-16 grid gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-3">
+            <div className="bg-slate-950/90 p-5"><p className="text-xs uppercase tracking-[0.18em] text-slate-500">Antes</p><p className="mt-2 text-sm text-slate-300">Evalúa una marca y detecta qué merece revisión.</p></div>
+            <div className="bg-slate-950/90 p-5"><p className="text-xs uppercase tracking-[0.18em] text-slate-500">Durante</p><p className="mt-2 text-sm text-slate-300">Investiga empresas, patentes y tecnologías con contexto.</p></div>
+            <div className="bg-slate-950/90 p-5"><p className="text-xs uppercase tracking-[0.18em] text-slate-500">Después</p><p className="mt-2 text-sm text-slate-300">Monitorea movimientos relevantes y vuelve sólo cuando algo cambia.</p></div>
           </div>
         </div>
       </section>
 
-      {/* Features Grid */}
-      <section className="py-20 px-6 border-t border-white/10 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-16 animate-slide-up">¿Qué obtienes?</h2>
-
-          <div className="grid md:grid-cols-3 gap-6 mb-8">
-            <div className="group bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-2xl p-8 hover-lift hover:border-blue-500/50 cursor-default smooth-transition" style={{ animationDelay: '0.1s' }}>
-              <div className="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center mb-4 group-hover:bg-blue-500/30 group-hover:scale-110 smooth-transition">
-                <Zap className="w-6 h-6 text-blue-400" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Análisis Viena</h3>
-              <p className="text-slate-300 text-sm leading-relaxed">
-                Clasificación preliminar de elementos figurativos, formas y composiciones visuales detectadas en el signo.
-              </p>
-            </div>
-
-            <div className="group bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-2xl p-8 hover-lift hover:border-purple-500/50 cursor-default smooth-transition" style={{ animationDelay: '0.2s' }}>
-              <div className="w-12 h-12 rounded-lg bg-purple-500/20 flex items-center justify-center mb-4 group-hover:bg-purple-500/30 group-hover:scale-110 smooth-transition">
-                <Shield className="w-6 h-6 text-purple-400" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Clasificación Niza</h3>
-              <p className="text-slate-300 text-sm leading-relaxed">
-                Sugerencia de clases de productos y servicios que deben ser revisadas antes de presentar una solicitud.
-              </p>
-            </div>
-
-            <div className="group bg-gradient-to-br from-green-500/10 to-cyan-500/10 border border-green-500/20 rounded-2xl p-8 hover-lift hover:border-green-500/50 cursor-default smooth-transition" style={{ animationDelay: '0.3s' }}>
-              <div className="w-12 h-12 rounded-lg bg-green-500/20 flex items-center justify-center mb-4 group-hover:bg-green-500/30 group-hover:scale-110 smooth-transition">
-                <CheckCircle className="w-6 h-6 text-green-400" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Antecedentes en Chile</h3>
-              <p className="text-slate-300 text-sm leading-relaxed">
-                Consulta de antecedentes disponibles para identificar coincidencias y similitudes relevantes para una revisión posterior.
-              </p>
-            </div>
+      <section id="producto" className="border-y border-white/10 bg-white/[0.025] px-5 py-24 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-12 max-w-3xl">
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-300">Un flujo, tres decisiones</p>
+            <h2 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">No necesitas aprender herramientas. Empieza por lo que quieres resolver.</h2>
           </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="group bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-2xl p-8 hover-lift hover:border-amber-500/50 cursor-default smooth-transition" style={{ animationDelay: '0.4s' }}>
-              <div className="w-12 h-12 rounded-lg bg-amber-500/20 flex items-center justify-center mb-4 group-hover:bg-amber-500/30 group-hover:scale-110 smooth-transition">
-                <Lock className="w-6 h-6 text-amber-400" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Detección de similitudes</h3>
-              <p className="text-slate-300 text-sm leading-relaxed">
-                Señala antecedentes potencialmente relacionados para que puedan ser evaluados con criterio marcario y jurídico.
-              </p>
-            </div>
-
-            <div className="group bg-gradient-to-br from-red-500/10 to-pink-500/10 border border-red-500/20 rounded-2xl p-8 hover-lift hover:border-red-500/50 cursor-default smooth-transition" style={{ animationDelay: '0.5s' }}>
-              <div className="w-12 h-12 rounded-lg bg-red-500/20 flex items-center justify-center mb-4 group-hover:bg-red-500/30 group-hover:scale-110 smooth-transition">
-                <Clock className="w-6 h-6 text-red-400" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Proceso rápido</h3>
-              <p className="text-slate-300 text-sm leading-relaxed">
-                La mayoría de los análisis se completa en 1–3 minutos, según la imagen y la disponibilidad de las fuentes consultadas.
-              </p>
-            </div>
-
-            <div className="group bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-2xl p-8 hover-lift hover:border-cyan-500/50 cursor-default smooth-transition" style={{ animationDelay: '0.6s' }}>
-              <div className="w-12 h-12 rounded-lg bg-cyan-500/20 flex items-center justify-center mb-4 group-hover:bg-cyan-500/30 group-hover:scale-110 smooth-transition">
-                <Sparkles className="w-6 h-6 text-cyan-400" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Asistencia automatizada</h3>
-              <p className="text-slate-300 text-sm leading-relaxed">
-                Modelos de visión y clasificación organizan la información para facilitar una revisión humana más eficiente.
-              </p>
-            </div>
+          <div className="grid gap-4 lg:grid-cols-3">
+            {journeys.map((journey) => {
+              const Icon = journey.icon
+              return (
+                <article key={journey.eyebrow} className="rounded-2xl border border-white/10 bg-slate-900/60 p-7">
+                  <div className="mb-8 flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5"><Icon className="h-5 w-5 text-blue-300" /></div>
+                  <p className="text-sm font-medium text-blue-300">{journey.eyebrow}</p>
+                  <h3 className="mt-2 text-2xl font-semibold tracking-tight">{journey.title}</h3>
+                  <p className="mt-4 text-sm leading-6 text-slate-400">{journey.description}</p>
+                </article>
+              )
+            })}
           </div>
         </div>
       </section>
 
-      {/* How it works */}
-      <section id="como-funciona" className="py-20 px-6 border-t border-white/10">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-16 animate-slide-up">Cómo funciona</h2>
-
-          <div className="space-y-8">
+      <section className="px-5 py-24 lg:px-8">
+        <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+          <div>
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-300">Investigar con contexto</p>
+            <h2 className="mt-4 text-4xl font-semibold tracking-tight">De un dato aislado a una lectura del panorama.</h2>
+            <p className="mt-5 max-w-xl leading-7 text-slate-400">Una empresa no es sólo una lista de patentes. Una marca no es sólo una coincidencia de texto. Visual Compare conecta actividad, estados, clases, IPC, inventores y evidencia para que la información tenga sentido antes de decidir.</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
             {[
-              { step: '1', title: 'Sube tu logo', desc: 'Carga una imagen clara del signo que quieres analizar en un formato compatible.' },
-              { step: '2', title: 'Describe la marca', desc: 'Ingresa el nombre y los productos o servicios asociados para contextualizar la evaluación.' },
-              { step: '3', title: 'Revisa el análisis', desc: 'Consulta clasificaciones sugeridas, antecedentes encontrados y posibles similitudes.' },
-              { step: '4', title: 'Decide el siguiente paso', desc: 'Usa el informe como apoyo preliminar y solicita revisión profesional cuando corresponda.' },
-            ].map((item, idx) => (
-              <div key={idx} className="flex gap-6 items-start group cursor-default hover-lift smooth-transition">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-lg font-bold group-hover:shadow-lg group-hover:shadow-blue-500/50 group-hover:scale-110 smooth-transition">
-                    {item.step}
-                  </div>
-                </div>
-                <div className="pt-2">
-                  <h3 className="text-xl font-bold mb-1">{item.title}</h3>
-                  <p className="text-slate-400 leading-relaxed">{item.desc}</p>
-                </div>
-              </div>
-            ))}
+              { icon: Building2, title: 'Empresas', text: 'Cartera observada, actividad anual, tecnologías dominantes e inventores recurrentes.' },
+              { icon: Database, title: 'Marcas y patentes', text: 'Búsqueda local sobre datos oficiales sincronizados y evidencia trazable.' },
+              { icon: Search, title: 'Tecnologías', text: 'Explora conceptos e IPC y descubre quién está activo en un área.' },
+              { icon: BellRing, title: 'Movimientos', text: 'Convierte una investigación importante en una vigilancia continua.' },
+            ].map((item) => {
+              const Icon = item.icon
+              return <div key={item.title} className="rounded-xl border border-white/10 bg-white/[0.03] p-5"><Icon className="h-5 w-5 text-slate-300" /><h3 className="mt-4 font-medium">{item.title}</h3><p className="mt-2 text-sm leading-6 text-slate-400">{item.text}</p></div>
+            })}
           </div>
         </div>
       </section>
 
-      {/* FAQ */}
-      <section className="py-20 px-6 border-t border-white/10">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-16 animate-slide-up">Preguntas frecuentes</h2>
-
-          <div className="space-y-4">
-            {[
-              { q: '¿La herramienta consulta INAPI?', a: 'La plataforma consulta antecedentes disponibles mediante su integración configurada. La disponibilidad y actualización de los resultados depende de la fuente y del estado de la integración.' },
-              { q: '¿El análisis garantiza el registro?', a: 'No. El resultado es preliminar y orientativo. La aceptación de una solicitud depende de INAPI y puede requerir evaluación jurídica especializada.' },
-              { q: '¿Qué significan Viena y Niza?', a: 'Son clasificaciones internacionales usadas para organizar elementos figurativos y categorías de productos o servicios en materia de marcas.' },
-              { q: '¿Cómo debo interpretar los resultados?', a: 'Como apoyo para identificar antecedentes y preparar una revisión más informada, no como una opinión legal definitiva.' },
-              { q: '¿Cuánto toma el análisis?', a: 'La mayoría de los análisis se completa en 1–3 minutos, aunque el tiempo puede variar según la imagen y las fuentes consultadas.' },
-            ].map((item, idx) => (
-              <details key={idx} className="group border border-white/10 rounded-lg p-4 hover:border-blue-500/30 smooth-transition cursor-pointer hover:bg-blue-500/5">
-                <summary className="font-semibold flex justify-between items-center text-lg group-open:text-blue-400 smooth-transition">
-                  <span>{item.q}</span>
-                  <span className="group-open:rotate-180 smooth-transition text-blue-400">
-                    <ChevronDown className="w-5 h-5" />
-                  </span>
-                </summary>
-                <p className="text-slate-400 mt-4 leading-relaxed">{item.a}</p>
-              </details>
-            ))}
+      <section className="border-y border-white/10 bg-white/[0.025] px-5 py-20 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-10 lg:grid-cols-[1fr_1.2fr] lg:items-center">
+            <div>
+              <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-300">Evidencia primero</p>
+              <h2 className="mt-4 text-3xl font-semibold tracking-tight">La IA ayuda a interpretar. La fuente sigue siendo visible.</h2>
+              <p className="mt-4 leading-7 text-slate-400">Visual Compare usa automatización e IA para ordenar información y acelerar análisis, sin esconder la procedencia de los datos ni convertir una señal preliminar en una certeza jurídica.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {evidence.map((item) => <div key={item} className="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-950/50 p-4 text-sm text-slate-300"><CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-300" />{item}</div>)}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Footer */}
-      <section className="py-20 px-6 border-t border-white/10">
-        <div className="max-w-4xl mx-auto text-center space-y-8 animate-slide-up">
-          <h2 className="text-5xl font-bold">
-            Evalúa tu marca <span className="gradient-text">antes de presentar la solicitud</span>
-          </h2>
-          <p className="text-xl text-slate-300">Obtén una revisión preliminar de antecedentes, clasificaciones y similitudes relevantes.</p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/auth/signup">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-500 gap-2 text-base h-12 smooth-transition hover-lift shadow-lg shadow-blue-500/30">
-                Comenzar análisis <ArrowRight className="w-5 h-5" />
-              </Button>
-            </Link>
-            <Link href="mailto:support@visualcompare.cl">
-              <Button size="lg" variant="outline" className="border-white/20 hover:bg-white/10 text-white text-base h-12 smooth-transition">
-                Contactar soporte
-              </Button>
-            </Link>
-          </div>
-
-          <p className="text-sm text-slate-500">La plataforma puede conservar información necesaria para historial, trazabilidad e informes. Revisa las condiciones aplicables antes de cargar material confidencial.</p>
+      <section className="px-5 py-24 lg:px-8">
+        <div className="mx-auto max-w-4xl text-center">
+          <h2 className="text-4xl font-semibold tracking-tight sm:text-5xl">Investiga antes. Decide mejor. Monitorea después.</h2>
+          <p className="mx-auto mt-5 max-w-2xl text-lg leading-7 text-slate-400">Empieza por una marca, una empresa o una tecnología. Visual Compare organiza el resto del recorrido.</p>
+          <Link href="/auth/signup"><Button size="lg" className="mt-8 h-12 gap-2 bg-white px-6 text-slate-950 hover:bg-slate-200">Entrar a Visual Compare <ArrowRight className="h-4 w-4" /></Button></Link>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-white/10 px-6 py-8">
-        <div className="max-w-7xl mx-auto flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between text-sm text-slate-500">
-          <div>© 2026 Visual Compare Chile. Todos los derechos reservados.</div>
-          <div className="flex gap-6">
-            <a href="mailto:support@visualcompare.cl" className="hover:text-white smooth-transition">Contacto</a>
-          </div>
+      <footer className="border-t border-white/10 px-5 py-8 text-sm text-slate-500 lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <span>© 2026 Visual Compare Chile.</span>
+          <span>Los resultados apoyan la investigación y no reemplazan una evaluación jurídica profesional.</span>
         </div>
       </footer>
-    </div>
+    </main>
   )
 }
