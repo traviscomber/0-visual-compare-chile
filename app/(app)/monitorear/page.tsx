@@ -1,1 +1,1 @@
-export { default } from "../patentes/alertas/page"
+export { default } from "../../patentes/alertas/page"
