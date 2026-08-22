@@ -6,51 +6,57 @@ export const dynamic = "force-dynamic"
 
 const INAPI_FRESH_HOURS = 36
 
+type Freshness = {
+  status: "fresh" | "stale" | "unknown"
+  lastSuccessfulSyncAt: string | null
+  ageHours: number | null
+}
+
 function resolveRevision() {
   return process.env.VERCEL_GIT_COMMIT_SHA || process.env.APP_REVISION || "local"
 }
 
+async function readFreshness(source: string, now: number): Promise<Freshness> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from("inapi_sync_runs")
+    .select("finished_at")
+    .eq("source", source)
+    .eq("status", "completed")
+    .not("finished_at", "is", null)
+    .order("finished_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) throw error
+
+  const lastSuccessfulSyncAt = data?.finished_at ? String(data.finished_at) : null
+  const ageHours = lastSuccessfulSyncAt
+    ? Math.max(0, (now - new Date(lastSuccessfulSyncAt).getTime()) / 3_600_000)
+    : null
+
+  return {
+    status: ageHours !== null && ageHours <= INAPI_FRESH_HOURS ? "fresh" : lastSuccessfulSyncAt ? "stale" : "unknown",
+    lastSuccessfulSyncAt,
+    ageHours: ageHours === null ? null : Number(ageHours.toFixed(2)),
+  }
+}
+
 export async function GET() {
   const now = Date.now()
-  let inapi: {
-    status: "fresh" | "stale" | "unknown"
-    lastSuccessfulSyncAt: string | null
-    ageHours: number | null
-  } = {
-    status: "unknown",
-    lastSuccessfulSyncAt: null,
-    ageHours: null,
-  }
+  let trademarks: Freshness = { status: "unknown", lastSuccessfulSyncAt: null, ageHours: null }
+  let patents: Freshness = { status: "unknown", lastSuccessfulSyncAt: null, ageHours: null }
 
   try {
-    const admin = createAdminClient()
-    const { data, error } = await admin
-      .from("inapi_sync_runs")
-      .select("finished_at")
-      .eq("source", "inapi-open-data")
-      .eq("status", "completed")
-      .not("finished_at", "is", null)
-      .order("finished_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (error) throw error
-
-    const lastSuccessfulSyncAt = data?.finished_at ? String(data.finished_at) : null
-    const ageHours = lastSuccessfulSyncAt
-      ? Math.max(0, (now - new Date(lastSuccessfulSyncAt).getTime()) / 3_600_000)
-      : null
-
-    inapi = {
-      status: ageHours !== null && ageHours <= INAPI_FRESH_HOURS ? "fresh" : lastSuccessfulSyncAt ? "stale" : "unknown",
-      lastSuccessfulSyncAt,
-      ageHours: ageHours === null ? null : Number(ageHours.toFixed(2)),
-    }
+    ;[trademarks, patents] = await Promise.all([
+      readFreshness("inapi-open-data", now),
+      readFreshness("inapi-patent-open-data", now),
+    ])
   } catch (error) {
     console.error("[health] failed to read INAPI sync freshness", error)
   }
 
-  const healthy = inapi.status === "fresh"
+  const healthy = trademarks.status === "fresh" && patents.status === "fresh"
 
   return NextResponse.json(
     {
@@ -60,16 +66,14 @@ export async function GET() {
       timestamp: new Date(now).toISOString(),
       dependencies: {
         inapi: {
-          ...inapi,
-          freshnessThresholdHours: INAPI_FRESH_HOURS,
+          trademarks: { ...trademarks, freshnessThresholdHours: INAPI_FRESH_HOURS },
+          patents: { ...patents, freshnessThresholdHours: INAPI_FRESH_HOURS },
         },
       },
     },
     {
       status: healthy ? 200 : 503,
-      headers: {
-        "Cache-Control": "no-store",
-      },
+      headers: { "Cache-Control": "no-store" },
     },
   )
 }
