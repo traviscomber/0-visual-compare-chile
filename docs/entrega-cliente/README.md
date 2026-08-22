@@ -62,8 +62,14 @@ Al cierre de esta documentación:
 - `/api/v1/health` responde `200 OK`;
 - el mirror INAPI de marcas se reporta `fresh`;
 - el mirror INAPI de patentes se reporta `fresh`;
+- el histórico oficial de solicitudes de patentes **2009–2025 está completo: 17/17 años**;
+- no existen números de solicitud de patente duplicados en el corpus auditado;
+- el corpus INAPI de patentes contiene **56.637 expedientes** y **174.446 relaciones IPC** al corte;
+- las métricas interanuales de Competitive Intelligence quedaron habilitadas automáticamente al completarse la cobertura histórica;
 - CI, TypeScript, build productivo y CodeQL están habilitados en el repositorio;
 - la sincronización diaria está configurada mediante Vercel Cron y `CRON_SECRET`.
+
+Las cifras de registros son una fotografía operativa del corte y continuarán cambiando con las sincronizaciones oficiales posteriores.
 
 ## Documento contractual vs. documento operativo
 

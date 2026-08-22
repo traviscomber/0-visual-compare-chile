@@ -39,9 +39,6 @@ flowchart TD
   SYNC2 --> DB
   SYNC2 --> DET[Detección de alertas]
   DET --> DB
-  SYNC2 --> BACK[Backfill histórico de patentes]
-  BACK --> DB
-
   DB --> HEALTH[/api/v1/health]
   HEALTH --> OPS[Observabilidad y frescura]
 ```
@@ -75,7 +72,9 @@ La búsqueda local normaliza tildes y variantes tipográficas para evitar degrad
 
 El sistema importa solicitudes y registros, mantiene relaciones IPC y construye perfiles competitivos sobre el corpus local.
 
-El histórico de solicitudes de patentes 2009–2025 se completa incrementalmente mediante el cron. El proceso es reiniciable: cada año sólo se considera completo cuando la ejecución correspondiente termina con estado exitoso.
+El histórico oficial de solicitudes de patentes **2009–2025 está completo: 17/17 años**. Cada año quedó registrado como ejecución exitosa en `inapi_sync_runs`, no se detectaron números de solicitud duplicados en la auditoría de cierre y el corpus llegó a **56.637 expedientes INAPI** con **174.446 relaciones IPC** al 22 de agosto de 2026.
+
+El sincronizador histórico permanece idempotente y reiniciable. Como la cobertura 2009–2025 ya está completa, el backfill diario normal no tiene años pendientes y se convierte en un no-op hasta que se cambie expresamente el rango histórico.
 
 ## 5. Sincronización diaria
 
@@ -86,10 +85,10 @@ Orden de ejecución:
 1. sincronizar marcas del año actual;
 2. sincronizar patentes del año actual;
 3. detectar nuevas coincidencias para alertas;
-4. ejecutar un lote acotado de backfill histórico;
+4. verificar si existen años históricos pendientes;
 5. registrar resultados en `inapi_sync_runs`.
 
-Este orden es importante porque evita que una patente histórica recién importada genere una alerta como si fuera una solicitud nueva.
+El orden de alertas antes de cualquier eventual backfill es importante porque evita que una patente histórica recién importada genere una alerta como si fuera una solicitud nueva.
 
 ## 6. Frescura de datos
 
@@ -121,9 +120,11 @@ Los archivos deben validarse antes de procesarse y almacenarse con controles de 
 
 ## 9. Competitive Intelligence
 
-Los perfiles por empresa se construyen sobre patentes observadas y relaciones IPC. Las métricas actuales incluyen cartera observada, estados, actividad reciente, tecnologías dominantes e inventores recurrentes.
+Los perfiles por empresa se construyen sobre patentes observadas y relaciones IPC. Las métricas incluyen cartera observada, estados, actividad reciente, tecnologías dominantes, inventores recurrentes y actividad anual.
 
-Las métricas interanuales sólo se habilitan cuando la cobertura histórica es suficiente. Esta regla evita publicar tendencias basadas en datos incompletos.
+Al completarse los **17 años oficiales 2009–2025**, la regla de cobertura habilitó automáticamente las métricas interanuales. `growthClaimsEnabled` es ahora `true`; los porcentajes YoY sólo se calculan cuando el año anterior tiene una base distinta de cero.
+
+Como prueba de cierre, el perfil `NESTLE` devolvió 70 solicitudes para 2025 frente a 62 en 2024, equivalente a **+12,9% YoY** dentro del corpus oficial sincronizado. Esta cifra es un resultado dinámico del corte, no una constante contractual.
 
 ## 10. Alertas
 
@@ -135,13 +136,7 @@ El criterio temporal excluye registros históricos anteriores a la creación de 
 
 La API v1 ofrece capacidades de integración protegidas mediante API keys y/o sesión según endpoint. El sistema contempla cuotas, rate limiting y trazabilidad de uso.
 
-Para integraciones externas se recomienda:
-
-- guardar las API keys en un secret manager;
-- no exponerlas en frontend;
-- respetar `429` y backoff;
-- registrar request IDs y tiempos;
-- probar primero en el API Playground o ambiente de preview.
+Para integraciones externas se recomienda guardar las API keys en un secret manager, no exponerlas en frontend, respetar `429` y backoff, registrar request IDs y tiempos y probar primero en el API Playground o ambiente de preview.
 
 ## 12. Despliegue
 
@@ -159,15 +154,7 @@ Flujo recomendado:
 
 ## 13. Controles de calidad
 
-El repositorio cuenta con:
-
-- TypeScript gate;
-- build productivo de Next.js en CI;
-- CodeQL para JavaScript/TypeScript;
-- Dependabot;
-- CODEOWNERS;
-- `SECURITY.md`;
-- previews automáticos en Vercel.
+El repositorio cuenta con TypeScript gate, build productivo de Next.js en CI, CodeQL para JavaScript/TypeScript, Dependabot, CODEOWNERS, `SECURITY.md` y previews automáticos en Vercel.
 
 ## 14. Continuidad operativa
 
