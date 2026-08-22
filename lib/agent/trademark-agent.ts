@@ -3,10 +3,21 @@
  */
 
 import OpenAI from "openai"
+import { zodResponseFormat } from "openai/helpers/zod"
+import { z } from "zod"
 import { VienaClassifier, type VienaClassification } from "./viena-classifier"
 import { NizaClassifier, type NizaClassification } from "./niza-classifier"
 import { ConflictEngine, type ConflictReport } from "./conflict-engine"
 import { searchInapi } from "@/lib/inapi/client"
+import {
+  buildAttempt,
+  maxTier,
+  modelForTier,
+  totalRoutingCostUsd,
+  type ModelAttempt,
+  type ModelRoutingSummary,
+  type ModelTier,
+} from "@/lib/ai/model-router"
 import type { Marca } from "@/types/marca"
 
 export interface TrademarkAgentRequest {
@@ -24,6 +35,11 @@ export interface TrademarkInsightReport {
   timestamp: string
   costo_estimado_usd: number
   tokens_totales: number
+  routing: {
+    max_tier_used: ModelTier
+    escalated: boolean
+    report: ModelRoutingSummary
+  }
   viena: VienaClassification
   niza: NizaClassification
   conflictos: ConflictReport
@@ -80,6 +96,14 @@ export interface TrademarkInsightReport {
   pipeline_ms: number
 }
 
+const ReportSchema = z.object({
+  resumen_ejecutivo: z.string(),
+  analisis_conflictos: z.string(),
+  nivel_riesgo_global: z.enum(["ALTO", "MEDIO", "BAJO"]),
+  recomendaciones: z.array(z.string()),
+  proximos_pasos: z.array(z.string()),
+})
+
 const REPORT_SYSTEM_PROMPT = `Eres un analista interno senior de propiedad intelectual para una plataforma chilena de apoyo a decisiones.
 
 Redacta para CEO, administración y analistas. Sé directo, corporativo y verificable.
@@ -99,7 +123,6 @@ export class TrademarkAgent {
 
   async analyze(req: TrademarkAgentRequest): Promise<TrademarkInsightReport> {
     const start = Date.now()
-    let tokens_totales = 0
 
     const [viena, niza] = await Promise.all([
       this.vienaClassifier.classify(req.imageBase64, req.imageMimeType),
@@ -109,8 +132,6 @@ export class TrademarkAgent {
         industria: req.industria,
       }),
     ])
-
-    tokens_totales += viena.tokens_used + niza.tokens_used
 
     const conflictEngine = new ConflictEngine(req.repositorio)
     const conflictos = conflictEngine.analyze({
@@ -128,6 +149,7 @@ export class TrademarkAgent {
       registrabilidad = buildUnavailableInapiResult(req.nombreMarca)
     }
 
+    const reportTier = chooseReportTier({ viena, niza, conflictos, registrabilidad })
     const informe = await this.generateReport({
       nombreMarca: req.nombreMarca,
       viena,
@@ -135,14 +157,25 @@ export class TrademarkAgent {
       conflictos,
       registrabilidad,
       visualScore: req.visualScore,
+      tier: reportTier,
     })
-    tokens_totales += informe.tokens_used
+
+    const tokens_totales = viena.tokens_used + niza.tokens_used + informe.tokens_used
+    const costo_estimado_usd = Number((
+      viena.estimated_cost_usd + niza.estimated_cost_usd + informe.estimated_cost_usd
+    ).toFixed(6))
+    const max_tier_used = maxTier(maxTier(viena.routing.final_tier, niza.routing.final_tier), informe.routing.final_tier)
 
     return {
       marca: req.nombreMarca,
       timestamp: new Date().toISOString(),
-      costo_estimado_usd: Number(((tokens_totales / 1000) * 0.01).toFixed(4)),
+      costo_estimado_usd,
       tokens_totales,
+      routing: {
+        max_tier_used,
+        escalated: viena.routing.escalated || niza.routing.escalated || reportTier !== "luna",
+        report: informe.routing,
+      },
       viena,
       niza,
       conflictos,
@@ -159,8 +192,9 @@ export class TrademarkAgent {
     conflictos: ConflictReport
     registrabilidad?: TrademarkInsightReport["registrabilidad"]
     visualScore?: number
+    tier: ModelTier
   }) {
-    const { nombreMarca, viena, niza, conflictos, registrabilidad, visualScore } = params
+    const { nombreMarca, viena, niza, conflictos, registrabilidad, visualScore, tier } = params
     const vienaResumen = viena.codes.slice(0, 5).map((c) => `${c.code} (${c.titulo}): ${c.elemento}`).join("\n")
     const nizaResumen = niza.clases.map((c) => `Clase ${c.numero} [${c.tipo}]: ${c.titulo} — ${c.razon}`).join("\n")
     const conflictosTop = conflictos.conflictos.slice(0, 5).map((c) =>
@@ -196,55 +230,48 @@ ${nizaResumen || "No determinada"}
 OTROS CONFLICTOS DEL MOTOR:
 ${conflictosTop || "Sin conflictos relevantes"}
 
-Responde ÚNICAMENTE con JSON válido:
-{
-  "resumen_ejecutivo": "Máximo 3 oraciones: decisión sugerida, evidencia principal y nivel de confianza.",
-  "analisis_conflictos": "Distingue antecedentes INAPI de inferencias visuales y de clasificación.",
-  "nivel_riesgo_global": "ALTO|MEDIO|BAJO",
-  "recomendaciones": ["Acción concreta 1", "Acción concreta 2", "Acción concreta 3"],
-  "proximos_pasos": ["Paso inmediato", "Paso posterior"],
-  "disclaimer": "Indica que es una evaluación preliminar basada en fuentes disponibles y no una decisión de INAPI ni asesoría jurídica."
-}`
+Entrega un resumen de máximo 3 oraciones, análisis de conflictos, nivel de riesgo, hasta 5 recomendaciones y hasta 4 próximos pasos.`
 
-    const response = await this.openai.chat.completions.create({
-      model: "gpt-4o",
-      max_tokens: 900,
-      temperature: 0.1,
+    const model = modelForTier(tier)
+    const response = await this.openai.chat.completions.parse({
+      model,
+      max_completion_tokens: 900,
       messages: [
         { role: "system", content: REPORT_SYSTEM_PROMPT },
         { role: "user", content: userPrompt },
       ],
+      response_format: zodResponseFormat(ReportSchema, "trademark_report"),
     })
 
-    const raw = response.choices[0]?.message?.content ?? "{}"
-    const tokens_used = response.usage?.total_tokens ?? 0
+    const parsed = response.choices[0]?.message.parsed
+    if (!parsed) throw new Error("Trademark report returned no schema-valid output")
 
-    try {
-      const jsonMatch = raw.match(/\{[\s\S]*\}/)
-      const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {}
-      return {
-        data: {
-          resumen_ejecutivo: String(parsed.resumen_ejecutivo ?? "Evaluación preliminar completada."),
-          analisis_conflictos: String(parsed.analisis_conflictos ?? ""),
-          nivel_riesgo_global: normalizeRisk(parsed.nivel_riesgo_global, conflictos.nivel_riesgo_global),
-          recomendaciones: toStringArray(parsed.recomendaciones).slice(0, 5),
-          proximos_pasos: toStringArray(parsed.proximos_pasos).slice(0, 4),
-          disclaimer: "Evaluación preliminar basada en las fuentes disponibles. No constituye una decisión de INAPI ni reemplaza asesoría jurídica.",
-        } satisfies TrademarkInsightReport["informe"],
-        tokens_used,
-      }
-    } catch {
-      return {
-        data: {
-          resumen_ejecutivo: "La evaluación preliminar fue completada, pero el resumen automático no pudo estructurarse.",
-          analisis_conflictos: "Revise directamente los antecedentes y las clasificaciones mostradas.",
-          nivel_riesgo_global: conflictos.nivel_riesgo_global.toUpperCase() as "ALTO" | "MEDIO" | "BAJO",
-          recomendaciones: ["Revisar antecedentes INAPI priorizados", "Validar clases Niza relevantes"],
-          proximos_pasos: ["Documentar la decisión", "Solicitar revisión jurídica cuando corresponda"],
-          disclaimer: "Evaluación preliminar basada en las fuentes disponibles. No constituye una decisión de INAPI ni reemplaza asesoría jurídica.",
-        },
-        tokens_used,
-      }
+    const confidence = reportConfidence(registrabilidad)
+    const attempts: ModelAttempt[] = [buildAttempt({
+      tier,
+      model,
+      confidence,
+      usage: response.usage,
+      reason: `risk-aware-report:${tier}`,
+    })]
+
+    return {
+      data: {
+        resumen_ejecutivo: parsed.resumen_ejecutivo,
+        analisis_conflictos: parsed.analisis_conflictos,
+        nivel_riesgo_global: normalizeRisk(parsed.nivel_riesgo_global, conflictos.nivel_riesgo_global),
+        recomendaciones: parsed.recomendaciones.slice(0, 5),
+        proximos_pasos: parsed.proximos_pasos.slice(0, 4),
+        disclaimer: "Evaluación preliminar basada en las fuentes disponibles. No constituye una decisión de INAPI ni reemplaza asesoría jurídica.",
+      } satisfies TrademarkInsightReport["informe"],
+      tokens_used: attempts.reduce((sum, attempt) => sum + attempt.total_tokens, 0),
+      estimated_cost_usd: totalRoutingCostUsd(attempts),
+      routing: {
+        final_tier: tier,
+        final_model: model,
+        escalated: tier !== "luna",
+        attempts,
+      } satisfies ModelRoutingSummary,
     }
   }
 
@@ -253,12 +280,7 @@ Responde ÚNICAMENTE con JSON válido:
     nizaClases: NizaClassification["clases"],
   ): Promise<TrademarkInsightReport["registrabilidad"]> {
     const consultedAt = new Date().toISOString()
-    const marcasEncontradas = await searchInapi({
-      query: nombreMarca,
-      type: "nombre",
-      matchMode: "2",
-    })
-
+    const marcasEncontradas = await searchInapi({ query: nombreMarca, type: "nombre", matchMode: "2" })
     const requestedClasses = new Set(nizaClases.map((clase) => String(clase.numero)))
     const ranked = marcasEncontradas
       .map((marca) => rankInapiResult(marca, nombreMarca, requestedClasses))
@@ -333,6 +355,28 @@ Responde ÚNICAMENTE con JSON válido:
   }
 }
 
+function chooseReportTier(params: {
+  viena: VienaClassification
+  niza: NizaClassification
+  conflictos: ConflictReport
+  registrabilidad?: TrademarkInsightReport["registrabilidad"]
+}): ModelTier {
+  const { viena, niza, conflictos, registrabilidad } = params
+  const upstreamTier = maxTier(viena.routing.final_tier, niza.routing.final_tier)
+  const lowSourceConfidence = registrabilidad?.calidad.confianza === "baja"
+  const highRisk = conflictos.nivel_riesgo_global.toUpperCase() === "ALTO"
+
+  if (upstreamTier === "sol" || (lowSourceConfidence && highRisk)) return "sol"
+  if (upstreamTier === "terra" || lowSourceConfidence || highRisk) return "terra"
+  return "luna"
+}
+
+function reportConfidence(registrabilidad?: TrademarkInsightReport["registrabilidad"]) {
+  if (registrabilidad?.calidad.confianza === "alta") return 0.95
+  if (registrabilidad?.calidad.confianza === "media") return 0.75
+  return 0.45
+}
+
 function rankInapiResult(marca: Marca, query: string, requestedClasses: Set<string>) {
   const normalizedName = normalizeComparable(marca.nombre)
   const normalizedQuery = normalizeComparable(query)
@@ -343,21 +387,13 @@ function rankInapiResult(marca: Marca, query: string, requestedClasses: Set<stri
 
   let score = active ? 40 : 5
   const reasons: string[] = [active ? "antecedente activo" : "antecedente histórico"]
-  if (exact) {
-    score += 35
-    reasons.push("nombre exacto")
-  } else if (starts) {
-    score += 20
-    reasons.push("nombre comienza igual")
-  } else if (normalizedName.includes(normalizedQuery)) {
-    score += 12
-    reasons.push("nombre contiene la consulta")
-  }
+  if (exact) { score += 35; reasons.push("nombre exacto") }
+  else if (starts) { score += 20; reasons.push("nombre comienza igual") }
+  else if (normalizedName.includes(normalizedQuery)) { score += 12; reasons.push("nombre contiene la consulta") }
   if (classOverlap > 0) {
     score += Math.min(25, classOverlap * 10)
     reasons.push(`${classOverlap} clase(s) Niza coincidente(s)`)
   }
-
   return { marca, score: Math.min(100, score), reasons }
 }
 
@@ -399,18 +435,10 @@ function buildUnavailableInapiResult(query: string): TrademarkInsightReport["reg
     conflictos_reales: 0,
     recomendacion: "La fuente INAPI no estuvo disponible. No tome una decisión hasta repetir la consulta.",
     fuente: {
-      nombre: "INAPI",
-      modo: "consulta-live",
-      consulta: query,
-      tipo: "nombre",
-      match: "contiene",
-      consultado_en: new Date().toISOString(),
+      nombre: "INAPI", modo: "consulta-live", consulta: query, tipo: "nombre", match: "contiene", consultado_en: new Date().toISOString(),
     },
     calidad: {
-      confianza: "baja",
-      cobertura_clases: 0,
-      resultados_totales: 0,
-      resultados_activos: 0,
+      confianza: "baja", cobertura_clases: 0, resultados_totales: 0, resultados_activos: 0,
       advertencias: ["Fuente INAPI no disponible durante el análisis."],
     },
   }
@@ -423,8 +451,4 @@ function normalizeComparable(value: string) {
 function normalizeRisk(value: unknown, fallback: string): "ALTO" | "MEDIO" | "BAJO" {
   const normalized = String(value ?? fallback).toUpperCase()
   return normalized === "ALTO" || normalized === "MEDIO" ? normalized : "BAJO"
-}
-
-function toStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []
 }
