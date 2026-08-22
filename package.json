@@ -12,6 +12,7 @@
     "smoke": "node scripts/smoke-check.mjs",
     "canary:inapi": "node scripts/canary-inapi-search.mjs",
     "sync:inapi": "node scripts/run-inapi-sync.mjs",
+    "sync:inapi:open-data": "node scripts/run-production-command.mjs node scripts/sync-inapi-open-data.mjs",
     "vercel:pull": "pnpm dlx vercel env pull .env.vercel.production --environment=production --yes",
     "run:prod": "node scripts/run-production-command.mjs",
     "sync:inapi:prod": "node scripts/run-production-command.mjs node scripts/run-inapi-sync-pg.mjs",
