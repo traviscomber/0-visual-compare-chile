@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic"
 const CASE_STATUSES = new Set(["open", "review", "decided", "archived"])
 const CASE_PRIORITIES = new Set(["low", "normal", "high"])
 const CONTEXT_TYPES = new Set(["general", "brand", "company", "technology"])
+const CASE_SELECT = "id,title,status,priority,context_type,context_query,decision_summary,notes,last_reviewed_at,created_at,updated_at"
 
 export async function GET() {
   const auth = await requireUser()
@@ -14,7 +15,7 @@ export async function GET() {
 
   const { data, error } = await auth.supabase
     .from("cases")
-    .select("id,title,status,priority,context_type,context_query,decision_summary,notes,created_at,updated_at,case_items(count)")
+    .select(`${CASE_SELECT},case_items(count)`)
     .order("updated_at", { ascending: false })
 
   if (error) return NextResponse.json({ error: "No pudimos cargar los casos." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
   const { data, error } = await auth.supabase
     .from("cases")
     .insert({ user_id: auth.user.id, title, context_type: contextType, context_query: contextQuery, priority, updated_at: now })
-    .select("id,title,status,priority,context_type,context_query,decision_summary,notes,created_at,updated_at")
+    .select(CASE_SELECT)
     .single()
 
   if (error) return NextResponse.json({ error: "No pudimos crear el caso." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
@@ -70,11 +71,13 @@ export async function PATCH(request: Request) {
     priority?: string
     decisionSummary?: string | null
     notes?: string | null
+    markReviewed?: boolean
   }
 
   if (!body.id) return NextResponse.json({ error: "Falta id." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
 
-  const patch: Record<string, string | null> = { updated_at: new Date().toISOString() }
+  const now = new Date().toISOString()
+  const patch: Record<string, string | null> = { updated_at: now }
   if (typeof body.title === "string") {
     const title = body.title.trim()
     if (title.length < 2 || title.length > 160) return NextResponse.json({ error: "Nombre de caso inválido." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
@@ -90,12 +93,13 @@ export async function PATCH(request: Request) {
   }
   if (body.decisionSummary !== undefined) patch.decision_summary = body.decisionSummary?.trim().slice(0, 2000) || null
   if (body.notes !== undefined) patch.notes = body.notes?.trim().slice(0, 8000) || null
+  if (body.markReviewed === true) patch.last_reviewed_at = now
 
   const { data, error } = await auth.supabase
     .from("cases")
     .update(patch)
     .eq("id", body.id)
-    .select("id,title,status,priority,context_type,context_query,decision_summary,notes,created_at,updated_at")
+    .select(CASE_SELECT)
     .single()
 
   if (error) return NextResponse.json({ error: "No pudimos actualizar el caso." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
