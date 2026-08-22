@@ -12,14 +12,16 @@ export async function GET(request: Request) {
   const caseId = new URL(request.url).searchParams.get("caseId")
   if (!caseId) return NextResponse.json({ error: "Falta caseId." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
 
-  const [{ data: caseRow, error: caseError }, { data: items, error: itemsError }] = await Promise.all([
+  const [{ data: caseRow, error: caseError }, { data: items, error: itemsError }, { data: events, error: eventsError }] = await Promise.all([
     auth.supabase.from("cases").select("id,title,status,priority,context_type,context_query,decision_summary,notes,last_reviewed_at,created_at,updated_at").eq("id", caseId).single(),
     auth.supabase.from("case_items").select("id,case_id,item_type,source_id,title,metadata,created_at").eq("case_id", caseId).order("created_at", { ascending: false }),
+    auth.supabase.from("case_events").select("id,case_id,event_type,title,payload,occurred_at").eq("case_id", caseId).order("occurred_at", { ascending: false }).limit(200),
   ])
 
   if (caseError || !caseRow) return NextResponse.json({ error: "Caso no encontrado." }, { status: 404, headers: PRIVATE_NO_STORE_HEADERS })
   if (itemsError) return NextResponse.json({ error: "No pudimos cargar la evidencia del caso." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
-  return NextResponse.json({ case: caseRow, items: items ?? [] }, { headers: PRIVATE_NO_STORE_HEADERS })
+  if (eventsError) return NextResponse.json({ error: "No pudimos cargar la línea de tiempo del caso." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
+  return NextResponse.json({ case: caseRow, items: items ?? [], events: events ?? [] }, { headers: PRIVATE_NO_STORE_HEADERS })
 }
 
 export async function POST(request: Request) {
