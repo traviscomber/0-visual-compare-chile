@@ -17,6 +17,7 @@ import {
 import {
   Activity,
   BellRing,
+  BriefcaseBusiness,
   Cpu,
   History,
   LayoutDashboard,
@@ -30,6 +31,7 @@ import { cn } from "@/lib/utils"
 
 const navItems = [
   { href: "/dashboard", label: "Inicio", icon: LayoutDashboard, aliases: [] },
+  { href: "/casos", label: "Casos", icon: BriefcaseBusiness, aliases: [] },
   { href: "/evaluar", label: "Evaluar", icon: Cpu, aliases: ["/agente", "/compare", "/comparisons"] },
   { href: "/investigar", label: "Investigar", icon: Search, aliases: ["/consulta-inapi", "/consulta", "/patentes"] },
   { href: "/monitorear", label: "Monitorear", icon: BellRing, aliases: ["/patentes/alertas"] },
