@@ -168,7 +168,7 @@ Principios actuales:
 
 Controles versionados bajo `.github/`:
 
-- CI de lint + TypeScript;
+- CI de TypeScript + build de producción sin secretos;
 - CodeQL;
 - Dependabot;
 - CODEOWNERS;
@@ -221,24 +221,18 @@ pnpm install
 pnpm dev
 ```
 
-Validación:
+Validación reproducible sin secretos:
 
 ```bash
-pnpm lint
 pnpm exec tsc --noEmit
-pnpm build
+pnpm build:raw
+```
+
+Validaciones operativas con entorno configurado:
+
+```bash
 pnpm smoke
-```
-
-Gate operativo:
-
-```bash
 pnpm gate:phase1
-```
-
-Release gate:
-
-```bash
 pnpm release:gate
 ```
 
@@ -263,7 +257,7 @@ pnpm canary:inapi
 
 1. Trabajar en branch.
 2. Abrir PR a `main`.
-3. Esperar CI + preview Vercel.
+3. Esperar CI + CodeQL + preview Vercel.
 4. Revisar migraciones/impacto de datos cuando corresponda.
 5. Mergear sólo con checks verdes.
 6. Esperar deploy de producción.
