@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { syncCurrentYearInapiOpenData } from "@/lib/inapi/open-data-sync"
-import { syncCurrentYearPatentOpenData } from "@/lib/inapi/patent-open-data-sync"
+import { syncCurrentYearPatentOpenData, syncNextPatentHistoryBatch } from "@/lib/inapi/patent-open-data-sync"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -16,16 +16,22 @@ export async function GET(request: Request) {
 
   const startedAt = Date.now()
   try {
+    // Current-year freshness is always the first priority.
     const [trademarks, patents] = await Promise.all([
       syncCurrentYearInapiOpenData(),
       syncCurrentYearPatentOpenData(),
     ])
+
+    // Then consume a bounded slice of the missing 2009-2025 applications history.
+    // Two years/run keeps the cron restart-safe and inside the Vercel duration budget.
+    const patentHistory = await syncNextPatentHistoryBatch(2)
 
     return NextResponse.json({
       ok: true,
       durationMs: Date.now() - startedAt,
       trademarks,
       patents,
+      patentHistory,
     })
   } catch (error) {
     console.error("[cron/inapi-open-data] sync failed", error)
