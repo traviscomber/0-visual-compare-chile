@@ -99,7 +99,6 @@ export async function syncNextPatentHistoryBatch(maxYears = 2): Promise<PatentHi
       summaries.push(await syncPatentOpenDataYear(year, [APPLICATIONS_DATASET]))
       completedBefore.add(year)
     } catch (error) {
-      // A missing/non-DataStore historical resource should not block the current-year refresh.
       console.error(`[patent-history] ${year} failed`, error)
       break
     }
@@ -150,13 +149,13 @@ async function syncDataset(dataset: (typeof DATASETS)[number], year: number) {
 
   try {
     while (true) {
-      const page = await ckan("datastore_search", { resource_id: resource.id, limit: PAGE_SIZE, offset })
+      const page = await ckan("datastore_search", { resource_id: String(resource.id), limit: PAGE_SIZE, offset })
       total = Number(page.total || total || 0)
-      const records = Array.isArray(page.records) ? page.records : []
+      const records: Record<string, unknown>[] = Array.isArray(page.records) ? page.records : []
       if (!records.length) break
 
       fetched += records.length
-      const rows = records.map((record) => normalizePatentRow(record, dataset)).filter(Boolean) as NormalizedPatentRow[]
+      const rows = records.map((record: Record<string, unknown>) => normalizePatentRow(record, dataset)).filter(Boolean) as NormalizedPatentRow[]
       normalized += rows.length
 
       for (let index = 0; index < rows.length; index += UPSERT_BATCH_SIZE) {
