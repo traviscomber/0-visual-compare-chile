@@ -45,18 +45,38 @@ The refreshed 2026 corpus is now fresh. Individual hits sourced only from older 
 
 ## Synchronization
 
-Use:
+Manual/operational command:
 
 ```bash
 pnpm sync:inapi:open-data
 ```
 
-The synchronizer discovers CKAN resources dynamically, defaults to the current UTC year, paginates DataStore JSON, normalizes the official English field schema (`ApplicationNumber`, `BrandName`, `NizaClasses`, etc.), upserts by application/registration identity, stores Niza/Vienna relations when supplied, and records runs in `inapi_sync_runs`.
+The synchronizer discovers CKAN resources dynamically, defaults to the current UTC year, paginates DataStore JSON, normalizes the official English field schema (`ApplicationNumber`, `BrandName`, `NizaClasses`, etc.), upserts by application identity, stores Niza relations when supplied, and records runs in `inapi_sync_runs`.
+
+### Vercel Cron
+
+Production scheduling is declared in `vercel.json`:
+
+- route: `/api/cron/inapi-open-data`
+- schedule: `10 8 * * *` (08:10 UTC every day)
+- runtime: Node.js
+- max duration: 300 seconds
+- authentication: `Authorization: Bearer $CRON_SECRET`
+
+The cron endpoint uses the same official CKAN resources and performs idempotent current-year upserts into Supabase. It records progress, success, and failures in `inapi_sync_runs`.
+
+Required production variable in Vercel:
+
+```text
+CRON_SECRET=<long-random-secret>
+```
+
+When `CRON_SECRET` is configured, Vercel Cron automatically sends it as the Bearer token. Requests with a missing or incorrect secret return HTTP 401.
 
 Useful controls:
 
-- `INAPI_OPEN_DATA_MIN_YEAR` — default current UTC year.
-- `INAPI_OPEN_DATA_PAGE_SIZE` — default 1000.
+- `INAPI_OPEN_DATA_MIN_YEAR` — default current UTC year for the CLI synchronizer.
+- `INAPI_OPEN_DATA_PAGE_SIZE` — default 1000 for the CLI synchronizer.
 - `INAPI_OPEN_DATA_MAX_ROWS` — optional safety cap for canary runs.
 - `INAPI_OPEN_DATA_CKAN_BASE` — defaults to `https://datos.gob.cl/api/3/action`.
 
@@ -64,6 +84,7 @@ Useful controls:
 
 - The fuzzy RPC is `security definer` with a fixed `search_path` and execute permission only for `service_role`.
 - Public/anon clients cannot call the RPC directly.
+- The Vercel cron endpoint requires `CRON_SECRET`.
 - Existing INAPI global rate controls, cache, retries and request logging remain in place for live verification.
 - Live failure degrades to synchronized evidence instead of turning a search into HTTP 502 when local data is available.
 - `pg_net` is enabled for controlled database-side refresh operations; normal application traffic does not depend on it.
