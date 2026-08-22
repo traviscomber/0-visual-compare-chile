@@ -3,8 +3,11 @@ import { createAdminClient } from "@/lib/supabase/admin"
 
 const CKAN_BASE = process.env.INAPI_OPEN_DATA_CKAN_BASE || "https://datos.gob.cl/api/3/action"
 const DATASETS = ["solicitudes-de-patentes", "registros-de-patentes"] as const
+const APPLICATIONS_DATASET = "solicitudes-de-patentes" as const
 const PAGE_SIZE = 1000
 const UPSERT_BATCH_SIZE = 500
+const HISTORY_START_YEAR = 2009
+const HISTORY_END_YEAR = 2025
 
 export interface PatentOpenDataSyncSummary {
   startedAt: string
@@ -24,27 +27,103 @@ export interface PatentOpenDataSyncSummary {
   totalIpcLinks: number
 }
 
-export async function syncCurrentYearPatentOpenData(year = new Date().getUTCFullYear()): Promise<PatentOpenDataSyncSummary> {
-  const startedAt = new Date().toISOString()
-  const datasets: PatentOpenDataSyncSummary["datasets"] = []
+export interface PatentHistoryBackfillSummary {
+  startedAt: string
+  finishedAt: string
+  completedYearsBefore: number[]
+  attemptedYears: number[]
+  completedYearsAfter: number[]
+  remainingYears: number[]
+  years: PatentOpenDataSyncSummary[]
+  complete: boolean
+}
 
-  for (const dataset of DATASETS) datasets.push(await syncDataset(dataset, year))
+export async function syncCurrentYearPatentOpenData(year = new Date().getUTCFullYear()): Promise<PatentOpenDataSyncSummary> {
+  return syncPatentOpenDataYear(year, [...DATASETS])
+}
+
+export async function syncPatentOpenDataYear(
+  year: number,
+  datasets: Array<(typeof DATASETS)[number]> = [...DATASETS],
+): Promise<PatentOpenDataSyncSummary> {
+  const startedAt = new Date().toISOString()
+  const summaries: PatentOpenDataSyncSummary["datasets"] = []
+
+  for (const dataset of datasets) summaries.push(await syncDataset(dataset, year))
 
   return {
     startedAt,
     finishedAt: new Date().toISOString(),
     year,
-    datasets,
-    totalFetched: datasets.reduce((sum, item) => sum + item.fetched, 0),
-    totalUpserted: datasets.reduce((sum, item) => sum + item.upserted, 0),
-    totalIpcLinks: datasets.reduce((sum, item) => sum + item.ipcLinks, 0),
+    datasets: summaries,
+    totalFetched: summaries.reduce((sum, item) => sum + item.fetched, 0),
+    totalUpserted: summaries.reduce((sum, item) => sum + item.upserted, 0),
+    totalIpcLinks: summaries.reduce((sum, item) => sum + item.ipcLinks, 0),
+  }
+}
+
+/**
+ * Incrementally fills the official INAPI applications history without making the daily cron unbounded.
+ * Completed years are discovered from inapi_sync_runs, so the process is restart-safe and idempotent.
+ */
+export async function syncNextPatentHistoryBatch(maxYears = 2): Promise<PatentHistoryBackfillSummary> {
+  const startedAt = new Date().toISOString()
+  const admin = createAdminClient()
+  const historyYears = Array.from(
+    { length: HISTORY_END_YEAR - HISTORY_START_YEAR + 1 },
+    (_, index) => HISTORY_START_YEAR + index,
+  )
+
+  const { data: completedRuns, error } = await admin
+    .from("inapi_sync_runs")
+    .select("query")
+    .eq("source", "inapi-patent-open-data")
+    .eq("status", "completed")
+    .eq("search_type", "patent_open_data")
+    .like("query", `${APPLICATIONS_DATASET}:%`)
+
+  if (error) throw new Error(`Could not inspect patent history coverage: ${error.message}`)
+
+  const completedBefore = new Set<number>()
+  for (const row of completedRuns || []) {
+    const match = String(row.query || "").match(/solicitudes-de-patentes:(\d{4})$/)
+    if (match) completedBefore.add(Number(match[1]))
+  }
+
+  const pending = historyYears.filter((year) => !completedBefore.has(year))
+  const attemptedYears = pending.slice(0, Math.max(0, Math.min(maxYears, 4)))
+  const summaries: PatentOpenDataSyncSummary[] = []
+
+  for (const year of attemptedYears) {
+    try {
+      summaries.push(await syncPatentOpenDataYear(year, [APPLICATIONS_DATASET]))
+      completedBefore.add(year)
+    } catch (error) {
+      // A missing/non-DataStore historical resource should not block the current-year refresh.
+      console.error(`[patent-history] ${year} failed`, error)
+      break
+    }
+  }
+
+  const completedYearsAfter = historyYears.filter((year) => completedBefore.has(year))
+  const remainingYears = historyYears.filter((year) => !completedBefore.has(year))
+
+  return {
+    startedAt,
+    finishedAt: new Date().toISOString(),
+    completedYearsBefore: historyYears.filter((year) => !pending.includes(year)),
+    attemptedYears,
+    completedYearsAfter,
+    remainingYears,
+    years: summaries,
+    complete: remainingYears.length === 0,
   }
 }
 
 async function syncDataset(dataset: (typeof DATASETS)[number], year: number) {
   const admin = createAdminClient()
   const packageInfo = await ckan("package_show", { id: dataset })
-  const resource = chooseCurrentYearResource(packageInfo.resources || [], year)
+  const resource = chooseYearResource(packageInfo.resources || [], year)
   if (!resource?.id) throw new Error(`No DataStore resource found for ${dataset} ${year}`)
 
   const { data: run, error: runError } = await admin
@@ -160,10 +239,13 @@ async function ckan(action: string, params: Record<string, string | number>) {
   return payload.result
 }
 
-function chooseCurrentYearResource(resources: Array<Record<string, unknown>>, year: number) {
+function chooseYearResource(resources: Array<Record<string, unknown>>, year: number) {
   const yearText = String(year)
-  return resources.find((resource) => resource.datastore_active && String(resource.name || "").includes(yearText))
-    || resources.find((resource) => resource.datastore_active && String(resource.description || "").includes(yearText))
+  const candidates = resources.filter((resource) => resource.datastore_active)
+
+  return candidates.find((resource) => String(resource.name || "").includes(yearText))
+    || candidates.find((resource) => String(resource.description || "").includes(yearText))
+    || candidates.find((resource) => String(resource.url || "").includes(yearText))
     || null
 }
 

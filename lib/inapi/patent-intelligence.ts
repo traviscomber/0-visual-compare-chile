@@ -9,11 +9,19 @@ export type PatentCompanyProfile = {
     registered: number
     pending: number
     recentFilings90d: number
+    previousFilings90d: number
     recentPublications90d: number
     firstFilingDate: string | null
     latestActivityDate: string | null
     technologyFamilies: number
     newestSync: string | null
+  }
+  annualActivity: Array<{ year: number; filings: number }>
+  growth: {
+    comparisonYear: number
+    latestFullYearFilings: number
+    previousFullYearFilings: number
+    yearOverYearPct: number | null
   }
   matchedApplicantNames: Array<{ applicants: string; records: number }>
   topIpc: Array<{ code: string; family: string; records: number }>
@@ -35,6 +43,8 @@ export type PatentCompanyProfile = {
   methodology: {
     scope: string
     recentWindowDays: number
+    historicalApplicationYearsExpected: number
+    historicalApplicationYearsCompleted: number
     growthClaimsEnabled: boolean
     note: string
   }
