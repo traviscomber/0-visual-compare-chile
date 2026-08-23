@@ -1,299 +1,132 @@
-# 🎨 BRAND BOOK CORRECTO - Logo Similarity Chile
+# VIDENTIA — Brand System
 
-## Brand Identity (Del documento oficial - líneas 56-151)
+## Canonical identity
 
-### Primary Information
-**Brand name**: Logo Similarity Chile  
-**Alternative internal name**: Trademark Visual Compare  
-**Optional footer line**: Powered by N3uralia  
+**Product:** VIDENTIA  
+**Canonical domain:** https://videntia.app  
+**Developer / technology provider:** N3uralia — https://www.n3uralia.com  
+**Relationship:** VIDENTIA is a product developed by N3uralia.  
+**Preferred signature:** `VIDENTIA · by N3uralia`
 
----
+Do not use Visual Compare, Logo Similarity Chile, N3uralia Intelligence, v0 or Vercel as public product names.
 
-## 🎯 Brand Personality
+## Positioning
 
-The interface MUST feel like a **premium B2B legal-tech / IP-tech SaaS platform** for visual logo analysis.
+VIDENTIA is a Chile-focused trademark intelligence product that helps professionals search, understand, decide and monitor using official trademark evidence and verifiable context.
 
-- Precise
-- Legal-tech oriented
-- Trustworthy
-- Modern
-- Minimal
-- Analytical
-- Evidence-based
-- Professional
-- Chile-ready
-- Easy to understand
+Preferred line:
 
----
+> **Busca. Entiende. Decide. Vigila.**
 
-## 🎨 Color Palette (EXACT - DO NOT DEVIATE)
+Supporting description:
 
-```
-Primary Colors:
-- Background:       #F8FAFC (very light slate)
-- Surface:          #FFFFFF (white)
-- Surface soft:     #F1F5F9 (light slate)
+> Inteligencia para marcas en Chile, construida sobre evidencia oficial y contexto verificable.
 
-Brand Colors (TEAL - Main):
-- Primary teal:     #0F766E (main brand color)
-- Primary dark:     #134E4A (darker teal)
+VIDENTIA does not replace INAPI, TDPI or professional legal judgment.
 
-Trust Color (NAVY):
-- Navy:              #0F172A (serious, trusted)
+## Visual character
 
-Technical Accent (Blue):
-- Accent blue:      #2563EB (secondary only)
+VIDENTIA inherits N3uralia's design DNA without copying n3uralia.com layouts.
 
-Text Colors:
-- Text primary:     #0F172A (same as Navy - serious)
-- Text secondary:   #64748B (slate)
+- quiet, intelligent, precise and operational;
+- editorial hierarchy with generous negative space;
+- evidence-led instead of card-led;
+- near-black / ink for authority;
+- bone and mist surfaces instead of sterile bright white everywhere;
+- muted teal reserved for focus, status and primary action;
+- fine rules, system indexes, small technical labels and traceability cues;
+- minimal shadows and restrained radii;
+- no neon, rainbow gradients, glossy AI effects or generic startup decoration.
 
-System Colors:
-- Border:           #E2E8F0 (light border)
-- Success:          #16A34A (green)
-- Warning:          #D97706 (amber)
-- Danger:           #DC2626 (red)
-- Neutral dark:     #111827 (very dark)
+## Tokens
+
+```txt
+Bone background      #F7F8F6
+Mist surface         #F1F3F0
+White                #FFFFFF
+Ink                  #111827
+Slate text           #667085
+Muted metadata       #98A2B3
+Border               #DFE3DF
+Primary teal         #0F766E
+Teal dark            #134E4A
+Teal light           #63C7B8
 ```
 
-### Rules:
-- ✅ Use TEAL as the main brand color (NOT blue, NOT purple)
-- ✅ Use NAVY for trust and seriousness
-- ✅ Use blue ONLY as secondary technical accent
-- ✅ NO heavy gradients
-- ✅ NO neon colors
-- ✅ Light, spacious, professional appearance
+Status colors must be semantic, not decorative.
 
----
+## Typography
 
-## 🔤 Typography
+Primary: Geist / Inter / system grotesk.  
+Technical metadata: Geist Mono / system monospace.
 
-**Preferred fonts**: Geist or Inter
+- display headings: regular or medium, large, tight tracking, deliberate line breaks;
+- body: compact and highly legible;
+- metadata: uppercase micro-labels and numeric system indexes;
+- avoid ultra-light operational text and decorative font changes.
 
-### Font Sizing Hierarchy:
-```
-H1 (Hero):   32-40px, bold, Navy or Teal
-H2 (Section): 24px, semibold, Navy
-H3 (Subsection): 18px, semibold, Navy
-Body:        16px, regular, Text Primary
-Small:       14px, regular, Text Secondary
-Tiny:        12px, regular, Text Secondary
-```
+## Layout
 
-### Font Rules:
-- ✅ Use Geist as primary (Next.js native)
-- ✅ Consistent line-height (1.5-1.6)
-- ✅ Clear hierarchy
-- ✅ NO decorative fonts
+- one dominant idea per viewport;
+- 1440–1480 px maximum editorial canvas;
+- strong grid and alignment;
+- section boundaries use fine rules before boxes;
+- prefer dividers and whitespace to nested cards;
+- panels only when they group an actual interactive or evidentiary object;
+- desktop and mobile preserve the same information hierarchy.
 
----
+## Components
 
-## 🎭 Visual Direction
-
-### What it MUST look like:
-- Clean legal-tech dashboard
-- Light interface
-- Soft cards with rounded corners
-- Clear search and result hierarchy
-- Calm teal and navy accents
-- Structured data presentation
-- Evidence-oriented design
-- Logo comparison grid
-- Clear scoring badges
-- Professional Chilean B2B tone
-
-### What it MUST NOT look like:
-- ❌ Toy-like AI design
-- ❌ Overly futuristic neon
-- ❌ Generic AI magic
-- ❌ Cartoon graphics
-- ❌ Random abstract AI art
-- ❌ Heavy gradients
-- ❌ Unnecessary visual noise
-- ❌ Flashy animations
-
----
-
-## 🏗️ Component Style Guide
-
-### Cards
-```css
-- Rounded: 2xl (rounded-2xl in Tailwind)
-- Border: 1px solid #E2E8F0
-- Shadow: Minimal (shadow-sm or none)
-- Padding: Spacious (p-6)
-- Background: White or #F1F5F9
-```
+### Navigation
+Flat, restrained, persistent. Active state uses type/line/accent rather than a large pill.
 
 ### Buttons
-```css
-Primary:
-- Background: #0F766E (teal)
-- Text: White
-- Rounded: lg (rounded-lg)
-- Padding: px-6 py-2
+Subtle radius, strong labels, minimum 40–48 px hit area. Teal is the principal action; ink may be used for high-trust neutral actions.
 
-Secondary:
-- Background: #F1F5F9 (soft surface)
-- Text: #0F172A (navy text)
-- Border: 1px #E2E8F0
-- Rounded: lg
+### Evidence panels
+Show source, status, reason and next action. Avoid decorative icon collections.
 
-Danger:
-- Background: #DC2626 (red)
-- Text: White
-```
+### Cards
+Use only when the content genuinely behaves as an object. No card-within-card unless interaction requires it.
 
-### Badges
-```css
-Similarity Status:
-- very_high:  bg-red-100, text-red-800 (or bg-red-500, text-white)
-- high:       bg-orange-100, text-orange-800
-- medium:     bg-yellow-100, text-yellow-800
-- low:        bg-blue-100, text-blue-800
-- none:       bg-gray-100, text-gray-800
-```
+### Motion
+Fast, quiet and purposeful. Respect reduced motion. No constant ambient motion.
 
-### Search Results Grid
-```css
-- Column layout: 2-3 columns on desktop
-- Gap: 4 (gap-4)
-- Cards inside: Soft borders, no shadows
-- Logo thumbnail: Centered, square aspect ratio
-- Similarity score: Large badge, prominent
-```
+## Product language
 
-### Logo Comparison Layout
-```css
-Side-by-side:
-Left side:   Uploaded/queried logo
-Right side:  Best match logo
+Language: Spanish, Chile-focused.
 
-Technical panel below:
-- Table format
-- Teal headers
-- Navy text
-- Clear metrics
-```
+Preferred vocabulary:
+- Buscar
+- Evaluar marca
+- Portafolio
+- Casos
+- Vigilancia
+- Evidencia
+- Titular
+- Precedentes comparables
+- Qué significa esto
+- Revisión prioritaria
+- Identidad verificada / Identidad por confirmar
 
----
+Avoid visible internal jargon and English names when a clear Spanish term exists.
 
-## 📐 Layout Structure
+## Public entity rules
 
-### Spacing System (Tailwind)
-```
-Padding:   p-4, p-6, p-8 (use spacious)
-Margins:   m-4, m-6, m-8
-Gap:       gap-4, gap-6 (between cards)
-```
+Search engines, AI systems and public visitors must understand:
 
-### Responsive
-```
-Mobile:   1 column, tight spacing
-Tablet:   2 columns, normal spacing
-Desktop:  3 columns or 2-column with sidebar
-```
+`N3uralia -> develops -> VIDENTIA -> trademark intelligence for Chile`
 
-### Sidebar (if applicable)
-```
-Width:     w-64 or w-72
-Background: #F8FAFC
-Border:    Right border only
-Text:      Navy, secondary text color
-```
+Canonical URL: `https://videntia.app`.
 
----
+Use `es-CL` language metadata. Public structured data may represent VIDENTIA as a WebApplication and N3uralia as its creator/publisher when truthful.
 
-## 🎤 Tone of Voice
+## Footer
 
-### Language: Spanish (Chile-focused)
+Preferred structure:
 
-### Examples from document:
-- "Nueva búsqueda de similitud"
-- "Sube un logo para compararlo contra la base disponible."
-- "Resultado orientativo para análisis preliminar."
-- "Esta plataforma no reemplaza una revisión legal especializada."
-- "Los logos se almacenan en un bucket privado y solo son visibles para usuarios autorizados."
+**VIDENTIA**  
+Inteligencia para marcas en Chile  
+Un desarrollo de **N3uralia**
 
-### Tone:
-- Professional
-- Reassuring
-- Clear
-- Legal-informed
-- Non-alarmist
-- Helpful
-- Accurate
-
-### Common phrases to use:
-- "Comparación visual"
-- "Análisis preliminar"
-- "Resultado orientativo"
-- "Especialista en marcas"
-- "Evaluación final"
-- "Almacenamiento privado"
-- "Datos protegidos"
-
----
-
-## 🌐 Logo & Branding
-
-### Logo Similarity Chile Logo (TBD - should be created)
-Should represent:
-- Visual comparison
-- Legal/professional
-- Trustworthy
-- Modern
-- Can incorporate: scales, magnifying glass, or geometric comparison icon
-
-### Footer
-Should include:
-```
-Logo Similarity Chile
-Powered by N3uralia
-© 2025 All rights reserved
-```
-
----
-
-## 🚫 What NOT to Do
-
-| Don't | Do Instead |
-|---|---|
-| Use bright neons | Use teal and navy |
-| Add heavy shadows | Use minimal or no shadows |
-| Use cartoon icons | Use professional icons (Lucide/Heroicons) |
-| Mix many gradients | Use flat colors |
-| Add animations | Keep it static/professional |
-| Use colored text backgrounds | Use text + badge system |
-| Large header images | Clean, spacious layouts |
-| Generic tech imagery | Evidence-based design |
-
----
-
-## ✅ Implementation Checklist
-
-- [ ] Update colors in globals.css (CSS variables for tokens)
-- [ ] Update typography (import Geist from next/font/google)
-- [ ] Update component styles (shadcn override or CSS)
-- [ ] Remove neon/gradient backgrounds
-- [ ] Update logo and branding
-- [ ] Add "Powered by N3uralia" in footer
-- [ ] Review all text for Chilean Spanish tone
-- [ ] Ensure card styling is consistent (2xl rounded, soft borders)
-- [ ] Verify color contrast (accessibility)
-- [ ] Test on mobile/tablet/desktop
-
----
-
-## 🎨 Figma Mockup (If needed)
-
-Key screens to design:
-1. Landing page
-2. Login
-3. Dashboard (post-login)
-4. Search page with upload
-5. Results page with side-by-side comparison
-6. Logos dataset page
-7. Settings page
-
-All should follow this brand book exactly.
+Include the disclaimer that VIDENTIA supports research and evidence review and does not replace professional legal evaluation or official sources.
