@@ -3,6 +3,7 @@
 import { useRef, useState } from "react"
 import type { TrademarkInsightReport } from "@/lib/agent/trademark-agent"
 import { AlertTriangle, ArrowRight, CheckCircle2, ImageIcon, Layers3, Loader2, Search, ShieldAlert, ShieldCheck, Upload } from "lucide-react"
+import { PrecedentPanel } from "@/components/intelligence/precedent-panel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -102,6 +103,8 @@ export default function EvaluarMarcaPage() {
           <div className="space-y-6"><div><p className="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">Qué encontramos</p><div className="mt-3 divide-y divide-border border-y border-border"><InfoRow title="Elementos visuales" text={report.viena.elementos_detectados.slice(0,6).join(" · ") || "Sin información visual suficiente"}/><InfoRow title="Clases sugeridas" text={report.niza.clases.slice(0,5).map(c=>`Clase ${c.numero}`).join(" · ") || "Sin clases sugeridas"}/><InfoRow title="Siguiente paso" text={report.informe.recomendaciones[0] || "Revisar los antecedentes priorizados"}/></div></div></div>
           <div id="antecedentes"><div className="flex items-end justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#0F766E]">Antecedentes priorizados</p><h3 className="mt-2 text-2xl font-semibold">Empieza por estos resultados</h3></div></div><div className="mt-4 divide-y divide-border border-y border-border">{(report.registrabilidad?.antecedentes ?? []).slice(0,8).map((item,index)=><div key={`${item.id}-${index}`} className="grid gap-3 py-5 sm:grid-cols-[1fr_auto] sm:items-start"><div><div className="flex flex-wrap items-center gap-2"><span className="text-sm font-semibold">{item.nombre}</span><Badge variant="outline">{item.estado}</Badge></div><p className="mt-1 text-sm text-muted-foreground">{item.solicitante || "Titular no informado"}</p><p className="mt-2 text-xs leading-5 text-muted-foreground">{item.razones.slice(0,3).join(" · ")}</p></div><div className="text-left sm:text-right"><p className="text-xs text-muted-foreground">Relevancia</p><p className="mt-1 text-lg font-semibold">{item.puntaje_relevancia}/100</p></div></div>)}{(report.registrabilidad?.antecedentes ?? []).length===0&&<div className="py-8 text-sm text-muted-foreground">No encontramos antecedentes para mostrar en esta consulta.</div>}</div></div>
         </section>
+
+        <PrecedentPanel mark={report.marca} niza={report.niza.clases.map((clase) => Number(clase.numero)).filter((value) => Number.isInteger(value) && value >= 1 && value <= 45)} />
 
         <section className="rounded-2xl border border-border bg-slate-50 p-5"><div className="flex gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#0F766E]"/><div><p className="font-medium">Importante</p><p className="mt-1 text-sm leading-6 text-muted-foreground">Esta lectura organiza antecedentes y señales para apoyar una revisión. No determina por sí sola si una marca será aceptada o rechazada.</p></div></div></section>
       </div>}
