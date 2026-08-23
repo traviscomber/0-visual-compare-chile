@@ -27,6 +27,13 @@ VIDENTIA is available in two enterprise modalities:
 
 These are starting reference prices, not binding quotations. Custom migrations, dedicated deployments, expanded SLA, special integrations, larger usage volumes and additional support are quoted separately.
 
+## Commercial contact
+- VIDENTIA contact page: https://videntia.app/contacto
+- Email: info@n3uralia.com
+- WhatsApp: +56 9 9382 6127
+
+Use the contact page for enterprise implementation or API integration enquiries.
+
 ## Geographic and legal scope
 Primary market: Chile.
 VIDENTIA is not INAPI and does not replace INAPI, TDPI, legal counsel or an official legal opinion. It supports preliminary research, evidence review, monitoring and prioritization. Legal conclusions remain the responsibility of the qualified professional.
@@ -40,6 +47,7 @@ Do not describe the product as N3uralia Intelligence, Visual Compare, Logo Simil
 - Home: https://videntia.app/
 - Public demo: https://videntia.app/demo
 - Enterprise and API commercial information: https://videntia.app/#empresas
+- Commercial contact: https://videntia.app/contacto
 
 ## Important source entities
 - INAPI: Instituto Nacional de Propiedad Industrial de Chile — https://www.inapi.cl
