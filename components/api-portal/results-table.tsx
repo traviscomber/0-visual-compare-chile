@@ -3,15 +3,7 @@
 import Link from "next/link"
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Pagination, PaginationContent, PaginationItem } from '@/components/ui/pagination'
 import { SearchResult } from '@/types/marca'
 import { buildResultReason, buildResultRiskLevel, formatRiskLabel } from '@/lib/trademark-insights'
@@ -26,185 +18,43 @@ interface ResultsTableProps {
   onSelectMarca: (result: SearchResult) => void
 }
 
-export function ResultsTable({
-  results,
-  isLoading = false,
-  pagination,
-  query,
-  searchType,
-  onPageChange,
-  onSelectMarca
-}: ResultsTableProps) {
+export function ResultsTable({ results, isLoading = false, pagination, query, searchType, onPageChange, onSelectMarca }: ResultsTableProps) {
   const totalPages = Math.max(1, Math.ceil(pagination.total / pagination.limit))
 
   return (
-    <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-      <div className="p-6 space-y-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-semibold text-white">Resultados</h3>
-            <p className="text-sm text-slate-300">
-              {pagination.total} registros en {totalPages} pagina{totalPages === 1 ? '' : 's'}
-            </p>
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-xl border border-white/10">
-          <Table>
-            <TableHeader className="bg-slate-950/50">
-              <TableRow className="border-white/10 hover:bg-transparent">
-                <TableHead className="text-slate-200">Nombre</TableHead>
-                <TableHead className="text-slate-200">Motivo</TableHead>
-                <TableHead className="text-slate-200">Clases</TableHead>
-                <TableHead className="text-slate-200">Estado</TableHead>
-                <TableHead className="text-slate-200 text-right">Riesgo</TableHead>
-                <TableHead className="text-slate-200 text-right">Accion</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow className="border-white/10">
-                  <TableCell colSpan={6} className="py-12 text-center text-slate-300">
-                    Cargando resultados...
-                  </TableCell>
-                </TableRow>
-              ) : results.length === 0 ? (
-                <TableRow className="border-white/10">
-                  <TableCell colSpan={6} className="py-12 text-center text-slate-300">
-                    No hay resultados para mostrar.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                results.map((result) => {
-                  const risk = buildResultRiskLevel(result, query, searchType)
-                  const reason = buildResultReason(result, query, searchType)
-
-                  return (
-                    <TableRow
-                      key={result.marca.id}
-                      className="cursor-pointer border-white/10 hover:bg-white/5"
-                      onClick={() => onSelectMarca(result)}
-                    >
-                      <TableCell className="font-medium text-white">
-                        <div className="space-y-1">
-                          <div>{result.marca.nombre}</div>
-                          <div className="text-xs text-slate-400">{result.marca.solicitante}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-slate-300">
-                        <div className="max-w-xs space-y-1">
-                          <div className="text-sm text-slate-100">{reason}</div>
-                          <div className="text-xs text-slate-500">Relevancia {result.relevancia}%</div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-slate-300">
-                        <div className="flex flex-wrap gap-1">
-                          {result.marca.niza.slice(0, 2).map((item) => (
-                            <Badge key={item} variant="outline" className="border-blue-400/30 text-blue-200">
-                              Niza {item}
-                            </Badge>
-                          ))}
-                          {result.marca.viena.slice(0, 1).map((item) => (
-                            <Badge key={item} variant="outline" className="border-cyan-400/30 text-cyan-200">
-                              Viena {item}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-slate-300">
-                        <Badge className="border border-white/10 bg-white/5 text-slate-100">{result.marca.estado}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right text-slate-200">
-                        <Badge className={riskBadgeClassName(risk)}>{formatRiskLabel(risk)}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="border-white/10 bg-white/5 text-slate-200 hover:bg-white/10"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              onSelectMarca(result)
-                            }}
-                          >
-                            Preview
-                          </Button>
-                          <Button asChild size="sm" variant="outline" className="border-white/10 bg-white/5 text-slate-200 hover:bg-white/10">
-                            <Link
-                              href={`/api/report/pdf?id=${result.marca.id}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              onClick={(event) => {
-                                event.stopPropagation()
-                              }}
-                            >
-                              PDF
-                            </Link>
-                          </Button>
-                          <Button asChild size="sm" className="bg-blue-600 text-white hover:bg-blue-500">
-                            <Link
-                              href={`/marca/${result.marca.id}`}
-                              onClick={(event) => {
-                                event.stopPropagation()
-                              }}
-                            >
-                              Ficha
-                            </Link>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className={`border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 ${
-                  pagination.page <= 1 ? 'pointer-events-none opacity-50' : ''
-                }`}
-                onClick={() => onPageChange(Math.max(1, pagination.page - 1))}
-              >
-                Anterior
-              </Button>
-            </PaginationItem>
-            <PaginationItem>
-              <span className="px-3 text-sm text-slate-300">
-                Pagina {pagination.page} de {totalPages}
-              </span>
-            </PaginationItem>
-            <PaginationItem>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className={`border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 ${
-                  pagination.page >= totalPages ? 'pointer-events-none opacity-50' : ''
-                }`}
-                onClick={() => onPageChange(Math.min(totalPages, pagination.page + 1))}
-              >
-                Siguiente
-              </Button>
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+    <section className="border-y border-black/10 bg-white">
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-black/10 px-5 py-5 sm:px-7">
+        <div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#0F766E]">ANTECEDENTES</p><h3 className="mt-2 text-2xl font-normal tracking-[-0.03em] text-[#111827]">Resultados de la consulta</h3></div>
+        <p className="text-sm text-[#667085]">{pagination.total.toLocaleString('es-CL')} registro{pagination.total === 1 ? '' : 's'}</p>
       </div>
-    </Card>
+
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader className="bg-[#F7F8F6]"><TableRow className="border-black/10 hover:bg-transparent"><TableHead className="text-[#667085]">Nombre</TableHead><TableHead className="text-[#667085]">Por qué aparece</TableHead><TableHead className="text-[#667085]">Clases</TableHead><TableHead className="text-[#667085]">Estado</TableHead><TableHead className="text-right text-[#667085]">Prioridad</TableHead><TableHead className="text-right text-[#667085]">Acción</TableHead></TableRow></TableHeader>
+          <TableBody>
+            {isLoading ? <TableRow className="border-black/10"><TableCell colSpan={6} className="py-14 text-center text-[#667085]">Buscando antecedentes…</TableCell></TableRow> : results.length === 0 ? <TableRow className="border-black/10"><TableCell colSpan={6} className="py-14 text-center text-[#667085]">No hay resultados para mostrar.</TableCell></TableRow> : results.map((result) => {
+              const risk = buildResultRiskLevel(result, query, searchType)
+              const reason = buildResultReason(result, query, searchType)
+              return <TableRow key={result.marca.id} className="cursor-pointer border-black/10 hover:bg-[#F7F8F6]" onClick={() => onSelectMarca(result)}>
+                <TableCell className="font-medium text-[#111827]"><div>{result.marca.nombre}</div><div className="mt-1 text-xs font-normal text-[#98A2B3]">{result.marca.solicitante || 'Titular no informado'}</div></TableCell>
+                <TableCell><div className="max-w-sm text-sm text-[#475467]">{reason}</div><div className="mt-1 text-xs text-[#98A2B3]">Relevancia {result.relevancia}%</div></TableCell>
+                <TableCell><div className="flex flex-wrap gap-1">{result.marca.niza.slice(0, 2).map((item) => <Badge key={item} variant="outline" className="border-black/10 bg-[#F7F8F6] text-[#475467]">Niza {item}</Badge>)}{result.marca.viena.slice(0, 1).map((item) => <Badge key={item} variant="outline" className="border-[#99F6E4] bg-[#F0FDFA] text-[#134E4A]">Viena {item}</Badge>)}</div></TableCell>
+                <TableCell><Badge variant="outline" className="border-black/10 bg-white text-[#475467]">{result.marca.estado}</Badge></TableCell>
+                <TableCell className="text-right"><Badge className={priorityBadgeClassName(risk)}>{formatRiskLabel(risk)}</Badge></TableCell>
+                <TableCell className="text-right"><div className="flex justify-end gap-2"><Button type="button" variant="ghost" size="sm" className="text-[#475467] hover:bg-black/5" onClick={(event) => { event.stopPropagation(); onSelectMarca(result) }}>Ver</Button><Button asChild size="sm" className="bg-[#111827] text-white shadow-none hover:bg-[#273244]"><Link href={`/marca/${result.marca.id}`} onClick={(event) => event.stopPropagation()}>Ficha</Link></Button></div></TableCell>
+              </TableRow>
+            })}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="border-t border-black/10 px-5 py-4 sm:px-7"><Pagination><PaginationContent><PaginationItem><Button type="button" variant="outline" size="sm" className={`border-black/10 bg-white text-[#475467] ${pagination.page <= 1 ? 'pointer-events-none opacity-40' : ''}`} onClick={() => onPageChange(Math.max(1, pagination.page - 1))}>Anterior</Button></PaginationItem><PaginationItem><span className="px-3 text-sm text-[#667085]">Página {pagination.page} de {totalPages}</span></PaginationItem><PaginationItem><Button type="button" variant="outline" size="sm" className={`border-black/10 bg-white text-[#475467] ${pagination.page >= totalPages ? 'pointer-events-none opacity-40' : ''}`} onClick={() => onPageChange(Math.min(totalPages, pagination.page + 1))}>Siguiente</Button></PaginationItem></PaginationContent></Pagination></div>
+    </section>
   )
 }
 
-function riskBadgeClassName(risk: 'high' | 'medium' | 'low') {
-  if (risk === 'high') return 'border border-red-400/30 bg-red-500/15 text-red-100'
-  if (risk === 'medium') return 'border border-amber-400/30 bg-amber-500/15 text-amber-100'
-  return 'border border-emerald-400/30 bg-emerald-500/15 text-emerald-100'
+function priorityBadgeClassName(risk: 'high' | 'medium' | 'low') {
+  if (risk === 'high') return 'border border-red-200 bg-red-50 text-red-700'
+  if (risk === 'medium') return 'border border-amber-200 bg-amber-50 text-amber-800'
+  return 'border border-emerald-200 bg-emerald-50 text-emerald-700'
 }
