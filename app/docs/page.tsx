@@ -1,265 +1,262 @@
-'use client'
+import Link from "next/link"
+import { ArrowRight, Check, Code2, Database, Fingerprint, ImageIcon, Search, ShieldCheck } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
-import Link from 'next/link'
-import { useState } from 'react'
-import { Check, Copy, Eye, ArrowRight, Orbit, Sparkles, Shield, ScanSearch } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-
-const routes = [
+const productRoutes = [
   {
-    title: 'Panel operativo',
-    href: '/panel',
-    summary: 'Vista principal para comparar, revisar historial y moverse entre modulos del MVP.',
+    title: "Panel operativo",
+    href: "/panel",
+    summary: "Superficie principal para investigaciones, historial y seguimiento del trabajo.",
   },
   {
-    title: 'Comparar',
-    href: '/compare',
-    summary: 'Workbench de comparacion visual con senales forenses y clasificacion operativa.',
+    title: "Comparar",
+    href: "/compare",
+    summary: "Comparación visual con señales técnicas, evidencia y clasificación operativa.",
   },
   {
-    title: 'Consulta',
-    href: '/consulta',
-    summary: 'Exploracion de marcas y registros con filtros y contexto de busqueda.',
+    title: "Consulta",
+    href: "/consulta",
+    summary: "Búsqueda de antecedentes marcarios con filtros y contexto de investigación.",
   },
 ]
 
 const apiSections = [
   {
-    method: 'GET',
-    path: '/api/v1/health',
-    description: 'Verifica estado del servicio, revision activa, host servido y presencia de configuracion critica.',
-    example: 'curl https://api.visualcompare.cl/api/v1/health',
+    method: "GET",
+    path: "/api/v1/health",
+    auth: "Público",
+    description:
+      "Informa el estado del servicio y la frescura de las sincronizaciones de marcas y patentes INAPI.",
+    command: "curl \"$BASE_URL/api/v1/health\"",
   },
   {
-    method: 'POST',
-    path: '/api/v1/images',
-    description: 'Carga una imagen para su analisis y generacion de identificadores.',
-    example:
-      'curl -X POST https://api.visualcompare.cl/api/v1/images -H "Authorization: Bearer YOUR_API_KEY" -F "image=@logo.jpg"',
+    method: "GET",
+    path: "/api/v1/search",
+    auth: "Público",
+    description:
+      "Busca registros por nombre, clase Niza o clasificación de Viena y admite filtros de estado, país y fechas.",
+    command: "curl \"$BASE_URL/api/v1/search?q=$QUERY&type=nombre\"",
   },
   {
-    method: 'POST',
-    path: '/api/v1/compare',
-    description: 'Compara dos imagenes y devuelve score, clasificacion y trazas operativas.',
-    example:
-      'curl -X POST https://api.visualcompare.cl/api/v1/compare -H "Authorization: Bearer YOUR_API_KEY" -d \'{"image_a_id":"uuid-1","image_b_id":"uuid-2"}\'',
+    method: "POST",
+    path: "/api/v1/images",
+    auth: "Bearer API key",
+    description:
+      "Incorpora una imagen a la organización. Calcula SHA-256, pHash, metadatos, OCR, EXIF y ELA, y deduplica archivos ya existentes.",
+    command:
+      "curl -X POST \"$BASE_URL/api/v1/images\" -H \"Authorization: Bearer $API_KEY\" -F \"image=@$IMAGE_PATH\"",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/compare",
+    auth: "Bearer API key",
+    description:
+      "Compara dos imágenes previamente incorporadas y devuelve similitud, clasificación, señales, recomendación y evidencia técnica disponible.",
+    command:
+      "curl -X POST \"$BASE_URL/api/v1/compare\" -H \"Authorization: Bearer $API_KEY\" -H \"Content-Type: application/json\" --data \"{\\\"image_a_id\\\":\\\"$IMAGE_A_ID\\\",\\\"image_b_id\\\":\\\"$IMAGE_B_ID\\\"}\"",
   },
 ]
 
-const designTokens = [
-  { label: 'Canvas', value: 'slate-950 + blue/cyan glows', helper: 'Fondo oscuro con profundidad neural.' },
-  { label: 'Primary', value: 'blue-500 / cyan-500', helper: 'Accion principal y confianza.' },
-  { label: 'Accent', value: 'emerald-500 / amber-400', helper: 'Estados, alertas y confirmaciones.' },
-  { label: 'Type', value: 'Serif + Mono', helper: 'Editorial para interfaz, mono para datos y API.' },
-]
-
-const principles = [
+const verifiedCapabilities = [
   {
-    title: 'Directo',
-    icon: <ScanSearch className="h-5 w-5" />,
-    text: 'Cada pagina debe explicar el flujo en una frase corta y concreta.',
+    icon: Search,
+    title: "Búsqueda marcaria",
+    text: "Nombre, Niza y Viena con filtros de estado, país y rango de fechas.",
   },
   {
-    title: 'Neural',
-    icon: <Sparkles className="h-5 w-5" />,
-    text: 'Usar capas, glow controlado y contraste alto sin ruido visual gratuito.',
+    icon: ImageIcon,
+    title: "Ingesta de imágenes",
+    text: "Carga controlada, deduplicación por hash y procesamiento técnico de la imagen.",
   },
   {
-    title: 'Verificable',
-    icon: <Shield className="h-5 w-5" />,
-    text: 'Todo lo visible debe sugerir trazabilidad, control y evidencia.',
+    icon: Fingerprint,
+    title: "Comparación",
+    text: "Score de similitud, clasificación, señales forenses, OCR, EXIF, ELA y contexto de marca cuando está disponible.",
   },
   {
-    title: 'Operativo',
-    icon: <Orbit className="h-5 w-5" />,
-    text: 'La estetica sirve al trabajo real, no a una demo temporal.',
+    icon: ShieldCheck,
+    title: "Control de API",
+    text: "Autenticación Bearer, cuotas y registro de consumo en las operaciones protegidas verificadas.",
   },
 ]
 
-const deploySignals = [
-  'Build stamp visible en footer y /panel con env, host y revision corta.',
-  'Health endpoint con status, version, revision, host y resumen de env de Supabase.',
-  'Smoke y audit de deploy deben ejecutarse contra la URL publica real antes de aceptar un release.',
+const environmentVariables = [
+  ["BASE_URL", "Origen real donde está desplegada la API."],
+  ["API_KEY", "Clave emitida para la organización que realiza operaciones protegidas."],
+  ["IMAGE_PATH", "Ruta local de una imagen real que el usuario desea procesar."],
+  ["IMAGE_A_ID / IMAGE_B_ID", "Identificadores devueltos por la ingesta real de imágenes."],
 ]
 
 export default function DocsPage() {
-  const [copied, setCopied] = useState<string | null>(null)
-
-  const copyToClipboard = async (value: string) => {
-    await navigator.clipboard.writeText(value)
-    setCopied(value)
-    window.setTimeout(() => setCopied(null), 1600)
-  }
-
   return (
-    <main className="min-h-screen bg-[#020617] text-white">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-32 h-96 w-96 rounded-full bg-cyan-500/20 blur-3xl" />
-        <div className="absolute top-44 -left-32 h-96 w-96 rounded-full bg-blue-500/15 blur-3xl" />
-      </div>
-
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400">
-              <Eye className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">N3uralia docs</p>
-              <p className="text-lg font-semibold text-white">Visual Compare Chile</p>
-            </div>
+    <main className="min-h-screen bg-[#F7F8F6] text-[#111827]">
+      <nav className="sticky top-0 z-50 border-b border-black/10 bg-[#F7F8F6]/95 backdrop-blur-xl">
+        <div className="mx-auto flex h-[72px] max-w-[1480px] items-center justify-between px-5 lg:px-10">
+          <Link href="/" aria-label="VIDENTIA" className="flex items-center gap-3">
+            <span className="grid h-9 w-9 place-items-center rounded-[10px] bg-[#111827] text-sm font-semibold text-white">V</span>
+            <span className="leading-none">
+              <span className="block text-[15px] font-semibold tracking-[0.16em]">VIDENTIA</span>
+              <span className="mt-1 block text-[9px] font-medium uppercase tracking-[0.18em] text-[#64748B]">by N3uralia</span>
+            </span>
           </Link>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/docs/clasificaciones"
-              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100 transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
-            >
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Link href="/docs/clasificaciones" className="hidden text-sm text-[#667085] hover:text-[#111827] sm:block">
               Clasificaciones
             </Link>
             <Link href="/panel">
-              <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">Ir al panel</Button>
+              <Button className="h-10 rounded-lg bg-[#111827] px-5 text-white shadow-none hover:bg-[#273244]">Ir al panel</Button>
             </Link>
           </div>
         </div>
-      </header>
+      </nav>
 
-      <section className="relative mx-auto max-w-6xl px-6 pb-10 pt-16">
-        <div className="grid gap-8 lg:grid-cols-[1.25fr_0.75fr]">
-          <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur-xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-cyan-200">
-              <Sparkles className="h-4 w-4" />
-              Product docs
-            </div>
-            <h1 className="mt-6 max-w-3xl text-5xl font-black leading-[0.95] text-white md:text-7xl">
-              Documentacion operativa del MVP.
+      <section className="border-b border-black/10 px-5 py-20 lg:px-10 lg:py-28">
+        <div className="mx-auto grid max-w-[1480px] gap-14 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#0F766E]">VIDENTIA · TECHNICAL SURFACE</p>
+            <h1 className="mt-6 max-w-4xl text-[clamp(3rem,6vw,6.3rem)] font-normal leading-[0.95] tracking-[-0.055em]">
+              Documentación basada en lo que el producto hace hoy.
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
-              Esta pagina resume el sistema visual, las rutas activas y la superficie tecnica real del producto.
-              Sirve para continuar el desarrollo sin volver al lenguaje de demo.
+          </div>
+          <div className="max-w-2xl lg:justify-self-end">
+            <p className="text-lg leading-8 text-[#667085]">
+              Esta superficie describe únicamente rutas y capacidades verificadas en el código actual. No contiene clientes,
+              métricas, respuestas, registros ni identificadores simulados.
             </p>
-
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/panel" className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950">
-                Abrir panel
-              </Link>
-              <Link
-                href="/compare"
-                className="rounded-full border border-white/15 bg-slate-950/50 px-5 py-3 text-sm font-semibold text-white"
-              >
-                Ver comparador
-              </Link>
-              <Link
-                href="/consulta"
-                className="rounded-full border border-white/15 bg-slate-950/50 px-5 py-3 text-sm font-semibold text-white"
-              >
-                Ver consulta
-              </Link>
-            </div>
-          </div>
-
-          <div className="rounded-[2rem] border border-white/10 bg-slate-950/70 p-6 backdrop-blur-xl">
-            <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">Quick map</p>
-            <div className="mt-5 space-y-4">
-              {routes.map((route) => (
-                <Link
-                  key={route.href}
-                  href={route.href}
-                  className="block rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-sm uppercase tracking-[0.25em] text-cyan-200">Ruta MVP</p>
-                      <p className="mt-1 text-xl font-semibold text-white">{route.title}</p>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-cyan-300" />
-                  </div>
-                  <p className="mt-3 text-sm leading-6 text-slate-300">{route.summary}</p>
-                </Link>
-              ))}
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link href="/panel"><Button className="h-11 gap-2 rounded-lg bg-[#0F766E] px-5 text-white shadow-none hover:bg-[#134E4A]">Abrir VIDENTIA <ArrowRight className="h-4 w-4" /></Button></Link>
+              <Link href="/contacto"><Button variant="outline" className="h-11 rounded-lg border-black/15 bg-transparent px-5 hover:bg-black/5">Hablar con N3uralia</Button></Link>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-6xl gap-4 px-6 pb-14 md:grid-cols-2 xl:grid-cols-4">
-        {designTokens.map((token) => (
-          <article key={token.label} className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
-            <p className="text-xs uppercase tracking-[0.25em] text-slate-400">{token.label}</p>
-            <p className="mt-2 text-lg font-semibold text-white">{token.value}</p>
-            <p className="mt-3 text-sm leading-6 text-slate-300">{token.helper}</p>
-          </article>
-        ))}
-      </section>
-
-      <section className="mx-auto max-w-6xl px-6 pb-16">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {principles.map((item) => (
-            <article key={item.title} className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-              <div className="inline-flex rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3 text-cyan-200">
-                {item.icon}
-              </div>
-              <h2 className="mt-4 text-xl font-bold text-white">{item.title}</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-300">{item.text}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-6 pb-20">
-        <div className="rounded-[2rem] border border-cyan-400/20 bg-gradient-to-r from-blue-500/15 via-cyan-500/10 to-slate-900/20 p-8 backdrop-blur-xl">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+      <section className="px-5 py-20 lg:px-10 lg:py-24">
+        <div className="mx-auto max-w-[1480px]">
+          <div className="grid gap-8 border-b border-black/10 pb-12 lg:grid-cols-[0.72fr_1.28fr] lg:items-end">
             <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-cyan-200">API surface</p>
-              <h2 className="mt-2 text-3xl font-black text-white">Endpoints activos y contratados.</h2>
-              <p className="mt-3 max-w-2xl text-slate-300">
-                Los ejemplos estan escritos para el stack real del MVP. Si cambia el contrato, esta pagina debe cambiar
-                junto con el codigo.
-              </p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#0F766E]">SYS 01 — PRODUCT MAP</p>
+              <h2 className="mt-4 text-[clamp(2.2rem,4vw,4.2rem)] font-normal leading-[1.02] tracking-[-0.045em]">Superficies principales.</h2>
             </div>
-            <div className="text-sm text-slate-300">Panel, compare y consulta como superficies primarias del producto.</div>
+            <p className="max-w-2xl text-lg leading-8 text-[#667085] lg:justify-self-end">
+              El producto mantiene separadas la investigación, la comparación y la consulta para que cada tarea tenga una jerarquía clara.
+            </p>
           </div>
-
-          <div className="mt-8 grid gap-4">
-            {apiSections.map((section) => (
-              <article key={section.path} className="rounded-3xl border border-white/10 bg-slate-950/60 p-5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div>
-                    <div className="inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-mono font-semibold text-cyan-200">
-                      {section.method}
-                    </div>
-                    <p className="mt-3 text-2xl font-bold text-white">{section.path}</p>
-                    <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">{section.description}</p>
-                  </div>
-                  <button
-                    onClick={() => copyToClipboard(section.example)}
-                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
-                  >
-                    {copied === section.example ? <Check className="h-4 w-4 text-emerald-300" /> : <Copy className="h-4 w-4" />}
-                    Copiar ejemplo
-                  </button>
+          <div className="grid border-b border-black/10 md:grid-cols-3">
+            {productRoutes.map((route, index) => (
+              <Link key={route.href} href={route.href} className={`group py-9 md:px-8 ${index > 0 ? "md:border-l md:border-black/10" : ""}`}>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="font-mono text-[10px] text-[#98A2B3]">0{index + 1}</span>
+                  <ArrowRight className="h-4 w-4 text-[#0F766E] transition-transform group-hover:translate-x-1" />
                 </div>
-                <pre className="mt-4 overflow-x-auto rounded-2xl border border-white/10 bg-slate-950/80 p-4 text-sm text-cyan-100">
-                  {section.example}
-                </pre>
+                <h3 className="mt-10 text-xl font-medium tracking-[-0.025em]">{route.title}</h3>
+                <p className="mt-4 text-sm leading-6 text-[#667085]">{route.summary}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[#111827] px-5 py-20 text-white lg:px-10 lg:py-28">
+        <div className="mx-auto max-w-[1480px]">
+          <div className="grid gap-10 lg:grid-cols-[0.72fr_1.28fr] lg:items-end">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#63C7B8]">SYS 02 — VERIFIED CAPABILITIES</p>
+              <h2 className="mt-5 max-w-2xl text-[clamp(2.3rem,4.2vw,4.6rem)] font-normal leading-[1.02] tracking-[-0.045em]">Capacidad demostrable, no promesa.</h2>
+            </div>
+            <p className="max-w-2xl text-lg leading-8 text-slate-400 lg:justify-self-end">
+              La documentación comercial debe evolucionar al mismo ritmo que estos contratos técnicos. Si una capacidad no está implementada, no aparece aquí.
+            </p>
+          </div>
+          <div className="mt-14 grid border-y border-white/15 md:grid-cols-2 lg:grid-cols-4">
+            {verifiedCapabilities.map(({ icon: Icon, title, text }, index) => (
+              <article key={title} className={`py-8 lg:px-7 ${index > 0 ? "lg:border-l lg:border-white/15" : ""}`}>
+                <Icon className="h-5 w-5 text-[#63C7B8]" />
+                <h3 className="mt-8 text-lg font-medium">{title}</h3>
+                <p className="mt-3 text-sm leading-6 text-slate-400">{text}</p>
               </article>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 pb-24">
-        <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur-xl">
-          <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">Deploy provenance</p>
-          <h2 className="mt-3 text-3xl font-black text-white">Senales minimas para validar el deploy correcto.</h2>
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            {deploySignals.map((signal) => (
-              <article key={signal} className="rounded-3xl border border-white/10 bg-slate-950/60 p-5">
-                <p className="text-sm leading-6 text-slate-300">{signal}</p>
+      <section className="px-5 py-20 lg:px-10 lg:py-28">
+        <div className="mx-auto max-w-[1480px]">
+          <div className="grid gap-10 border-b border-black/10 pb-12 lg:grid-cols-[0.72fr_1.28fr] lg:items-end">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#0F766E]">SYS 03 — API CONTRACT</p>
+              <h2 className="mt-4 text-[clamp(2.3rem,4.2vw,4.6rem)] font-normal leading-[1.02] tracking-[-0.045em]">Rutas verificadas.</h2>
+            </div>
+            <p className="max-w-2xl text-lg leading-8 text-[#667085] lg:justify-self-end">
+              Los comandos usan variables de entorno para obligar a trabajar con URLs, claves, archivos e identificadores reales del entorno del cliente.
+            </p>
+          </div>
+
+          <div className="divide-y divide-black/10 border-b border-black/10">
+            {apiSections.map((section, index) => (
+              <article key={section.path} className="grid gap-6 py-9 lg:grid-cols-[90px_1fr_1.1fr] lg:items-start">
+                <div className="font-mono text-[11px] text-[#0F766E]">0{index + 1}</div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-md bg-[#111827] px-2.5 py-1 font-mono text-[11px] font-semibold text-white">{section.method}</span>
+                    <span className="text-xs text-[#667085]">{section.auth}</span>
+                  </div>
+                  <h3 className="mt-4 font-mono text-lg font-semibold tracking-[-0.02em]">{section.path}</h3>
+                  <p className="mt-3 max-w-xl text-sm leading-6 text-[#667085]">{section.description}</p>
+                </div>
+                <pre className="overflow-x-auto rounded-xl border border-black/10 bg-[#EEF1EE] p-4 text-xs leading-6 text-[#344054]"><code>{section.command}</code></pre>
               </article>
             ))}
           </div>
         </div>
       </section>
+
+      <section className="border-y border-black/10 bg-white px-5 py-20 lg:px-10 lg:py-24">
+        <div className="mx-auto grid max-w-[1480px] gap-12 lg:grid-cols-[0.72fr_1.28fr]">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#0F766E]">SYS 04 — REAL INPUTS</p>
+            <h2 className="mt-5 text-[clamp(2.2rem,3.8vw,4rem)] font-normal leading-[1.03] tracking-[-0.045em]">Sin datos de ejemplo.</h2>
+            <p className="mt-6 max-w-lg text-base leading-7 text-[#667085]">
+              Los comandos están diseñados para fallar si el operador no entrega un origen, credencial, archivo o identificador real.
+            </p>
+          </div>
+          <div className="border-t border-black/10">
+            {environmentVariables.map(([name, description]) => (
+              <div key={name} className="grid gap-3 border-b border-black/10 py-5 sm:grid-cols-[220px_1fr]">
+                <code className="text-sm font-semibold text-[#111827]">{name}</code>
+                <p className="text-sm leading-6 text-[#667085]">{description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="px-5 py-20 lg:px-10 lg:py-24">
+        <div className="mx-auto grid max-w-[1480px] gap-6 md:grid-cols-3">
+          <article className="border-t border-black/10 pt-6">
+            <Database className="h-5 w-5 text-[#0F766E]" />
+            <h3 className="mt-5 text-lg font-medium">Fuente y frescura</h3>
+            <p className="mt-3 text-sm leading-6 text-[#667085]">El health check expone el estado real de las sincronizaciones INAPI para evitar presentar datos antiguos como actuales.</p>
+          </article>
+          <article className="border-t border-black/10 pt-6">
+            <ShieldCheck className="h-5 w-5 text-[#0F766E]" />
+            <h3 className="mt-5 text-lg font-medium">Aislamiento organizacional</h3>
+            <p className="mt-3 text-sm leading-6 text-[#667085]">Las operaciones protegidas verificadas resuelven la organización desde la API key y limitan el acceso a sus imágenes.</p>
+          </article>
+          <article className="border-t border-black/10 pt-6">
+            <Code2 className="h-5 w-5 text-[#0F766E]" />
+            <h3 className="mt-5 text-lg font-medium">Contrato antes que marketing</h3>
+            <p className="mt-3 text-sm leading-6 text-[#667085]">La página técnica se mantiene deliberadamente más corta que el backend completo: sólo documenta contratos ya verificados.</p>
+          </article>
+        </div>
+      </section>
+
+      <footer className="border-t border-black/10 px-5 py-8 lg:px-10">
+        <div className="mx-auto flex max-w-[1480px] flex-col gap-4 text-sm text-[#667085] sm:flex-row sm:items-center sm:justify-between">
+          <p>VIDENTIA · by N3uralia</p>
+          <div className="flex items-center gap-2 text-xs"><Check className="h-4 w-4 text-[#0F766E]" />Documentación sin mock data</div>
+        </div>
+      </footer>
     </main>
   )
 }
