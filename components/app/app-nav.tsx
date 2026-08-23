@@ -41,7 +41,7 @@ const primaryItems = [
   { href: "/monitorear", label: "Vigilancia", icon: BellRing, aliases: ["/patentes/alertas"] },
 ]
 
-const workspaceItems = [
+const workItems = [
   { href: "/dashboard", label: "Resumen", icon: LayoutDashboard },
   { href: "/casos/pendientes", label: "Pendientes", icon: ClipboardCheck },
   { href: "/notificaciones", label: "Notificaciones", icon: Bell },
@@ -49,9 +49,9 @@ const workspaceItems = [
 ]
 
 const advancedItems = [
-  { href: "/portfolio/analytics", label: "Analytics y SLA", icon: BarChart3 },
+  { href: "/portfolio/analytics", label: "Métricas del portafolio", icon: BarChart3 },
   { href: "/portfolio/risk", label: "Riesgo predictivo", icon: Radar },
-  { href: "/portfolio/control", label: "Automation & Copilot", icon: Bot },
+  { href: "/portfolio/control", label: "Automatización y asistente", icon: Bot },
   { href: "/dashboard/playground", label: "API e integraciones", icon: Terminal },
   { href: "/dashboard/processing", label: "Operación del sistema", icon: Activity },
 ]
@@ -143,8 +143,8 @@ export function AppNav({ userEmail, fullName, companyName }: { userEmail: string
                 <span className="mt-0.5 block truncate text-xs text-slate-500">{userEmail}</span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <p className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Workspace</p>
-              {workspaceItems.map(item => {
+              <p className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Área de trabajo</p>
+              {workItems.map(item => {
                 const Icon = item.icon
                 return <DropdownMenuItem key={item.href} asChild><Link href={item.href} className="cursor-pointer rounded-lg"><Icon className="mr-2 h-4 w-4" />{item.label}</Link></DropdownMenuItem>
               })}
@@ -184,7 +184,7 @@ export function AppNav({ userEmail, fullName, companyName }: { userEmail: string
               )
             })}
             <div className="my-2 h-px bg-slate-200" />
-            {workspaceItems.map(item => {
+            {workItems.map(item => {
               const Icon = item.icon
               return <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-slate-600 hover:bg-slate-50"><Icon className="h-4 w-4" />{item.label}</Link>
             })}
