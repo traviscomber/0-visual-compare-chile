@@ -4,12 +4,13 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { resolveCompanyInRes } from "@/lib/intelligence/resolver-res"
 import { refreshCmfOwnerSignal } from "@/lib/intelligence/cmf"
+import { buildOwnerInsights, type OwnerInsight } from "@/lib/intelligence/owner-insights"
 
 const QuerySchema = z.object({ application: z.string().trim().min(1).max(40) })
 
 export const runtime = "nodejs"
 
- type TimelineItem = {
+type TimelineItem = {
   id: string
   source: string
   source_key: string
@@ -29,8 +30,13 @@ type OwnerContext = {
     identity_confidence?: number
     identity_status?: string
   }
+  portfolio?: { total?: number; registered?: number; pending?: number }
+  top_classes?: Array<{ class: number; count: number }>
+  recent_marks?: Array<{ name: string; status: string | null; filed_at: string | null; application: string | null; niza: number[] }>
+  portfolio_growth?: Array<{ year: number; count: number }>
   tdpi_events?: Array<{ title: string; summary: string | null; url: string | null; date: string | null; type: string; source: string }>
   timeline?: TimelineItem[]
+  insights?: OwnerInsight[]
   [key: string]: unknown
 }
 
@@ -76,8 +82,12 @@ export async function GET(request: Request) {
   }
 
   const enriched = await withTimeline(context.data)
+  const withInsights: OwnerContext = {
+    ...enriched,
+    insights: buildOwnerInsights(enriched),
+  }
 
-  return NextResponse.json(enriched ?? { found: false }, {
+  return NextResponse.json(withInsights ?? { found: false }, {
     headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=1800" },
   })
 }
