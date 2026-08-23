@@ -1,9 +1,12 @@
 /**
  * POST /api/v1/agent/analyze
- * Pipeline interno: Viena → Niza → conflictos → INAPI → informe ejecutivo.
+ * Pipeline interno: denominacion visual -> Viena -> Niza -> conflictos -> INAPI -> informe ejecutivo.
  */
 
 import { NextRequest, NextResponse } from "next/server"
+import OpenAI from "openai"
+import { zodResponseFormat } from "openai/helpers/zod"
+import { z } from "zod"
 import { TrademarkAgent } from "@/lib/agent/trademark-agent"
 import { createClient } from "@/lib/supabase/server"
 
@@ -15,6 +18,11 @@ const MAX_NAME_LENGTH = 120
 const MAX_DESCRIPTION_LENGTH = 2_000
 const MAX_IMAGE_BASE64_LENGTH = 6 * 1024 * 1024
 const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"])
+
+const DetectedNameSchema = z.object({
+  denominacion: z.string().nullable(),
+  confidence: z.number().min(0).max(1),
+})
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -31,16 +39,47 @@ export async function POST(request: NextRequest) {
     }
 
     const payload = await readPayload(request)
-    const nombre = payload.nombre.trim()
     const descripcion = payload.descripcion.trim()
     const industria = payload.industria.trim()
 
-    if (!nombre) return NextResponse.json({ error: "El campo nombre es requerido." }, { status: 400, headers: noStoreHeaders() })
-    if (nombre.length > MAX_NAME_LENGTH) {
+    if (payload.nombre.trim().length > MAX_NAME_LENGTH) {
       return NextResponse.json({ error: `El nombre no puede superar ${MAX_NAME_LENGTH} caracteres.` }, { status: 400, headers: noStoreHeaders() })
     }
     if (descripcion.length > MAX_DESCRIPTION_LENGTH || industria.length > 240) {
       return NextResponse.json({ error: "Los campos de contexto exceden el largo permitido." }, { status: 400, headers: noStoreHeaders() })
+    }
+
+    let cleanImage: string | undefined
+    let imageMimeType: string | undefined
+    if (payload.image.trim()) {
+      const mimeMatch = payload.image.match(/^data:(image\/[a-z0-9.+-]+);base64,/i)
+      imageMimeType = (mimeMatch?.[1] ?? "image/png").toLowerCase()
+      if (!ALLOWED_IMAGE_TYPES.has(imageMimeType)) {
+        return NextResponse.json({ error: "Formato de imagen no soportado." }, { status: 415, headers: noStoreHeaders() })
+      }
+      cleanImage = payload.image.replace(/^data:image\/[a-z0-9.+-]+;base64,/i, "")
+      if (!/^[a-z0-9+/=\r\n]+$/i.test(cleanImage)) {
+        return NextResponse.json({ error: "La imagen no contiene base64 válido." }, { status: 400, headers: noStoreHeaders() })
+      }
+      if (cleanImage.length > MAX_IMAGE_BASE64_LENGTH) {
+        return NextResponse.json({ error: "Imagen demasiado grande. Máximo aproximado: 4,5 MB." }, { status: 413, headers: noStoreHeaders() })
+      }
+    }
+
+    let nombre = payload.nombre.trim()
+    let detectedNameConfidence: number | null = null
+    if (!nombre && cleanImage && imageMimeType) {
+      const detected = await detectTrademarkName(cleanImage, imageMimeType)
+      nombre = detected.denominacion?.trim().slice(0, MAX_NAME_LENGTH) ?? ""
+      detectedNameConfidence = detected.confidence
+    }
+
+    if (!nombre) {
+      return NextResponse.json({
+        error: cleanImage
+          ? "No pudimos leer una denominación clara en la imagen. Escribe el nombre de la marca para continuar."
+          : "Sube una imagen o escribe el nombre de la marca.",
+      }, { status: 400, headers: noStoreHeaders() })
     }
 
     const { data: cachedComparison } = !payload.image.trim()
@@ -59,23 +98,6 @@ export async function POST(request: NextRequest) {
         { ...cachedComparison.result_data, comparison_id: cachedComparison.id, cached: true },
         { status: 200, headers: noStoreHeaders() },
       )
-    }
-
-    let cleanImage: string | undefined
-    let imageMimeType: string | undefined
-    if (payload.image.trim()) {
-      const mimeMatch = payload.image.match(/^data:(image\/[a-z0-9.+-]+);base64,/i)
-      imageMimeType = (mimeMatch?.[1] ?? "image/png").toLowerCase()
-      if (!ALLOWED_IMAGE_TYPES.has(imageMimeType)) {
-        return NextResponse.json({ error: "Formato de imagen no soportado." }, { status: 415, headers: noStoreHeaders() })
-      }
-      cleanImage = payload.image.replace(/^data:image\/[a-z0-9.+-]+;base64,/i, "")
-      if (!/^[a-z0-9+/=\r\n]+$/i.test(cleanImage)) {
-        return NextResponse.json({ error: "La imagen no contiene base64 válido." }, { status: 400, headers: noStoreHeaders() })
-      }
-      if (cleanImage.length > MAX_IMAGE_BASE64_LENGTH) {
-        return NextResponse.json({ error: "Imagen demasiado grande. Máximo aproximado: 4,5 MB." }, { status: 413, headers: noStoreHeaders() })
-      }
     }
 
     const agent = new TrademarkAgent()
@@ -104,11 +126,20 @@ export async function POST(request: NextRequest) {
           niza_model: report.niza.model_used,
           viena_model: report.viena.model_used,
           report_model: report.routing.report.final_model,
+          denomination_source: payload.nombre.trim() ? "user" : "image-detected",
+          denomination_confidence: detectedNameConfidence,
         },
         recommendation: report.registrabilidad?.recomendacion ?? report.informe.recomendaciones?.[0] ?? null,
         result_data: { ...report, marca: nombre },
         result_json: { ...report, marca: nombre },
-        brand_context: { marca: nombre, descripcion: descripcion || null, industria: industria || null, source: "trademark-agent" },
+        brand_context: {
+          marca: nombre,
+          descripcion: descripcion || null,
+          industria: industria || null,
+          source: "trademark-agent",
+          denomination_source: payload.nombre.trim() ? "user" : "image-detected",
+          denomination_confidence: detectedNameConfidence,
+        },
       })
       .select("id")
       .single()
@@ -124,13 +155,19 @@ export async function POST(request: NextRequest) {
       durationMs: report.pipeline_ms,
       risk: report.informe.nivel_riesgo_global,
       inapiConfidence: report.registrabilidad?.calidad?.confianza ?? "no-disponible",
+      denominationSource: payload.nombre.trim() ? "user" : "image-detected",
       aiCostUsd: report.costo_estimado_usd,
       aiTokens: report.tokens_totales,
       aiMaxTier: report.routing.max_tier_used,
       aiEscalated: report.routing.escalated,
     })
 
-    return NextResponse.json({ ...report, comparison_id: savedComparison.id }, { status: 200, headers: noStoreHeaders() })
+    return NextResponse.json({
+      ...report,
+      comparison_id: savedComparison.id,
+      denomination_source: payload.nombre.trim() ? "user" : "image-detected",
+      denomination_confidence: detectedNameConfidence,
+    }, { status: 200, headers: noStoreHeaders() })
   } catch (error) {
     console.error("[trademark-agent] failed", {
       userId: user.id,
@@ -148,10 +185,34 @@ export async function GET() {
   return NextResponse.json({
     endpoint: "POST /api/v1/agent/analyze",
     status: process.env.OPENAI_API_KEY ? "available" : "unavailable",
-    pipeline: ["viena", "niza", "conflictos", "inapi", "informe"],
+    pipeline: ["denominacion-visual", "viena", "niza", "conflictos", "inapi", "informe"],
     aiRouting: ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"],
     maxDurationSeconds: 60,
   }, { headers: noStoreHeaders() })
+}
+
+async function detectTrademarkName(imageBase64: string, imageMimeType: string) {
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  const response = await client.chat.completions.parse({
+    model: "gpt-5.6-luna",
+    max_completion_tokens: 160,
+    messages: [
+      {
+        role: "system",
+        content: "Identifica únicamente la denominación marcaria visible y principal de la imagen. No inventes texto. Si no hay texto suficientemente claro, devuelve null. Ignora slogans secundarios, etiquetas legales, precios y texto ambiental.",
+      },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "Lee la denominación principal de esta marca o logo." },
+          { type: "image_url", image_url: { url: `data:${imageMimeType};base64,${imageBase64}`, detail: "low" } },
+        ],
+      },
+    ],
+    response_format: zodResponseFormat(DetectedNameSchema, "detected_trademark_name"),
+  })
+
+  return response.choices[0]?.message.parsed ?? { denominacion: null, confidence: 0 }
 }
 
 async function readPayload(request: NextRequest) {
