@@ -1,10 +1,20 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Building2, CheckCircle2, Clock3, Landmark, Loader2, ShieldAlert, Tags, TrendingUp } from "lucide-react"
+import { Building2, CheckCircle2, Clock3, ExternalLink, History, Landmark, Loader2, ShieldAlert, Tags, TrendingUp } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
 type Candidate = { name: string; applicant: string; application: string }
+type TimelineItem = {
+  id: string
+  source: string
+  source_key: string
+  type: string
+  title: string
+  summary: string | null
+  date: string | null
+  url: string | null
+}
 type OwnerContext = {
   found: boolean
   owner: null | { id?: string; name: string; rut: string | null; identity_confidence: number; identity_status: string }
@@ -14,6 +24,7 @@ type OwnerContext = {
   recent_marks?: Array<{ name: string; status: string | null; filed_at: string | null; application: string | null; niza: number[] }>
   portfolio_growth?: Array<{ year: number; count: number }>
   tdpi_events?: Array<{ title: string; summary: string | null; url: string | null; date: string | null; type: string; source: string }>
+  timeline?: TimelineItem[]
   warning: string | null
 }
 type PublicActivity = {
@@ -68,7 +79,7 @@ export function OwnerContextPanel({ candidates }: { candidates: Candidate[] }) {
       <div className="max-w-2xl">
         <div className="flex items-center gap-2 text-[#0F766E]"><Building2 className="h-4 w-4"/><p className="text-xs font-semibold uppercase tracking-[0.15em]">Quién está detrás</p></div>
         <h3 className="mt-2 text-xl font-semibold tracking-tight text-slate-950">Perfil estratégico del titular</h3>
-        <p className="mt-2 text-sm leading-6 text-slate-600">Agrupamos su portafolio y, cuando la identidad está verificada, incorporamos actividad pública oficial relacionada. No inferimos identidad societaria si el RUT aún no está confirmado.</p>
+        <p className="mt-2 text-sm leading-6 text-slate-600">Agrupamos su portafolio y, cuando la identidad está verificada, incorporamos hechos públicos oficiales relacionados. No inferimos identidad societaria si el RUT aún no está confirmado.</p>
       </div>
       {loading ? <span className="inline-flex items-center gap-2 text-xs text-slate-500"><Loader2 className="h-3.5 w-3.5 animate-spin"/>Cargando contexto…</span> : null}
     </div>
@@ -79,6 +90,7 @@ export function OwnerContextPanel({ candidates }: { candidates: Candidate[] }) {
       const topClasses = context.top_classes ?? []
       const recentMarks = context.recent_marks ?? []
       const growth = context.portfolio_growth ?? []
+      const timeline = context.timeline ?? []
       const lastGrowth = growth.at(-1)
       const showActivity = verified && Boolean(activity?.available)
       return <article key={candidate.application} className="py-6">
@@ -122,6 +134,16 @@ export function OwnerContextPanel({ candidates }: { candidates: Candidate[] }) {
             </div>)}
           </div>
         </div> : context.family_sample?.length ? <div className="mt-4 flex flex-wrap items-center gap-2"><Tags className="h-3.5 w-3.5 text-slate-400"/>{context.family_sample.slice(0, 5).map(item => <Badge key={`${candidate.application}-${item.name}`} variant="outline" className="bg-white text-slate-600">{item.name}</Badge>)}</div> : null}
+
+        {timeline.length ? <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+          <div className="flex items-start gap-3"><div className="mt-0.5 rounded-lg bg-teal-50 p-2 text-teal-700"><History className="h-4 w-4"/></div><div><p className="text-sm font-semibold text-slate-900">Línea de tiempo del titular</p><p className="mt-1 text-sm leading-6 text-slate-500">Hechos públicos y marcarios verificables reunidos en un solo lugar.</p></div></div>
+          <div className="mt-4 divide-y divide-slate-100 border-t border-slate-100">{timeline.slice(0, 6).map(item => <div key={item.id} className="py-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="bg-slate-50 text-[11px]">{timelineSourceLabel(item)}</Badge>{item.date ? <span className="text-xs text-slate-400">{formatDate(item.date)}</span> : null}</div><p className="mt-2 text-sm font-medium leading-5 text-slate-900">{item.title}</p>{item.summary ? <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">{item.summary}</p> : null}</div>
+              {item.url ? <a href={item.url} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-teal-700 hover:text-teal-900">Ver fuente oficial<ExternalLink className="h-3.5 w-3.5"/></a> : null}
+            </div>
+          </div>)}</div>
+        </div> : null}
       </article>
     })}</div> : null}
   </section>
@@ -129,6 +151,23 @@ export function OwnerContextPanel({ candidates }: { candidates: Candidate[] }) {
 
 function Metric({ label, value }: { label: string; value: number }) {
   return <div className="rounded-xl border border-slate-200 bg-white px-3 py-2"><p className="text-lg font-semibold text-slate-950">{value}</p><p className="mt-0.5 text-[11px] text-slate-500">{label}</p></div>
+}
+
+function timelineSourceLabel(item: TimelineItem) {
+  const labels: Record<string, string> = {
+    registro_empresas: "RES",
+    mercado_publico: "Mercado Público",
+    tdpi: "TDPI",
+    cmf: "CMF",
+    superir: "SUPERIR",
+    inapi_open_data: "INAPI",
+  }
+  return labels[item.source_key] ?? item.source
+}
+
+function formatDate(value: string) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("es-CL", { dateStyle: "medium" }).format(date)
 }
 
 function formatDateTime(value: string) {
