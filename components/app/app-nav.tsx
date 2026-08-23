@@ -5,28 +5,8 @@ import { useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  Bell,
-  BellRing,
-  BriefcaseBusiness,
-  ClipboardCheck,
-  History,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  Search,
-  Settings,
-  Waypoints,
-  X,
-} from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Bell, BellRing, BriefcaseBusiness, ClipboardCheck, History, LayoutDashboard, LogOut, Menu, Search, Settings, Waypoints, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const primaryItems = [
@@ -48,15 +28,7 @@ function matchesPath(pathname: string, href: string) {
 }
 
 function BrandMark() {
-  return (
-    <span className="flex items-center gap-3">
-      <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#0F766E] text-sm font-semibold text-white shadow-sm">V</span>
-      <span className="hidden leading-none sm:block">
-        <span className="block text-sm font-semibold tracking-[-0.02em] text-slate-950">VIDENTIA</span>
-        <span className="mt-1 block text-[10px] font-medium uppercase tracking-[0.18em] text-slate-500">by N3uralia</span>
-      </span>
-    </span>
-  )
+  return <span className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-[8px] bg-[#111827] text-xs font-semibold text-white">V</span><span className="hidden leading-none sm:block"><span className="block text-[13px] font-semibold tracking-[0.14em] text-[#111827]">VIDENTIA</span><span className="mt-1 block text-[8px] font-medium uppercase tracking-[0.18em] text-[#98A2B3]">by N3uralia</span></span></span>
 }
 
 export function AppNav({ userEmail, fullName, companyName }: { userEmail: string; fullName: string | null; companyName: string | null }) {
@@ -68,58 +40,46 @@ export function AppNav({ userEmail, fullName, companyName }: { userEmail: string
 
   const handleLogout = async () => {
     const supabase = createClient()
-    if (!supabase) {
-      router.push("/")
-      router.refresh()
-      return
-    }
+    if (!supabase) { router.push("/"); router.refresh(); return }
     await supabase.auth.signOut()
     router.push("/")
     router.refresh()
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
-      <div className="mx-auto flex h-[72px] max-w-[1480px] items-center justify-between gap-5 px-4 sm:px-6 lg:px-8">
-        <div className="flex min-w-0 items-center gap-8">
+    <header className="sticky top-0 z-40 border-b border-black/10 bg-[#F7F8F6]/95 backdrop-blur-xl">
+      <div className="mx-auto flex h-[68px] max-w-[1480px] items-center justify-between gap-5 px-4 sm:px-6 lg:px-8">
+        <div className="flex min-w-0 items-center gap-10">
           <Link href="/dashboard" aria-label="VIDENTIA"><BrandMark /></Link>
-          <nav className="hidden items-center gap-1.5 lg:flex" aria-label="Navegación principal">
+          <nav className="hidden h-[68px] items-stretch gap-7 lg:flex" aria-label="Navegación principal">
             {primaryItems.map(item => {
               const Icon = item.icon
               const active = activePrimary(item)
-              return (
-                <Link key={item.href} href={item.href} className={cn("flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors", active ? "bg-teal-50 text-[#0F766E]" : "text-slate-600 hover:bg-slate-50 hover:text-slate-950")}>
-                  <Icon className="h-4 w-4" />{item.label}
-                </Link>
-              )
+              return <Link key={item.href} href={item.href} className={cn("relative flex items-center gap-2 text-[13px] font-medium transition-colors", active ? "text-[#111827]" : "text-[#667085] hover:text-[#111827]")}><Icon className={cn("h-3.5 w-3.5", active ? "text-[#0F766E]" : "text-[#98A2B3]")} />{item.label}{active ? <span className="absolute inset-x-0 bottom-0 h-px bg-[#0F766E]" /> : null}</Link>
             })}
           </nav>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <Button asChild variant="ghost" size="icon" className="text-slate-500 hover:bg-slate-100 hover:text-slate-950" aria-label="Notificaciones"><Link href="/notificaciones"><Bell className="h-5 w-5" /></Link></Button>
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(open => !open)} aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}>{mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</Button>
+        <div className="flex items-center gap-1">
+          <Button asChild variant="ghost" size="icon" className="h-9 w-9 rounded-md text-[#667085] hover:bg-black/5 hover:text-[#111827]" aria-label="Notificaciones"><Link href="/notificaciones"><Bell className="h-4 w-4" /></Link></Button>
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md lg:hidden" onClick={() => setMobileOpen(open => !open)} aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}>{mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}</Button>
+
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="ml-1 h-11 gap-2.5 rounded-xl px-2 hover:bg-slate-50">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-slate-950 text-xs font-semibold text-white">{initials || "U"}</span>
-                <span className="hidden max-w-44 flex-col items-start leading-tight md:flex"><span className="w-full truncate text-sm font-medium text-slate-900">{fullName ?? userEmail}</span>{companyName ? <span className="mt-0.5 w-full truncate text-xs text-slate-500">{companyName}</span> : null}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72 rounded-xl border-slate-200 p-1.5 shadow-xl">
-              <DropdownMenuLabel className="px-2 py-2 font-normal"><span className="block text-sm font-medium text-slate-950">{fullName ?? "Usuario"}</span><span className="mt-0.5 block truncate text-xs text-slate-500">{userEmail}</span></DropdownMenuLabel>
+            <DropdownMenuTrigger asChild><Button variant="ghost" className="ml-1 h-10 gap-2.5 rounded-md px-2 hover:bg-black/5"><span className="grid h-7 w-7 place-items-center rounded-full bg-[#111827] text-[10px] font-semibold text-white">{initials || "U"}</span><span className="hidden max-w-40 flex-col items-start leading-tight md:flex"><span className="w-full truncate text-xs font-medium text-[#111827]">{fullName ?? userEmail}</span>{companyName ? <span className="mt-0.5 w-full truncate text-[10px] text-[#98A2B3]">{companyName}</span> : null}</span></Button></DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72 rounded-lg border-[#DFE3DF] p-1.5 shadow-lg">
+              <DropdownMenuLabel className="px-2 py-2 font-normal"><span className="block text-sm font-medium text-[#111827]">{fullName ?? "Usuario"}</span><span className="mt-0.5 block truncate text-xs text-[#667085]">{userEmail}</span></DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <p className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Área de trabajo</p>
-              {workspaceItems.map(item => { const Icon = item.icon; return <DropdownMenuItem key={item.href} asChild><Link href={item.href} className="cursor-pointer rounded-lg"><Icon className="mr-2 h-4 w-4" />{item.label}</Link></DropdownMenuItem> })}
+              <p className="px-2 pb-1 pt-2 font-mono text-[9px] font-medium uppercase tracking-[0.18em] text-[#98A2B3]">Área de trabajo</p>
+              {workspaceItems.map(item => { const Icon = item.icon; return <DropdownMenuItem key={item.href} asChild><Link href={item.href} className="cursor-pointer rounded-md"><Icon className="mr-2 h-3.5 w-3.5" />{item.label}</Link></DropdownMenuItem> })}
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild><Link href="/settings" className="rounded-lg"><Settings className="mr-2 h-4 w-4" />Configuración</Link></DropdownMenuItem>
-              <DropdownMenuItem onClick={handleLogout} className="rounded-lg"><LogOut className="mr-2 h-4 w-4" />Cerrar sesión</DropdownMenuItem>
+              <DropdownMenuItem asChild><Link href="/settings" className="rounded-md"><Settings className="mr-2 h-3.5 w-3.5" />Configuración</Link></DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout} className="rounded-md"><LogOut className="mr-2 h-3.5 w-3.5" />Cerrar sesión</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
-      {mobileOpen ? <nav className="border-t border-slate-200 bg-white px-4 py-4 lg:hidden" aria-label="Navegación móvil"><div className="mx-auto grid max-w-[1480px] gap-1">{primaryItems.map(item => { const Icon = item.icon; const active = activePrimary(item); return <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={cn("flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium", active ? "bg-teal-50 text-[#0F766E]" : "text-slate-600 hover:bg-slate-50 hover:text-slate-950")}><Icon className="h-4 w-4" />{item.label}</Link> })}<div className="my-2 h-px bg-slate-200" />{workspaceItems.map(item => { const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-slate-600 hover:bg-slate-50"><Icon className="h-4 w-4" />{item.label}</Link> })}</div></nav> : null}
+      {mobileOpen ? <nav className="border-t border-black/10 bg-[#F7F8F6] px-4 py-4 lg:hidden" aria-label="Navegación móvil"><div className="mx-auto grid max-w-[1480px] gap-1">{primaryItems.map(item => { const Icon = item.icon; const active = activePrimary(item); return <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={cn("flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium", active ? "bg-[#E8EFEC] text-[#134E4A]" : "text-[#667085] hover:bg-black/5")}><Icon className="h-4 w-4" />{item.label}</Link> })}<div className="my-2 h-px bg-black/10" />{workspaceItems.map(item => { const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm text-[#667085] hover:bg-black/5"><Icon className="h-4 w-4" />{item.label}</Link> })}</div></nav> : null}
     </header>
   )
 }
