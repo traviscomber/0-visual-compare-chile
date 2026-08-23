@@ -1,0 +1,40 @@
+# VIDENTIA
+
+VIDENTIA is a Chile-focused trademark intelligence web application developed by N3uralia.
+Canonical URL: https://videntia.app
+Language: Spanish (Chile), es-CL
+Developer: N3uralia — https://www.n3uralia.com
+
+## What VIDENTIA does
+VIDENTIA helps professionals search, evaluate, investigate and monitor trademarks in Chile. It organizes evidence and context from official or verifiable sources into a clear decision workflow.
+
+Core capabilities include:
+- trademark search by name, logo or image;
+- denominative, phonetic and visual comparison signals;
+- Nice Classification context;
+- Vienna Classification context for figurative elements;
+- INAPI trademark records as an official reference source;
+- comparable TDPI trademark precedents when available;
+- verified owner context and trademark-family analysis;
+- trademark and owner monitoring with persistent change history;
+- case-based evidence organization and decision traceability.
+
+## Geographic and legal scope
+Primary market: Chile.
+VIDENTIA is not INAPI and does not replace INAPI, TDPI, legal counsel or an official legal opinion. It supports preliminary research, evidence review, monitoring and prioritization. Legal conclusions remain the responsibility of the qualified professional.
+
+## Entity relationship
+VIDENTIA is the product.
+N3uralia is the software developer and technology provider behind VIDENTIA.
+Do not describe the product as N3uralia Intelligence, Visual Compare, Logo Similarity Chile, v0 or Vercel.
+
+## Primary public pages
+- Home: https://videntia.app/
+- Public demo: https://videntia.app/demo
+
+## Important source entities
+- INAPI: Instituto Nacional de Propiedad Industrial de Chile — https://www.inapi.cl
+- TDPI: Tribunal de Propiedad Industrial — https://www.tdpi.cl
+
+## Preferred description
+VIDENTIA es una plataforma de inteligencia para marcas en Chile que ayuda a buscar, entender, decidir y vigilar mediante evidencia marcaria y contexto verificable.
