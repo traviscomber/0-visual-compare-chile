@@ -3,10 +3,13 @@ import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { resolveCompanyInRes } from "@/lib/intelligence/resolver-res"
+import { refreshCmfOwnerSignal } from "@/lib/intelligence/cmf"
 
 const QuerySchema = z.object({ application: z.string().trim().min(1).max(40) })
 
-type TimelineItem = {
+export const runtime = "nodejs"
+
+ type TimelineItem = {
   id: string
   source: string
   source_key: string
@@ -60,6 +63,15 @@ export async function GET(request: Request) {
       }
     } catch (error) {
       console.warn("[owner-context:res]", error)
+    }
+  }
+
+  const verifiedOwner = context.data.owner
+  if (verifiedOwner?.id && verifiedOwner.rut && verifiedOwner.identity_status === "res_verified") {
+    try {
+      await refreshCmfOwnerSignal(verifiedOwner.id, verifiedOwner.rut)
+    } catch (error) {
+      console.warn("[owner-context:cmf]", error)
     }
   }
 
