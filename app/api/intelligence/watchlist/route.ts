@@ -5,6 +5,8 @@ import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
+const WATCH_SELECT = "id,watch_type,query,nice_classes,is_active,last_checked_at,last_reviewed_at,created_at,updated_at"
+
 const WatchSchema = z.object({
   type: z.enum(["brand", "owner"]).default("brand"),
   query: z.string().trim().min(2).max(160),
@@ -23,7 +25,7 @@ export async function GET() {
 
   const { data, error } = await auth.supabase
     .from("trademark_watches")
-    .select("id,watch_type,query,nice_classes,is_active,last_checked_at,created_at,updated_at")
+    .select(WATCH_SELECT)
     .order("is_active", { ascending: false })
     .order("updated_at", { ascending: false })
 
@@ -52,7 +54,7 @@ export async function POST(request: Request) {
       query: parsed.data.query,
       nice_classes: [...new Set(parsed.data.niza)].sort((a, b) => a - b),
     })
-    .select("id,watch_type,query,nice_classes,is_active,last_checked_at,created_at,updated_at")
+    .select(WATCH_SELECT)
     .single()
 
   if (error) {
@@ -83,7 +85,7 @@ export async function PATCH(request: Request) {
     .from("trademark_watches")
     .update(update)
     .eq("id", parsed.data.id)
-    .select("id,watch_type,query,nice_classes,is_active,last_checked_at,created_at,updated_at")
+    .select(WATCH_SELECT)
     .maybeSingle()
 
   if (error) {
