@@ -14,21 +14,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-  Activity,
-  BarChart3,
   Bell,
   BellRing,
-  Bot,
   BriefcaseBusiness,
   ClipboardCheck,
   History,
   LayoutDashboard,
   LogOut,
   Menu,
-  Radar,
   Search,
   Settings,
-  Terminal,
   Waypoints,
   X,
 } from "lucide-react"
@@ -41,19 +36,11 @@ const primaryItems = [
   { href: "/monitorear", label: "Vigilancia", icon: BellRing, aliases: ["/patentes/alertas"] },
 ]
 
-const workItems = [
+const workspaceItems = [
   { href: "/dashboard", label: "Resumen", icon: LayoutDashboard },
   { href: "/casos/pendientes", label: "Pendientes", icon: ClipboardCheck },
   { href: "/notificaciones", label: "Notificaciones", icon: Bell },
   { href: "/history", label: "Actividad", icon: History },
-]
-
-const advancedItems = [
-  { href: "/portfolio/analytics", label: "Métricas del portafolio", icon: BarChart3 },
-  { href: "/portfolio/risk", label: "Riesgo predictivo", icon: Radar },
-  { href: "/portfolio/control", label: "Automatización y asistente", icon: Bot },
-  { href: "/dashboard/playground", label: "API e integraciones", icon: Terminal },
-  { href: "/dashboard/processing", label: "Operación del sistema", icon: Activity },
 ]
 
 function matchesPath(pathname: string, href: string) {
@@ -106,9 +93,7 @@ export function AppNav({ userEmail, fullName, companyName }: { userEmail: string
                   href={item.href}
                   className={cn(
                     "flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors",
-                    active
-                      ? "bg-teal-50 text-[#0F766E]"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-950",
+                    active ? "bg-teal-50 text-[#0F766E]" : "text-slate-600 hover:bg-slate-50 hover:text-slate-950",
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -144,13 +129,7 @@ export function AppNav({ userEmail, fullName, companyName }: { userEmail: string
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <p className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Área de trabajo</p>
-              {workItems.map(item => {
-                const Icon = item.icon
-                return <DropdownMenuItem key={item.href} asChild><Link href={item.href} className="cursor-pointer rounded-lg"><Icon className="mr-2 h-4 w-4" />{item.label}</Link></DropdownMenuItem>
-              })}
-              <DropdownMenuSeparator />
-              <p className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Herramientas avanzadas</p>
-              {advancedItems.map(item => {
+              {workspaceItems.map(item => {
                 const Icon = item.icon
                 return <DropdownMenuItem key={item.href} asChild><Link href={item.href} className="cursor-pointer rounded-lg"><Icon className="mr-2 h-4 w-4" />{item.label}</Link></DropdownMenuItem>
               })}
@@ -184,7 +163,7 @@ export function AppNav({ userEmail, fullName, companyName }: { userEmail: string
               )
             })}
             <div className="my-2 h-px bg-slate-200" />
-            {workItems.map(item => {
+            {workspaceItems.map(item => {
               const Icon = item.icon
               return <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-slate-600 hover:bg-slate-50"><Icon className="h-4 w-4" />{item.label}</Link>
             })}
