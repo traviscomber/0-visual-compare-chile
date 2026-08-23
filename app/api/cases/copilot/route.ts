@@ -32,6 +32,16 @@ export async function POST(request: Request) {
   ])
   if (caseError || !caseRow || !role) return NextResponse.json({ error: "No tienes acceso a este caso." }, { status: 403, headers: PRIVATE_NO_STORE_HEADERS })
 
+  const { data: quota, error: quotaError } = await auth.supabase.rpc("consume_case_copilot_quota")
+  if (quotaError) {
+    console.error("[case-copilot] quota check failed", quotaError)
+    return NextResponse.json({ error: "No pudimos validar la cuota del Copilot." }, { status: 503, headers: PRIVATE_NO_STORE_HEADERS })
+  }
+  const quotaState = quota as { allowed?: boolean; hourCount?: number; dayCount?: number; hourLimit?: number; dayLimit?: number } | null
+  if (!quotaState?.allowed) {
+    return NextResponse.json({ error: "Límite de uso del Copilot alcanzado. Intenta nuevamente más tarde.", quota: quotaState }, { status: 429, headers: { ...PRIVATE_NO_STORE_HEADERS, "Retry-After": "3600" } })
+  }
+
   const [{ data: evidence }, { data: events }, { data: governance }, { data: governanceStatus }, { data: reviews }] = await Promise.all([
     auth.supabase.from("case_items").select("item_type,title,metadata,created_at").eq("case_id", caseId).order("created_at", { ascending: false }).limit(40),
     auth.supabase.from("case_events").select("event_type,title,payload,occurred_at").eq("case_id", caseId).order("occurred_at", { ascending: false }).limit(30),
@@ -64,7 +74,7 @@ export async function POST(request: Request) {
     }).select("id,created_at").single()
     if (insertError) console.error("[case-copilot] audit insert failed", insertError)
 
-    return NextResponse.json({ ...result.output, model: result.model, estimatedCostUsd: result.estimatedCostUsd, runId: run?.id ?? null, createdAt: run?.created_at ?? new Date().toISOString() }, { headers: PRIVATE_NO_STORE_HEADERS })
+    return NextResponse.json({ ...result.output, model: result.model, estimatedCostUsd: result.estimatedCostUsd, quota: quotaState, runId: run?.id ?? null, createdAt: run?.created_at ?? new Date().toISOString() }, { headers: PRIVATE_NO_STORE_HEADERS })
   } catch (error) {
     console.error("[case-copilot] failed", error)
     return NextResponse.json({ error: "El Copilot no pudo responder en este momento. La evidencia del caso no fue modificada." }, { status: 502, headers: PRIVATE_NO_STORE_HEADERS })
