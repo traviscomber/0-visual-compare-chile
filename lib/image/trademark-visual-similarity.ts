@@ -1,5 +1,6 @@
 import { calculateHammingDistance } from "@/lib/image/hash"
 import { calculatePerceptualHash, phashSimilarityFromDistance } from "@/lib/image/phash"
+import { enrichCandidatesWithOfficialImages } from "@/lib/inapi/visual-detail"
 import type { Marca } from "@/types/marca"
 
 export interface TrademarkVisualSignal {
@@ -14,8 +15,9 @@ const FETCH_TIMEOUT_MS = 5_000
 const MAX_CANDIDATES = 6
 
 /**
- * Adds a structural visual signal only when the registry/source actually exposes
- * an image URL. It never fabricates a visual score when no candidate image exists.
+ * Adds a structural visual signal only when INAPI or another trusted source
+ * actually exposes a candidate image. Missing images remain missing: no score
+ * is fabricated and no undocumented URL pattern is guessed.
  */
 export async function compareTrademarkCandidateImages(
   queryImageBase64: string | undefined,
@@ -34,7 +36,9 @@ export async function compareTrademarkCandidateImages(
     return signals
   }
 
-  const eligible = candidates.filter((candidate) => Boolean(candidate.imagenUrl)).slice(0, MAX_CANDIDATES)
+  const enriched = await enrichCandidatesWithOfficialImages(candidates)
+  const eligible = enriched.filter((candidate) => Boolean(candidate.imagenUrl)).slice(0, MAX_CANDIDATES)
+
   for (const candidate of eligible) {
     const url = candidate.imagenUrl
     if (!url || !isAllowedImageUrl(url)) continue
