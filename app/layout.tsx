@@ -33,11 +33,11 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#020617",
+  themeColor: "#F8FAFC",
   width: "device-width",
   initialScale: 1,
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="es"><body className="bg-slate-950 font-sans text-foreground antialiased"><AuthProvider>{children}</AuthProvider><Toaster richColors position="top-right" />{process.env.NODE_ENV === "production" && <Analytics />}</body></html>
+  return <html lang="es"><body className="bg-background font-sans text-foreground antialiased"><AuthProvider>{children}</AuthProvider><Toaster richColors position="top-right" />{process.env.NODE_ENV === "production" && <Analytics />}</body></html>
 }
