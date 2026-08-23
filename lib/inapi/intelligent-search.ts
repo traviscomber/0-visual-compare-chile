@@ -102,7 +102,8 @@ export function rankTrademarkSearchResults(
       const contains = normalizedName.includes(normalizedQuery) || normalizedQuery.includes(normalizedName)
       const dominantMatch = Boolean(dominant && normalizedName.includes(dominant))
       const classOverlap = marca.niza.filter((code) => classSet.has(String(code))).length
-      const denominativeSimilarity = similarityPercent(compactQuery, compactName)
+      const denominative = denominativeSimilarityBreakdown(normalizedQuery, normalizedName)
+      const denominativeSimilarity = denominative.score
       const phoneticSimilarity = similarityPercent(queryPhonetic, phoneticKey(normalizedName))
 
       let score = active ? 35 : 5
@@ -117,7 +118,15 @@ export function rankTrademarkSearchResults(
 
       if (!exact && !compactExact && denominativeSimilarity >= 72 && denominativeSimilarity < 84) {
         score += 8
-        reasons.push(`semejanza ortográfica ${denominativeSimilarity}%`)
+        reasons.push(`semejanza denominativa compuesta ${denominativeSimilarity}%`)
+      }
+      if (!exact && denominative.prefix >= 80) {
+        score += 4
+        reasons.push("inicio denominativo muy similar")
+      }
+      if (!exact && denominative.token >= 80 && denominative.queryTokens > 1) {
+        score += 5
+        reasons.push("alta coincidencia entre palabras distintivas")
       }
       if (!exact && phoneticSimilarity >= 74 && phoneticSimilarity < 86) {
         score += 6
@@ -130,7 +139,7 @@ export function rankTrademarkSearchResults(
 
       return { marca, score: Math.min(100, score), reasons, denominativeSimilarity, phoneticSimilarity }
     })
-    .sort((a, b) => b.score - a.score || b.phoneticSimilarity - a.phoneticSimilarity)
+    .sort((a, b) => b.score - a.score || b.denominativeSimilarity - a.denominativeSimilarity || b.phoneticSimilarity - a.phoneticSimilarity)
 }
 
 function dominantToken(value: string) {
@@ -192,6 +201,95 @@ function phoneticKey(value: string) {
     .replace(/GE|GI/g, "JE")
     .replace(/CE|CI/g, "SE")
     .replace(/(.)\1+/g, "$1")
+}
+
+function denominativeSimilarityBreakdown(query: string, candidate: string) {
+  const a = compactComparable(query)
+  const b = compactComparable(candidate)
+  const edit = similarityPercent(a, b)
+  const jaro = Math.round(jaroWinkler(a, b) * 100)
+  const token = tokenSimilarity(query, candidate)
+  const prefix = prefixSimilarity(a, b)
+  const containment = a && b && (a.includes(b) || b.includes(a)) ? Math.round((Math.min(a.length, b.length) / Math.max(a.length, b.length)) * 100) : 0
+  const queryTokens = meaningfulTokens(query).length
+
+  // Jaro-Winkler handles transpositions and shared prefixes better than edit distance.
+  // Token overlap captures multi-word marks where order or generic suffixes differ.
+  // Edit distance remains a conservative anchor so the score cannot be inflated by one signal alone.
+  const weighted = edit * 0.38 + jaro * 0.32 + token * 0.20 + prefix * 0.10
+  const score = Math.round(Math.max(weighted, containment * 0.92))
+  return { score: Math.min(100, score), edit, jaro, token, prefix, queryTokens }
+}
+
+function meaningfulTokens(value: string) {
+  return normalize(value)
+    .split(/[\s-]+/)
+    .map((token) => token.replace(/[^A-Z0-9]/g, ""))
+    .filter((token) => token.length >= 2 && !STOP_WORDS.has(token))
+}
+
+function tokenSimilarity(a: string, b: string) {
+  const left = meaningfulTokens(a)
+  const right = meaningfulTokens(b)
+  if (!left.length || !right.length) return 0
+
+  let total = 0
+  for (const token of left) {
+    const best = Math.max(...right.map((candidate) => similarityPercent(token, candidate)))
+    total += best
+  }
+  const forward = total / left.length
+
+  let reverseTotal = 0
+  for (const token of right) {
+    const best = Math.max(...left.map((candidate) => similarityPercent(token, candidate)))
+    reverseTotal += best
+  }
+  const reverse = reverseTotal / right.length
+  return Math.round((forward + reverse) / 2)
+}
+
+function prefixSimilarity(a: string, b: string) {
+  if (!a || !b) return 0
+  const limit = Math.min(6, a.length, b.length)
+  let shared = 0
+  while (shared < limit && a[shared] === b[shared]) shared += 1
+  return Math.round((shared / limit) * 100)
+}
+
+function jaroWinkler(a: string, b: string) {
+  if (a === b) return 1
+  if (!a || !b) return 0
+  const range = Math.max(0, Math.floor(Math.max(a.length, b.length) / 2) - 1)
+  const aMatches = new Array(a.length).fill(false)
+  const bMatches = new Array(b.length).fill(false)
+  let matches = 0
+
+  for (let i = 0; i < a.length; i += 1) {
+    const start = Math.max(0, i - range)
+    const end = Math.min(i + range + 1, b.length)
+    for (let j = start; j < end; j += 1) {
+      if (bMatches[j] || a[i] !== b[j]) continue
+      aMatches[i] = true
+      bMatches[j] = true
+      matches += 1
+      break
+    }
+  }
+  if (!matches) return 0
+
+  const aMatched: string[] = []
+  const bMatched: string[] = []
+  for (let i = 0; i < a.length; i += 1) if (aMatches[i]) aMatched.push(a[i])
+  for (let i = 0; i < b.length; i += 1) if (bMatches[i]) bMatched.push(b[i])
+  let transpositions = 0
+  for (let i = 0; i < aMatched.length; i += 1) if (aMatched[i] !== bMatched[i]) transpositions += 1
+  transpositions /= 2
+
+  const jaro = (matches / a.length + matches / b.length + (matches - transpositions) / matches) / 3
+  let prefix = 0
+  while (prefix < Math.min(4, a.length, b.length) && a[prefix] === b[prefix]) prefix += 1
+  return jaro + prefix * 0.1 * (1 - jaro)
 }
 
 function similarityPercent(a: string, b: string) {
