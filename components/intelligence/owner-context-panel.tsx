@@ -15,6 +15,14 @@ type TimelineItem = {
   date: string | null
   url: string | null
 }
+type OwnerInsight = {
+  id: string
+  title: string
+  explanation: string
+  importance: "alta" | "media" | "contexto"
+  source_keys: string[]
+  evidence_ids: string[]
+}
 type OwnerContext = {
   found: boolean
   owner: null | { id?: string; name: string; rut: string | null; identity_confidence: number; identity_status: string }
@@ -25,6 +33,7 @@ type OwnerContext = {
   portfolio_growth?: Array<{ year: number; count: number }>
   tdpi_events?: Array<{ title: string; summary: string | null; url: string | null; date: string | null; type: string; source: string }>
   timeline?: TimelineItem[]
+  insights?: OwnerInsight[]
   warning: string | null
 }
 type PublicActivity = {
@@ -91,6 +100,7 @@ export function OwnerContextPanel({ candidates }: { candidates: Candidate[] }) {
       const recentMarks = context.recent_marks ?? []
       const growth = context.portfolio_growth ?? []
       const timeline = context.timeline ?? []
+      const insights = context.insights ?? []
       const lastGrowth = growth.at(-1)
       const showActivity = verified && Boolean(activity?.available)
       return <article key={candidate.application} className="py-6">
@@ -105,6 +115,15 @@ export function OwnerContextPanel({ candidates }: { candidates: Candidate[] }) {
           </div>
           <div className="grid grid-cols-3 gap-2 text-center md:min-w-72"><Metric label="Marcas" value={context.portfolio.total}/><Metric label="Registradas" value={context.portfolio.registered}/><Metric label="Pendientes" value={context.portfolio.pending}/></div>
         </div>
+
+        {insights.length ? <div className="mt-5 rounded-xl border border-teal-200 bg-teal-50/60 p-4 sm:p-5">
+          <div className="flex items-start gap-3"><div className="mt-0.5 rounded-lg bg-white p-2 text-teal-700"><CheckCircle2 className="h-4 w-4"/></div><div><p className="text-sm font-semibold text-slate-950">Qué significa esto</p><p className="mt-1 text-sm leading-6 text-slate-600">Lecturas construidas sólo con hechos verificables. Son contexto para revisar, no una predicción jurídica.</p></div></div>
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">{insights.slice(0, 4).map(item => <div key={item.id} className="rounded-xl border border-teal-100 bg-white p-4">
+            <div className="flex flex-wrap items-center gap-2"><p className="text-sm font-semibold text-slate-900">{item.title}</p><Badge variant="outline" className={item.importance === "alta" ? "border-amber-200 bg-amber-50 text-amber-700" : "bg-slate-50 text-slate-600"}>{item.importance === "alta" ? "Revisar" : "Contexto"}</Badge></div>
+            <p className="mt-2 text-sm leading-6 text-slate-600">{item.explanation}</p>
+            {item.source_keys.length ? <div className="mt-3 flex flex-wrap gap-1.5">{item.source_keys.map(source => <Badge key={`${item.id}-${source}`} variant="secondary" className="text-[11px]">{sourceKeyLabel(source)}</Badge>)}</div> : null}
+          </div>)}</div>
+        </div> : null}
 
         <div className={`mt-5 grid gap-4 ${showActivity ? "xl:grid-cols-3" : "lg:grid-cols-2"}`}>
           <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -153,7 +172,7 @@ function Metric({ label, value }: { label: string; value: number }) {
   return <div className="rounded-xl border border-slate-200 bg-white px-3 py-2"><p className="text-lg font-semibold text-slate-950">{value}</p><p className="mt-0.5 text-[11px] text-slate-500">{label}</p></div>
 }
 
-function timelineSourceLabel(item: TimelineItem) {
+function sourceKeyLabel(source: string) {
   const labels: Record<string, string> = {
     registro_empresas: "RES",
     mercado_publico: "Mercado Público",
@@ -162,7 +181,11 @@ function timelineSourceLabel(item: TimelineItem) {
     superir: "SUPERIR",
     inapi_open_data: "INAPI",
   }
-  return labels[item.source_key] ?? item.source
+  return labels[source] ?? source
+}
+
+function timelineSourceLabel(item: TimelineItem) {
+  return sourceKeyLabel(item.source_key) || item.source
 }
 
 function formatDate(value: string) {
