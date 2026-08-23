@@ -1,74 +1,103 @@
 import { calculateHammingDistance } from "@/lib/image/hash"
 import { calculatePerceptualHash, phashSimilarityFromDistance } from "@/lib/image/phash"
 import { enrichCandidatesWithOfficialImages } from "@/lib/inapi/visual-detail"
+import { buildVisualFingerprint, compareVisualFingerprints, type FigurativeSimilarity, type VisualFingerprint } from "@/lib/image/visual-fingerprint"
 import type { Marca } from "@/types/marca"
 
 export interface TrademarkVisualSignal {
   marcaId: string
-  imageUrl: string
-  similarity: number
-  method: "phash"
+  imageUrl?: string
+  structuralSimilarity: number | null
+  figurativeSimilarity: number | null
+  sharedViennaCodes: string[]
+  sharedViennaLabels: string[]
+  method: "phash+vienna" | "phash" | "vienna"
+}
+
+export interface TrademarkVisualAnalysis {
+  queryFingerprint: VisualFingerprint
+  candidates: Marca[]
+  signals: Map<string, TrademarkVisualSignal>
 }
 
 const MAX_REMOTE_BYTES = 5 * 1024 * 1024
 const FETCH_TIMEOUT_MS = 5_000
 const MAX_CANDIDATES = 6
 
-/**
- * Adds a structural visual signal only when INAPI or another trusted source
- * actually exposes a candidate image. Missing images remain missing: no score
- * is fabricated and no undocumented URL pattern is guessed.
- */
-export async function compareTrademarkCandidateImages(
+export async function analyzeTrademarkVisualCandidates(
   queryImageBase64: string | undefined,
+  queryViennaCodes: Array<string | { code: string }>,
   candidates: Marca[],
-): Promise<Map<string, TrademarkVisualSignal>> {
+): Promise<TrademarkVisualAnalysis> {
   const signals = new Map<string, TrademarkVisualSignal>()
-  if (!queryImageBase64) return signals
+  const queryFingerprint = buildVisualFingerprint(queryViennaCodes)
+  const enriched = await enrichCandidatesWithOfficialImages(candidates.slice(0, MAX_CANDIDATES))
 
-  const queryBuffer = Buffer.from(queryImageBase64, "base64")
-  if (!queryBuffer.length || queryBuffer.length > MAX_REMOTE_BYTES) return signals
-
-  let queryHash: string
-  try {
-    queryHash = await calculatePerceptualHash(queryBuffer)
-  } catch {
-    return signals
-  }
-
-  const enriched = await enrichCandidatesWithOfficialImages(candidates)
-  const eligible = enriched.filter((candidate) => Boolean(candidate.imagenUrl)).slice(0, MAX_CANDIDATES)
-
-  for (const candidate of eligible) {
-    const url = candidate.imagenUrl
-    if (!url || !isAllowedImageUrl(url)) continue
-    try {
-      const buffer = await fetchImageBuffer(url)
-      const candidateHash = await calculatePerceptualHash(buffer)
-      if (candidateHash.length !== queryHash.length) continue
-      const distance = calculateHammingDistance(queryHash, candidateHash)
-      const similarity = Math.round(phashSimilarityFromDistance(distance, queryHash.length * 4) * 10) / 10
-      signals.set(candidate.id, { marcaId: candidate.id, imageUrl: url, similarity, method: "phash" })
-    } catch (error) {
-      console.warn("[trademark-visual] candidate skipped", candidate.id, error instanceof Error ? error.message : String(error))
+  let queryHash: string | null = null
+  if (queryImageBase64) {
+    const queryBuffer = Buffer.from(queryImageBase64, "base64")
+    if (queryBuffer.length && queryBuffer.length <= MAX_REMOTE_BYTES) {
+      try { queryHash = await calculatePerceptualHash(queryBuffer) } catch { queryHash = null }
     }
   }
-  return signals
+
+  for (const candidate of enriched) {
+    const figurative = compareVisualFingerprints(queryFingerprint, buildVisualFingerprint(candidate.viena))
+    let structuralSimilarity: number | null = null
+    let imageUrl: string | undefined
+
+    if (queryHash && candidate.imagenUrl && isAllowedImageUrl(candidate.imagenUrl)) {
+      try {
+        const buffer = await fetchImageBuffer(candidate.imagenUrl)
+        const candidateHash = await calculatePerceptualHash(buffer)
+        if (candidateHash.length === queryHash.length) {
+          const distance = calculateHammingDistance(queryHash, candidateHash)
+          structuralSimilarity = Math.round(phashSimilarityFromDistance(distance, queryHash.length * 4) * 10) / 10
+          imageUrl = candidate.imagenUrl
+        }
+      } catch (error) {
+        console.warn("[trademark-visual] candidate image skipped", candidate.id, error instanceof Error ? error.message : String(error))
+      }
+    }
+
+    if (structuralSimilarity == null && figurative.score == null) continue
+    signals.set(candidate.id, {
+      marcaId: candidate.id,
+      ...(imageUrl ? { imageUrl } : {}),
+      structuralSimilarity,
+      figurativeSimilarity: figurative.score,
+      sharedViennaCodes: figurative.sharedCodes,
+      sharedViennaLabels: figurative.sharedLabels,
+      method: structuralSimilarity != null && figurative.score != null ? "phash+vienna" : structuralSimilarity != null ? "phash" : "vienna",
+    })
+  }
+
+  return { queryFingerprint, candidates: mergeEnrichedCandidates(candidates, enriched), signals }
+}
+
+/** Backward-compatible pHash-only view for existing callers. */
+export async function compareTrademarkCandidateImages(queryImageBase64: string | undefined, candidates: Marca[]) {
+  const analysis = await analyzeTrademarkVisualCandidates(queryImageBase64, [], candidates)
+  const legacy = new Map<string, { marcaId: string; imageUrl: string; similarity: number; method: "phash" }>()
+  for (const [id, signal] of analysis.signals) {
+    if (signal.structuralSimilarity == null || !signal.imageUrl) continue
+    legacy.set(id, { marcaId: id, imageUrl: signal.imageUrl, similarity: signal.structuralSimilarity, method: "phash" })
+  }
+  return legacy
+}
+
+function mergeEnrichedCandidates(original: Marca[], enriched: Marca[]) {
+  const byId = new Map(enriched.map((item) => [item.id, item]))
+  return original.map((item) => byId.get(item.id) ?? item)
 }
 
 function isAllowedImageUrl(value: string) {
   try {
     const url = new URL(value)
     if (url.protocol !== "https:") return false
-    const configured = (process.env.TRADEMARK_IMAGE_ALLOWED_HOSTS ?? "")
-      .split(",")
-      .map((host) => host.trim().toLowerCase())
-      .filter(Boolean)
-    const allowed = new Set(["buscadormarcas.inapi.cl", ...configured])
-    return allowed.has(url.hostname.toLowerCase())
-  } catch {
-    return false
-  }
+    const configured = (process.env.TRADEMARK_IMAGE_ALLOWED_HOSTS ?? "").split(",").map((host) => host.trim().toLowerCase()).filter(Boolean)
+    return new Set(["buscadormarcas.inapi.cl", ...configured]).has(url.hostname.toLowerCase())
+  } catch { return false }
 }
 
 async function fetchImageBuffer(url: string) {
@@ -84,7 +113,5 @@ async function fetchImageBuffer(url: string) {
     const bytes = Buffer.from(await response.arrayBuffer())
     if (bytes.length > MAX_REMOTE_BYTES) throw new Error("image too large")
     return bytes
-  } finally {
-    clearTimeout(timeout)
-  }
+  } finally { clearTimeout(timeout) }
 }
