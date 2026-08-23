@@ -1,194 +1,77 @@
 # Visual Compare Chile
 
-Plataforma de inteligencia de propiedad industrial para Chile. Combina comparación visual de marcas, clasificación Niza/Viena, consulta INAPI, Patent Intelligence, Competitive Intelligence, alertas y una API protegida sobre Supabase + Vercel.
+Visual Compare es una plataforma de **decision intelligence para propiedad industrial**. Conecta evaluación de marcas, investigación INAPI/patentes, monitoreo competitivo, casos, gobernanza, colaboración, analytics, riesgo predictivo, automatización y Decision Copilot sobre Next.js + Vercel + Supabase.
 
-## Estado actual
+## Producto v1
 
-Producción corre en Vercel con Supabase como base de datos y autenticación. El sistema ya incluye:
+Flujo operativo:
 
-- comparación visual de imágenes y persistencia de resultados;
-- clasificación Niza y Viena con OpenAI Structured Outputs;
-- router multimodelo `Luna -> Terra -> Sol` según confianza/costo;
-- tracking de tokens, tier utilizado, escalamiento y costo estimado por análisis;
-- mirror local de datos oficiales INAPI para marcas;
-- búsqueda local fuzzy/accent-insensitive con verificación live selectiva;
-- sincronización diaria de Datos Abiertos INAPI desde `datos.gob.cl`;
-- Patent Intelligence con solicitudes, registros e IPC;
-- Competitive Intelligence por empresa, inventores, concentración IPC y actividad reciente;
-- backfill autónomo de solicitudes históricas de patentes 2009-2025;
-- alertas competitivas por empresa o prefijo IPC;
-- health checks de revisión, configuración y frescura de datos;
-- API v1, auth Supabase, API keys, cuotas y rate limiting.
+`Intelligence Home -> Evaluar -> Investigar -> Monitorear -> Caso -> Case Intelligence -> Governance -> Decision Brief`
 
-## Arquitectura completa
+Capa ejecutiva:
 
-```mermaid
-flowchart TD
-    U[Usuario Web / Cliente API] --> AUTH[Supabase Auth / API Key]
-    AUTH --> WEB[Next.js App en Vercel]
-
-    WEB --> IMG[Upload de imágenes]
-    IMG --> CMP[Pipeline de comparación]
-    CMP --> VISION[Análisis visual / features]
-    CMP --> CLASS[Niza + Viena]
-    CLASS --> ROUTER{Router multimodelo}
-    ROUTER -->|default| LUNA[GPT-5.6 Luna]
-    ROUTER -->|baja confianza| TERRA[GPT-5.6 Terra]
-    ROUTER -->|caso crítico| SOL[GPT-5.6 Sol]
-    LUNA --> SO[Structured Outputs + Zod]
-    TERRA --> SO
-    SOL --> SO
-    SO --> REPORT[Informe / recomendación]
-    REPORT --> DB[(Supabase Postgres)]
-    VISION --> DB
-    CMP --> DB
-
-    WEB --> TM[Consulta de marcas]
-    TM --> LOCALTM[search_inapi_local / pg_trgm]
-    LOCALTM --> DB
-    TM -->|verificación selectiva| LIVE[Buscador INAPI live]
-    LIVE --> TM
-
-    WEB --> PAT[Patent Intelligence]
-    PAT --> PSEARCH[Búsqueda por título / solicitante / IPC]
-    PAT --> COMP[Competitive Intelligence]
-    PSEARCH --> DB
-    COMP --> DB
-
-    WEB --> ALERTS[Alertas competitivas]
-    ALERTS --> WATCH[Watches por empresa / IPC]
-    WATCH --> DB
-
-    CRON[Vercel Cron diario] --> CKAN[Datos Abiertos INAPI / datos.gob.cl]
-    CKAN --> SYNC_TM[Sync marcas año actual]
-    CKAN --> SYNC_PAT[Sync patentes año actual]
-    SYNC_TM --> DB
-    SYNC_PAT --> DB
-    SYNC_PAT --> DETECT[Detector de nuevas coincidencias]
-    DETECT --> DB
-    DETECT --> ALERTS
-    SYNC_PAT --> BACKFILL[Backfill histórico 2009-2025]
-    BACKFILL --> DB
-
-    DB --> HEALTH[/api/v1/health]
-    HEALTH --> OBS[Observabilidad / freshness / revisión]
-
-    WEB --> PDF[Reportes PDF]
-    WEB --> HISTORY[Historial y detalle]
-    PDF --> DB
-    HISTORY --> DB
-```
-
-## Flujo de análisis visual
-
-1. El usuario inicia sesión o usa una API key válida.
-2. Sube una o dos imágenes.
-3. El backend valida formato, tamaño y permisos.
-4. El pipeline extrae señales visuales y ejecuta clasificación Niza/Viena.
-5. Luna resuelve por defecto los casos de menor costo.
-6. Si la confianza cae bajo el umbral configurado, el caso escala a Terra.
-7. Sol se reserva para casos realmente ambiguos o de alto riesgo.
-8. Las respuestas pasan por schemas Zod/Structured Outputs; no se depende de parsing regex de JSON.
-9. Se guarda resultado, modelo, tier máximo, tokens, escalamiento, costo estimado y señales.
-10. El usuario recibe score, clasificación, recomendación, evidencia e historial.
-
-## Flujo de datos INAPI
-
-### Marcas
-
-La fuente primaria operacional es el mirror local en Supabase. El buscador live se usa sólo para verificación selectiva o fallback.
-
-```text
-Datos Abiertos INAPI -> Supabase -> búsqueda local fuzzy -> candidatos -> verificación live opcional
-```
-
-La búsqueda local usa `pg_trgm`, normalización de tildes y ranking por:
-
-- similitud de nombre;
-- nombre exacto normalizado;
-- overlap de clases Niza;
-- estado del expediente;
-- frescura del dato.
-
-### Patentes
-
-Patent Intelligence sincroniza solicitudes y registros oficiales y normaliza:
-
-- número de solicitud/registro;
-- título;
-- solicitantes;
-- inventores;
-- IPC;
-- país/región;
-- estado;
-- fechas de presentación, publicación, registro y expiración;
-- PCT y prioridades cuando existen.
-
-Competitive Intelligence agrega cartera observada, actividad reciente, IPC dominantes, inventores recurrentes y últimos movimientos.
-
-El crecimiento interanual sólo se habilita cuando la cobertura histórica oficial 2009-2025 está completa. Antes de eso el sistema devuelve `yearOverYearPct = null` para evitar conclusiones sobre un corpus incompleto.
-
-## Sincronización diaria
-
-Vercel ejecuta `/api/cron/inapi-open-data` una vez al día con `CRON_SECRET`.
-
-Orden operativo:
-
-1. refrescar marcas del año actual;
-2. refrescar patentes del año actual;
-3. detectar eventos para watches competitivos;
-4. ejecutar un batch acotado del histórico 2009-2025;
-5. registrar cada corrida en `inapi_sync_runs`.
-
-El orden evita que una patente histórica importada durante el backfill se presente falsamente como una solicitud nueva.
-
-## Alertas competitivas
-
-En `/patentes/alertas` cada usuario puede vigilar:
-
-- nombre de empresa/solicitante;
-- prefijo IPC.
-
-Los eventos son idempotentes por `watch + expediente`, están protegidos por RLS y sólo consideran registros incorporados después de crear la vigilancia y con fecha de presentación compatible con esa vigilancia.
-
-## Seguridad
-
-Principios actuales:
-
-- Supabase Auth para sesiones;
-- RLS en datos de usuario, watches y alertas;
-- `SUPABASE_SERVICE_ROLE_KEY` sólo en runtime server-side;
-- cron protegido con `Authorization: Bearer CRON_SECRET`;
-- APIs privadas con `no-store`;
-- Structured Outputs + Zod para contratos de IA;
-- endpoints administrativos separados de rutas públicas;
-- health sin exponer secretos;
-- datos históricos y sincronizaciones idempotentes;
-- ninguna credencial debe commitearse al repositorio.
-
-Controles versionados bajo `.github/`:
-
-- CI de TypeScript + build de producción sin secretos;
-- CodeQL;
-- Dependabot;
-- CODEOWNERS;
-- política `SECURITY.md`.
-
-GitHub Settings debe además mantener `main` protegido con PR obligatorio, checks requeridos y bloqueo de force-push/delete.
+`Executive Portfolio -> Analytics & SLA -> Trends -> Predictive Risk -> Recommended Interventions -> Automation & Copilot`
 
 ## Rutas principales
 
-- `/dashboard` — inicio operativo
-- `/compare` — comparación visual
-- `/history` — historial de comparaciones
-- `/consulta-inapi` — búsqueda de marcas INAPI
-- `/patentes` — Patent + Competitive Intelligence
-- `/patentes/alertas` — vigilancia competitiva
-- `/settings` — cuenta/configuración
-- `/dashboard/playground` — API Playground
-- `/api/v1/health` — health y frescura
+- `/dashboard` — Intelligence Home
+- `/portfolio` — Executive Portfolio
+- `/portfolio/analytics` — Analytics, SLA y tendencias
+- `/portfolio/risk` — Predictive Risk Radar
+- `/portfolio/control` — Automation & Copilot
+- `/casos` — casos y decisiones
+- `/casos/[id]` — expediente, evidencia, intelligence y timeline
+- `/casos/[id]/equipo` — colaboración
+- `/casos/[id]/revision` — revisión y governance
+- `/casos/[id]/brief` — Decision Brief
+- `/casos/[id]/control` — automatización + Copilot
+- `/evaluar` — evaluación decision-first
+- `/investigar` — investigación unificada
+- `/monitorear` — Signal Center
+- `/notificaciones` — notificaciones persistentes
+- `/api/v1/health` — health operativo
 
-## Variables de entorno
+Las URLs históricas siguen funcionando por compatibilidad, pero la arquitectura de producto oficial es la anterior.
+
+## Arquitectura
+
+- **Frontend/runtime:** Next.js 16 en Vercel.
+- **Auth/datos:** Supabase Auth + Postgres + RLS.
+- **Fuentes externas:** INAPI / datos.gob.cl.
+- **IA:** OpenAI con router multimodelo cost-aware y Structured Outputs.
+- **Automatización:** Vercel Cron + RPCs service-role controladas.
+- **Calidad:** GitHub Actions TypeScript/build + CodeQL + Vercel Preview antes de merge.
+
+## Seguridad
+
+- RLS en todas las superficies de casos y colaboración.
+- `SUPABASE_SERVICE_ROLE_KEY` sólo server-side.
+- Crons protegidos con `CRON_SECRET`.
+- APIs privadas con `no-store`.
+- Governance impide cerrar decisiones sin cumplir revisión/quórum configurado.
+- Decision Copilot sólo lee contexto autorizado y nunca aprueba/cierra casos autónomamente.
+- Copilot limitado a **20 solicitudes/hora/usuario** y **100/día/usuario**.
+- Ejecuciones de Copilot, intervenciones, automatizaciones y cambios del caso quedan auditados.
+
+## Datos INAPI
+
+La fuente masiva operacional es el mirror local en Supabase, sincronizado desde datos abiertos oficiales. La búsqueda live se reserva para verificación selectiva/fallback.
+
+El cron `/api/cron/inapi-open-data`:
+
+1. refresca marcas del año actual;
+2. refresca patentes del año actual;
+3. detecta eventos de vigilancia;
+4. avanza backfill histórico;
+5. registra la corrida en `inapi_sync_runs`.
+
+Los batches de marcas se deduplican por `source_record_id` antes del upsert para tolerar duplicados provenientes de CKAN.
+
+## IA y costo
+
+Clasificación y Copilot usan routing cost-aware. Los análisis registran modelo/tier, tokens y costo estimado. Las reglas deterministas —RLS, governance, riesgo, readiness, automatización— permanecen separadas del juicio del modelo.
+
+## Variables de entorno mínimas
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
@@ -199,98 +82,39 @@ CRON_SECRET=long-random-secret
 OPENAI_API_KEY=your-openai-key
 ```
 
-Opcionales para routing IA:
+Nunca versionar secretos reales.
 
-```bash
-OPENAI_CLASSIFIER_MODEL=gpt-5.6-luna
-OPENAI_NIZA_MODEL=gpt-5.6-luna
-OPENAI_VIENA_MODEL=gpt-5.6-luna
-```
-
-Nunca usar valores reales de producción en archivos versionados.
-
-## Desarrollo local
-
-Requisitos:
-
-- Node.js 18+
-- pnpm
+## Desarrollo y validación
 
 ```bash
 pnpm install
 pnpm dev
-```
-
-Validación reproducible sin secretos:
-
-```bash
 pnpm exec tsc --noEmit
 pnpm build:raw
 ```
 
-Validaciones operativas con entorno configurado:
+Con entorno productivo configurado:
 
 ```bash
 pnpm smoke
-pnpm gate:phase1
 pnpm release:gate
 ```
 
-## Operación INAPI
+## Release
 
-Sync oficial de marcas:
+1. Branch.
+2. Migraciones reproducibles + verificación RLS.
+3. Vercel Preview `READY`.
+4. PR a `main`.
+5. TypeScript/build + CodeQL verdes.
+6. Merge.
+7. Producción `READY`.
+8. Validar `/api/v1/health`, crons y Runtime Errors.
 
-```bash
-pnpm sync:inapi:open-data
-```
+## Documentación de entrega
 
-Herramientas existentes:
+- `docs/V1_ENTERPRISE_HANDOFF.md` — arquitectura, permisos, QA, observabilidad y runbook.
+- `SECURITY.md` — política de seguridad.
+- `ROADMAP.md` — backlog/roadmap posterior a v1.
 
-```bash
-pnpm evidence:inapi
-pnpm plan:inapi --maxJobs 25
-pnpm monitor:inapi
-pnpm canary:inapi
-```
-
-## Deploy
-
-1. Trabajar en branch.
-2. Abrir PR a `main`.
-3. Esperar CI + CodeQL + preview Vercel.
-4. Revisar migraciones/impacto de datos cuando corresponda.
-5. Mergear sólo con checks verdes.
-6. Esperar deploy de producción.
-7. Validar `/api/v1/health` y flujos críticos.
-
-## Health contract
-
-`/api/v1/health` permite verificar, sin exponer secretos:
-
-- revisión Git servida;
-- host y origen esperado;
-- configuración de Supabase;
-- callbacks de auth;
-- frescura del mirror INAPI de marcas;
-- frescura del mirror INAPI de patentes.
-
-Un corpus INAPI fuera del threshold de frescura debe degradar el health para que una falla de sincronización no pase inadvertida.
-
-## Fuente de datos
-
-Los mirrors de marcas y patentes usan como fuente masiva los Datos Abiertos oficiales publicados por INAPI en `datos.gob.cl`. El buscador web INAPI no es tratado como API estable ni como fuente primaria para cargas masivas.
-
-## Política de cambios
-
-- no hacer cambios directos a `main`;
-- cambios de schema mediante migraciones reproducibles;
-- no marcar un sync como exitoso si quedó parcial;
-- no publicar métricas de precisión/costo sin evidencia observable;
-- mantener fallbacks reversibles para IA e INAPI;
-- todo cambio de runtime debe pasar preview Vercel antes de merge.
-
-## Documentación relacionada
-
-- `ROADMAP.md`
-- `docs/AI_RND_EVAL_PLAN.md`
-- `SECURITY.md`
+GitHub, Supabase y Vercel deben permanecer alineados; `main` es la fuente de verdad del código y las migraciones versionadas.
