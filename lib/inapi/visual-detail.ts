@@ -9,40 +9,22 @@ const CACHE_TTL_MS = 6 * 60 * 60 * 1000
 type CacheEntry = { expiresAt: number; imageUrl: string | null }
 const detailImageCache = new Map<string, CacheEntry>()
 
-interface InapiSearchPayload {
-  Hash?: string
-  Marcas?: Array<{ id: string; cell: string[] }>
-}
-
 /**
- * Enriches only the first registry candidates with image references that are
- * actually exposed by INAPI's own detail payload. No URL is synthesized from
- * fileSeq/fileType or other undocumented fields.
+ * Enriches only the first candidates with image references that INAPI itself
+ * exposes in its detail payload. It never constructs an image URL from
+ * undocumented file sequence/type fields.
  */
-export async function enrichCandidatesWithOfficialImages(
-  query: string,
-  candidates: Marca[],
-): Promise<Marca[]> {
-  if (!query.trim() || candidates.length === 0) return candidates
-
+export async function enrichCandidatesWithOfficialImages(candidates: Marca[]): Promise<Marca[]> {
+  if (candidates.length === 0) return candidates
   const targets = candidates.slice(0, MAX_DETAILS)
-  const unresolved = targets.filter((item) => !item.imagenUrl && !readCached(item.id))
+  const unresolved = targets.filter((item) => !item.imagenUrl && readCached(item.id) === undefined)
   if (unresolved.length === 0) return applyCachedImages(candidates)
 
-  let sessionId = ""
   try {
-    sessionId = await fetchSession()
-    const search = await fetchPrimarySearch(query, sessionId)
-    const hash = search.Hash ?? ""
-    const ids = new Set((search.Marcas ?? []).map((item) => item.id))
-
+    const sessionId = await fetchSession()
     for (const candidate of unresolved) {
-      if (!ids.has(candidate.id)) {
-        writeCached(candidate.id, null)
-        continue
-      }
       try {
-        const imageUrl = await fetchDetailImage(candidate.id, hash, sessionId)
+        const imageUrl = await fetchDetailImage(candidate.id, sessionId)
         writeCached(candidate.id, imageUrl)
       } catch (error) {
         console.warn("[inapi-visual-detail] candidate detail skipped", candidate.id, error instanceof Error ? error.message : String(error))
@@ -52,33 +34,14 @@ export async function enrichCandidatesWithOfficialImages(
   } catch (error) {
     console.warn("[inapi-visual-detail] enrichment unavailable", error instanceof Error ? error.message : String(error))
   }
-
   return applyCachedImages(candidates)
 }
 
-async function fetchPrimarySearch(query: string, sessionId: string): Promise<InapiSearchPayload> {
-  const params: Record<string, string> = {
-    LastNumSol: "", Hash: "", IDW: "", responseCaptcha: "",
-    param1: "", param2: "", param3: normalizeQuery(query), param4: "", param5: "",
-    param6: "", param7: "", param8: "", param9: "", param10: "", param11: "",
-    param12: "", param13: "", param14: "", param15: "", param16: "", param17: "2",
-  }
-  const response = await fetchWithTimeout(`${INAPI_BASE}/BuscarMarca.aspx/FindMarcas`, {
-    method: "POST",
-    headers: commonHeaders(sessionId),
-    body: JSON.stringify(params),
-    cache: "no-store",
-  })
-  if (!response.ok) throw new Error(`search HTTP ${response.status}`)
-  const json = await response.json()
-  return JSON.parse(json.d ?? "{}") as InapiSearchPayload
-}
-
-async function fetchDetailImage(numeroSolicitud: string, hash: string, sessionId: string) {
+async function fetchDetailImage(numeroSolicitud: string, sessionId: string) {
   const response = await fetchWithTimeout(`${INAPI_BASE}/BuscarMarca.aspx/FindMarcaByNumeroSolicitud`, {
     method: "POST",
     headers: commonHeaders(sessionId),
-    body: JSON.stringify({ Hash: hash, IDW: "", numeroSolicitud }),
+    body: JSON.stringify({ Hash: "", IDW: "", numeroSolicitud }),
     cache: "no-store",
   })
   if (!response.ok) throw new Error(`detail HTTP ${response.status}`)
@@ -118,11 +81,10 @@ function normalizeImageReference(raw: string) {
   if (!value || value.startsWith("data:")) return null
   try {
     const url = new URL(value, "https://buscadormarcas.inapi.cl")
-    if (url.protocol !== "https:") return null
-    if (url.hostname !== "buscadormarcas.inapi.cl") return null
-    const path = url.pathname.toLowerCase()
-    const looksLikeImage = /\.(png|jpe?g|gif|webp|bmp)(?:$|\?)/i.test(url.pathname + url.search)
-      || /imagen|image|logo|etiqueta|archivo|file/i.test(path + url.search)
+    if (url.protocol !== "https:" || url.hostname !== "buscadormarcas.inapi.cl") return null
+    const haystack = `${url.pathname}${url.search}`.toLowerCase()
+    const looksLikeImage = /\.(png|jpe?g|gif|webp|bmp)(?:$|\?)/i.test(haystack)
+      || /imagen|image|logo|etiqueta|archivo|file/i.test(haystack)
     return looksLikeImage ? url.toString() : null
   } catch {
     return null
@@ -179,8 +141,4 @@ function applyCachedImages(candidates: Marca[]) {
     const imageUrl = readCached(candidate.id)
     return imageUrl ? { ...candidate, imagenUrl: imageUrl } : candidate
   })
-}
-
-function normalizeQuery(value: string) {
-  return value.trim().toUpperCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ")
 }
