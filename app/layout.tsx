@@ -5,31 +5,58 @@ import { Toaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/lib/auth-context"
 import "./globals.css"
 
-function resolveMetadataBase() {
-  const configuredOrigin = process.env.NEXT_PUBLIC_SITE_URL?.trim()
-  const fallbackOrigin = "http://127.0.0.1:3000"
-  try { return new URL(configuredOrigin || fallbackOrigin) } catch { return new URL(fallbackOrigin) }
-}
+const CANONICAL_ORIGIN = "https://videntia.app"
 
 export const metadata: Metadata = {
-  metadataBase: resolveMetadataBase(),
+  metadataBase: new URL(CANONICAL_ORIGIN),
   title: {
-    default: "N3uralia Intelligence | Visual Compare",
-    template: "%s | N3uralia Intelligence",
+    default: "VIDENTIA | Inteligencia para marcas en Chile",
+    template: "%s | VIDENTIA",
   },
-  description: "Visual Compare, powered by N3uralia Intelligence: busca una marca por nombre, logo o fotografía y revisa antecedentes oficiales INAPI, clases Niza, señales figurativas Viena y evidencia priorizada.",
-  applicationName: "N3uralia Intelligence · Visual Compare",
-  keywords: ["N3uralia Intelligence", "Visual Compare", "N3uralia", "marcas Chile", "INAPI", "búsqueda de marcas", "propiedad industrial", "Niza", "Viena", "trademark intelligence"],
+  description: "VIDENTIA ayuda a evaluar, investigar y vigilar marcas en Chile con antecedentes INAPI, clases Niza, señales figurativas Viena, jurisprudencia TDPI y contexto verificable del titular.",
+  applicationName: "VIDENTIA",
+  keywords: [
+    "VIDENTIA",
+    "marcas Chile",
+    "búsqueda de marcas Chile",
+    "INAPI marcas",
+    "registro de marca Chile",
+    "vigilancia de marcas",
+    "propiedad industrial Chile",
+    "clases Niza",
+    "clasificación de Viena",
+    "TDPI",
+    "jurisprudencia de marcas",
+    "inteligencia marcaria",
+  ],
   authors: [{ name: "N3uralia", url: "https://www.n3uralia.com" }],
   creator: "N3uralia",
   publisher: "N3uralia",
+  alternates: {
+    canonical: "/",
+    languages: { "es-CL": "/" },
+  },
   openGraph: {
-    title: "N3uralia Intelligence | Visual Compare",
-    description: "De un logo o nombre a antecedentes INAPI priorizados, con evidencia visible y análisis asistido. Powered by N3uralia.",
+    title: "VIDENTIA | Inteligencia para marcas en Chile",
+    description: "Busca, entiende, decide y vigila. Inteligencia marcaria construida sobre fuentes oficiales de Chile.",
+    url: CANONICAL_ORIGIN,
+    siteName: "VIDENTIA",
     type: "website",
     locale: "es_CL",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "VIDENTIA — Inteligencia para marcas en Chile" }],
   },
-  robots: { index: true, follow: true },
+  twitter: {
+    card: "summary_large_image",
+    title: "VIDENTIA | Inteligencia para marcas en Chile",
+    description: "Busca, entiende, decide y vigila marcas en Chile con evidencia oficial y contexto explicable.",
+    images: ["/opengraph-image"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 },
+  },
+  category: "legal technology",
 }
 
 export const viewport: Viewport = {
@@ -39,5 +66,5 @@ export const viewport: Viewport = {
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="es"><body className="bg-background font-sans text-foreground antialiased"><AuthProvider>{children}</AuthProvider><Toaster richColors position="top-right" />{process.env.NODE_ENV === "production" && <Analytics />}</body></html>
+  return <html lang="es-CL"><body className="bg-background font-sans text-foreground antialiased"><AuthProvider>{children}</AuthProvider><Toaster richColors position="top-right" />{process.env.NODE_ENV === "production" && <Analytics />}</body></html>
 }
