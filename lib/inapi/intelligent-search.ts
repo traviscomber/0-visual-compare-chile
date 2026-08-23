@@ -1,4 +1,5 @@
 import { searchInapi, type InapiMatchMode } from "@/lib/inapi/client"
+import { searchTrademarkIntelligenceIndex } from "@/lib/trademark/intelligence-index"
 import type { Marca } from "@/types/marca"
 
 export type TrademarkSearchStrategyKind = "exact" | "contains" | "starts" | "dominant-token" | "phonetic"
@@ -18,6 +19,8 @@ export interface TrademarkSearchExecution {
   results: Marca[]
   rawResultCount: number
   deduplicatedResultCount: number
+  discovery?: { source: "n3uralia-index"; candidates: number }
+  verification?: { source: "inapi-live"; strategies: number; rows: number }
 }
 
 export interface RankedTrademarkResult {
@@ -29,6 +32,7 @@ export interface RankedTrademarkResult {
 }
 
 const MAX_STRATEGIES = 4
+const MAX_LIVE_VERIFICATION_STRATEGIES = 2
 const STOP_WORDS = new Set([
   "DE", "DEL", "LA", "LAS", "EL", "LOS", "Y", "E", "EN", "PARA", "POR", "CON", "SIN",
   "SPA", "S.A", "SA", "LTDA", "LIMITADA", "CHILE", "THE", "AND", "OF",
@@ -60,25 +64,56 @@ export function buildTrademarkSearchPlan(name: string): TrademarkSearchStrategy[
   return dedupeStrategies(strategies).slice(0, MAX_STRATEGIES)
 }
 
-export async function searchTrademarkIntelligently(name: string): Promise<TrademarkSearchExecution> {
+/**
+ * Hybrid search: the synchronized N3uralia Intelligence index discovers broad
+ * candidates in one local RPC. INAPI live is then used only to verify the two
+ * strongest textual strategies. Live rows always win during deduplication.
+ */
+export async function searchTrademarkIntelligently(
+  name: string,
+  requestedClasses: Array<string | number> = [],
+): Promise<TrademarkSearchExecution> {
   const strategies = buildTrademarkSearchPlan(name)
   const completedStrategies: TrademarkSearchStrategy[] = []
   const failedStrategies: Array<TrademarkSearchStrategy & { error: string }> = []
-  const batches: Marca[][] = []
 
-  for (const strategy of strategies) {
+  let indexRows: Marca[] = []
+  try {
+    const index = await searchTrademarkIntelligenceIndex(name, requestedClasses, 50)
+    indexRows = index.rows
+  } catch (error) {
+    console.warn("[trademark-search] local index unavailable", error instanceof Error ? error.message : String(error))
+  }
+
+  const verificationPlan = strategies.slice(0, MAX_LIVE_VERIFICATION_STRATEGIES)
+  const liveBatches: Marca[][] = []
+  for (const strategy of verificationPlan) {
     try {
       const rows = await searchInapi({ query: strategy.query, type: "nombre", matchMode: strategy.matchMode })
-      batches.push(rows)
+      liveBatches.push(rows.map((row) => ({
+        ...row,
+        metadata: { ...(row.metadata ?? {}), discoverySource: "inapi-live" },
+      })))
       completedStrategies.push(strategy)
     } catch (error) {
       failedStrategies.push({ ...strategy, error: error instanceof Error ? error.message : "Consulta no disponible" })
     }
   }
 
-  const raw = batches.flat()
+  const live = liveBatches.flat()
+  const raw = [...live, ...indexRows]
   const results = dedupeMarcas(raw)
-  return { strategies, completedStrategies, failedStrategies, results, rawResultCount: raw.length, deduplicatedResultCount: results.length }
+
+  return {
+    strategies,
+    completedStrategies,
+    failedStrategies,
+    results,
+    rawResultCount: raw.length,
+    deduplicatedResultCount: results.length,
+    discovery: { source: "n3uralia-index", candidates: indexRows.length },
+    verification: { source: "inapi-live", strategies: completedStrategies.length, rows: live.length },
+  }
 }
 
 export function rankTrademarkSearchResults(
@@ -90,7 +125,7 @@ export function rankTrademarkSearchResults(
   const compactQuery = compactComparable(normalizedQuery)
   const queryPhonetic = phoneticKey(normalizedQuery)
   const dominant = dominantToken(normalizedQuery)
-  const classSet = new Set(requestedClasses.map((value) => String(value)))
+  const classSet = new Set(requestedClasses.map(String))
 
   return execution.results
     .map((marca) => {
@@ -105,9 +140,12 @@ export function rankTrademarkSearchResults(
       const denominative = denominativeSimilarityBreakdown(normalizedQuery, normalizedName)
       const denominativeSimilarity = denominative.score
       const phoneticSimilarity = similarityPercent(queryPhonetic, phoneticKey(normalizedName))
+      const liveVerified = marca.metadata?.discoverySource === "inapi-live"
 
       let score = active ? 35 : 5
       const reasons: string[] = [active ? "antecedente activo" : "antecedente histórico"]
+      if (liveVerified) reasons.push("verificado en consulta INAPI live")
+      else reasons.push("descubierto en índice N3uralia Intelligence")
 
       if (exact) { score += 40; reasons.push("nombre exacto") }
       else if (compactExact) { score += 34; reasons.push("misma denominación sin espacios o guiones") }
@@ -120,22 +158,11 @@ export function rankTrademarkSearchResults(
         score += 8
         reasons.push(`semejanza denominativa compuesta ${denominativeSimilarity}%`)
       }
-      if (!exact && denominative.prefix >= 80) {
-        score += 4
-        reasons.push("inicio denominativo muy similar")
-      }
-      if (!exact && denominative.token >= 80 && denominative.queryTokens > 1) {
-        score += 5
-        reasons.push("alta coincidencia entre palabras distintivas")
-      }
-      if (!exact && phoneticSimilarity >= 74 && phoneticSimilarity < 86) {
-        score += 6
-        reasons.push(`proximidad fonética ${phoneticSimilarity}%`)
-      }
-      if (classOverlap > 0) {
-        score += Math.min(25, classOverlap * 10)
-        reasons.push(`${classOverlap} clase(s) Niza coincidente(s)`)
-      }
+      if (!exact && denominative.prefix >= 80) { score += 4; reasons.push("inicio denominativo muy similar") }
+      if (!exact && denominative.token >= 80 && denominative.queryTokens > 1) { score += 5; reasons.push("alta coincidencia entre palabras distintivas") }
+      if (!exact && phoneticSimilarity >= 74 && phoneticSimilarity < 86) { score += 6; reasons.push(`proximidad fonética ${phoneticSimilarity}%`) }
+      if (classOverlap > 0) { score += Math.min(25, classOverlap * 10); reasons.push(`${classOverlap} clase(s) Niza coincidente(s)`) }
+      if (liveVerified) score += 3
 
       return { marca, score: Math.min(100, score), reasons, denominativeSimilarity, phoneticSimilarity }
     })
@@ -161,9 +188,25 @@ function dedupeMarcas(rows: Marca[]) {
   for (const row of rows) {
     const key = trademarkKey(row)
     const existing = byKey.get(key)
-    if (!existing || richness(row) > richness(existing)) byKey.set(key, row)
+    if (!existing) { byKey.set(key, row); continue }
+    const rowLive = row.metadata?.discoverySource === "inapi-live"
+    const existingLive = existing.metadata?.discoverySource === "inapi-live"
+    if (rowLive && !existingLive) byKey.set(key, mergeRecord(row, existing))
+    else if (!rowLive && existingLive) byKey.set(key, mergeRecord(existing, row))
+    else if (richness(row) > richness(existing)) byKey.set(key, mergeRecord(row, existing))
   }
   return [...byKey.values()]
+}
+
+function mergeRecord(primary: Marca, fallback: Marca): Marca {
+  return {
+    ...fallback,
+    ...primary,
+    niza: primary.niza.length ? primary.niza : fallback.niza,
+    viena: primary.viena.length ? primary.viena : fallback.viena,
+    imagenUrl: primary.imagenUrl || fallback.imagenUrl,
+    metadata: { ...(fallback.metadata ?? {}), ...(primary.metadata ?? {}) },
+  }
 }
 
 function trademarkKey(row: Marca) {
@@ -175,7 +218,7 @@ function trademarkKey(row: Marca) {
 }
 
 function richness(row: Marca) {
-  return (row.numeroRegistro ? 3 : 0) + (row.metadata?.numSolicitud ? 3 : 0) + row.niza.length + (row.solicitante ? 1 : 0)
+  return (row.numeroRegistro ? 3 : 0) + (row.metadata?.numSolicitud ? 3 : 0) + row.niza.length + row.viena.length + (row.imagenUrl ? 3 : 0) + (row.solicitante ? 1 : 0)
 }
 
 function normalize(value: string) {
@@ -212,40 +255,21 @@ function denominativeSimilarityBreakdown(query: string, candidate: string) {
   const prefix = prefixSimilarity(a, b)
   const containment = a && b && (a.includes(b) || b.includes(a)) ? Math.round((Math.min(a.length, b.length) / Math.max(a.length, b.length)) * 100) : 0
   const queryTokens = meaningfulTokens(query).length
-
-  // Jaro-Winkler handles transpositions and shared prefixes better than edit distance.
-  // Token overlap captures multi-word marks where order or generic suffixes differ.
-  // Edit distance remains a conservative anchor so the score cannot be inflated by one signal alone.
   const weighted = edit * 0.38 + jaro * 0.32 + token * 0.20 + prefix * 0.10
   const score = Math.round(Math.max(weighted, containment * 0.92))
   return { score: Math.min(100, score), edit, jaro, token, prefix, queryTokens }
 }
 
 function meaningfulTokens(value: string) {
-  return normalize(value)
-    .split(/[\s-]+/)
-    .map((token) => token.replace(/[^A-Z0-9]/g, ""))
-    .filter((token) => token.length >= 2 && !STOP_WORDS.has(token))
+  return normalize(value).split(/[\s-]+/).map((token) => token.replace(/[^A-Z0-9]/g, "")).filter((token) => token.length >= 2 && !STOP_WORDS.has(token))
 }
 
 function tokenSimilarity(a: string, b: string) {
   const left = meaningfulTokens(a)
   const right = meaningfulTokens(b)
   if (!left.length || !right.length) return 0
-
-  let total = 0
-  for (const token of left) {
-    const best = Math.max(...right.map((candidate) => similarityPercent(token, candidate)))
-    total += best
-  }
-  const forward = total / left.length
-
-  let reverseTotal = 0
-  for (const token of right) {
-    const best = Math.max(...left.map((candidate) => similarityPercent(token, candidate)))
-    reverseTotal += best
-  }
-  const reverse = reverseTotal / right.length
+  const forward = left.reduce((sum, token) => sum + Math.max(...right.map((candidate) => similarityPercent(token, candidate))), 0) / left.length
+  const reverse = right.reduce((sum, token) => sum + Math.max(...left.map((candidate) => similarityPercent(token, candidate))), 0) / right.length
   return Math.round((forward + reverse) / 2)
 }
 
@@ -264,20 +288,15 @@ function jaroWinkler(a: string, b: string) {
   const aMatches = new Array(a.length).fill(false)
   const bMatches = new Array(b.length).fill(false)
   let matches = 0
-
   for (let i = 0; i < a.length; i += 1) {
     const start = Math.max(0, i - range)
     const end = Math.min(i + range + 1, b.length)
     for (let j = start; j < end; j += 1) {
       if (bMatches[j] || a[i] !== b[j]) continue
-      aMatches[i] = true
-      bMatches[j] = true
-      matches += 1
-      break
+      aMatches[i] = true; bMatches[j] = true; matches += 1; break
     }
   }
   if (!matches) return 0
-
   const aMatched: string[] = []
   const bMatched: string[] = []
   for (let i = 0; i < a.length; i += 1) if (aMatches[i]) aMatched.push(a[i])
@@ -285,7 +304,6 @@ function jaroWinkler(a: string, b: string) {
   let transpositions = 0
   for (let i = 0; i < aMatched.length; i += 1) if (aMatched[i] !== bMatched[i]) transpositions += 1
   transpositions /= 2
-
   const jaro = (matches / a.length + matches / b.length + (matches - transpositions) / matches) / 3
   let prefix = 0
   while (prefix < Math.min(4, a.length, b.length) && a[prefix] === b[prefix]) prefix += 1
