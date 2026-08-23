@@ -58,9 +58,13 @@ export async function POST(request: NextRequest) {
       numero_registro: item.numero_registro,
       numero_solicitud: item.numero_solicitud,
       relevancia: item.puntaje_relevancia,
-      razones: item.razones.slice(0, 4),
+      razones: item.razones.slice(0, 5),
       similitud_denominativa: item.similitud_denominativa,
       similitud_fonetica: item.similitud_fonetica,
+      similitud_visual: item.similitud_visual,
+      similitud_figurativa: item.similitud_figurativa,
+      viena_compartida: item.viena_compartida,
+      elementos_visuales_compartidos: item.elementos_visuales_compartidos,
       imagen_url: item.imagen_url,
     }))
 
@@ -68,7 +72,12 @@ export async function POST(request: NextRequest) {
       marca: nombre,
       denomination_source: rawName ? "user" : "image-detected",
       denomination_confidence: denominationConfidence,
-      visual: { elementos: report.viena.elementos_detectados.slice(0, 6), colores: report.viena.colores_dominantes.slice(0, 5), viena: report.viena.codes.slice(0, 5).map((code) => ({ code: code.code, elemento: code.elemento, confidence: code.confidence })) },
+      visual: {
+        elementos: report.viena.elementos_detectados.slice(0, 6),
+        colores: report.viena.colores_dominantes.slice(0, 5),
+        viena: report.viena.codes.slice(0, 6).map((code) => ({ code: code.code, titulo: code.titulo, elemento: code.elemento, confidence: code.confidence })),
+        fingerprint: report.visual_fingerprint,
+      },
       niza: report.niza.clases.slice(0, 5).map((item) => ({ numero: item.numero, titulo: item.titulo, tipo: item.tipo, razon: item.razon })),
       busqueda: {
         estrategias_planificadas: registry?.calidad.estrategias.length ?? 0,
@@ -85,6 +94,8 @@ export async function POST(request: NextRequest) {
         resultados_totales: registry?.calidad.resultados_totales ?? 0,
         resultados_activos: registry?.calidad.resultados_activos ?? 0,
         confianza: registry?.calidad.confianza ?? "baja",
+        imagenes_comparadas: registry?.calidad.imagenes_comparadas ?? 0,
+        antecedentes_con_viena: registry?.calidad.antecedentes_con_viena ?? 0,
         advertencias: registry?.calidad.advertencias ?? [],
       },
       lectura: {
