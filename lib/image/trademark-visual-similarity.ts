@@ -1,7 +1,8 @@
 import { calculateHammingDistance } from "@/lib/image/hash"
 import { calculatePerceptualHash, phashSimilarityFromDistance } from "@/lib/image/phash"
 import { enrichCandidatesWithOfficialImages } from "@/lib/inapi/visual-detail"
-import { buildVisualFingerprint, compareVisualFingerprints, type FigurativeSimilarity, type VisualFingerprint } from "@/lib/image/visual-fingerprint"
+import { buildVisualFingerprint, compareVisualFingerprints, type VisualFingerprint } from "@/lib/image/visual-fingerprint"
+import { createAdminClient } from "@/lib/supabase/admin"
 import type { Marca } from "@/types/marca"
 
 export interface TrademarkVisualSignal {
@@ -23,6 +24,7 @@ export interface TrademarkVisualAnalysis {
 const MAX_REMOTE_BYTES = 5 * 1024 * 1024
 const FETCH_TIMEOUT_MS = 5_000
 const MAX_CANDIDATES = 6
+const HASH_VERSION = "phash-v1"
 
 export async function analyzeTrademarkVisualCandidates(
   queryImageBase64: string | undefined,
@@ -48,9 +50,8 @@ export async function analyzeTrademarkVisualCandidates(
 
     if (queryHash && candidate.imagenUrl && isAllowedImageUrl(candidate.imagenUrl)) {
       try {
-        const buffer = await fetchImageBuffer(candidate.imagenUrl)
-        const candidateHash = await calculatePerceptualHash(buffer)
-        if (candidateHash.length === queryHash.length) {
+        const candidateHash = await getOrCreateCandidateHash(candidate, candidate.imagenUrl)
+        if (candidateHash && candidateHash.length === queryHash.length) {
           const distance = calculateHammingDistance(queryHash, candidateHash)
           structuralSimilarity = Math.round(phashSimilarityFromDistance(distance, queryHash.length * 4) * 10) / 10
           imageUrl = candidate.imagenUrl
@@ -84,6 +85,50 @@ export async function compareTrademarkCandidateImages(queryImageBase64: string |
     legacy.set(id, { marcaId: id, imageUrl: signal.imageUrl, similarity: signal.structuralSimilarity, method: "phash" })
   }
   return legacy
+}
+
+async function getOrCreateCandidateHash(candidate: Marca, imageUrl: string) {
+  const stored = await readStoredHash(candidate)
+  if (stored) return stored
+
+  const buffer = await fetchImageBuffer(imageUrl)
+  const hash = await calculatePerceptualHash(buffer)
+  await persistHash(candidate, hash)
+  return hash
+}
+
+async function readStoredHash(candidate: Marca) {
+  const indexId = candidate.metadata?.intelligenceIndexId
+  if (typeof indexId !== "string" || !indexId) return null
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from("trademark_records")
+      .select("visual_phash,visual_hash_version")
+      .eq("id", indexId)
+      .maybeSingle()
+    if (error || !data) return null
+    return data.visual_hash_version === HASH_VERSION && typeof data.visual_phash === "string"
+      ? data.visual_phash
+      : null
+  } catch {
+    return null
+  }
+}
+
+async function persistHash(candidate: Marca, hash: string) {
+  const indexId = candidate.metadata?.intelligenceIndexId
+  if (typeof indexId !== "string" || !indexId) return
+  try {
+    const admin = createAdminClient()
+    const { error } = await admin
+      .from("trademark_records")
+      .update({ visual_phash: hash, visual_hash_version: HASH_VERSION, visual_indexed_at: new Date().toISOString() })
+      .eq("id", indexId)
+    if (error) console.warn("[trademark-visual] hash persistence skipped", error.message)
+  } catch (error) {
+    console.warn("[trademark-visual] hash persistence skipped", error instanceof Error ? error.message : String(error))
+  }
 }
 
 function mergeEnrichedCandidates(original: Marca[], enriched: Marca[]) {
