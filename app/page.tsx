@@ -7,20 +7,20 @@ import { Button } from '@/components/ui/button'
 const journeys = [
   {
     eyebrow: 'Evaluar',
-    title: 'Decide si vale la pena avanzar.',
-    description: 'Revisa una marca antes de invertir más tiempo: antecedentes relevantes, similitudes, clases y señales que requieren una mirada más profunda.',
+    title: 'Revisa antes de avanzar.',
+    description: 'Revisa antecedentes, similitudes y clases antes de dedicar más tiempo a una marca.',
     icon: ShieldCheck,
   },
   {
     eyebrow: 'Investigar',
-    title: 'Entiende empresas y tecnologías.',
-    description: 'Explora marcas, patentes, solicitantes, inventores e IPC para construir una visión del panorama competitivo y tecnológico en Chile.',
+    title: 'Conoce empresas y tecnologías.',
+    description: 'Busca marcas, patentes e inventores para entender mejor el mercado en Chile.',
     icon: Search,
   },
   {
     eyebrow: 'Monitorear',
-    title: 'Mira qué cambió desde ayer.',
-    description: 'Sigue empresas y áreas tecnológicas relevantes y detecta nuevas solicitudes sin repetir manualmente la misma investigación.',
+    title: 'Sigue los cambios importantes.',
+    description: 'Recibe señales sobre nuevas solicitudes sin repetir la misma búsqueda.',
     icon: BellRing,
   },
 ]
@@ -40,7 +40,7 @@ export default function LandingPage() {
           <Link href="/" className="text-lg font-semibold tracking-tight">Visual Compare</Link>
           <div className="flex items-center gap-2">
             <Link href="/auth/login"><Button variant="ghost" className="text-slate-300 hover:bg-white/10 hover:text-white">Iniciar sesión</Button></Link>
-            <Link href="/auth/signup"><Button className="gap-2 bg-white text-slate-950 hover:bg-slate-200">Entrar a Visual Compare <ArrowRight className="h-4 w-4" /></Button></Link>
+            <Link href="/auth/signup"><Button className="gap-2 bg-white text-slate-950 hover:bg-slate-200">Empezar ahora <ArrowRight className="h-4 w-4" /></Button></Link>
           </div>
         </div>
       </nav>
@@ -53,21 +53,21 @@ export default function LandingPage() {
               <Sparkles className="h-4 w-4 text-blue-300" /> Inteligencia de propiedad industrial en Chile
             </div>
             <h1 className="max-w-5xl text-5xl font-semibold leading-[1.02] tracking-[-0.04em] sm:text-6xl lg:text-8xl">
-              Entiende el panorama <span className="text-blue-300">antes de decidir.</span>
+              Información clara <span className="text-blue-300">antes de decidir.</span>
             </h1>
             <p className="mt-7 max-w-3xl text-lg leading-8 text-slate-300 sm:text-xl">
-              Marcas, patentes e inteligencia competitiva en una sola plataforma, con datos oficiales de INAPI y análisis asistido por IA.
+              Revisa marcas, patentes y movimientos relevantes en un solo lugar, con datos de INAPI y apoyo de IA.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-              <Link href="/auth/signup"><Button size="lg" className="h-12 gap-2 bg-white px-6 text-slate-950 hover:bg-slate-200">Entrar a Visual Compare <ArrowRight className="h-4 w-4" /></Button></Link>
+              <Link href="/auth/signup"><Button size="lg" className="h-12 gap-2 bg-white px-6 text-slate-950 hover:bg-slate-200">Empezar ahora <ArrowRight className="h-4 w-4" /></Button></Link>
               <Link href="#producto"><Button size="lg" variant="outline" className="h-12 border-white/15 bg-transparent px-6 text-white hover:bg-white/10">Ver cómo funciona</Button></Link>
             </div>
           </div>
 
           <div className="mt-16 grid gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-3">
-            <div className="bg-slate-950/90 p-5"><p className="text-xs uppercase tracking-[0.18em] text-slate-500">Antes</p><p className="mt-2 text-sm text-slate-300">Evalúa una marca y detecta qué merece revisión.</p></div>
-            <div className="bg-slate-950/90 p-5"><p className="text-xs uppercase tracking-[0.18em] text-slate-500">Durante</p><p className="mt-2 text-sm text-slate-300">Investiga empresas, patentes y tecnologías con contexto.</p></div>
-            <div className="bg-slate-950/90 p-5"><p className="text-xs uppercase tracking-[0.18em] text-slate-500">Después</p><p className="mt-2 text-sm text-slate-300">Monitorea movimientos relevantes y vuelve sólo cuando algo cambia.</p></div>
+            <div className="bg-slate-950/90 p-5"><p className="text-xs uppercase tracking-[0.18em] text-slate-500">Antes</p><p className="mt-2 text-sm text-slate-300">Revisa una marca antes de avanzar.</p></div>
+            <div className="bg-slate-950/90 p-5"><p className="text-xs uppercase tracking-[0.18em] text-slate-500">Durante</p><p className="mt-2 text-sm text-slate-300">Busca empresas, patentes y tecnologías.</p></div>
+            <div className="bg-slate-950/90 p-5"><p className="text-xs uppercase tracking-[0.18em] text-slate-500">Después</p><p className="mt-2 text-sm text-slate-300">Sigue cambios importantes sin empezar de nuevo.</p></div>
           </div>
         </div>
       </section>
@@ -76,7 +76,7 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-12 max-w-3xl">
             <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-300">Un flujo, tres decisiones</p>
-            <h2 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">No necesitas aprender herramientas. Empieza por lo que quieres resolver.</h2>
+            <h2 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">Empieza por lo que necesitas resolver.</h2>
           </div>
           <div className="grid gap-4 lg:grid-cols-3">
             {journeys.map((journey) => {
@@ -98,8 +98,8 @@ export default function LandingPage() {
         <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-300">Investigar con contexto</p>
-            <h2 className="mt-4 text-4xl font-semibold tracking-tight">De un dato aislado a una lectura del panorama.</h2>
-            <p className="mt-5 max-w-xl leading-7 text-slate-400">Una empresa no es sólo una lista de patentes. Una marca no es sólo una coincidencia de texto. Visual Compare conecta actividad, estados, clases, IPC, inventores y evidencia para que la información tenga sentido antes de decidir.</p>
+            <h2 className="mt-4 text-4xl font-semibold tracking-tight">Información que ayuda a decidir.</h2>
+            <p className="mt-5 max-w-xl leading-7 text-slate-400">Visual Compare reúne actividad, estados, clases, IPC, inventores y fuentes para que la información sea más fácil de entender.</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {[
@@ -132,9 +132,9 @@ export default function LandingPage() {
 
       <section className="px-5 py-24 lg:px-8">
         <div className="mx-auto max-w-4xl text-center">
-          <h2 className="text-4xl font-semibold tracking-tight sm:text-5xl">Investiga antes. Decide mejor. Monitorea después.</h2>
-          <p className="mx-auto mt-5 max-w-2xl text-lg leading-7 text-slate-400">Empieza por una marca, una empresa o una tecnología. Visual Compare organiza el resto del recorrido.</p>
-          <Link href="/auth/signup"><Button size="lg" className="mt-8 h-12 gap-2 bg-white px-6 text-slate-950 hover:bg-slate-200">Entrar a Visual Compare <ArrowRight className="h-4 w-4" /></Button></Link>
+          <h2 className="text-4xl font-semibold tracking-tight sm:text-5xl">Busca, revisa y decide con más claridad.</h2>
+          <p className="mx-auto mt-5 max-w-2xl text-lg leading-7 text-slate-400">Empieza por una marca, una empresa o una tecnología. Visual Compare te ayuda a ordenar la información.</p>
+          <Link href="/auth/signup"><Button size="lg" className="mt-8 h-12 gap-2 bg-white px-6 text-slate-950 hover:bg-slate-200">Empezar ahora <ArrowRight className="h-4 w-4" /></Button></Link>
         </div>
       </section>
 
