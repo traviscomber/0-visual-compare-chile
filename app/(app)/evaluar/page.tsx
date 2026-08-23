@@ -5,6 +5,7 @@ import type { TrademarkInsightReport } from "@/lib/agent/trademark-agent"
 import { AlertTriangle, ArrowRight, CheckCircle2, ImageIcon, Layers3, Loader2, Search, ShieldAlert, ShieldCheck, Upload } from "lucide-react"
 import { OwnerContextPanel } from "@/components/intelligence/owner-context-panel"
 import { PrecedentPanel } from "@/components/intelligence/precedent-panel"
+import { WatchBrandAction } from "@/components/intelligence/watch-brand-action"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -62,6 +63,8 @@ export default function EvaluarMarcaPage() {
     } catch { setError("No pudimos conectar con el servicio. Intenta nuevamente.") } finally { setLoading(false) }
   }
 
+  const reportNiza = report?.niza.clases.map((clase) => Number(clase.numero)).filter((value) => Number.isInteger(value) && value >= 1 && value <= 45) ?? []
+
   return <main className="min-h-screen bg-background px-4 py-8 sm:px-6 lg:px-8">
     <div className="mx-auto max-w-6xl">
       <header className="mb-8 max-w-3xl">
@@ -97,7 +100,7 @@ export default function EvaluarMarcaPage() {
       </section> : <div className="space-y-6">
         <section className="overflow-hidden rounded-[28px] border border-border bg-white"><div className="grid lg:grid-cols-[220px_1fr]">
           <div className="flex min-h-52 items-center justify-center border-b border-border bg-slate-50 p-5 lg:border-b-0 lg:border-r">{imagePreview ? <div className="flex h-40 w-full items-center justify-center rounded-xl border border-border bg-white p-4"><img src={imagePreview} alt={report.marca} className="max-h-full max-w-full object-contain"/></div> : <div className="text-center text-muted-foreground"><ImageIcon className="mx-auto h-7 w-7"/><p className="mt-2 text-sm">Análisis por nombre</p></div>}</div>
-          <div className="p-6 sm:p-8"><div className="flex flex-wrap gap-2"><RiskBadge nivel={report.informe.nivel_riesgo_global}/><Badge variant="outline">{report.marca}</Badge><Badge variant="outline">Datos INAPI</Badge></div><p className="mt-6 text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">Resumen</p><h2 className="mt-2 text-2xl font-semibold leading-tight sm:text-3xl">{report.informe.resumen_ejecutivo}</h2><div className="mt-6 grid grid-cols-3 divide-x divide-border border-y border-border py-4"><SimpleMetric label="Antecedentes" value={String(report.registrabilidad?.calidad.resultados_totales ?? 0)}/><SimpleMetric label="Activos" value={String(report.registrabilidad?.calidad.resultados_activos ?? 0)}/><SimpleMetric label="Confianza" value={confidenceLabel(report.registrabilidad?.calidad.confianza)}/></div><div className="mt-6 flex flex-wrap gap-2"><Button variant="outline" onClick={reset}>Analizar otra marca</Button><Button asChild className="bg-[#0F766E] text-white hover:bg-[#115E59]"><a href="#antecedentes">Ver antecedentes <ArrowRight className="ml-2 h-4 w-4"/></a></Button></div></div>
+          <div className="p-6 sm:p-8"><div className="flex flex-wrap gap-2"><RiskBadge nivel={report.informe.nivel_riesgo_global}/><Badge variant="outline">{report.marca}</Badge><Badge variant="outline">Datos INAPI</Badge></div><p className="mt-6 text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">Resumen</p><h2 className="mt-2 text-2xl font-semibold leading-tight sm:text-3xl">{report.informe.resumen_ejecutivo}</h2><div className="mt-6 grid grid-cols-3 divide-x divide-border border-y border-border py-4"><SimpleMetric label="Antecedentes" value={String(report.registrabilidad?.calidad.resultados_totales ?? 0)}/><SimpleMetric label="Activos" value={String(report.registrabilidad?.calidad.resultados_activos ?? 0)}/><SimpleMetric label="Confianza" value={confidenceLabel(report.registrabilidad?.calidad.confianza)}/></div><div className="mt-6 flex flex-wrap items-start gap-2"><Button variant="outline" onClick={reset}>Analizar otra marca</Button><WatchBrandAction mark={report.marca} niza={reportNiza}/><Button asChild className="bg-[#0F766E] text-white hover:bg-[#115E59]"><a href="#antecedentes">Ver antecedentes <ArrowRight className="ml-2 h-4 w-4"/></a></Button></div></div>
         </div></section>
 
         <section className="grid gap-6 lg:grid-cols-[0.7fr_1.3fr]">
@@ -107,7 +110,7 @@ export default function EvaluarMarcaPage() {
 
         <OwnerContextPanel candidates={(report.registrabilidad?.antecedentes ?? []).slice(0,3).map((item) => ({ name: item.nombre, applicant: item.solicitante, application: item.numero_solicitud }))} />
 
-        <PrecedentPanel mark={report.marca} niza={report.niza.clases.map((clase) => Number(clase.numero)).filter((value) => Number.isInteger(value) && value >= 1 && value <= 45)} />
+        <PrecedentPanel mark={report.marca} niza={reportNiza} />
 
         <section className="rounded-2xl border border-border bg-slate-50 p-5"><div className="flex gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#0F766E]"/><div><p className="font-medium">Importante</p><p className="mt-1 text-sm leading-6 text-muted-foreground">Esta lectura organiza antecedentes y señales para apoyar una revisión. No determina por sí sola si una marca será aceptada o rechazada.</p></div></div></section>
       </div>}
