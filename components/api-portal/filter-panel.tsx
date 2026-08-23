@@ -1,8 +1,6 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { SearchFilters } from '@/types/marca'
 
 interface FilterPanelProps {
@@ -13,158 +11,29 @@ interface FilterPanelProps {
   onClearFilters: () => void
 }
 
-export function FilterPanel({
-  filters,
-  availableNiza,
-  availableViena,
-  onFilterChange,
-  onClearFilters
-}: FilterPanelProps) {
-  const activeCount = [
-    filters.estado,
-    filters.pais,
-    filters.fechaDesde,
-    filters.fechaHasta,
-    filters.niza?.length,
-    filters.viena?.length
-  ].filter(Boolean).length
+const fieldClass = 'w-full rounded-lg border border-black/15 bg-white px-3 py-2.5 text-sm text-[#111827] outline-none focus:border-[#0F766E]/50'
+
+export function FilterPanel({ filters, availableNiza, availableViena, onFilterChange, onClearFilters }: FilterPanelProps) {
+  const activeCount = [filters.estado, filters.pais, filters.fechaDesde, filters.fechaHasta, filters.niza?.length, filters.viena?.length].filter(Boolean).length
 
   return (
-    <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-      <div className="p-6 space-y-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-semibold text-white">Filtros</h3>
-            <p className="text-sm text-slate-300">Reduce el conjunto de resultados visibles.</p>
-          </div>
-          {activeCount > 0 && (
-            <Badge className="bg-blue-500/20 text-blue-100 border border-blue-400/30">
-              {activeCount} activos
-            </Badge>
-          )}
+    <section className="border-y border-black/10 bg-[#F7F8F6] px-5 py-6 sm:px-7">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">FILTROS</p>
+          <p className="mt-2 text-sm text-[#667085]">Refina la consulta con campos verificables del registro.</p>
         </div>
-
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <label className="space-y-2">
-            <span className="text-sm text-slate-200">Estado</span>
-            <select
-              className="w-full rounded-md border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-white"
-              value={filters.estado ?? ''}
-              onChange={(event) =>
-                onFilterChange({
-                  ...filters,
-                  estado: event.target.value ? (event.target.value as SearchFilters['estado']) : undefined
-                })
-              }
-            >
-              <option value="">Todos</option>
-              <option value="Registrada">Registrada</option>
-              <option value="Pendiente">Pendiente</option>
-              <option value="Denegada">Denegada</option>
-            </select>
-          </label>
-
-          <label className="space-y-2">
-            <span className="text-sm text-slate-200">País</span>
-            <input
-              className="w-full rounded-md border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-white placeholder:text-slate-500"
-              value={filters.pais ?? ''}
-              onChange={(event) =>
-                onFilterChange({
-                  ...filters,
-                  pais: event.target.value.toUpperCase() || undefined
-                })
-              }
-              placeholder="CL"
-            />
-          </label>
-
-          <label className="space-y-2">
-            <span className="text-sm text-slate-200">Desde</span>
-            <input
-              type="date"
-              className="w-full rounded-md border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-white"
-              value={filters.fechaDesde ?? ''}
-              onChange={(event) =>
-                onFilterChange({
-                  ...filters,
-                  fechaDesde: event.target.value || undefined
-                })
-              }
-            />
-          </label>
-
-          <label className="space-y-2">
-            <span className="text-sm text-slate-200">Hasta</span>
-            <input
-              type="date"
-              className="w-full rounded-md border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-white"
-              value={filters.fechaHasta ?? ''}
-              onChange={(event) =>
-                onFilterChange({
-                  ...filters,
-                  fechaHasta: event.target.value || undefined
-                })
-              }
-            />
-          </label>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="space-y-2">
-            <span className="text-sm text-slate-200">Clase Niza</span>
-            <select
-              className="w-full rounded-md border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-white"
-              value={filters.niza?.[0] ?? ''}
-              onChange={(event) =>
-                onFilterChange({
-                  ...filters,
-                  niza: event.target.value ? [event.target.value] : undefined
-                })
-              }
-            >
-              <option value="">Todas</option>
-              {availableNiza.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="space-y-2">
-            <span className="text-sm text-slate-200">Codigo Viena</span>
-            <select
-              className="w-full rounded-md border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-white"
-              value={filters.viena?.[0] ?? ''}
-              onChange={(event) =>
-                onFilterChange({
-                  ...filters,
-                  viena: event.target.value ? [event.target.value] : undefined
-                })
-              }
-            >
-              <option value="">Todos</option>
-              {availableViena.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <div className="flex flex-wrap gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            className="border-white/10 bg-white/5 text-slate-200 hover:bg-white/10"
-            onClick={onClearFilters}
-          >
-            Limpiar filtros
-          </Button>
-        </div>
+        {activeCount > 0 && <Button type="button" variant="ghost" className="text-[#0F766E] hover:bg-black/5" onClick={onClearFilters}>Limpiar {activeCount} filtro{activeCount === 1 ? '' : 's'}</Button>}
       </div>
-    </Card>
+
+      <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+        <label className="space-y-2"><span className="text-xs text-[#667085]">Estado</span><select className={fieldClass} value={filters.estado ?? ''} onChange={(e) => onFilterChange({ ...filters, estado: e.target.value ? e.target.value as SearchFilters['estado'] : undefined })}><option value="">Todos</option><option value="Registrada">Registrada</option><option value="Pendiente">Pendiente</option><option value="Denegada">Denegada</option></select></label>
+        <label className="space-y-2"><span className="text-xs text-[#667085]">País</span><input className={fieldClass} value={filters.pais ?? ''} onChange={(e) => onFilterChange({ ...filters, pais: e.target.value.toUpperCase() || undefined })} placeholder="CL" /></label>
+        <label className="space-y-2"><span className="text-xs text-[#667085]">Desde</span><input type="date" className={fieldClass} value={filters.fechaDesde ?? ''} onChange={(e) => onFilterChange({ ...filters, fechaDesde: e.target.value || undefined })} /></label>
+        <label className="space-y-2"><span className="text-xs text-[#667085]">Hasta</span><input type="date" className={fieldClass} value={filters.fechaHasta ?? ''} onChange={(e) => onFilterChange({ ...filters, fechaHasta: e.target.value || undefined })} /></label>
+        <label className="space-y-2"><span className="text-xs text-[#667085]">Niza</span><select className={fieldClass} value={filters.niza?.[0] ?? ''} onChange={(e) => onFilterChange({ ...filters, niza: e.target.value ? [e.target.value] : undefined })}><option value="">Todas</option>{availableNiza.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+        <label className="space-y-2"><span className="text-xs text-[#667085]">Viena</span><select className={fieldClass} value={filters.viena?.[0] ?? ''} onChange={(e) => onFilterChange({ ...filters, viena: e.target.value ? [e.target.value] : undefined })}><option value="">Todos</option>{availableViena.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+      </div>
+    </section>
   )
 }
