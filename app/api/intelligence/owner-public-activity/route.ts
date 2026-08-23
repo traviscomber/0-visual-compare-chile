@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { getOwnerPublicActivity } from "@/lib/intelligence/mercado-publico"
 
 const QuerySchema = z.object({ application: z.string().trim().min(1).max(40) })
@@ -16,7 +17,8 @@ export async function GET(request: Request) {
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) return NextResponse.json({ error: "Debes iniciar sesión." }, { status: 401 })
 
-  const { data: context, error } = await supabase.rpc("get_trademark_owner_context_by_application", {
+  const admin = createAdminClient()
+  const { data: context, error } = await admin.rpc("get_trademark_owner_context_by_application", {
     p_application_number: parsed.data.application,
   })
   if (error) {
