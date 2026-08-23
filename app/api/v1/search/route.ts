@@ -70,7 +70,7 @@ export async function GET(request: Request) {
       { status: 200 },
     )
   } catch (error) {
-    console.error("[v0] search api error", error)
+    console.error("[videntia] search api error", error)
     return NextResponse.json({ error: "Search request failed" }, { status: 500 })
   }
 }
