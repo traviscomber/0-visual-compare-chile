@@ -142,7 +142,7 @@ export default function DemoPage() {
               <span className="leading-none"><span className="block text-[15px] font-semibold tracking-[0.16em] text-[#111827]">VIDENTIA</span><span className="mt-1 block text-[9px] font-medium uppercase tracking-[0.18em] text-[#64748B]">by N3uralia</span></span>
             </Link>
           </div>
-          <div className="flex items-center gap-2"><Link href="/auth/login"><Button variant="ghost" className="hidden rounded-lg text-[#475569] hover:bg-black/5 sm:inline-flex">Iniciar sesión</Button></Link><Link href="/auth/sign-up?redirectTo=%2Fevaluar"><Button className="rounded-lg bg-[#111827] text-white shadow-none hover:bg-[#273244]">Crear espacio</Button></Link></div>
+          <div className="flex items-center gap-2"><Link href="/auth/login"><Button variant="ghost" className="hidden rounded-lg text-[#475569] hover:bg-black/5 sm:inline-flex">Iniciar sesión</Button></Link><Link href="/contacto"><Button className="rounded-lg bg-[#111827] text-white shadow-none hover:bg-[#273244]">Solicitar acceso</Button></Link></div>
         </div>
       </nav>
 
@@ -248,7 +248,7 @@ function Results({ preview, imagePreview, reset }: { preview: Preview; imagePrev
               )}
             </section>
 
-            {preview.locked_count > 0 && <div className="mt-5 flex flex-col gap-4 bg-[#111827] p-6 text-white sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">Hay {preview.locked_count} antecedentes adicionales.</p><p className="mt-1 text-sm text-slate-400">Crea un espacio para conservar la investigación, abrir evidencia completa y activar vigilancia.</p></div><Link href="/auth/sign-up?redirectTo=%2Fevaluar"><Button className="shrink-0 gap-2 rounded-lg bg-white text-[#111827] hover:bg-slate-100">Continuar en VIDENTIA <ArrowRight className="h-4 w-4" /></Button></Link></div>}
+            {preview.locked_count > 0 && <div className="mt-5 flex flex-col gap-4 bg-[#111827] p-6 text-white sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">Hay {preview.locked_count} antecedentes adicionales.</p><p className="mt-1 text-sm text-slate-400">Solicita acceso para conservar la investigación, abrir evidencia completa y activar vigilancia.</p></div><Link href="/contacto"><Button className="shrink-0 gap-2 rounded-lg bg-white text-[#111827] hover:bg-slate-100">Solicitar acceso <ArrowRight className="h-4 w-4" /></Button></Link></div>}
 
             {preview.evidencia.advertencias.length > 0 && <div className="mt-5 border border-amber-200 bg-amber-50 p-5"><p className="text-sm font-semibold text-amber-900">Limitaciones de esta consulta</p><div className="mt-3 space-y-2">{preview.evidencia.advertencias.map((warning) => <p key={warning} className="text-xs leading-5 text-amber-800">• {warning}</p>)}</div></div>}
           </div>
