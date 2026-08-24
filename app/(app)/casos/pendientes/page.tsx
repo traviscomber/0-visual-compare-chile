@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import type { ReactNode } from "react"
 import { useEffect, useState } from "react"
 import { ArrowLeft, ArrowRight, CheckCircle2, Inbox, Loader2, MessageSquareText } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -61,5 +62,5 @@ export default function CaseInboxPage() {
   </div>
 }
 
-function SectionHeading({icon,title,meta}:{icon:React.ReactNode;title:string;meta:string}) { return <div><div className="flex items-center gap-2 text-primary">{icon}<p className="text-[10px] font-semibold uppercase tracking-[0.16em]">Colaboración</p></div><div className="mt-2 flex items-end justify-between gap-3"><h2 className="text-xl font-normal tracking-[-0.02em] text-foreground">{title}</h2><span className="text-xs text-muted-foreground">{meta}</span></div></div> }
+function SectionHeading({icon,title,meta}:{icon:ReactNode;title:string;meta:string}) { return <div><div className="flex items-center gap-2 text-primary">{icon}<p className="text-[10px] font-semibold uppercase tracking-[0.16em]">Colaboración</p></div><div className="mt-2 flex items-end justify-between gap-3"><h2 className="text-xl font-normal tracking-[-0.02em] text-foreground">{title}</h2><span className="text-xs text-muted-foreground">{meta}</span></div></div> }
 function Empty({text}:{text:string}) { return <div className="py-10 text-sm text-muted-foreground">{text}</div> }
