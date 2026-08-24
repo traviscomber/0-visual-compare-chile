@@ -3,8 +3,6 @@ import type { Metadata, Viewport } from "next"
 import { Toaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/lib/auth-context"
 import "./globals.css"
-import "./home-polish.css"
-import "./home-media.css"
 import "./home-v2.css"
 
 const CANONICAL_ORIGIN = "https://videntia.app"
