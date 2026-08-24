@@ -49,10 +49,10 @@ export async function GET(request: Request) {
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) return NextResponse.json({ error: "Debes iniciar sesión." }, { status: 401 })
 
-  let context = await loadContext(parsed.data.application)
+  const context = await loadContext(parsed.data.application)
   if (!context.ok) return context.response
 
-  const current = context.data
+  let current = context.data
   const unresolved = current.owner?.id && current.owner?.name && !current.owner?.rut
 
   if (unresolved) {
@@ -64,15 +64,16 @@ export async function GET(request: Request) {
           ownerName: current.owner?.name ?? match.legalName,
           match,
         })
-        context = await loadContext(parsed.data.application)
-        if (!context.ok) return context.response
+        const refreshed = await loadContext(parsed.data.application)
+        if (!refreshed.ok) return refreshed.response
+        current = refreshed.data
       }
     } catch (error) {
       console.warn("[owner-context:res]", error)
     }
   }
 
-  const verifiedOwner = context.data.owner
+  const verifiedOwner = current.owner
   if (verifiedOwner?.id && verifiedOwner.rut && verifiedOwner.identity_status === "res_verified") {
     try {
       await refreshCmfOwnerSignal(verifiedOwner.id, verifiedOwner.rut)
@@ -81,7 +82,7 @@ export async function GET(request: Request) {
     }
   }
 
-  const enriched = await withTimeline(context.data)
+  const enriched = await withTimeline(current)
   const withInsights: OwnerContext = {
     ...enriched,
     insights: buildOwnerInsights(enriched),
