@@ -8,6 +8,19 @@ export const dynamic = "force-dynamic"
 const PRIVATE_HEADERS = { "Cache-Control": "private, no-store" }
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
+type UserProcessingMetrics = {
+  queued?: number
+  processing?: number
+  completed?: number
+  failed?: number
+  retried?: number
+  active_workers?: number
+  avg_processing_seconds?: number
+  throughput_last_hour?: number
+  oldest_queued_seconds?: number
+  recent_jobs?: unknown[]
+}
+
 async function getAuthenticatedClient() {
   const supabase = await createClient()
   const {
@@ -22,6 +35,20 @@ async function readJobId(request: Request) {
   return typeof body?.job_id === "string" ? body.job_id.trim() : ""
 }
 
+function userScopedHealth(metrics: UserProcessingMetrics | null) {
+  return {
+    status: "unknown" as const,
+    queued: Number(metrics?.queued ?? 0),
+    processing: Number(metrics?.processing ?? 0),
+    failures_last_hour: 0,
+    completed_last_hour: Number(metrics?.throughput_last_hour ?? 0),
+    oldest_queued_seconds: Number(metrics?.oldest_queued_seconds ?? 0),
+    expiring_leases: 0,
+    checked_at: new Date().toISOString(),
+    scope: "user" as const,
+  }
+}
+
 export async function GET() {
   try {
     const { supabase, user } = await getAuthenticatedClient()
@@ -30,11 +57,7 @@ export async function GET() {
       return NextResponse.json({ error: "No autorizado." }, { status: 401, headers: PRIVATE_HEADERS })
     }
 
-    const admin = createAdminClient()
-    const [{ data: metrics, error: metricsError }, { data: health, error: healthError }] = await Promise.all([
-      supabase.rpc("get_my_image_processing_metrics"),
-      admin.rpc("get_image_processing_health"),
-    ])
+    const { data: metrics, error: metricsError } = await supabase.rpc("get_my_image_processing_metrics")
 
     if (metricsError) {
       console.error("[processing-metrics] user metrics failed", metricsError.code)
@@ -44,6 +67,17 @@ export async function GET() {
       )
     }
 
+    const isAdmin = user.app_metadata?.role === "admin"
+    if (!isAdmin) {
+      return NextResponse.json(
+        { metrics, health: userScopedHealth((metrics ?? null) as UserProcessingMetrics | null) },
+        { status: 200, headers: PRIVATE_HEADERS },
+      )
+    }
+
+    const admin = createAdminClient()
+    const { data: health, error: healthError } = await admin.rpc("get_image_processing_health")
+
     if (healthError) {
       console.error("[processing-metrics] health failed", healthError.code)
     }
@@ -51,18 +85,7 @@ export async function GET() {
     return NextResponse.json(
       {
         metrics,
-        health: healthError
-          ? {
-              status: "unknown",
-              queued: 0,
-              processing: 0,
-              failures_last_hour: 0,
-              completed_last_hour: 0,
-              oldest_queued_seconds: 0,
-              expiring_leases: 0,
-              checked_at: new Date().toISOString(),
-            }
-          : health,
+        health: healthError ? userScopedHealth((metrics ?? null) as UserProcessingMetrics | null) : { ...health, scope: "global" },
       },
       { status: 200, headers: PRIVATE_HEADERS },
     )
