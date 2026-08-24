@@ -1,0 +1,143 @@
+/* Unify the flagship hero into one editorial composition.
+   Loaded after home-v2.css so the product visual reads as part of the page,
+   not as a second application/page beside it. */
+
+.vx-home a.vx-button-light {
+  color: #07100f;
+}
+
+.vx-home a.vx-button-light:hover {
+  color: #07100f;
+}
+
+@media (min-width: 1181px) {
+  .vx-hero {
+    min-height: 940px;
+    padding-top: 142px;
+    padding-bottom: 72px;
+  }
+
+  .vx-hero-grid {
+    position: relative;
+    display: block;
+    min-height: 720px;
+  }
+
+  .vx-hero-copy {
+    position: relative;
+    z-index: 8;
+    width: 46%;
+    max-width: 650px;
+    padding-top: 22px;
+  }
+
+  .vx-hero-copy h1 {
+    max-width: 8.7ch;
+    font-size: clamp(4.6rem, 6.25vw, 7.35rem);
+  }
+
+  .vx-stage {
+    position: absolute;
+    z-index: 2;
+    top: 18px;
+    right: -9.5%;
+    width: 69%;
+    min-height: 690px;
+  }
+
+  .vx-stage-glow {
+    inset: 4% 2% 7% 2%;
+    opacity: .78;
+  }
+
+  .vx-stage-graph {
+    inset: -4% -5% -2% -8%;
+    opacity: .22;
+    background-size: 110% auto;
+    mask-image: linear-gradient(90deg, transparent 0%, #000 22%, #000 86%, transparent 100%);
+  }
+
+  .vx-product-window {
+    inset: 6% -1% 5% 2%;
+    overflow: hidden;
+    border: 0;
+    border-top: 1px solid rgba(214, 235, 232, .12);
+    border-bottom: 1px solid rgba(214, 235, 232, .09);
+    border-radius: 0;
+    background: linear-gradient(90deg, rgba(8, 16, 24, .18) 0%, rgba(8, 16, 24, .88) 12%, rgba(6, 13, 20, .98) 100%);
+    box-shadow: 0 42px 115px rgba(0, 0, 0, .28);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 10%, #000 96%);
+    mask-image: linear-gradient(90deg, transparent 0%, #000 10%, #000 96%);
+  }
+
+  .vx-window-bar {
+    padding-left: 11%;
+    padding-right: 3%;
+    background: rgba(6, 13, 20, .34);
+  }
+
+  .vx-workspace {
+    grid-template-columns: .68fr 1.32fr;
+    gap: 10px;
+    padding: 14px 2% 14px 10%;
+  }
+
+  .vx-context-pane {
+    display: none;
+  }
+
+  .vx-query-pane {
+    min-height: 474px;
+    background: rgba(8, 16, 24, .58);
+  }
+
+  .vx-evidence-pane {
+    background: rgba(8, 16, 24, .72);
+  }
+
+  .vx-decision {
+    margin-left: 10%;
+    margin-right: 2%;
+  }
+
+  .vx-stage-caption {
+    left: 10%;
+    right: 2%;
+  }
+
+  .vx-float-source,
+  .vx-float-action {
+    display: none;
+  }
+
+  .vx-hero:after {
+    right: -8vw;
+    top: 13%;
+    width: 58vw;
+    height: 58vw;
+    opacity: .72;
+  }
+}
+
+@media (min-width: 1181px) and (max-width: 1380px) {
+  .vx-hero-copy {
+    width: 48%;
+    max-width: 590px;
+  }
+
+  .vx-hero-copy h1 {
+    font-size: clamp(4.25rem, 6.1vw, 6.4rem);
+  }
+
+  .vx-stage {
+    right: -13%;
+    width: 70%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vx-product-window,
+  .vx-stage-graph {
+    transform: none !important;
+  }
+}
