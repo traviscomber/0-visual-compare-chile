@@ -5,6 +5,7 @@ import { AuthProvider } from "@/lib/auth-context"
 import "./globals.css"
 
 const CANONICAL_ORIGIN = "https://videntia.app"
+const GOOGLE_SITE_VERIFICATION = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim()
 
 export const metadata: Metadata = {
   metadataBase: new URL(CANONICAL_ORIGIN),
@@ -21,6 +22,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/", languages: { "es-CL": "/" } },
   icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }], shortcut: "/icon.svg" },
   manifest: "/manifest.webmanifest",
+  verification: GOOGLE_SITE_VERIFICATION ? { google: GOOGLE_SITE_VERIFICATION } : undefined,
   openGraph: {
     title: "VIDENTIA | Inteligencia marcaria para Chile",
     description: "Investiga, entiende y vigila marcas en Chile con evidencia oficial, señales explicables y contexto verificable.",
