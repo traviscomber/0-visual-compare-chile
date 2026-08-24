@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/lib/auth-context"
 import "./globals.css"
 import "./home-polish.css"
+import "./home-media.css"
 
 const CANONICAL_ORIGIN = "https://videntia.app"
 const GOOGLE_SITE_VERIFICATION = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim()
