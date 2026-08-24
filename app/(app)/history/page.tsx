@@ -1,57 +1,54 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { ArrowLeft, ShieldCheck, Tags } from "lucide-react"
+import { ArrowRight, ImageIcon, Search, Tags } from "lucide-react"
 import { ComparisonRow } from "@/components/app/comparison-row"
 import { HistoryFilters } from "@/components/app/history-filters"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { resolvePrimaryBrandName } from "@/lib/comparison/context"
 import { createClient } from "@/lib/supabase/server"
 
 export const dynamic = "force-dynamic"
-
-interface SearchParams { classification?: string; min?: string; max?: string; q?: string }
+interface SearchParams { classification?: string; q?: string; min?: string; max?: string }
 
 export default async function HistoryPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const sp = await searchParams
   const classification = sp.classification ?? "all"
-  const minScore = sp.min ?? ""
-  const maxScore = sp.max ?? ""
   const query = sp.q ?? ""
   const supabase = await createClient()
-  let user = null
-  try { user = (await supabase.auth.getUser()).data.user } catch { user = null }
-  if (!user) redirect(`/auth/login?redirectTo=${encodeURIComponent("/history")}`)
+  const { data: auth } = await supabase.auth.getUser()
+  if (!auth.user) redirect(`/auth/login?redirectTo=${encodeURIComponent("/history")}`)
 
-  let request = supabase.from("comparisons").select("id, similarity_score, classification, recommendation, created_at, result_json, brand_context").eq("user_id", user.id).order("created_at", { ascending: false }).limit(200)
+  let request = supabase.from("comparisons").select("id, similarity_score, classification, recommendation, created_at, result_json, brand_context").eq("user_id", auth.user.id).order("created_at", { ascending: false }).limit(200)
   if (classification && classification !== "all") request = request.eq("classification", classification)
-  const minNum = Number(minScore); if (minScore && !Number.isNaN(minNum)) request = request.gte("similarity_score", minNum)
-  const maxNum = Number(maxScore); if (maxScore && !Number.isNaN(maxNum)) request = request.lte("similarity_score", maxNum)
-  if (query.trim().length > 0) request = request.ilike("recommendation", `%${query.trim()}%`)
+  if (query.trim()) request = request.ilike("recommendation", `%${query.trim()}%`)
 
-  const { data: comparisons } = await request
+  const { data: comparisons, error } = await request
+  if (error) throw new Error("No pudimos cargar tu actividad de evaluaciones.")
   const rows = comparisons ?? []
-  const filtered = classification !== "all" || minScore !== "" || maxScore !== "" || query.length > 0
-  const highRiskCount = rows.filter((row) => row.classification === "exact_match" || row.classification === "near_duplicate" || Number(row.similarity_score) >= 85).length
+  const filtered = classification !== "all" || query.trim().length > 0
+  const closeCount = rows.filter(row => row.classification === "exact_match" || row.classification === "near_duplicate").length
+  const visualCount = rows.filter(row => row.classification === "visually_similar" || row.classification === "partially_similar").length
   const brandIndex = buildBrandIndex(rows)
 
-  return <div className="min-h-full bg-[#F8FAFC]">
-    <div className="mx-auto flex max-w-5xl flex-col gap-7 px-4 py-8 sm:px-6 lg:py-12">
-      <header className="flex flex-wrap items-end justify-between gap-5 border-b border-slate-200 pb-7">
-        <div><Button asChild variant="ghost" className="mb-4 h-auto p-0 text-sm text-slate-500 hover:bg-transparent hover:text-slate-900"><Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4"/>Volver al resumen</Link></Button><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0F766E]">Actividad</p><h1 className="mt-3 text-4xl font-semibold tracking-[-0.035em] text-slate-950 sm:text-5xl">Lo que ya analizaste.</h1><p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">Consulta evaluaciones anteriores, vuelve a abrir una marca y encuentra rápidamente las que merecieron revisión.</p></div>
-        <Button asChild className="bg-[#0F766E] text-white hover:bg-[#134E4A]"><Link href="/evaluar"><ShieldCheck className="mr-2 h-4 w-4"/>Analizar otra marca</Link></Button>
-      </header>
+  return <div className="mx-auto w-full max-w-[1480px] px-4 py-9 sm:px-6 lg:px-8 lg:py-12">
+    <header className="grid gap-8 border-b border-border pb-9 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
+      <div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">VIDENTIA / Actividad</p><h1 className="mt-4 max-w-[10ch] text-4xl font-normal leading-[0.96] tracking-[-0.05em] text-foreground sm:text-5xl lg:text-6xl">Vuelve a la evidencia que ya revisaste.</h1></div>
+      <div className="max-w-2xl lg:justify-self-end"><p className="text-base leading-7 text-muted-foreground sm:text-lg">Consulta evaluaciones anteriores por marca, clasificación registrada y recomendación. El historial conserva el score técnico, pero esta vista no lo usa como criterio de prioridad ni de navegación.</p><div className="mt-5 flex flex-wrap gap-2"><Button asChild variant="outline"><Link href="/investigar">Investigar</Link></Button><Button asChild><Link href="/evaluar">Nueva evaluación <ArrowRight className="ml-2 h-4 w-4" /></Link></Button></div></div>
+    </header>
 
-      <section className="grid gap-3 sm:grid-cols-3"><Metric label="Evaluaciones" value={rows.length}/><Metric label="Revisión prioritaria" value={highRiskCount}/><Metric label="Marcas recientes" value={brandIndex.length}/></section>
+    <section className="grid border-b border-border sm:grid-cols-3">
+      <Metric label="Evaluaciones" value={rows.length} detail="Registros dentro de esta vista" />
+      <Metric label="Coincidencias cercanas" value={closeCount} detail="Exactas o muy cercanas" />
+      <Metric label="Señales visuales" value={visualCount} detail="Similares o parcialmente similares" />
+    </section>
 
-      {brandIndex.length>0&&<section className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center gap-2"><Tags className="h-4 w-4 text-slate-400"/><h2 className="font-semibold text-slate-950">Marcas recientes</h2></div><div className="mt-4 flex flex-wrap gap-2">{brandIndex.map(item=><Button key={item.name} variant="outline" size="sm" asChild className="border-slate-200 bg-white"><Link href={`/investigar?q=${encodeURIComponent(item.name)}`}><span className="font-medium">{item.name}</span><span className="ml-2 text-xs text-slate-400">{item.count}</span></Link></Button>)}</div></section>}
+    {brandIndex.length > 0 && <section className="border-b border-border py-8"><div className="flex items-center gap-2 text-primary"><Tags className="h-4 w-4" /><p className="text-[10px] font-semibold uppercase tracking-[0.16em]">Marcas recientes</p></div><div className="mt-4 flex flex-wrap gap-2">{brandIndex.map(item => <Button key={item.name} variant="outline" size="sm" asChild><Link href={`/investigar?q=${encodeURIComponent(item.name)}&mode=brand`}><span>{item.name}</span><span className="ml-2 text-xs text-muted-foreground">{item.count}</span></Link></Button>)}</div></section>}
 
-      <Card className="border-slate-200 shadow-sm"><CardHeader className="pb-4"><CardTitle className="text-lg">Buscar en tu actividad</CardTitle></CardHeader><CardContent><HistoryFilters defaultClassification={classification} defaultMinScore={minScore} defaultMaxScore={maxScore} defaultQuery={query}/></CardContent></Card>
+    <section className="border-b border-border py-8"><div className="grid gap-6 lg:grid-cols-[0.35fr_0.65fr]"><div><div className="flex items-center gap-2 text-primary"><Search className="h-4 w-4" /><p className="text-[10px] font-semibold uppercase tracking-[0.16em]">Filtrar actividad</p></div><h2 className="mt-2 text-2xl font-normal tracking-[-0.03em] text-foreground">Encuentra una evaluación anterior</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">Filtra por la clasificación registrada o por texto de la recomendación.</p></div><HistoryFilters defaultClassification={classification} defaultQuery={query} /></div></section>
 
-      <Card className="border-slate-200 shadow-sm"><CardHeader><CardTitle className="text-lg">Evaluaciones</CardTitle></CardHeader><CardContent>{rows.length===0?<div className="rounded-xl border border-dashed border-slate-200 px-4 py-12 text-center"><p className="mb-4 text-slate-500">{filtered?"No hay evaluaciones que coincidan con esos filtros.":"Tu actividad aparecerá aquí cuando completes tu primera evaluación."}</p>{!filtered&&<Button asChild><Link href="/evaluar">Analizar primera marca</Link></Button>}</div>:<ul className="flex flex-col divide-y divide-slate-100">{rows.map(row=><li key={row.id} className="py-3 first:pt-0 last:pb-0"><ComparisonRow comparison={row}/></li>)}</ul>}</CardContent></Card>
-    </div>
+    <section className="py-8"><div className="flex items-end justify-between gap-4"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Evaluaciones</p><h2 className="mt-2 text-2xl font-normal tracking-[-0.03em] text-foreground">Registro reciente</h2></div><span className="text-xs text-muted-foreground">{rows.length} resultado{rows.length===1?"":"s"}</span></div>{rows.length===0?<div className="mt-5 border-y border-dashed border-border py-12 text-center"><ImageIcon className="mx-auto h-5 w-5 text-muted-foreground"/><p className="mt-3 text-sm font-medium text-foreground">{filtered?"No hay evaluaciones con esos filtros.":"Aún no hay evaluaciones registradas."}</p>{!filtered&&<Button asChild variant="outline" className="mt-5"><Link href="/evaluar">Evaluar una marca</Link></Button>}</div>:<div className="mt-5 divide-y divide-border border-y border-border">{rows.map(row=><ComparisonRow key={row.id} comparison={row}/>)}</div>}</section>
   </div>
 }
 
-function Metric({label,value}:{label:string;value:number}){return <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs text-slate-500">{label}</p><p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-slate-950">{value}</p></div>}
+function Metric({label,value,detail}:{label:string;value:number;detail:string}){return <div className="border-b border-border py-6 sm:border-b-0 sm:border-r sm:px-5 first:pl-0 last:border-r-0"><p className="text-3xl font-semibold tracking-[-0.03em] text-foreground">{value}</p><p className="mt-1 text-sm font-semibold text-foreground">{label}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p></div>}
 function buildBrandIndex(rows:Array<{result_json?:unknown;brand_context?:unknown}>){const counts=new Map<string,number>();for(const row of rows){const primary=resolvePrimaryBrandName(row as Parameters<typeof resolvePrimaryBrandName>[0]);if(!primary)continue;counts.set(primary,(counts.get(primary)??0)+1)}return [...counts.entries()].map(([name,count])=>({name,count})).sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name)).slice(0,8)}
