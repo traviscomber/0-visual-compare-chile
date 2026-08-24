@@ -1,25 +1,6 @@
 import Link from "next/link"
 import { ArrowRight, Check, Fingerprint, Layers3, Search, Waves } from "lucide-react"
-
-const signals = [
-  { icon: Search, label: "Denominación", title: "Lectura verbal", copy: "Ortografía, estructura, términos dominantes y variantes relevantes." },
-  { icon: Waves, label: "Fonética", title: "Proximidad sonora", copy: "Pronunciación y cercanía fonética explicadas por separado." },
-  { icon: Fingerprint, label: "Visual", title: "Huella figurativa", copy: "Elementos compartidos, composición y señales visuales comparables." },
-  { icon: Layers3, label: "Ámbito", title: "Contexto comercial", copy: "Clases Niza y relación entre productos o servicios." },
-]
-
-const workflow = [
-  ["Busca", "Parte desde un nombre, logo, fotografía o una combinación."],
-  ["Entiende", "VIDENTIA ordena antecedentes, señales y evidencia verificable."],
-  ["Decide", "Pone la evidencia en contexto para priorizar qué requiere revisión profesional, sin dictar un resultado jurídico."],
-  ["Vigila", "Conserva la investigación y detecta cambios posteriores."],
-]
-
-const faqs = [
-  ["¿Qué es VIDENTIA?", "Una plataforma de inteligencia marcaria para Chile que reúne búsqueda, evaluación, contexto y vigilancia con evidencia trazable."],
-  ["¿VIDENTIA reemplaza a INAPI?", "No. INAPI mantiene la fuente oficial. VIDENTIA organiza antecedentes y contexto para facilitar investigación y seguimiento."],
-  ["¿Entrega una opinión legal?", "No. VIDENTIA apoya investigación y priorización. La evaluación jurídica final corresponde al profesional responsable."],
-]
+import { HomeMotion } from "@/components/home-motion"
 
 const structuredData = {
   "@context": "https://schema.org",
@@ -29,143 +10,260 @@ const structuredData = {
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   inLanguage: "es-CL",
+  creator: { "@type": "Organization", name: "N3uralia", url: "https://www.n3uralia.com" },
   description: "Plataforma de inteligencia marcaria para búsqueda, evaluación y vigilancia de marcas en Chile.",
 }
 
+const story = [
+  {
+    index: "01",
+    title: "Abre la fuente.",
+    copy: "La investigación parte desde antecedentes y campos verificables. Fuente, disponibilidad y fecha permanecen visibles.",
+    meta: ["INAPI", "Solicitud / registro", "Estado"],
+  },
+  {
+    index: "02",
+    title: "Separa las señales.",
+    copy: "Denominación, fonética, elementos visuales y ámbito se leen por separado para entender por qué un antecedente merece revisión.",
+    meta: ["Denominación", "Visual", "Niza + Viena"],
+  },
+  {
+    index: "03",
+    title: "Conecta el contexto.",
+    copy: "Cuando existe evidencia verificable, VIDENTIA relaciona titular, historial, clases y precedentes sin confundir fuente con inferencia.",
+    meta: ["Titular", "Historial", "Precedentes"],
+  },
+  {
+    index: "04",
+    title: "Conserva lo que cambia.",
+    copy: "La investigación puede convertirse en caso y vigilancia para volver a revisar nueva evidencia sin reconstruir el contexto desde cero.",
+    meta: ["Casos", "Vigilancia", "Trazabilidad"],
+  },
+]
+
+const flow = [
+  ["Busca", "Parte desde un nombre, un signo o una imagen.", "Entrada simple"],
+  ["Entiende", "Ordena antecedentes, señales y contexto verificable.", "Evidencia separada"],
+  ["Decide", "Prioriza qué requiere revisión profesional.", "Juicio humano"],
+  ["Vigila", "Conserva el contexto y revisa cambios posteriores.", "Seguimiento"],
+]
+
 function Mark({ variant = "a" }: { variant?: "a" | "b" | "c" }) {
-  return <span className={`v-abstract-mark v-abstract-mark--${variant}`} aria-hidden="true"><i /></span>
+  return <span className={`vx-mark ${variant === "b" ? "vx-mark-b" : variant === "c" ? "vx-mark-c" : ""}`} aria-hidden="true" />
+}
+
+function EvidenceItem({ letter, label, title, copy, status }: { letter: string; label: string; title: string; copy: string; status: string }) {
+  return (
+    <div className="vx-evidence-item">
+      <span className="vx-evidence-letter">{letter}</span>
+      <div>
+        <small>{label}</small>
+        <strong>{title}</strong>
+        <p>{copy}</p>
+      </div>
+      <em>{status}</em>
+    </div>
+  )
 }
 
 export default function LandingPage() {
   return (
-    <main className="v-home">
+    <main className="vx-home">
+      <HomeMotion />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
 
-      <nav className="v-nav">
-        <div className="v-shell v-nav-inner">
-          <Link href="/" aria-label="VIDENTIA" className="v-brand"><span className="v-mark">V</span><span><span className="v-word">VIDENTIA</span><span className="v-by">by N3uralia</span></span></Link>
-          <div className="v-nav-links">
-            <Link href="#producto">Producto</Link><Link href="#metodo">Cómo funciona</Link><Link href="#empresas">Empresas y API</Link>
-            <Link href="/auth/login" className="v-btn v-btn--ghost">Iniciar sesión</Link><Link href="/demo" className="v-btn v-btn--solid">Probar VIDENTIA <ArrowRight size={15}/></Link>
+      <nav className="vx-nav" aria-label="Navegación principal">
+        <div className="vx-shell vx-nav-inner">
+          <Link href="/" className="vx-brand" aria-label="VIDENTIA, inicio">
+            <span className="vx-brand-mark">V</span>
+            <span className="vx-brand-copy"><strong>VIDENTIA</strong><small>by N3uralia</small></span>
+          </Link>
+          <div className="vx-nav-links">
+            <Link href="#producto">Producto</Link>
+            <Link href="#metodo">Cómo funciona</Link>
+            <Link href="#empresas">Empresas y API</Link>
+            <Link href="/auth/login" className="vx-button vx-button-soft">Iniciar sesión</Link>
+            <Link href="/demo" className="vx-button vx-button-light vx-nav-demo">Probar sin cuenta <ArrowRight size={15} /></Link>
           </div>
         </div>
       </nav>
 
-      <section className="v-hero">
-        <div className="v-shell v-hero-grid">
-          <div className="v-hero-copy v-reveal">
-            <p className="v-kicker"><span /> Inteligencia marcaria para Chile</p>
-            <h1>Investiga una marca con <em>evidencia</em> y <em>contexto verificable.</em></h1>
-            <p className="v-lede">VIDENTIA reúne antecedentes marcarios, señales denominativas y visuales, contexto del titular y vigilancia en una revisión clara y trazable.</p>
-            <div className="v-actions"><Link href="/demo" className="v-btn v-btn--primary">Evaluar una marca <ArrowRight size={16}/></Link><Link href="/contacto" className="v-btn v-btn--ghost">Contacto comercial</Link></div>
-            <div className="v-proof-chips"><span>INAPI</span><span>Niza + Viena</span><span>TDPI</span><span>Evidencia trazable</span></div>
+      <section className="vx-hero" aria-labelledby="vx-hero-title">
+        <div className="vx-shell vx-hero-grid">
+          <div className="vx-hero-copy" data-vx-reveal>
+            <p className="vx-kicker">Inteligencia marcaria para Chile</p>
+            <h1 id="vx-hero-title">Antes de decidir, <em>mira la evidencia.</em></h1>
+            <p>VIDENTIA reúne antecedentes marcarios, señales denominativas y visuales, contexto verificable y vigilancia en una investigación clara y trazable.</p>
+            <div className="vx-actions">
+              <Link href="/demo" className="vx-button vx-button-primary">Investigar una marca <ArrowRight size={16} /></Link>
+              <Link href="#producto" className="vx-button vx-button-soft">Ver cómo funciona</Link>
+            </div>
+            <span className="vx-public-note">El demo se puede usar antes de iniciar sesión</span>
+            <div className="vx-proof" aria-label="Fuentes y capacidades"><span>INAPI</span><span>Niza + Viena</span><span>TDPI</span><span>Evidencia trazable</span></div>
           </div>
 
-          <div className="v-hero-product v-reveal" aria-label="Visual representativo de una investigación VIDENTIA">
-            <div className="v-window-bar"><span>Espacio de investigación</span><span className="v-live"><i/> Evidencia conectada</span></div>
-            <div className="v-research-shell">
-              <section className="v-research-query" aria-label="Consulta marcaria representativa">
-                <div className="v-query-index"><span>01 / consulta</span><b>Visual representativo</b></div>
-                <div className="v-query-core">
-                  <Mark variant="a"/>
-                  <div><small>Marca consultada</small><strong>Consulta marcaria</strong><p>Nombre, signo o imagen como punto de partida.</p></div>
-                </div>
-                <div className="v-query-flags"><span>Denominación</span><span>Visual</span><span>Ámbito</span></div>
-              </section>
+          <div className="vx-stage" data-vx-stage data-vx-reveal aria-label="Visual representativo de un espacio de investigación VIDENTIA">
+            <div className="vx-stage-glow" />
+            <div className="vx-stage-graph" aria-hidden="true" />
+            <div className="vx-product-window">
+              <header className="vx-window-bar"><span>VIDENTIA / espacio de investigación</span><span className="vx-window-live"><i /> Evidencia conectada</span></header>
+              <div className="vx-workspace">
+                <section className="vx-pane vx-query-pane">
+                  <header className="vx-pane-head"><span>01 / consulta</span><b>Visual representativo</b></header>
+                  <div className="vx-query-core">
+                    <Mark />
+                    <small>Marca consultada</small>
+                    <strong>Consulta marcaria</strong>
+                    <p>Nombre, signo o imagen como punto de partida para abrir antecedentes verificables.</p>
+                  </div>
+                  <div className="vx-query-tags"><span>Denominación</span><span>Visual</span><span>Ámbito</span></div>
+                </section>
 
-              <section className="v-research-evidence" aria-label="Evidencia organizada">
-                <header><span>02 / evidencia</span><b>Fuente antes que conclusión</b></header>
-                <div className="v-evidence-stack">
-                  <article><span className="v-evidence-number">A</span><div><small>Fuente oficial</small><strong>Antecedente verificable</strong><p>Solicitud, registro, estado y campos públicos cuando están disponibles.</p></div><em>Fuente visible</em></article>
-                  <article><span className="v-evidence-number">B</span><div><small>Señales comparables</small><strong>Denominación y visual</strong><p>Los indicios se explican por separado, sin depender de un score opaco.</p></div><em>Explicable</em></article>
-                  <article><span className="v-evidence-number">C</span><div><small>Ámbito</small><strong>Clases y relación comercial</strong><p>El contexto ayuda a entender por qué un antecedente merece revisión.</p></div><em>Contextualizado</em></article>
-                </div>
-              </section>
+                <section className="vx-pane vx-evidence-pane">
+                  <header className="vx-pane-head"><span>02 / evidencia</span><b>Fuente antes que conclusión</b></header>
+                  <div className="vx-evidence-list">
+                    <EvidenceItem letter="A" label="Fuente oficial" title="Antecedente verificable" copy="Solicitud, registro, estado y campos públicos cuando están disponibles." status="Fuente visible" />
+                    <EvidenceItem letter="B" label="Señales comparables" title="Nombre y fonética" copy="La cercanía denominativa se explica sin convertirla en un veredicto." status="Señal separada" />
+                    <EvidenceItem letter="C" label="Contexto visual" title="Elementos y Viena" copy="La lectura figurativa aparece sólo cuando existe evidencia comparable." status="Explicable" />
+                    <EvidenceItem letter="D" label="Ámbito" title="Clases y relación" copy="Niza ayuda a entender el campo de productos o servicios observado." status="Contextualizado" />
+                  </div>
+                </section>
 
-              <aside className="v-research-context" aria-label="Contexto de la investigación">
-                <header><span>03 / contexto</span><b>Qué se conecta</b></header>
-                <div className="v-context-node"><small>Titular</small><strong>Sólo si está verificado</strong></div>
-                <div className="v-context-node"><small>Precedentes</small><strong>Comparables y revisables</strong></div>
-                <div className="v-context-node"><small>Historial</small><strong>Con fuente visible</strong></div>
-                <div className="v-context-node"><small>Vigilancia</small><strong>Cambios posteriores</strong></div>
-              </aside>
+                <aside className="vx-pane vx-context-pane">
+                  <header className="vx-pane-head"><span>03 / contexto</span><b>Qué se conecta</b></header>
+                  <div className="vx-context-item"><small>Titular</small><strong>Sólo si está verificado</strong></div>
+                  <div className="vx-context-item"><small>Precedentes</small><strong>Comparables y revisables</strong></div>
+                  <div className="vx-context-item"><small>Historial</small><strong>Con fuente visible</strong></div>
+                  <div className="vx-context-item"><small>Vigilancia</small><strong>Cambios posteriores</strong></div>
+                </aside>
+              </div>
+              <div className="vx-decision">
+                <div><span>Qué significa esto</span><strong>La evidencia queda organizada para decidir qué requiere revisión profesional.</strong></div>
+                <span className="vx-decision-rule">Fuente ≠ análisis ≠ decisión jurídica</span>
+              </div>
+              <footer className="vx-stage-caption"><span>Visual representativo · no contiene un expediente real</span><span>Sin score opaco</span></footer>
             </div>
-            <div className="v-decision-band">
-              <div><span>Qué significa esto</span><strong>La evidencia queda organizada para decidir qué requiere revisión profesional.</strong></div>
-              <span className="v-decision-rule">Fuente ≠ análisis ≠ decisión jurídica</span>
-            </div>
-            <div className="v-hero-foot"><span>Visual representativo · no contiene un expediente real</span><span>Sin score opaco</span></div>
+            <div className="vx-float-source"><small>Fuente</small><strong>Origen visible</strong><p>La procedencia de cada antecedente no se oculta detrás del análisis.</p></div>
+            <div className="vx-float-action"><small>Siguiente acción</small><strong>Revisar evidencia</strong><p>La plataforma organiza la revisión; la decisión jurídica sigue siendo humana.</p></div>
           </div>
         </div>
       </section>
 
-      <section id="producto" className="v-section v-evidence-section">
-        <div className="v-shell">
-          <div className="v-section-head v-reveal"><div><p className="v-eyebrow">Evidencia y explicabilidad</p><h2>Todo hallazgo debe mostrar <em>su fuente.</em></h2></div><p>VIDENTIA separa antecedentes oficiales de análisis. Así puedes entender qué encontró, de dónde viene y qué parte requiere revisión profesional.</p></div>
-          <div className="v-evidence-grid">
-            <article className="v-source-panel v-reveal">
-              <div className="v-panel-top"><span>Fuente oficial · INAPI</span><span>Consulta pública</span></div>
-              <h3>Antecedente marcario verificable</h3><p className="v-muted">Estructura inspirada en campos públicos de consulta: solicitud, registro, clases, signo, titular y estado.</p>
-              <div className="v-source-table"><div className="v-row v-row--head"><span>Campo</span><span>Lectura</span></div><div className="v-row"><span>Solicitud / registro</span><b>Disponible en fuente</b></div><div className="v-row"><span>Signo o denominación</span><b>Identificado</b></div><div className="v-row"><span>Clase(s)</span><b>Contextualizadas</b></div><div className="v-row"><span>Titular</span><b>Sólo si está verificado</b></div><div className="v-row"><span>Estado</span><b>Fuente visible</b></div></div>
-              <footer>VIDENTIA organiza la evidencia · no reemplaza la fuente oficial.</footer>
+      <section className="vx-trust-rail" aria-label="Principios del producto">
+        <div className="vx-shell vx-trust-grid">
+          <div className="vx-trust-intro"><p>VIDENTIA no intenta reemplazar una fuente oficial ni convertir señales técnicas en una respuesta jurídica automática.</p></div>
+          <div className="vx-trust-item"><span>01 / fuente</span><strong>Origen visible</strong></div>
+          <div className="vx-trust-item"><span>02 / señales</span><strong>Separadas</strong></div>
+          <div className="vx-trust-item"><span>03 / contexto</span><strong>Verificable</strong></div>
+          <div className="vx-trust-item"><span>04 / decisión</span><strong>Humana</strong></div>
+        </div>
+      </section>
+
+      <section id="producto" className="vx-section vx-story">
+        <div className="vx-shell vx-story-grid">
+          <div className="vx-story-copy" data-vx-reveal>
+            <p className="vx-eyebrow">Producto / evidencia conectada</p>
+            <h2>Una investigación no es una lista de <em>resultados.</em></h2>
+            <p>Es una secuencia de fuentes, señales, relaciones y cambios que debe poder volver a revisarse. VIDENTIA conserva esa estructura para que el contexto no se pierda entre búsquedas aisladas.</p>
+            <div className="vx-story-rule">La prioridad organiza la revisión. No equivale a registrabilidad, riesgo jurídico ni una conclusión de INAPI o TDPI.</div>
+          </div>
+          <div className="vx-story-stack">
+            {story.map((item) => (
+              <article key={item.index} className="vx-story-row" data-vx-reveal>
+                <span>{item.index}</span>
+                <h3>{item.title}</h3>
+                <p>{item.copy}</p>
+                <div className="vx-story-meta">{item.meta.map((tag) => <span key={tag}>{tag}</span>)}</div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="vx-photo" aria-label="Escena editorial de investigación documental">
+        <div className="vx-photo-media" aria-hidden="true" />
+        <div className="vx-shell vx-photo-shell">
+          <div className="vx-photo-copy" data-vx-reveal>
+            <p className="vx-eyebrow">Investigación asistida</p>
+            <h2>Del expediente a una <em>red de evidencia.</em></h2>
+            <p>La investigación gana claridad cuando documentos, signos, titulares, clases y precedentes se leen como partes de un mismo contexto, manteniendo separadas la fuente y la interpretación.</p>
+            <span className="vx-photo-note">Fotografía editorial · no representa un expediente real</span>
+          </div>
+          <div className="vx-photo-overlay" data-vx-reveal>
+            <header><span>VIDENTIA / nota de campo</span><span>Contexto antes de decidir</span></header>
+            <div className="vx-photo-overlay-row"><span>A</span><div><strong>Fuente pública</strong><p>La evidencia conserva su procedencia.</p></div><em>Verificable</em></div>
+            <div className="vx-photo-overlay-row"><span>B</span><div><strong>Relaciones</strong><p>Titular, clases, historial y precedentes sólo cuando existen.</p></div><em>Contexto</em></div>
+            <div className="vx-photo-overlay-row"><span>C</span><div><strong>Seguimiento</strong><p>Los cambios posteriores vuelven al mismo caso o vigilancia.</p></div><em>Trazable</em></div>
+          </div>
+        </div>
+      </section>
+
+      <section className="vx-section vx-compare">
+        <div className="vx-shell">
+          <div className="vx-section-head" data-vx-reveal>
+            <div><p className="vx-eyebrow">Comparación visual</p><h2>Compara estructura, no un <em>porcentaje.</em></h2></div>
+            <p>Una comparación útil explica qué rasgos merecen atención. Por eso VIDENTIA presenta señales visuales separadas y conserva el contexto marcario alrededor de ellas.</p>
+          </div>
+          <div className="vx-compare-board" data-vx-reveal>
+            <article className="vx-compare-side">
+              <header><span>Visual representativo</span><b>Referencias abstractas</b></header>
+              <div className="vx-compare-visual"><Mark variant="a" /><span className="vx-vs">VS</span><Mark variant="b" /></div>
+              <p className="vx-compare-caption">Geometría abstracta para explicar el método. No representa marcas ni expedientes reales.</p>
             </article>
-            <div className="v-signal-grid v-reveal">{signals.map(({icon:Icon,label,title,copy})=><article key={label} className="v-signal-card"><Icon/><small>{label}</small><h3>{title}</h3><p>{copy}</p></article>)}</div>
+            <article className="vx-compare-side">
+              <header><span>Lectura técnica</span><b>Señales por separado</b></header>
+              <div className="vx-evidence-list">
+                <EvidenceItem letter="A" label="Contorno" title="Estructura observable" copy="Se describe el rasgo compartido o diferenciador sin fundirlo en un score global." status="Explicable" />
+                <EvidenceItem letter="B" label="Composición" title="Relación entre elementos" copy="La lectura visual conserva qué parte de la imagen motiva la comparación." status="Revisable" />
+                <EvidenceItem letter="C" label="Ámbito" title="Contexto marcario" copy="La señal visual se interpreta junto a clases y antecedentes, no de forma aislada." status="Contextualizado" />
+              </div>
+            </article>
           </div>
         </div>
       </section>
 
-      <section className="v-section v-context-section">
-        <div className="v-shell v-context-grid">
-          <div className="v-context-visual v-reveal" aria-label="Visual representativo de contexto marcario conectado">
-            <div className="v-context-card v-context-owner"><small>Titular verificado</small><strong>Titular del expediente</strong><p>Fuente oficial disponible</p></div>
-            <div className="v-context-card v-context-history"><small>Historial</small><span>Solicitud presentada</span><span>Admitida a trámite</span><span>Estado actual</span></div>
-            <div className="v-context-core"><small>Expediente marcario</small><h3>Caso en revisión</h3><p>Antecedentes · titular · clases · historial · precedentes</p><span className="v-pill">Contexto verificable</span></div>
-            <div className="v-context-card v-context-family"><small>Familia marcaria</small><span>Marca relacionada A</span><span>Marca relacionada B</span><span>Marca relacionada C</span></div>
-            <div className="v-context-card v-context-classes"><small>Clases y ámbito</small><span>Servicios relacionados</span><span>Tecnología y análisis</span></div>
-            <div className="v-context-card v-context-sources"><small>Fuentes oficiales</small><strong>INAPI · TDPI · registros</strong><p>Trazabilidad conservada</p></div>
-            <span className="v-context-caption">Evidencia conectada · visual representativo</span>
-          </div>
-          <div className="v-context-copy v-reveal"><p className="v-eyebrow">Contexto verificable</p><h2>La marca no se revisa aislada.</h2><p>Cuando existe evidencia verificable, VIDENTIA conecta antecedentes con titular, familia marcaria, clases y precedentes sin confundir evidencia con inferencia.</p><div className="v-checks">{["Fuente oficial siempre visible","Titular sólo cuando está verificado","Contexto sin predicción jurídica"].map(x=><div key={x}><Check size={17}/>{x}</div>)}</div></div>
-        </div>
-      </section>
-
-      <section className="v-editorial" aria-label="Investigación asistida por evidencia">
-        <div className="v-shell v-editorial-grid">
-          <div className="v-editorial-copy v-reveal">
-            <p className="v-eyebrow">Investigación asistida</p>
-            <h2>De un expediente a una <em>red de evidencia.</em></h2>
-            <p>La investigación gana claridad cuando documentos, signos, titulares, clases y antecedentes se leen como partes de un mismo contexto, manteniendo separadas la fuente y la interpretación.</p>
-            <span className="v-editorial-note">Fotografía editorial · no representa un expediente real</span>
-          </div>
-          <div className="v-editorial-frame v-reveal" role="img" aria-label="Escena editorial de revisión documental; imagen atmosférica y no captura del producto">
-            <div className="v-editorial-index"><span>VIDENTIA / NOTA DE CAMPO</span><span>Contexto antes de decidir</span></div>
-            <div className="v-editorial-tags"><span>Fuente pública</span><span>Relaciones</span><span>Revisión profesional</span><span>Seguimiento</span></div>
+      <section id="metodo" className="vx-section vx-flow">
+        <div className="vx-shell">
+          <div className="vx-flow-head" data-vx-reveal><p className="vx-eyebrow">Cómo funciona</p><h2>Busca. Entiende. Decide. Vigila.</h2></div>
+          <div className="vx-flow-grid" data-vx-reveal>
+            {flow.map(([title, copy, note], index) => (
+              <article className="vx-flow-step" key={title}>
+                <span>0{index + 1}</span><h3>{title}</h3><p>{copy}</p><small>{note}</small>
+              </article>
+            ))}
           </div>
         </div>
       </section>
 
-      <section id="metodo" className="v-section v-process-section">
-        <div className="v-shell"><div className="v-process-head v-reveal"><p className="v-eyebrow">Cómo funciona</p><h2>Busca. Entiende. Decide. Vigila.</h2></div><div className="v-process-grid v-reveal">{workflow.map(([title,copy],i)=><article key={title} className="v-process-step"><span>0{i+1}</span><i/><h3>{title}</h3><p>{copy}</p></article>)}</div></div>
-      </section>
-
-      <section className="v-section v-compare-section">
-        <div className="v-shell"><div className="v-section-head v-reveal"><div><p className="v-eyebrow">Comparación visual</p><h2>Compara estructura, no decoración.</h2></div><p>La comparación visual debe mostrar qué elementos se parecen o se diferencian. Los ejemplos siguientes son abstractos y no representan marcas reales.</p></div>
-          <div className="v-compare-grid v-reveal">
-            <article className="v-compare"><header><span>Coincidencia alta</span><b>Estructura próxima</b></header><div className="v-pair"><div><Mark variant="a"/><small>Referencia A</small></div><i>VS</i><div><Mark variant="b"/><small>Referencia B</small></div></div><footer>Contorno · proporción · elemento dominante</footer></article>
-            <article className="v-compare"><header><span>Similitud parcial</span><b>Rasgos compartidos</b></header><div className="v-pair"><div><Mark variant="a"/><small>Referencia A</small></div><i>VS</i><div><Mark variant="c"/><small>Referencia B</small></div></div><footer>Forma · ritmo · composición</footer></article>
-            <article className="v-compare"><header><span>Contraste claro</span><b>Identidad diferenciable</b></header><div className="v-pair"><div><Mark variant="b"/><small>Referencia A</small></div><i>VS</i><div><Mark variant="c"/><small>Referencia B</small></div></div><footer>Símbolo · estructura · balance</footer></article>
+      <section id="empresas" className="vx-section vx-enterprise">
+        <div className="vx-shell vx-enterprise-grid">
+          <div className="vx-enterprise-copy" data-vx-reveal>
+            <p className="vx-eyebrow">Para organizaciones</p>
+            <h2>La misma trazabilidad, en plataforma o API.</h2>
+            <p>Equipos legales, de innovación o propiedad industrial pueden investigar desde la aplicación o integrar capacidades marcarias dentro de sus propios procesos.</p>
+          </div>
+          <div className="vx-offer-list" data-vx-reveal>
+            <article className="vx-offer"><span>01</span><div><h3>VIDENTIA Enterprise</h3><p>Investigación, casos, evidencia, colaboración y vigilancia dentro de un mismo espacio de trabajo.</p></div><Link href="/contacto">Hablar con el equipo <ArrowRight size={14} /></Link></article>
+            <article className="vx-offer"><span>02</span><div><h3>VIDENTIA API</h3><p>Capacidades marcarias integrables en sistemas y procesos del cliente, con el mismo criterio de trazabilidad.</p></div><Link href="/contacto">Explorar integración <ArrowRight size={14} /></Link></article>
+            <article className="vx-offer"><span>03</span><div><h3>Demo público</h3><p>Una primera investigación puede realizarse antes de iniciar sesión para entender la experiencia y la evidencia disponible.</p></div><Link href="/demo">Probar sin cuenta <ArrowRight size={14} /></Link></article>
           </div>
         </div>
       </section>
 
-      <section id="empresas" className="v-section v-enterprise-section"><div className="v-shell v-enterprise-grid"><div className="v-reveal"><p className="v-eyebrow">Para organizaciones</p><h2>Plataforma o API, con la misma trazabilidad.</h2><p>Integra búsqueda, evaluación, contexto y vigilancia marcaria en la operación de tu equipo.</p></div><div className="v-offers v-reveal"><article><small>Plataforma</small><h3>VIDENTIA Enterprise</h3><p>Investigación, casos, evidencia y vigilancia en una experiencia completa.</p></article><article><small>API</small><h3>VIDENTIA API</h3><p>Capacidades marcarias integradas directamente en sistemas y procesos del cliente.</p></article></div></div><div className="v-shell v-faqs">{faqs.map(([q,a])=><article key={q}><h3>{q}</h3><p>{a}</p></article>)}</div></section>
+      <section className="vx-final">
+        <div className="vx-shell" data-vx-reveal>
+          <p className="vx-eyebrow">VIDENTIA · by N3uralia</p>
+          <h2>Investiga antes de decidir. <em>Conserva la evidencia después.</em></h2>
+          <p>Puedes ver y probar VIDENTIA antes de iniciar sesión. El acceso privado queda reservado para guardar casos, colaborar y activar vigilancia.</p>
+          <div className="vx-actions"><Link href="/demo" className="vx-button vx-button-primary">Probar VIDENTIA sin cuenta <ArrowRight size={16} /></Link><Link href="/auth/login" className="vx-button vx-button-soft">Iniciar sesión</Link></div>
+        </div>
+      </section>
 
-      <section className="v-final"><div className="v-shell v-reveal"><p className="v-eyebrow">VIDENTIA</p><h2>Investiga antes de decidir. Conserva la evidencia después.</h2><div className="v-actions"><Link href="/demo" className="v-btn v-btn--primary">Probar VIDENTIA <ArrowRight size={16}/></Link><Link href="/contacto" className="v-btn v-btn--ghost">Hablar con el equipo</Link></div></div></section>
-      <footer className="v-footer">
-        <div className="v-shell v-footer-grid">
-          <div className="v-footer-brand"><strong>VIDENTIA</strong><span>Inteligencia para marcas en Chile</span></div>
+      <footer className="vx-footer">
+        <div className="vx-shell vx-footer-grid">
+          <div className="vx-footer-brand"><strong>VIDENTIA</strong><span>Inteligencia para marcas en Chile</span></div>
           <p>VIDENTIA apoya investigación y revisión de evidencia. No reemplaza la evaluación jurídica profesional ni las fuentes oficiales.</p>
-          <span className="v-footer-credit">Un desarrollo de <a href="https://www.n3uralia.com" target="_blank" rel="noreferrer">N3uralia</a></span>
+          <span className="vx-footer-credit">Un desarrollo de <a href="https://www.n3uralia.com" target="_blank" rel="noreferrer">N3uralia</a></span>
         </div>
       </footer>
     </main>
