@@ -104,6 +104,21 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section className="v-editorial" aria-label="Investigación asistida por evidencia">
+        <div className="v-shell v-editorial-grid">
+          <div className="v-editorial-copy v-reveal">
+            <p className="v-eyebrow">Investigación asistida</p>
+            <h2>De un expediente a una <em>red de evidencia.</em></h2>
+            <p>La investigación gana claridad cuando documentos, signos, titulares, clases y antecedentes se leen como partes de un mismo contexto, manteniendo separadas la fuente y la interpretación.</p>
+            <span className="v-editorial-note">Fotografía editorial · no representa un expediente real</span>
+          </div>
+          <div className="v-editorial-frame v-reveal" role="img" aria-label="Escena editorial de revisión documental; imagen atmosférica y no captura del producto">
+            <div className="v-editorial-index"><span>VIDENTIA / FIELD NOTE</span><span>Contexto antes de decisión</span></div>
+            <div className="v-editorial-tags"><span>Fuente pública</span><span>Relaciones</span><span>Revisión profesional</span><span>Seguimiento</span></div>
+          </div>
+        </div>
+      </section>
+
       <section id="metodo" className="v-section v-process-section">
         <div className="v-shell"><div className="v-process-head v-reveal"><p className="v-eyebrow">Cómo funciona</p><h2>De una búsqueda puntual a una investigación continua.</h2></div><div className="v-process-grid v-reveal">{workflow.map(([title,copy],i)=><article key={title} className="v-process-step"><span>0{i+1}</span><i/><h3>{title}</h3><p>{copy}</p></article>)}</div></div>
       </section>
