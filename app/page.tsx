@@ -33,24 +33,23 @@ export default function LandingPage() {
       <section className="px-hero">
         <div className="px-shell px-hero-grid">
           <div className="px-hero-copy" data-px-reveal>
-            <p className="px-kicker">Inteligencia marcaria para Chile</p>
-            <h1>Antes de presentar tu marca, <em>descubre qué puede complicarla.</em></h1>
+            <p className="px-kicker">Búsqueda marcaria · comparación visual · vigilancia</p>
+            <h1>Antes de presentar tu marca, <em>revisa qué puede complicarla.</em></h1>
             <p>Busca por nombre o imagen. VIDENTIA encuentra antecedentes similares, cruza clases y señales, y te muestra por qué merecen revisión.</p>
-            <div className="px-actions">
+            <div className="px-actions px-actions-hero">
               <Link href="/demo" className="px-btn px-btn-primary">Revisar mi marca <ArrowRight size={16} /></Link>
-              <Link href="/demo" className="px-btn px-btn-ghost">Probar sin cuenta</Link>
+              <Link href="/demo" className="px-text-link">Probar sin cuenta <ArrowRight size={14} /></Link>
             </div>
-            <span className="px-note">Prueba pública · no necesitas iniciar sesión</span>
-            <div className="px-proof"><span>INAPI</span><span>Niza + Viena</span><span>TDPI</span><span>Comparación visual</span></div>
+            <div className="px-proof px-proof-hero"><span>INAPI</span><span>Niza + Viena</span><span>TDPI</span><span>Sin veredictos automáticos</span></div>
           </div>
 
           <div className="px-visual" data-px-visual data-px-reveal aria-label="Visual editorial representativo de investigación marcaria">
             <div className="px-visual-grid" />
             <div className="px-scan" />
             <span className="px-orbit o1" /><span className="px-orbit o2" /><span className="px-orbit o3" />
-            <div className="px-chip px-chip-a"><small>Busca</small><strong>Antecedentes</strong></div>
-            <div className="px-chip px-chip-b"><small>Compara</small><strong>Nombre + imagen</strong></div>
-            <div className="px-chip px-chip-c"><small>Revisa</small><strong>Clases + contexto</strong></div>
+            <div className="px-visual-head"><small>VIDENTIA / investigación</small><strong>Evidencia antes de presentar</strong></div>
+            <div className="px-chip px-chip-a"><small>01 / antecedente</small><strong>Fuente visible</strong></div>
+            <div className="px-chip px-chip-b"><small>02 / señal</small><strong>Nombre + imagen</strong></div>
             <span className="px-visual-caption">Visual propio VIDENTIA · no representa un expediente real</span>
           </div>
         </div>
