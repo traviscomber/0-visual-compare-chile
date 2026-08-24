@@ -1,6 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight, Check, Eye, Fingerprint, Layers3, Search, ShieldCheck, Waves } from "lucide-react"
+import { ArrowRight, Check, Fingerprint, Layers3, Search, Waves } from "lucide-react"
 
 const signals = [
   { icon: Search, label: "Denominación", title: "Lectura verbal", copy: "Ortografía, estructura, términos dominantes y variantes relevantes." },
