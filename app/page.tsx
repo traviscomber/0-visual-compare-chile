@@ -34,10 +34,10 @@ export default function LandingPage() {
         <div className="px-shell px-hero-grid">
           <div className="px-hero-copy" data-px-reveal>
             <p className="px-kicker">Inteligencia marcaria para Chile</p>
-            <h1>Busca una marca. <em>Detecta qué revisar antes de presentar.</em></h1>
-            <p>VIDENTIA cruza antecedentes marcarios, similitud denominativa y visual, clases y contexto para mostrarte qué merece revisión antes de avanzar.</p>
+            <h1>Antes de presentar tu marca, <em>descubre qué puede complicarla.</em></h1>
+            <p>Busca por nombre o imagen. VIDENTIA encuentra antecedentes similares, cruza clases y señales, y te muestra por qué merecen revisión.</p>
             <div className="px-actions">
-              <Link href="/demo" className="px-btn px-btn-primary">Buscar una marca <ArrowRight size={16} /></Link>
+              <Link href="/demo" className="px-btn px-btn-primary">Revisar mi marca <ArrowRight size={16} /></Link>
               <Link href="/demo" className="px-btn px-btn-ghost">Probar sin cuenta</Link>
             </div>
             <span className="px-note">Prueba pública · no necesitas iniciar sesión</span>
