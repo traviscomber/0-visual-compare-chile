@@ -3,10 +3,10 @@ import { ArrowRight } from "lucide-react"
 import { HomeMotion } from "@/components/home-motion"
 
 const story = [
-  ["01", "Abre la fuente.", "La investigación parte desde antecedentes y campos verificables. Fuente, disponibilidad y fecha permanecen visibles.", ["INAPI", "Solicitud / registro", "Estado"]],
-  ["02", "Separa las señales.", "Denominación, fonética, elementos visuales y ámbito se leen por separado para explicar por qué un antecedente merece revisión.", ["Denominación", "Visual", "Niza + Viena"]],
-  ["03", "Conecta el contexto.", "Cuando existe evidencia verificable, VIDENTIA relaciona titular, historial y precedentes sin confundir fuente con inferencia.", ["Titular", "Historial", "Precedentes"]],
-  ["04", "Conserva lo que cambia.", "La investigación puede convertirse en caso y vigilancia para volver a revisar nueva evidencia sin reconstruir el contexto desde cero.", ["Casos", "Vigilancia", "Trazabilidad"]],
+  ["01", "Llega antes.", "Antes de presentar una marca, abre el terreno: antecedentes, clases, titulares y señales que ya existen alrededor de tu nombre o signo.", ["INAPI", "Solicitud / registro", "Estado"]],
+  ["02", "Entiende qué se parece — y por qué.", "VIDENTIA separa nombre, fonética, estructura visual y ámbito para que la revisión no dependa de un porcentaje sin explicación.", ["Denominación", "Visual", "Niza + Viena"]],
+  ["03", "Ve la red, no el registro aislado.", "Cuando existe evidencia verificable, conecta titular, historial, clases y precedentes para revelar el contexto que una búsqueda plana deja fuera.", ["Titular", "Historial", "Precedentes"]],
+  ["04", "No dejes de mirar después.", "Convierte una investigación en caso y vigilancia para volver a detectar cambios sin reconstruir todo desde cero.", ["Casos", "Vigilancia", "Trazabilidad"]],
 ] as const
 
 export default function LandingPage() {
@@ -34,13 +34,13 @@ export default function LandingPage() {
         <div className="px-shell px-hero-grid">
           <div className="px-hero-copy" data-px-reveal>
             <p className="px-kicker">Inteligencia marcaria para Chile</p>
-            <h1>Antes de decidir, <em>mira la evidencia.</em></h1>
-            <p>VIDENTIA organiza antecedentes, señales visuales y denominativas, contexto verificable y vigilancia en una investigación clara y trazable.</p>
+            <h1>No esperes a que el problema <em>aparezca.</em></h1>
+            <p>VIDENTIA te ayuda a descubrir antes qué existe alrededor de una marca, qué merece atención y qué cambia después. Todo con evidencia visible y contexto verificable.</p>
             <div className="px-actions">
-              <Link href="/demo" className="px-btn px-btn-primary">Investigar una marca <ArrowRight size={16} /></Link>
-              <Link href="#producto" className="px-btn px-btn-ghost">Ver el producto</Link>
+              <Link href="/demo" className="px-btn px-btn-primary">Explorar una marca <ArrowRight size={16} /></Link>
+              <Link href="#producto" className="px-btn px-btn-ghost">Ver qué descubre VIDENTIA</Link>
             </div>
-            <span className="px-note">El demo se puede usar antes de iniciar sesión</span>
+            <span className="px-note">Puedes probarlo antes de iniciar sesión</span>
             <div className="px-proof"><span>INAPI</span><span>Niza + Viena</span><span>TDPI</span><span>Evidencia trazable</span></div>
           </div>
 
@@ -48,9 +48,9 @@ export default function LandingPage() {
             <div className="px-visual-grid" />
             <div className="px-scan" />
             <span className="px-orbit o1" /><span className="px-orbit o2" /><span className="px-orbit o3" />
-            <div className="px-chip px-chip-a"><small>Fuente</small><strong>Origen visible</strong></div>
-            <div className="px-chip px-chip-b"><small>Señales</small><strong>Separadas y explicables</strong></div>
-            <div className="px-chip px-chip-c"><small>Decisión</small><strong>Revisión profesional</strong></div>
+            <div className="px-chip px-chip-a"><small>Antes</small><strong>Detecta el terreno</strong></div>
+            <div className="px-chip px-chip-b"><small>Durante</small><strong>Entiende las señales</strong></div>
+            <div className="px-chip px-chip-c"><small>Después</small><strong>Vigila lo que cambia</strong></div>
             <span className="px-visual-caption">Visual propio VIDENTIA · no representa un expediente real</span>
           </div>
         </div>
@@ -58,19 +58,19 @@ export default function LandingPage() {
 
       <section className="px-principles">
         <div className="px-shell px-principles-grid">
-          <div><p>VIDENTIA no reemplaza la fuente oficial ni convierte una señal técnica en una respuesta jurídica automática.</p></div>
-          <div><span>01 / fuente</span><strong>Origen visible</strong></div>
-          <div><span>02 / análisis</span><strong>Señales separadas</strong></div>
-          <div><span>03 / decisión</span><strong>Juicio humano</strong></div>
+          <div><p>Las mejores decisiones no parten de más datos. Parten de ver antes lo que importa.</p></div>
+          <div><span>01 / descubre</span><strong>Qué ya existe</strong></div>
+          <div><span>02 / entiende</span><strong>Qué merece atención</strong></div>
+          <div><span>03 / vigila</span><strong>Qué cambia después</strong></div>
         </div>
       </section>
 
       <section id="producto" className="px-section px-story">
         <div className="px-shell px-story-grid">
           <div className="px-story-copy" data-px-reveal>
-            <p className="px-eyebrow">Producto / evidencia conectada</p>
-            <h2>Una investigación no es una lista de <em>resultados.</em></h2>
-            <p>Es una secuencia de fuentes, señales, relaciones y cambios que debe poder volver a revisarse. VIDENTIA conserva esa estructura para que el contexto no se pierda entre búsquedas aisladas.</p>
+            <p className="px-eyebrow">La diferencia / llegar antes</p>
+            <h2>Una marca puede parecer libre hasta que <em>dejas de mirar sólo el nombre.</em></h2>
+            <p>La oportunidad está en conectar señales que normalmente viven separadas: registros, titulares, clases, visuales, precedentes y cambios posteriores. Ahí aparece el contexto.</p>
           </div>
           <div className="px-story-list">
             {story.map(([n,title,copy,tags]) => (
@@ -86,8 +86,8 @@ export default function LandingPage() {
       <section className="px-section px-compare">
         <div className="px-shell">
           <div className="px-heading" data-px-reveal>
-            <div><p className="px-eyebrow">Comparación visual</p><h2>Compara estructura, no un <em>porcentaje.</em></h2></div>
-            <p>La comparación visual útil explica qué rasgos se observan y mantiene el contexto marcario alrededor de ellos. No convierte una similitud en un veredicto.</p>
+            <div><p className="px-eyebrow">Más allá del nombre</p><h2>Lo parecido no siempre es obvio. <em>Por eso hay que explicarlo.</em></h2></div>
+            <p>VIDENTIA separa estructura, composición y contexto para mostrar qué está generando una señal. Sin esconder la lectura detrás de un score global.</p>
           </div>
           <div className="px-compare-grid" data-px-reveal>
             <article className="px-compare-art">
@@ -95,9 +95,9 @@ export default function LandingPage() {
               <footer>Referencias abstractas para explicar el método. No representan marcas reales.</footer>
             </article>
             <article className="px-compare-copy">
-              <div className="px-signal"><small>Contorno</small><strong>Estructura observable</strong><p>Se describe el rasgo compartido o diferenciador sin fundirlo en un score global.</p></div>
-              <div className="px-signal"><small>Composición</small><strong>Relación entre elementos</strong><p>La lectura conserva qué parte de la imagen motiva la comparación.</p></div>
-              <div className="px-signal"><small>Ámbito</small><strong>Contexto marcario</strong><p>Las señales visuales se entienden junto a clases y antecedentes, no de forma aislada.</p></div>
+              <div className="px-signal"><small>Contorno</small><strong>Qué comparte la forma</strong><p>La lectura identifica el rasgo visible que activa la comparación.</p></div>
+              <div className="px-signal"><small>Composición</small><strong>Cómo se relacionan los elementos</strong><p>La señal deja de ser una cifra y pasa a tener una explicación revisable.</p></div>
+              <div className="px-signal"><small>Ámbito</small><strong>Dónde importa esa similitud</strong><p>Clases y antecedentes ayudan a entender el contexto en que la señal merece atención.</p></div>
             </article>
           </div>
         </div>
@@ -105,22 +105,22 @@ export default function LandingPage() {
 
       <section id="metodo" className="px-section px-story">
         <div className="px-shell px-heading" data-px-reveal>
-          <div><p className="px-eyebrow">Cómo funciona</p><h2>Busca. Entiende. Decide. Vigila.</h2></div>
-          <p>Una misma investigación puede avanzar desde la búsqueda pública hasta un caso privado y vigilancia posterior, sin perder la procedencia de la evidencia.</p>
+          <div><p className="px-eyebrow">El flujo VIDENTIA</p><h2>Descubre antes. Decide mejor. Sigue mirando.</h2></div>
+          <p>Una búsqueda puede convertirse en investigación, una investigación en caso y un caso en vigilancia. El contexto permanece conectado durante todo el recorrido.</p>
         </div>
       </section>
 
       <section id="empresas" className="px-section px-enterprise">
         <div className="px-shell px-enterprise-grid">
           <div className="px-story-copy" data-px-reveal>
-            <p className="px-eyebrow">Para organizaciones</p>
-            <h2>La misma trazabilidad, en plataforma o API.</h2>
-            <p>Equipos legales, de innovación o propiedad industrial pueden trabajar desde VIDENTIA o integrar capacidades marcarias en sus propios procesos.</p>
+            <p className="px-eyebrow">Para equipos que no pueden llegar tarde</p>
+            <h2>Haz de la inteligencia marcaria una <em>capacidad continua.</em></h2>
+            <p>VIDENTIA puede vivir como espacio de trabajo para equipos legales y de innovación, o integrarse vía API dentro de procesos propios.</p>
           </div>
           <div className="px-offers" data-px-reveal>
-            <article className="px-offer"><span>01</span><div><h3>VIDENTIA Enterprise</h3><p>Investigación, casos, colaboración y vigilancia en un solo espacio de trabajo.</p></div><Link href="/contacto">Hablar con el equipo</Link></article>
-            <article className="px-offer"><span>02</span><div><h3>VIDENTIA API</h3><p>Capacidades marcarias integrables con el mismo criterio de trazabilidad.</p></div><Link href="/contacto">Explorar integración</Link></article>
-            <article className="px-offer"><span>03</span><div><h3>Demo público</h3><p>Prueba una primera investigación antes de iniciar sesión.</p></div><Link href="/demo">Probar sin cuenta</Link></article>
+            <article className="px-offer"><span>01</span><div><h3>VIDENTIA Enterprise</h3><p>Investiga, coordina casos y vigila cambios desde un mismo lugar.</p></div><Link href="/contacto">Hablar con el equipo</Link></article>
+            <article className="px-offer"><span>02</span><div><h3>VIDENTIA API</h3><p>Lleva señales y contexto marcario a tus propios sistemas y procesos.</p></div><Link href="/contacto">Explorar integración</Link></article>
+            <article className="px-offer"><span>03</span><div><h3>Prueba pública</h3><p>Comprueba la experiencia con una primera investigación antes de crear una cuenta.</p></div><Link href="/demo">Probar ahora</Link></article>
           </div>
         </div>
       </section>
@@ -128,9 +128,9 @@ export default function LandingPage() {
       <section className="px-final">
         <div className="px-shell" data-px-reveal>
           <p className="px-eyebrow">VIDENTIA · by N3uralia</p>
-          <h2>Investiga antes de decidir. <em>Conserva la evidencia después.</em></h2>
-          <p>El acceso público permite conocer y probar VIDENTIA. El acceso privado queda para guardar casos, colaborar y activar vigilancia.</p>
-          <div className="px-actions"><Link href="/demo" className="px-btn px-btn-primary">Probar VIDENTIA sin cuenta <ArrowRight size={16} /></Link><Link href="/auth/login" className="px-btn px-btn-ghost">Iniciar sesión</Link></div>
+          <h2>Una marca no se protege el día que la presentas. <em>Empieza antes.</em></h2>
+          <p>Explora el terreno, entiende las señales y conserva la vigilancia en un mismo sistema.</p>
+          <div className="px-actions"><Link href="/demo" className="px-btn px-btn-primary">Explorar una marca <ArrowRight size={16} /></Link><Link href="/auth/login" className="px-btn px-btn-ghost">Iniciar sesión</Link></div>
         </div>
       </section>
 
