@@ -1,1 +1,10 @@
-/* Legacy homepage overrides retired. DESIGN.md + home.css are the single source of truth. */
+/* VIDENTIA visual media layer. Scoped to the public landing page. */
+.v-home .v-hero-product{isolation:isolate;background:linear-gradient(180deg,rgba(7,16,24,.5),rgba(7,16,24,.92)),url('/videntia-knowledge-graph.svg') center/cover no-repeat}
+.v-home .v-hero-product:before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(circle at 62% 42%,rgba(102,221,203,.18),transparent 38%);pointer-events:none}
+.v-home .v-hero-case,.v-home .v-window-bar,.v-home .v-hero-foot{position:relative;z-index:1}
+.v-home .v-context-visual{background-image:linear-gradient(rgba(6,10,15,.28),rgba(6,10,15,.8)),url('/videntia-knowledge-graph.svg');background-size:cover;background-position:center}
+.v-home .v-context-visual:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 44%,transparent 0 18%,rgba(6,10,15,.3) 52%,rgba(6,10,15,.78) 100%);pointer-events:none}
+.v-home .v-context-card,.v-home .v-context-core,.v-home .v-context-caption{z-index:1}
+.v-home .v-final{position:relative;overflow:hidden;background:linear-gradient(90deg,rgba(6,10,15,.97) 0%,rgba(6,10,15,.84) 48%,rgba(6,10,15,.48) 100%),url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1800&q=82') center 46%/cover no-repeat}
+.v-home .v-final:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,10,15,.2),rgba(6,10,15,.68));pointer-events:none}.v-home .v-final>.v-shell{position:relative;z-index:1}
+@media(max-width:900px){.v-home .v-final{background-position:64% center}.v-home .v-hero-product{background-position:55% center}}
