@@ -1,0 +1,17 @@
+<svg width="1200" height="760" viewBox="0 0 1200 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs><linearGradient id="a" x1="0" y1="0" x2="1200" y2="760"><stop stop-color="#0B1118"/><stop offset="1" stop-color="#081016"/></linearGradient><linearGradient id="b" x1="200" y1="120" x2="900" y2="650"><stop stop-color="#7EE3D2"/><stop offset="1" stop-color="#1D7E70"/></linearGradient></defs>
+<rect width="1200" height="760" rx="36" fill="url(#a)"/>
+<g font-family="Arial, Helvetica, sans-serif">
+<text x="64" y="78" fill="#6C7A87" font-size="13">LECTURA DE EVIDENCIA</text><text x="64" y="122" fill="#F3F7F6" font-size="32" font-weight="700">Una marca, múltiples señales verificables.</text><text x="64" y="157" fill="#8C99A5" font-size="16">Cada capa conserva su fuente y explica por qué merece revisión.</text>
+<rect x="64" y="208" width="1072" height="420" rx="28" fill="#0D151D" stroke="#FFFFFF" stroke-opacity=".08"/>
+<g stroke="#FFFFFF" stroke-opacity=".08"><path d="M332 208V628"/><path d="M602 208V628"/><path d="M872 208V628"/></g>
+<g>
+<circle cx="198" cy="330" r="38" fill="#12252A" stroke="#70DDCB"/><circle cx="468" cy="330" r="38" fill="#12252A" stroke="#70DDCB"/><circle cx="738" cy="330" r="38" fill="#12252A" stroke="#70DDCB"/><circle cx="1008" cy="330" r="38" fill="#12252A" stroke="#70DDCB"/>
+<text x="198" y="336" fill="#78E4D2" text-anchor="middle" font-size="20">Aa</text><text x="468" y="336" fill="#78E4D2" text-anchor="middle" font-size="20">≈</text><text x="738" y="336" fill="#78E4D2" text-anchor="middle" font-size="20">◫</text><text x="1008" y="336" fill="#78E4D2" text-anchor="middle" font-size="20">N</text>
+<g fill="#F3F7F6" text-anchor="middle" font-size="18" font-weight="700"><text x="198" y="406">Denominación</text><text x="468" y="406">Fonética</text><text x="738" y="406">Visual</text><text x="1008" y="406">Ámbito</text></g>
+<g fill="#86939F" text-anchor="middle" font-size="13"><text x="198" y="436">estructura y términos</text><text x="468" y="436">proximidad sonora</text><text x="738" y="436">huella figurativa</text><text x="1008" y="436">clases y cobertura</text></g>
+<g><rect x="120" y="490" width="156" height="10" rx="5" fill="#17242C"/><rect x="120" y="490" width="126" height="10" rx="5" fill="url(#b)"/><rect x="390" y="490" width="156" height="10" rx="5" fill="#17242C"/><rect x="390" y="490" width="104" height="10" rx="5" fill="url(#b)"/><rect x="660" y="490" width="156" height="10" rx="5" fill="#17242C"/><rect x="660" y="490" width="84" height="10" rx="5" fill="url(#b)"/><rect x="930" y="490" width="156" height="10" rx="5" fill="#17242C"/><rect x="930" y="490" width="139" height="10" rx="5" fill="url(#b)"/></g>
+<g fill="#667581" text-anchor="middle" font-size="12"><text x="198" y="542">Fuente visible</text><text x="468" y="542">Explicación separada</text><text x="738" y="542">Sólo cuando aplica</text><text x="1008" y="542">Contexto comercial</text></g>
+</g>
+<rect x="64" y="652" width="1072" height="48" rx="14" fill="#0A1117" stroke="#FFFFFF" stroke-opacity=".06"/><circle cx="90" cy="676" r="5" fill="#72DFCF"/><text x="108" y="681" fill="#A5B0BA" font-size="14">VIDENTIA no comprime la investigación en un score opaco: muestra evidencia, fuente y contexto.</text>
+</g></svg>
