@@ -10,7 +10,7 @@ interface RiskSummaryCounts {
 
 export interface TrademarkExecutiveSummary {
   risk: TrademarkRiskLevel
-  riskLabel: "Alto" | "Medio" | "Bajo"
+  riskLabel: "Alta" | "Media" | "Rutina"
   title: string
   recommendation: string
   primaryResult: SearchResult | null
@@ -31,18 +31,12 @@ export function buildSearchExecutiveSummary(
 ): TrademarkExecutiveSummary {
   const riskCounts = buildRiskCounts(results, query, searchType)
   const primaryResult = results[0] ?? null
-  const topStates = Array.from(
-    countValues(results.map((result) => result.marca.estado))
-      .entries(),
-  )
+  const topStates = Array.from(countValues(results.map((result) => result.marca.estado)).entries())
     .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
     .slice(0, 3)
     .map(([state, count]) => `${state} (${count})`)
 
-  const topNiza = Array.from(
-    countValues(results.flatMap((result) => result.marca.niza))
-      .entries(),
-  )
+  const topNiza = Array.from(countValues(results.flatMap((result) => result.marca.niza)).entries())
     .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
     .slice(0, 3)
     .map(([code]) => code)
@@ -50,7 +44,6 @@ export function buildSearchExecutiveSummary(
   const registeredCount = results.filter((result) => result.marca.estado === "Registrada").length
   const pendingCount = results.filter((result) => result.marca.estado === "Pendiente").length
   const deniedCount = results.filter((result) => result.marca.estado === "Denegada").length
-
   const risk = deriveGlobalRisk(riskCounts, primaryResult, searchType, query)
   const riskLabel = formatRiskLabel(risk)
 
@@ -58,11 +51,11 @@ export function buildSearchExecutiveSummary(
     return {
       risk,
       riskLabel,
-      title: "Sin conflictos relevantes detectados",
+      title: "Sin antecedentes priorizados en esta muestra",
       recommendation:
         searchType === "nombre"
-          ? "No aparecieron coincidencias directas en esta consulta. El siguiente paso es revisar clases Niza y contrastar el logo en Compare."
-          : "No aparecieron coincidencias operativas en esta consulta. Conviene validar el nombre y complementar con clases o codigos relacionados.",
+          ? "La consulta no devolvió coincidencias para priorizar. Revisa clases y fuente oficial antes de concluir disponibilidad o registrabilidad."
+          : "La consulta no devolvió coincidencias para priorizar. Complementa con denominación, clases relacionadas y fuente oficial.",
       primaryResult: null,
       criticalCount: riskCounts.high,
       mediumCount: riskCounts.medium,
@@ -80,10 +73,10 @@ export function buildSearchExecutiveSummary(
     riskLabel,
     title:
       risk === "high"
-        ? `Choque probable con ${primaryResult.marca.nombre}`
+        ? `Revisar primero: ${primaryResult.marca.nombre}`
         : risk === "medium"
-          ? `Revision recomendada por ${primaryResult.marca.nombre}`
-          : `Base con conflicto acotado: ${primaryResult.marca.nombre}`,
+          ? `Revisar contexto de ${primaryResult.marca.nombre}`
+          : `Antecedente relacionado: ${primaryResult.marca.nombre}`,
     recommendation: buildRecommendation(risk, primaryResult, searchType, query),
     primaryResult,
     criticalCount: riskCounts.high,
@@ -110,52 +103,42 @@ export function buildResultReason(
   const normalizedName = normalizeValue(result.marca.nombre)
 
   if (searchType === "nombre") {
-    if (normalizedName === normalizedQuery) {
-      return "Coincidencia exacta de nombre"
-    }
-
+    if (normalizedName === normalizedQuery) return "Coincidencia exacta de denominación"
     if (normalizedName.includes(normalizedQuery) || normalizedQuery.includes(normalizedName)) {
-      return "Nombre parcialmente coincidente"
+      return "Denominación parcialmente coincidente"
     }
-
-    if (result.relevancia >= 85) {
-      return "Similitud nominal alta"
-    }
-
-    return "Coincidencia nominal relacionada"
+    if (result.relevancia >= 85) return "Coincidencia nominal priorizada para revisión"
+    return "Antecedente nominal relacionado"
   }
 
   if (searchType === "niza") {
-    return result.marca.niza.includes(query) ? `Comparte clase Niza ${query}` : "Clase Niza cercana"
+    return result.marca.niza.includes(query) ? `Comparte clase Niza ${query}` : "Clase Niza relacionada"
   }
 
-  return result.marca.viena.includes(query) ? `Comparte codigo Viena ${query}` : "Codigo Viena relacionado"
+  return result.marca.viena.includes(query) ? `Comparte código Viena ${query}` : "Código Viena relacionado"
 }
 
+/**
+ * Orden heurístico de revisión. El nombre histórico de la función se conserva por compatibilidad,
+ * pero el valor no representa riesgo jurídico, probabilidad de registro ni una decisión de INAPI.
+ */
 export function buildResultRiskLevel(
   result: SearchResult,
   query: string,
   searchType: "nombre" | "niza" | "viena",
 ): TrademarkRiskLevel {
-  const exactName =
-    searchType === "nombre" && normalizeValue(result.marca.nombre) === normalizeValue(query)
+  const exactName = searchType === "nombre" && normalizeValue(result.marca.nombre) === normalizeValue(query)
   const isRegistered = result.marca.estado === "Registrada"
 
-  if ((exactName && isRegistered) || (result.relevancia >= 92 && isRegistered)) {
-    return "high"
-  }
-
-  if (result.relevancia >= 78 || (isRegistered && result.relevancia >= 65)) {
-    return "medium"
-  }
-
+  if ((exactName && isRegistered) || (result.relevancia >= 92 && isRegistered)) return "high"
+  if (result.relevancia >= 78 || (isRegistered && result.relevancia >= 65)) return "medium"
   return "low"
 }
 
-export function formatRiskLabel(risk: TrademarkRiskLevel): "Alto" | "Medio" | "Bajo" {
-  if (risk === "high") return "Alto"
-  if (risk === "medium") return "Medio"
-  return "Bajo"
+export function formatRiskLabel(risk: TrademarkRiskLevel): "Alta" | "Media" | "Rutina" {
+  if (risk === "high") return "Alta"
+  if (risk === "medium") return "Media"
+  return "Rutina"
 }
 
 export function formatTrademarkDate(value: string): string {
@@ -202,21 +185,19 @@ function buildRecommendation(
   const topNiza = primaryResult.marca.niza.slice(0, 2).join(", ") || "sin clase visible"
 
   if (risk === "high") {
-    return `No avanzar sin revision legal. ${reason} con una marca ${primaryResult.marca.estado.toLowerCase()} en Niza ${topNiza}.`
+    return `Prioriza este antecedente para revisión. ${reason}; estado ${primaryResult.marca.estado.toLowerCase()} y Niza ${topNiza}. La prioridad no predice registrabilidad.`
   }
 
   if (risk === "medium") {
-    return `Conviene revisar la coexistencia antes de registrar. ${reason} y presencia operativa en Niza ${topNiza}.`
+    return `Revisa denominación, estado y alcance de clases antes de sacar conclusiones. ${reason}; Niza ${topNiza}.`
   }
 
-  return `La consulta no muestra un bloqueo directo, pero igual conviene documentar clases y validar logo antes de presentar.`
+  return `Mantén este antecedente como contexto y documenta la revisión de clases y fuente oficial. La ausencia de prioridad alta no implica disponibilidad.`
 }
 
 function countValues(values: string[]) {
   const map = new Map<string, number>()
-  for (const value of values.filter(Boolean)) {
-    map.set(value, (map.get(value) ?? 0) + 1)
-  }
+  for (const value of values.filter(Boolean)) map.set(value, (map.get(value) ?? 0) + 1)
   return map
 }
 
