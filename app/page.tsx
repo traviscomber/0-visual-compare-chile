@@ -77,155 +77,161 @@ const structuredData = {
   ],
 }
 
+const border = "border-white/10"
+const muted = "text-[#8F9AA8]"
+const teal = "#64D5C2"
+
 export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-[#F7F8F6] text-[#111827]">
+    <main className="min-h-screen bg-[#090D12] text-[#F4F7F6]">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
 
-      <nav className="fixed inset-x-0 top-0 z-50 border-b border-black/10 bg-[#F7F8F6]/95 backdrop-blur-xl">
-        <div className="mx-auto flex h-[72px] max-w-[1480px] items-center justify-between px-5 lg:px-10">
+      <nav className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[#090D12]/90 backdrop-blur-xl">
+        <div className="mx-auto flex h-[76px] max-w-[1480px] items-center justify-between px-5 lg:px-10">
           <Link href="/" aria-label="VIDENTIA" className="flex items-center gap-3">
-            <span className="grid h-9 w-9 place-items-center rounded-[10px] bg-[#111827] text-sm font-semibold text-white">V</span>
+            <span className="grid h-9 w-9 place-items-center rounded-[9px] border border-white/15 bg-white/[0.04] text-sm font-semibold text-white">V</span>
             <span className="leading-none">
-              <span className="block text-[15px] font-semibold tracking-[0.16em] text-[#111827]">VIDENTIA</span>
-              <span className="mt-1 block text-[9px] font-medium uppercase tracking-[0.18em] text-[#64748B]">by N3uralia</span>
+              <span className="block text-[15px] font-semibold tracking-[0.16em] text-white">VIDENTIA</span>
+              <span className="mt-1 block text-[9px] font-medium uppercase tracking-[0.18em] text-[#76818F]">by N3uralia</span>
             </span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-5">
-            <Link href="#producto" className="hidden text-sm text-[#667085] transition-colors hover:text-[#111827] md:block">Producto</Link>
-            <Link href="#empresas" className="hidden text-sm text-[#667085] transition-colors hover:text-[#111827] lg:block">Empresas y API</Link>
-            <Link href="/auth/login"><Button variant="ghost" className="hidden rounded-lg text-[#475569] hover:bg-black/5 sm:inline-flex">Iniciar sesión</Button></Link>
-            <Link href="/demo"><Button className="h-10 gap-2 rounded-lg bg-[#111827] px-5 text-white shadow-none hover:bg-[#273244]">Probar VIDENTIA <ArrowRight className="h-4 w-4" /></Button></Link>
+            <Link href="#producto" className="hidden text-sm text-[#8F9AA8] transition-colors hover:text-white md:block">Producto</Link>
+            <Link href="#empresas" className="hidden text-sm text-[#8F9AA8] transition-colors hover:text-white lg:block">Empresas y API</Link>
+            <Link href="/auth/login"><Button variant="ghost" className="hidden rounded-lg text-[#A8B0BA] hover:bg-white/[0.06] hover:text-white sm:inline-flex">Iniciar sesión</Button></Link>
+            <Link href="/demo"><Button className="h-10 gap-2 rounded-lg bg-white px-5 text-[#0A0E13] shadow-none hover:bg-[#E7ECEA]">Probar VIDENTIA <ArrowRight className="h-4 w-4" /></Button></Link>
           </div>
         </div>
       </nav>
 
-      <section className="relative overflow-hidden border-b border-black/10 px-5 pb-20 pt-32 lg:px-10 lg:pb-28 lg:pt-40">
-        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[42%] border-l border-black/5 bg-[#F1F3F0] lg:block" />
-        <div className="relative mx-auto grid max-w-[1480px] gap-14 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+      <section className="relative overflow-hidden border-b border-white/10 px-5 pb-24 pt-36 lg:px-10 lg:pb-32 lg:pt-44">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_74%_32%,rgba(24,132,118,0.16),transparent_36%),radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.035),transparent_30%)]" />
+        <div className="pointer-events-none absolute inset-y-0 right-[44%] hidden border-l border-white/[0.06] lg:block" />
+        <div className="relative mx-auto grid max-w-[1480px] gap-16 lg:grid-cols-[0.88fr_1.12fr] lg:items-center">
           <div className="max-w-3xl">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#0F766E]">Inteligencia marcaria para Chile</p>
-            <h1 className="mt-6 max-w-3xl text-[clamp(3rem,6.2vw,6.6rem)] font-normal leading-[0.95] tracking-[-0.055em] text-[#111827]">Investiga una marca con evidencia y contexto.</h1>
-            <p className="mt-7 max-w-2xl text-[17px] leading-8 text-[#667085]">VIDENTIA reúne antecedentes marcarios, señales denominativas y visuales, contexto del titular y vigilancia en una revisión clara y trazable.</p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href="/demo"><Button size="lg" className="h-12 gap-2 rounded-lg bg-[#0F766E] px-6 text-white shadow-none hover:bg-[#134E4A]">Analizar una marca <ArrowRight className="h-4 w-4" /></Button></Link>
-              <Link href="/contacto"><Button size="lg" variant="outline" className="h-12 rounded-lg border-black/15 bg-transparent px-6 hover:bg-black/5">Contacto comercial</Button></Link>
+            <div className="inline-flex items-center gap-3 border border-white/10 bg-white/[0.03] px-3 py-2 text-[10px] font-medium uppercase tracking-[0.2em] text-[#7EE3D2]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#64D5C2]" /> Inteligencia marcaria para Chile
             </div>
-            <div className="mt-9 flex flex-wrap gap-x-6 gap-y-2 border-t border-black/10 pt-5 text-xs text-[#667085]">
-              {["INAPI", "Niza + Viena", "TDPI", "Evidencia trazable"].map(item => <span key={item} className="inline-flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#0F766E]" />{item}</span>)}
+            <h1 className="mt-7 max-w-3xl text-[clamp(3.1rem,6vw,6.5rem)] font-normal leading-[0.94] tracking-[-0.06em] text-white">Investiga una marca con evidencia y contexto.</h1>
+            <p className="mt-7 max-w-2xl text-[18px] leading-8 text-[#9AA5B2]">VIDENTIA reúne antecedentes marcarios, señales denominativas y visuales, contexto del titular y vigilancia en una revisión clara y trazable.</p>
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+              <Link href="/demo"><Button size="lg" className="h-12 gap-2 rounded-lg bg-[#1B8F80] px-6 text-white shadow-none hover:bg-[#16796C]">Analizar una marca <ArrowRight className="h-4 w-4" /></Button></Link>
+              <Link href="/contacto"><Button size="lg" variant="outline" className="h-12 rounded-lg border-white/15 bg-white/[0.02] px-6 text-white hover:bg-white/[0.07] hover:text-white">Contacto comercial</Button></Link>
+            </div>
+            <div className="mt-10 grid max-w-2xl grid-cols-2 gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-4">
+              {["INAPI", "Niza + Viena", "TDPI", "Evidencia trazable"].map(item => (
+                <div key={item} className="bg-[#0D1218] px-4 py-4 text-[11px] text-[#9AA5B2]"><span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-[#64D5C2]" />{item}</div>
+              ))}
             </div>
           </div>
           <SystemPreview />
         </div>
       </section>
 
-      <section id="producto" className="px-5 py-20 lg:px-10 lg:py-24">
+      <section id="producto" className="px-5 py-24 lg:px-10 lg:py-28">
         <div className="mx-auto max-w-[1480px]">
-          <div className="grid gap-8 border-b border-black/10 pb-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+          <div className="grid gap-8 border-b border-white/10 pb-12 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">Evidencia</p>
-              <h2 className="mt-4 max-w-xl text-[clamp(2.3rem,4vw,4.3rem)] font-normal leading-[1.02] tracking-[-0.045em]">Una investigación no cabe en un solo porcentaje.</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6F7A87]">Evidencia</p>
+              <h2 className="mt-4 max-w-xl text-[clamp(2.4rem,4vw,4.4rem)] font-normal leading-[1.01] tracking-[-0.05em] text-white">Una investigación no cabe en un solo porcentaje.</h2>
             </div>
-            <p className="max-w-2xl text-lg leading-8 text-[#667085] lg:justify-self-end">VIDENTIA separa las señales para mostrar qué encontró, de dónde viene y por qué merece revisión.</p>
+            <p className="max-w-2xl text-lg leading-8 text-[#8F9AA8] lg:justify-self-end">VIDENTIA separa las señales para mostrar qué encontró, de dónde viene y por qué merece revisión.</p>
           </div>
-          <div className="grid border-b border-black/10 md:grid-cols-2 lg:grid-cols-4">
-            {signals.map(({ icon: Icon, label, value, detail }, i) => (
-              <article key={label} className={`py-8 md:px-7 ${i > 0 ? "md:border-l md:border-black/10" : ""}`}>
-                <Icon className="h-4 w-4 text-[#0F766E]" />
-                <p className="mt-7 text-xs font-medium uppercase tracking-[0.14em] text-[#667085]">{label}</p>
-                <p className="mt-2 text-xl font-medium tracking-[-0.025em]">{value}</p>
-                <p className="mt-3 text-sm leading-6 text-[#667085]">{detail}</p>
+          <div className="grid gap-px border-b border-white/10 bg-white/10 md:grid-cols-2 lg:grid-cols-4">
+            {signals.map(({ icon: Icon, label, value, detail }) => (
+              <article key={label} className="bg-[#0C1117] px-6 py-8 transition-colors hover:bg-[#10171F] lg:px-7">
+                <Icon className="h-4 w-4 text-[#64D5C2]" />
+                <p className="mt-8 text-[10px] font-medium uppercase tracking-[0.16em] text-[#697582]">{label}</p>
+                <p className="mt-2 text-xl font-medium tracking-[-0.025em] text-white">{value}</p>
+                <p className="mt-3 text-sm leading-6 text-[#8994A1]">{detail}</p>
               </article>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="bg-[#111827] px-5 py-20 text-white lg:px-10 lg:py-24">
-        <div className="mx-auto grid max-w-[1480px] gap-12 lg:grid-cols-[0.78fr_1.22fr]">
+      <section className="border-y border-white/10 bg-[#0B1016] px-5 py-24 lg:px-10 lg:py-28">
+        <div className="mx-auto grid max-w-[1480px] gap-14 lg:grid-cols-[0.72fr_1.28fr]">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Cómo funciona</p>
-            <h2 className="mt-4 max-w-xl text-[clamp(2.4rem,4vw,4.5rem)] font-normal leading-[1.02] tracking-[-0.045em]">De una búsqueda puntual a una investigación continua.</h2>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#64D5C2]">Cómo funciona</p>
+            <h2 className="mt-4 max-w-xl text-[clamp(2.5rem,4vw,4.6rem)] font-normal leading-[1] tracking-[-0.05em] text-white">De una búsqueda puntual a una investigación continua.</h2>
           </div>
-          <div className="border-t border-white/15">
+          <div className="border-t border-white/10">
             {workflow.map(([title, copy], index) => (
-              <div key={title} className="grid gap-4 border-b border-white/15 py-6 sm:grid-cols-[48px_160px_1fr]">
-                <span className="font-mono text-xs text-[#63C7B8]">0{index + 1}</span><h3 className="font-medium text-white">{title}</h3><p className="text-sm leading-6 text-slate-400">{copy}</p>
+              <div key={title} className="grid gap-4 border-b border-white/10 py-7 sm:grid-cols-[54px_150px_1fr]">
+                <span className="font-mono text-xs text-[#64D5C2]">0{index + 1}</span>
+                <h3 className="font-medium text-white">{title}</h3>
+                <p className="text-sm leading-6 text-[#8994A1]">{copy}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="px-5 py-20 lg:px-10 lg:py-24">
-        <div className="mx-auto grid max-w-[1480px] gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+      <section className="px-5 py-24 lg:px-10 lg:py-28">
+        <div className="mx-auto grid max-w-[1480px] gap-14 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
           <DecisionPreview />
           <div className="max-w-xl lg:justify-self-end">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">Contexto verificable</p>
-            <h2 className="mt-4 text-[clamp(2.3rem,3.8vw,4.1rem)] font-normal leading-[1.04] tracking-[-0.045em]">La marca no se revisa aislada de quien está detrás.</h2>
-            <p className="mt-5 text-lg leading-8 text-[#667085]">Cuando existe evidencia verificable, VIDENTIA conecta antecedentes con titular, familia marcaria y precedentes sin confundir evidencia con inferencia.</p>
-            <div className="mt-7 border-t border-black/10">
-              {["Fuente oficial siempre visible", "Titular sólo cuando está verificado", "Contexto sin predicción jurídica"].map(item => <div key={item} className="flex items-center gap-3 border-b border-black/10 py-4 text-sm text-[#475467]"><Check className="h-4 w-4 text-[#0F766E]" />{item}</div>)}
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6F7A87]">Contexto verificable</p>
+            <h2 className="mt-4 text-[clamp(2.4rem,3.8vw,4.2rem)] font-normal leading-[1.03] tracking-[-0.05em] text-white">La marca no se revisa aislada de quien está detrás.</h2>
+            <p className="mt-5 text-lg leading-8 text-[#8F9AA8]">Cuando existe evidencia verificable, VIDENTIA conecta antecedentes con titular, familia marcaria y precedentes sin confundir evidencia con inferencia.</p>
+            <div className="mt-8 border-t border-white/10">
+              {["Fuente oficial siempre visible", "Titular sólo cuando está verificado", "Contexto sin predicción jurídica"].map(item => <div key={item} className="flex items-center gap-3 border-b border-white/10 py-4 text-sm text-[#A1ABB6]"><Check className="h-4 w-4 text-[#64D5C2]" />{item}</div>)}
             </div>
           </div>
         </div>
       </section>
 
-      <section id="empresas" className="border-y border-black/10 bg-white px-5 py-20 lg:px-10 lg:py-24">
+      <section id="empresas" className="border-y border-white/10 bg-[#0B1016] px-5 py-24 lg:px-10 lg:py-28">
         <div className="mx-auto max-w-[1480px]">
-          <div className="grid gap-8 border-b border-black/10 pb-10 lg:grid-cols-[0.72fr_1.28fr] lg:items-end">
+          <div className="grid gap-8 border-b border-white/10 pb-12 lg:grid-cols-[0.72fr_1.28fr] lg:items-end">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">Contratación</p>
-              <h2 className="mt-4 max-w-2xl text-[clamp(2.4rem,4.3vw,4.6rem)] font-normal leading-[1.02] tracking-[-0.045em]">Usa VIDENTIA como plataforma o intégralo por API.</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#64D5C2]">Contratación</p>
+              <h2 className="mt-4 max-w-2xl text-[clamp(2.5rem,4.3vw,4.7rem)] font-normal leading-[1] tracking-[-0.05em] text-white">Plataforma empresarial o integración por API.</h2>
             </div>
-            <p className="max-w-2xl text-lg leading-8 text-[#667085] lg:justify-self-end">Dos formas de contratar la misma inteligencia, según cómo trabaja tu organización.</p>
+            <p className="max-w-2xl text-lg leading-8 text-[#8F9AA8] lg:justify-self-end">Dos formas de contratar la misma inteligencia, según cómo trabaja tu organización.</p>
           </div>
 
-          <div className="grid border-b border-black/10 lg:grid-cols-2">
-            <article className="py-9 lg:pr-12">
-              <div className="flex items-center justify-between gap-4"><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#98A2B3]">Plataforma</p><span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#0F766E]">Implementación empresarial</span></div>
-              <h3 className="mt-6 text-3xl font-normal tracking-[-0.035em]">VIDENTIA Plataforma</h3>
-              <p className="mt-3 max-w-xl text-sm leading-7 text-[#667085]">Para estudios jurídicos, áreas legales y empresas que quieren centralizar investigación y vigilancia.</p>
-              <div className="mt-7 border-t border-black/10 pt-6"><p className="text-xs uppercase tracking-[0.14em] text-[#667085]">Implementación desde</p><p className="mt-2 text-[clamp(2.6rem,5vw,4.6rem)] font-normal leading-none tracking-[-0.05em]">$5.000.000 <span className="text-lg tracking-normal text-[#667085]">CLP</span></p></div>
-              <div className="mt-7 border-t border-black/10">{platformIncludes.map(item => <div key={item} className="flex items-center gap-3 border-b border-black/10 py-3.5 text-sm text-[#475467]"><Check className="h-4 w-4 text-[#0F766E]" />{item}</div>)}</div>
-              <Link href="/contacto" className="mt-7 inline-flex items-center gap-2 text-sm font-semibold text-[#0F766E]">Solicitar propuesta <ArrowRight className="h-4 w-4" /></Link>
-            </article>
-
-            <article className="border-t border-black/10 py-9 lg:border-l lg:border-t-0 lg:pl-12">
-              <div className="flex items-center justify-between gap-4"><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#98A2B3]">API</p><span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#0F766E]">Suscripción + consumo</span></div>
-              <h3 className="mt-6 text-3xl font-normal tracking-[-0.035em]">VIDENTIA API</h3>
-              <p className="mt-3 max-w-xl text-sm leading-7 text-[#667085]">Para compañías y plataformas que necesitan integrar búsqueda y comparación marcaria en sus propios procesos.</p>
-              <div className="mt-7 border-t border-black/10 pt-6"><p className="text-xs uppercase tracking-[0.14em] text-[#667085]">Suscripción desde</p><p className="mt-2 text-[clamp(2.6rem,5vw,4.6rem)] font-normal leading-none tracking-[-0.05em]">USD 500 <span className="text-lg tracking-normal text-[#667085]">/ mes</span></p></div>
-              <div className="mt-7 border-t border-black/10">{apiIncludes.map(item => <div key={item} className="flex items-center gap-3 border-b border-black/10 py-3.5 text-sm text-[#475467]"><Check className="h-4 w-4 text-[#0F766E]" />{item}</div>)}</div>
-              <Link href="/contacto" className="mt-7 inline-flex items-center gap-2 text-sm font-semibold text-[#0F766E]">Cotizar API <ArrowRight className="h-4 w-4" /></Link>
-            </article>
+          <div className="grid gap-px bg-white/10 lg:grid-cols-2">
+            <CommercialCard label="Plataforma" status="Implementación empresarial" title="VIDENTIA Plataforma" copy="Para estudios jurídicos, áreas legales y empresas que quieren centralizar investigación y vigilancia." price="$5.000.000" unit="CLP" items={platformIncludes} cta="Solicitar propuesta" />
+            <CommercialCard label="API" status="Suscripción + consumo" title="VIDENTIA API" copy="Para compañías y plataformas que necesitan integrar búsqueda y comparación marcaria en sus propios procesos." price="USD 500" unit="/ mes" items={apiIncludes} cta="Cotizar API" />
           </div>
-          <p className="mt-4 max-w-4xl text-xs leading-6 text-[#98A2B3]">Valores iniciales de referencia. Integraciones especiales, SLA, despliegues dedicados y volúmenes superiores se cotizan según alcance.</p>
+          <p className="mt-4 max-w-4xl text-xs leading-6 text-[#697582]">Valores iniciales de referencia. Integraciones especiales, SLA, despliegues dedicados y volúmenes superiores se cotizan según alcance.</p>
         </div>
       </section>
 
-      <section className="px-5 py-16 lg:px-10 lg:py-20">
-        <div className="mx-auto grid max-w-[1180px] gap-10 lg:grid-cols-[0.7fr_1.3fr]">
+      <section className="px-5 py-20 lg:px-10 lg:py-24">
+        <div className="mx-auto grid max-w-[1180px] gap-12 lg:grid-cols-[0.66fr_1.34fr]">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">Preguntas frecuentes</p>
-            <h2 className="mt-4 text-[clamp(2rem,3.4vw,3.5rem)] font-normal leading-[1.04] tracking-[-0.045em]">Lo esencial antes de comenzar.</h2>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6F7A87]">Preguntas frecuentes</p>
+            <h2 className="mt-4 text-[clamp(2.1rem,3.4vw,3.6rem)] font-normal leading-[1.03] tracking-[-0.05em] text-white">Lo esencial antes de comenzar.</h2>
           </div>
-          <div className="border-t border-black/10">{faqs.map(([question, answer]) => <div key={question} className="grid gap-3 border-b border-black/10 py-5 md:grid-cols-[0.8fr_1.2fr]"><h3 className="font-medium">{question}</h3><p className="text-sm leading-7 text-[#667085]">{answer}</p></div>)}</div>
+          <div className="border-t border-white/10">{faqs.map(([question, answer]) => <div key={question} className="grid gap-3 border-b border-white/10 py-6 md:grid-cols-[0.82fr_1.18fr]"><h3 className="font-medium text-white">{question}</h3><p className="text-sm leading-7 text-[#8994A1]">{answer}</p></div>)}</div>
         </div>
       </section>
 
-      <section className="border-t border-black/10 bg-[#111827] px-5 py-20 text-white lg:px-10">
+      <section className="border-t border-white/10 bg-[#0B1016] px-5 py-24 lg:px-10">
         <div className="mx-auto max-w-[1480px]">
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#63C7B8]">VIDENTIA · by N3uralia</p><h2 className="mt-4 max-w-4xl text-[clamp(2.6rem,5vw,5.2rem)] font-normal leading-[0.98] tracking-[-0.05em]">Prueba una marca real o conversa con nosotros.</h2><p className="mt-5 max-w-2xl text-base leading-7 text-slate-400">Usa la demostración o solicita una propuesta para implementar VIDENTIA como plataforma o API.</p></div>
-            <div className="flex flex-col gap-3 sm:flex-row"><Link href="/demo"><Button size="lg" className="h-12 gap-2 rounded-lg bg-[#F7F8F6] px-6 text-[#111827] hover:bg-white">Probar VIDENTIA <ArrowRight className="h-4 w-4" /></Button></Link><Link href="/contacto"><Button size="lg" variant="outline" className="h-12 rounded-lg border-white/20 bg-transparent px-6 text-white hover:bg-white/10 hover:text-white">Contacto comercial</Button></Link></div>
+          <div className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#64D5C2]">VIDENTIA · by N3uralia</p>
+              <h2 className="mt-4 max-w-4xl text-[clamp(2.8rem,5vw,5.4rem)] font-normal leading-[0.97] tracking-[-0.055em] text-white">Prueba una marca real o conversa con nosotros.</h2>
+              <p className="mt-5 max-w-2xl text-base leading-7 text-[#8F9AA8]">Usa la demostración o solicita una propuesta para implementar VIDENTIA como plataforma o API.</p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link href="/demo"><Button size="lg" className="h-12 gap-2 rounded-lg bg-white px-6 text-[#0A0E13] hover:bg-[#E7ECEA]">Probar VIDENTIA <ArrowRight className="h-4 w-4" /></Button></Link>
+              <Link href="/contacto"><Button size="lg" variant="outline" className="h-12 rounded-lg border-white/15 bg-transparent px-6 text-white hover:bg-white/[0.07] hover:text-white">Contacto comercial</Button></Link>
+            </div>
           </div>
         </div>
       </section>
 
-      <footer className="border-t border-white/10 bg-[#111827] px-5 py-8 text-slate-400 lg:px-10">
-        <div className="mx-auto flex max-w-[1480px] flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div><div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-[10px] border border-white/15 text-sm font-semibold text-white">V</span><div><p className="text-sm font-semibold tracking-[0.14em] text-white">VIDENTIA</p><p className="mt-1 text-[9px] uppercase tracking-[0.18em]">by N3uralia</p></div></div><p className="mt-4 max-w-xl text-xs leading-6">Inteligencia marcaria para Chile. VIDENTIA apoya investigación y gestión de evidencia; no reemplaza evaluación jurídica profesional ni a las fuentes oficiales.</p></div>
+      <footer className="border-t border-white/10 bg-[#090D12] px-5 py-9 text-[#73808D] lg:px-10">
+        <div className="mx-auto flex max-w-[1480px] flex-col gap-7 md:flex-row md:items-end md:justify-between">
+          <div>
+            <div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-[9px] border border-white/15 text-sm font-semibold text-white">V</span><div><p className="text-sm font-semibold tracking-[0.14em] text-white">VIDENTIA</p><p className="mt-1 text-[9px] uppercase tracking-[0.18em]">by N3uralia</p></div></div>
+            <p className="mt-4 max-w-xl text-xs leading-6">Inteligencia marcaria para Chile. VIDENTIA apoya investigación y gestión de evidencia; no reemplaza evaluación jurídica profesional ni a las fuentes oficiales.</p>
+          </div>
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs"><Link href="/demo" className="hover:text-white">Demo</Link><Link href="/contacto" className="hover:text-white">Contacto</Link><Link href="/docs" className="hover:text-white">API</Link><a href="https://www.inapi.cl" target="_blank" rel="noreferrer" className="hover:text-white">INAPI</a><a href="https://www.n3uralia.com" target="_blank" rel="noreferrer" className="hover:text-white">N3uralia</a><span>© {new Date().getFullYear()} VIDENTIA</span></div>
         </div>
       </footer>
@@ -233,42 +239,56 @@ export default function LandingPage() {
   )
 }
 
+function CommercialCard({ label, status, title, copy, price, unit, items, cta }: { label: string; status: string; title: string; copy: string; price: string; unit: string; items: string[]; cta: string }) {
+  return (
+    <article className="bg-[#0D131A] p-7 sm:p-9 lg:p-11">
+      <div className="flex flex-wrap items-center justify-between gap-4"><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#6F7A87]">{label}</p><span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64D5C2]">{status}</span></div>
+      <h3 className="mt-7 text-3xl font-normal tracking-[-0.04em] text-white">{title}</h3>
+      <p className="mt-3 max-w-xl text-sm leading-7 text-[#8F9AA8]">{copy}</p>
+      <div className="mt-8 border-t border-white/10 pt-7"><p className="text-xs uppercase tracking-[0.14em] text-[#6F7A87]">Desde</p><p className="mt-2 text-[clamp(2.7rem,5vw,4.8rem)] font-normal leading-none tracking-[-0.055em] text-white">{price} <span className="text-lg tracking-normal text-[#8F9AA8]">{unit}</span></p></div>
+      <div className="mt-8 border-t border-white/10">{items.map(item => <div key={item} className="flex items-center gap-3 border-b border-white/10 py-4 text-sm text-[#A1ABB6]"><Check className="h-4 w-4 text-[#64D5C2]" />{item}</div>)}</div>
+      <Link href="/contacto" className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-[#7EE3D2]">{cta} <ArrowRight className="h-4 w-4" /></Link>
+    </article>
+  )
+}
+
 function SystemPreview() {
   return (
-    <div className="relative lg:pl-6">
-      <div className="border border-black/10 bg-white p-3">
-        <div className="border border-black/10">
-          <div className="flex items-center justify-between border-b border-black/10 px-5 py-4">
-            <div><p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[#98A2B3]">Investigación en curso</p><p className="mt-2 font-medium">Marca a evaluar</p></div>
-            <span className="h-2 w-2 rounded-full bg-[#0F766E]" />
+    <div className="relative lg:pl-8">
+      <div className="absolute -inset-8 -z-10 bg-[radial-gradient(circle,rgba(20,133,118,0.12),transparent_68%)]" />
+      <div className="border border-white/10 bg-[#0B1016] p-3 shadow-2xl shadow-black/30">
+        <div className="border border-white/10 bg-[#0D131A]">
+          <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+            <div><p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[#6F7A87]">Investigación en curso</p><p className="mt-2 font-medium text-white">Marca a evaluar</p></div>
+            <span className="h-2 w-2 rounded-full bg-[#64D5C2] shadow-[0_0_18px_rgba(100,213,194,0.8)]" />
           </div>
           <div className="grid sm:grid-cols-[170px_1fr]">
-            <div className="flex min-h-48 items-center justify-center border-b border-black/10 bg-[#F1F3F0] p-6 sm:border-b-0 sm:border-r"><div className="grid h-28 w-28 place-items-center border border-black/10 bg-white"><ImageIcon className="h-8 w-8 text-[#0F766E]" /></div></div>
+            <div className="flex min-h-48 items-center justify-center border-b border-white/10 bg-[#0A0F15] p-6 sm:border-b-0 sm:border-r"><div className="grid h-28 w-28 place-items-center border border-white/10 bg-[#111820]"><ImageIcon className="h-8 w-8 text-[#64D5C2]" /></div></div>
             <div className="p-6">
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[#98A2B3]">Señales a revisar</p>
-              <p className="mt-3 text-xl font-medium tracking-[-0.025em]">Antecedentes ordenados por relevancia</p>
-              <p className="mt-2 text-xs leading-5 text-[#667085]">Cada resultado conserva su fuente, cobertura y explicación.</p>
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[#6F7A87]">Señales a revisar</p>
+              <p className="mt-3 text-xl font-medium tracking-[-0.025em] text-white">Antecedentes ordenados por relevancia</p>
+              <p className="mt-2 text-xs leading-5 text-[#8994A1]">Cada resultado conserva su fuente, cobertura y explicación.</p>
               <div className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5"><MiniSignal label="Nombre" value="Comparado" /><MiniSignal label="Fonética" value="Comparada" /><MiniSignal label="Visual" value="Cuando aplica" /><MiniSignal label="Niza" value="Contextualizada" /></div>
             </div>
           </div>
-          <div className="border-t border-black/10 bg-[#F7F8F6] px-5 py-4"><div className="flex gap-3"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#0F766E]" /><p className="text-sm leading-6 text-[#475467]"><span className="font-medium text-[#111827]">La diferencia:</span> VIDENTIA explica las señales y mantiene visible la evidencia que las sostiene.</p></div></div>
+          <div className="border-t border-white/10 bg-[#0A0F15] px-5 py-4"><div className="flex gap-3"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#64D5C2]" /><p className="text-sm leading-6 text-[#A1ABB6]"><span className="font-medium text-white">La diferencia:</span> VIDENTIA explica las señales y mantiene visible la evidencia que las sostiene.</p></div></div>
         </div>
       </div>
-      <div className="mt-4 flex items-center justify-between font-mono text-[9px] uppercase tracking-[0.16em] text-[#98A2B3]"><span>INAPI · NIZA · VIENA · TDPI</span><span>Evidencia trazable</span></div>
+      <div className="mt-4 flex items-center justify-between font-mono text-[9px] uppercase tracking-[0.16em] text-[#66727F]"><span>INAPI · NIZA · VIENA · TDPI</span><span>Evidencia trazable</span></div>
     </div>
   )
 }
 
 function DecisionPreview() {
   return (
-    <div className="border border-black/10 bg-white p-6 sm:p-8">
-      <div className="flex items-center justify-between border-b border-black/10 pb-5"><div><p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[#98A2B3]">Lectura de evidencia</p><p className="mt-2 text-lg font-medium">Tu marca ↔ antecedente oficial</p></div><span className="border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-800">Revisar</span></div>
+    <div className="border border-white/10 bg-[#0D131A] p-6 shadow-2xl shadow-black/20 sm:p-8">
+      <div className="flex items-center justify-between border-b border-white/10 pb-5"><div><p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[#6F7A87]">Lectura de evidencia</p><p className="mt-2 text-lg font-medium text-white">Tu marca ↔ antecedente oficial</p></div><span className="border border-[#8D6E3F]/40 bg-[#8D6E3F]/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#D6B77A]">Revisar</span></div>
       <div className="grid gap-4 py-7 sm:grid-cols-2"><LogoPlaceholder label="Marca analizada" /><LogoPlaceholder label="Antecedente oficial" /></div>
-      <div className="grid grid-cols-2 border-t border-black/10 sm:grid-cols-4"><Evidence label="Nombre" value="Señal explicada" /><Evidence label="Fonética" value="Señal explicada" /><Evidence label="Visual" value="Si existe evidencia" /><Evidence label="Ámbito" value="Cobertura relacionada" /></div>
+      <div className="grid grid-cols-2 border-t border-white/10 sm:grid-cols-4"><Evidence label="Nombre" value="Señal explicada" /><Evidence label="Fonética" value="Señal explicada" /><Evidence label="Visual" value="Si existe evidencia" /><Evidence label="Ámbito" value="Cobertura relacionada" /></div>
     </div>
   )
 }
 
-function MiniSignal({ label, value }: { label: string; value: string }) { return <div><p className="text-[10px] uppercase tracking-[0.14em] text-[#98A2B3]">{label}</p><p className="mt-1 text-sm font-medium">{value}</p></div> }
-function LogoPlaceholder({ label }: { label: string }) { return <div className="border border-black/10 bg-[#F7F8F6] p-4"><p className="text-[10px] uppercase tracking-[0.14em] text-[#98A2B3]">{label}</p><div className="mt-4 flex h-28 items-center justify-center bg-white text-[#98A2B3]"><ImageIcon className="h-7 w-7" /></div></div> }
-function Evidence({ label, value }: { label: string; value: string }) { return <div className="border-r border-black/10 px-3 py-4 last:border-r-0"><p className="text-[10px] uppercase tracking-[0.12em] text-[#98A2B3]">{label}</p><p className="mt-1 text-xs font-medium">{value}</p></div> }
+function MiniSignal({ label, value }: { label: string; value: string }) { return <div><p className="text-[10px] uppercase tracking-[0.14em] text-[#687481]">{label}</p><p className="mt-1 text-sm font-medium text-[#E7ECEA]">{value}</p></div> }
+function LogoPlaceholder({ label }: { label: string }) { return <div className="border border-white/10 bg-[#0A0F15] p-4"><p className="text-[10px] uppercase tracking-[0.14em] text-[#687481]">{label}</p><div className="mt-4 flex h-28 items-center justify-center border border-white/[0.05] bg-[#111820] text-[#687481]"><ImageIcon className="h-7 w-7" /></div></div> }
+function Evidence({ label, value }: { label: string; value: string }) { return <div className="border-r border-white/10 px-3 py-4 last:border-r-0"><p className="text-[10px] uppercase tracking-[0.12em] text-[#687481]">{label}</p><p className="mt-1 text-xs font-medium text-[#E7ECEA]">{value}</p></div> }
