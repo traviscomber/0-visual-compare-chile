@@ -13,7 +13,7 @@ import { analyzeTrademarkVisualCandidates } from "@/lib/image/trademark-visual-s
 import { buildAttempt, maxTier, modelForTier, totalRoutingCostUsd, type ModelAttempt, type ModelRoutingSummary, type ModelTier } from "@/lib/ai/model-router"
 import type { Marca } from "@/types/marca"
 
-export interface TrademarkAgentRequest { imageBase64?: string; imageMimeType?: string; nombreMarca: string; descripcion?: string; industria?: string; visualScore?: number; repositorio?: Marca[] }
+export interface TrademarkAgentRequest { imageBase64?: string; imageMimeType?: string; nombreMarca: string; descripcion?: string; industria?: string; visualScore?: number; repositorio?: Marca[]; includeExecutiveReport?: boolean }
 export interface TrademarkInsightReport {
   marca: string; timestamp: string; costo_estimado_usd: number; tokens_totales: number
   routing: { max_tier_used: ModelTier; escalated: boolean; report: ModelRoutingSummary }
@@ -52,10 +52,16 @@ export class TrademarkAgent {
     catch (error) { console.error("[trademark-agent] INAPI unavailable", error); registrabilidad = buildUnavailableInapiResult(req.nombreMarca) }
     const visual_fingerprint = { codes: viena.codes.map((item) => item.code), categories: [...new Set(viena.codes.map((item) => item.code.split(".")[0]))], divisions: [...new Set(viena.codes.map((item) => item.code.split(".").slice(0, 2).join(".")))], labels: viena.codes.map((item) => item.titulo) }
     const reportTier = chooseReportTier({ viena, niza, conflictos, registrabilidad })
-    const informe = await this.generateReport({ nombreMarca: req.nombreMarca, viena, niza, conflictos, registrabilidad, visualScore: req.visualScore, tier: reportTier })
+    const includeExecutiveReport = req.includeExecutiveReport !== false
+    const informe = includeExecutiveReport
+      ? await this.generateReport({ nombreMarca: req.nombreMarca, viena, niza, conflictos, registrabilidad, visualScore: req.visualScore, tier: reportTier })
+      : buildPreviewReport(req.nombreMarca, conflictos, registrabilidad)
     const tokens_totales = viena.tokens_used + niza.tokens_used + informe.tokens_used
     const costo_estimado_usd = Number((viena.estimated_cost_usd + niza.estimated_cost_usd + informe.estimated_cost_usd).toFixed(6))
-    return { marca: req.nombreMarca, timestamp: new Date().toISOString(), costo_estimado_usd, tokens_totales, routing: { max_tier_used: maxTier(maxTier(viena.routing.final_tier, niza.routing.final_tier), informe.routing.final_tier), escalated: viena.routing.escalated || niza.routing.escalated || reportTier !== "luna", report: informe.routing }, viena, visual_fingerprint, niza, conflictos, registrabilidad, informe: informe.data, pipeline_ms: Date.now() - start }
+    const classifierTier = maxTier(viena.routing.final_tier, niza.routing.final_tier)
+    const maxTierUsed = includeExecutiveReport ? maxTier(classifierTier, informe.routing.final_tier) : classifierTier
+    const escalated = viena.routing.escalated || niza.routing.escalated || (includeExecutiveReport && reportTier !== "luna")
+    return { marca: req.nombreMarca, timestamp: new Date().toISOString(), costo_estimado_usd, tokens_totales, routing: { max_tier_used: maxTierUsed, escalated, report: informe.routing }, viena, visual_fingerprint, niza, conflictos, registrabilidad, informe: informe.data, pipeline_ms: Date.now() - start }
   }
 
   private async generateReport(params: { nombreMarca: string; viena: VienaClassification; niza: NizaClassification; conflictos: ConflictReport; registrabilidad?: TrademarkInsightReport["registrabilidad"]; visualScore?: number; tier: ModelTier }) {
@@ -114,6 +120,24 @@ export class TrademarkAgent {
 
 function chooseReportTier(params: { viena: VienaClassification; niza: NizaClassification; conflictos: ConflictReport; registrabilidad?: TrademarkInsightReport["registrabilidad"] }): ModelTier { const upstreamTier = maxTier(params.viena.routing.final_tier, params.niza.routing.final_tier); const low = params.registrabilidad?.calidad.confianza === "baja"; const high = params.conflictos.nivel_riesgo_global.toUpperCase() === "ALTO"; if (upstreamTier === "sol" || (low && high)) return "sol"; if (upstreamTier === "terra" || low || high) return "terra"; return "luna" }
 function reportConfidence(r?: TrademarkInsightReport["registrabilidad"]) { return r?.calidad.confianza === "alta" ? 0.95 : r?.calidad.confianza === "media" ? 0.75 : 0.45 }
+function buildPreviewReport(nombreMarca: string, conflictos: ConflictReport, registrabilidad?: TrademarkInsightReport["registrabilidad"]) {
+  const results = registrabilidad?.calidad.resultados_totales ?? 0
+  const active = registrabilidad?.calidad.resultados_activos ?? 0
+  const risk = normalizeRisk(conflictos.nivel_riesgo_global, "BAJO")
+  return {
+    data: {
+      resumen_ejecutivo: `La revisión de ${nombreMarca} recuperó ${results} antecedente${results === 1 ? "" : "s"} para análisis inicial.`,
+      analisis_conflictos: active > 0 ? `Se observaron ${active} antecedentes activos dentro de la cobertura recuperada.` : "No se observaron antecedentes activos dentro de la cobertura recuperada.",
+      nivel_riesgo_global: risk,
+      recomendaciones: ["Revisar los antecedentes priorizados y confirmar su estado directamente en INAPI."],
+      proximos_pasos: ["Ampliar la revisión profesional si alguna señal merece análisis adicional."],
+      disclaimer: "Evaluación preliminar basada en las fuentes disponibles. No constituye una decisión de INAPI ni reemplaza asesoría jurídica.",
+    },
+    tokens_used: 0,
+    estimated_cost_usd: 0,
+    routing: { final_tier: "luna", final_model: "not-used", escalated: false, attempts: [] } satisfies ModelRoutingSummary,
+  }
+}
 function calculateClassCoverage(marcas: Marca[], requested: Set<string>) { if (!requested.size) return 0; const covered = new Set<string>(); for (const marca of marcas) for (const code of marca.niza) if (requested.has(String(code))) covered.add(String(code)); return Math.round((covered.size / requested.size) * 100) }
 function determineConfidence(results: number, coverage: number, classes: number, strategies: number): "alta" | "media" | "baja" { if (strategies >= 2 && classes > 0 && results > 0 && coverage === 100) return "alta"; if (results > 0 || coverage > 0) return "media"; return "baja" }
 function toPrimaryReference(marca: Marca) { return { nombre: marca.nombre, solicitante: marca.solicitante || "Desconocido", clase_niza: marca.niza.join(", ") || "N/A", estado: marca.estado, fecha_registro: marca.fecha || "", pais: "Chile", numero_registro: marca.numeroRegistro || "", numero_solicitud: String(marca.metadata?.numSolicitud ?? "") } }
