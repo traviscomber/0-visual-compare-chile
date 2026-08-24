@@ -174,10 +174,46 @@ export default function LandingPage() {
             <div><p className="v-eyebrow">Inteligencia visual</p><h2 className="v-h2">Mira el conjunto, después entra al detalle.</h2></div>
             <p className="v-head-copy">Las coincidencias visuales se revisan dentro de una secuencia que mantiene la imagen, su contexto y el resto de señales disponibles en el mismo caso.</p>
           </div>
-          <div className="v-gallery v-reveal">
-            <figure><Image src="/images/comparison-example-1.jpg" alt="Ejemplo de comparación visual de marca" fill sizes="(max-width: 700px) 100vw, 62vw" /><figcaption>Comparación visual</figcaption></figure>
-            <figure><Image src="/images/comparison-example-2.jpg" alt="Detalle gráfico utilizado en una comparación visual" fill sizes="(max-width: 700px) 100vw, 34vw" /><figcaption>Detalle figurativo</figcaption></figure>
-            <figure><Image src="/images/comparison-example-3.jpg" alt="Segundo detalle gráfico para análisis comparativo" fill sizes="(max-width: 700px) 100vw, 34vw" /><figcaption>Evidencia relacionada</figcaption></figure>
+
+          <div className="v-visual-grid v-reveal" aria-label="Ejemplos representativos de comparación visual">
+            <article className="v-compare-card v-compare-card--primary">
+              <div className="v-compare-head">
+                <div><p className="v-compare-kicker">Comparación visual</p><h3 className="v-compare-title">Misma categoría, composición prácticamente idéntica.</h3></div>
+                <span className="v-compare-state">Coincidencia alta</span>
+              </div>
+              <div className="v-compare-pair">
+                <div className="v-compare-side"><span className="v-compare-label">Referencia A</span><Image src="/certificate-a.jpg" alt="Primer certificado usado como ejemplo representativo de comparación visual" fill sizes="(max-width: 700px) 42vw, 29vw" /></div>
+                <div className="v-compare-divider"><span className="v-compare-vs">VS</span></div>
+                <div className="v-compare-side"><span className="v-compare-label">Referencia B</span><Image src="/certificate-b.jpg" alt="Segundo certificado usado como ejemplo representativo de comparación visual" fill sizes="(max-width: 700px) 42vw, 29vw" /></div>
+              </div>
+              <div className="v-compare-meta"><span><strong>Lectura</strong> · estructura y elementos gráficos</span><span>Ejemplo representativo</span></div>
+            </article>
+
+            <article className="v-compare-card v-compare-card--compact">
+              <div className="v-compare-head">
+                <div><p className="v-compare-kicker">Detalle figurativo</p><h3 className="v-compare-title">Productos relacionados, señales visuales distintas.</h3></div>
+                <span className="v-compare-state">Similitud parcial</span>
+              </div>
+              <div className="v-compare-pair">
+                <div className="v-compare-side"><Image src="/product-a.jpg" alt="Primer producto usado como ejemplo representativo" fill sizes="(max-width: 700px) 42vw, 18vw" /></div>
+                <div className="v-compare-divider"><span className="v-compare-vs">VS</span></div>
+                <div className="v-compare-side"><Image src="/product-b.jpg" alt="Segundo producto usado como ejemplo representativo" fill sizes="(max-width: 700px) 42vw, 18vw" /></div>
+              </div>
+              <div className="v-compare-meta"><span><strong>Señales</strong> · forma, color, etiqueta</span><span>Ejemplo</span></div>
+            </article>
+
+            <article className="v-compare-card v-compare-card--compact">
+              <div className="v-compare-head">
+                <div><p className="v-compare-kicker">Evidencia relacionada</p><h3 className="v-compare-title">Signos de la misma clase, identidad diferenciable.</h3></div>
+                <span className="v-compare-state v-compare-state--muted">Contraste claro</span>
+              </div>
+              <div className="v-compare-pair">
+                <div className="v-compare-side"><Image src="/test-logo-a.png" alt="Primer signo gráfico usado como ejemplo representativo" fill sizes="(max-width: 700px) 42vw, 18vw" /></div>
+                <div className="v-compare-divider"><span className="v-compare-vs">VS</span></div>
+                <div className="v-compare-side"><Image src="/test-logo-b.png" alt="Segundo signo gráfico usado como ejemplo representativo" fill sizes="(max-width: 700px) 42vw, 18vw" /></div>
+              </div>
+              <div className="v-compare-meta"><span><strong>Lectura</strong> · símbolo y composición</span><span>Ejemplo</span></div>
+            </article>
           </div>
         </div>
       </section>
