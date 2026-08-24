@@ -1,62 +1,41 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { AlertTriangle, ArrowLeft, ArrowRight, Gauge, Radar, ShieldCheck, TimerReset } from "lucide-react"
+import { AlertTriangle, ArrowRight, Clock3, ShieldCheck, TimerReset } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { InterventionActions } from "@/components/cases/intervention-actions"
 import { buildPredictiveDecisionRisk, riskLabel, type RiskGovernance, type RiskLevel, type RiskReview } from "@/lib/cases/predictive-risk"
 import { createClient } from "@/lib/supabase/server"
 
 export const dynamic="force-dynamic"
-
 type CaseRow={id:string;title:string;priority:"low"|"normal"|"high";status:string;updated_at:string}
 const HOUR=3_600_000
 const median=(values:number[])=>{if(!values.length)return null;const s=[...values].sort((a,b)=>a-b);const m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2}
-const levelRank:Record<RiskLevel,number>={critical:0,high:1,medium:2,low:3}
+const rank:Record<RiskLevel,number>={critical:0,high:1,medium:2,low:3}
 
-export default async function PredictiveRiskPage(){
-  const supabase=await createClient()
-  const {data:auth}=await supabase.auth.getUser()
-  if(!auth.user)redirect("/auth/login?redirectTo=%2Fportfolio%2Frisk")
-
-  const {data:caseData,error:caseError}=await supabase.from("cases").select("id,title,priority,status,updated_at").not("status","in",'(\"decided\",\"archived\")').order("updated_at",{ascending:false}).limit(250)
-  if(caseError)throw new Error("No pudimos cargar el radar predictivo.")
-  const cases=(caseData??[]) as CaseRow[]
-  const caseIds=cases.map(c=>c.id)
-  const [{data:governanceData},{data:reviewData}]=caseIds.length?await Promise.all([
-    supabase.from("case_governance").select("case_id,current_round_id,round_deadline_at,required_approvals").in("case_id",caseIds),
-    supabase.from("case_review_requests").select("case_id,status,governance_round_id,created_at,responded_at,deadline_at").in("case_id",caseIds).order("created_at",{ascending:true}),
-  ]):[{data:[]},{data:[]}]
-  const governance=(governanceData??[]) as RiskGovernance[]
-  const reviews=(reviewData??[]) as RiskReview[]
-  const respondedHours=reviews.filter(r=>r.responded_at&&r.status!=="cancelled").map(r=>(Date.parse(r.responded_at!)-Date.parse(r.created_at))/HOUR).filter(v=>Number.isFinite(v)&&v>=0)
-  const historicalMedianResponseHours=median(respondedHours)
-  const govMap=new Map(governance.map(g=>[g.case_id,g]))
-  const reviewsByCase=new Map<string,RiskReview[]>()
-  for(const review of reviews)reviewsByCase.set(review.case_id,[...(reviewsByCase.get(review.case_id)??[]),review])
-
-  const items=cases.map(caseRow=>({caseRow,risk:buildPredictiveDecisionRisk({caseRow,governance:govMap.get(caseRow.id),reviews:reviewsByCase.get(caseRow.id)??[],historicalMedianResponseHours})}))
-    .sort((a,b)=>levelRank[a.risk.level]-levelRank[b.risk.level]||b.risk.score-a.risk.score)
-  const counts={critical:items.filter(i=>i.risk.level==="critical").length,high:items.filter(i=>i.risk.level==="high").length,medium:items.filter(i=>i.risk.level==="medium").length,low:items.filter(i=>i.risk.level==="low").length}
-  const elevated=items.filter(i=>i.risk.level==="critical"||i.risk.level==="high")
-
-  return <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:py-12">
-    <div className="mb-6"><Button asChild variant="ghost" size="sm"><Link href="/portfolio"><ArrowLeft className="mr-2 h-4 w-4"/>Volver al portafolio</Link></Button></div>
-    <section className="grid gap-7 border-b border-border pb-9 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
-      <div><Badge variant="secondary">Phase 20 · Recommended Interventions</Badge><h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-[-0.035em] sm:text-5xl lg:text-6xl">Detecta el riesgo y actúa antes del atraso.</h1><p className="mt-5 max-w-3xl text-base leading-7 text-muted-foreground sm:text-lg">El radar mantiene su score explicable y ahora convierte la recomendación en acciones ejecutables. Cada intervención requiere una acción humana y queda trazada en el expediente.</p></div>
-      <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-secondary/20 p-3"><Metric value={counts.critical} label="Riesgo crítico"/><Metric value={counts.high} label="Riesgo alto"/><Metric value={counts.medium} label="Riesgo medio"/><Metric value={counts.low} label="Riesgo bajo"/></div>
-    </section>
-
-    <section className="grid gap-5 py-9 lg:grid-cols-[1.25fr_0.75fr]">
-      <Card><CardHeader><div className="flex items-center justify-between gap-3"><div><p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Radar preventivo</p><CardTitle className="mt-2 text-xl">Intervenir antes del atraso</CardTitle></div><Radar className="h-5 w-5 text-muted-foreground"/></div></CardHeader><CardContent className="space-y-3">{elevated.length?elevated.slice(0,8).map(({caseRow,risk})=><div key={caseRow.id} className="rounded-xl border border-border p-4"><Link href={`/casos/${caseRow.id}/revision`} className="block transition-colors"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><RiskBadge level={risk.level}/><Badge variant="outline">Score {risk.score}</Badge></div><ArrowRight className="h-4 w-4 text-muted-foreground"/></div><p className="mt-3 text-sm font-medium">{caseRow.title}</p><p className="mt-2 text-xs leading-5 text-muted-foreground">{risk.reasons.join(" · ")||"Sin señales materiales de atraso."}</p><p className="mt-3 text-xs font-medium">{risk.recommendedAction}</p></Link><InterventionActions caseId={caseRow.id} priority={caseRow.priority} hasActiveRound={risk.pendingReviews>0}/></div>):<div className="rounded-xl border border-dashed p-8 text-center"><ShieldCheck className="mx-auto h-5 w-5"/><p className="mt-3 text-sm font-medium">No hay casos con riesgo alto o crítico.</p><p className="mt-1 text-sm text-muted-foreground">El radar no detecta señales fuertes de atraso en este momento.</p></div>}</CardContent></Card>
-      <Card><CardHeader><p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Modelo operativo</p><CardTitle className="mt-2 text-xl">Qué empuja el riesgo</CardTitle></CardHeader><CardContent className="space-y-3"><Factor icon={TimerReset} title="Espera vs historia" text={historicalMedianResponseHours===null?"Aún no hay muestra histórica suficiente.":`Mediana histórica del equipo: ${historicalMedianResponseHours<48?`${historicalMedianResponseHours.toFixed(1)} h`:`${(historicalMedianResponseHours/24).toFixed(1)} d`}.`}/><Factor icon={AlertTriangle} title="Deadline y bloqueos" text="El riesgo sube cuando una ronda entra en sus últimos 7, 3 o 1 días, o cuando ya existieron solicitudes de cambio."/><Factor icon={Gauge} title="Carga y prioridad" text="Más revisores pendientes, prioridad alta y falta de movimiento aumentan el score preventivo."/></CardContent></Card>
-    </section>
-
-    <section className="border-t border-border py-9"><div className="mb-5"><p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Todos los casos activos</p><h2 className="mt-2 text-2xl font-semibold">Riesgo ordenado por intervención</h2></div><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{items.map(({caseRow,risk})=><Link key={caseRow.id} href={`/casos/${caseRow.id}`} className="rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-0.5 hover:shadow-md"><div className="flex items-center justify-between gap-2"><RiskBadge level={risk.level}/><span className="text-sm font-semibold">{risk.score}/100</span></div><h3 className="mt-4 text-base font-semibold">{caseRow.title}</h3><p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">{risk.reasons[0]??"Sin señales materiales de atraso."}</p><div className="mt-4 text-xs text-muted-foreground">{risk.pendingReviews} revisión{risk.pendingReviews===1?"":"es"} pendiente{risk.pendingReviews===1?"":"s"}</div></Link>)}</div></section>
-  </div>
+export default async function PortfolioRiskPage(){
+ const supabase=await createClient();const {data:auth}=await supabase.auth.getUser();if(!auth.user)redirect("/auth/login?redirectTo=%2Fportfolio%2Frisk")
+ const {data:caseData,error}=await supabase.from("cases").select("id,title,priority,status,updated_at").not("status","in",'(\"decided\",\"archived\")').order("updated_at",{ascending:false}).limit(250)
+ if(error)throw new Error("No pudimos cargar el riesgo operativo.")
+ const cases=(caseData??[]) as CaseRow[];const ids=cases.map(c=>c.id)
+ const [gResult,rResult]=ids.length?await Promise.all([
+  supabase.from("case_governance").select("case_id,current_round_id,round_deadline_at,required_approvals").in("case_id",ids),
+  supabase.from("case_review_requests").select("case_id,status,governance_round_id,created_at,responded_at,deadline_at").in("case_id",ids).order("created_at",{ascending:true}),
+ ]):[{data:[],error:null},{data:[],error:null}]
+ if(gResult.error||rResult.error)throw new Error("No pudimos completar el riesgo operativo.")
+ const governance=(gResult.data??[]) as RiskGovernance[];const reviews=(rResult.data??[]) as RiskReview[]
+ const responseHours=reviews.filter(r=>r.responded_at&&r.status!=="cancelled").map(r=>(Date.parse(r.responded_at!)-Date.parse(r.created_at))/HOUR).filter(v=>Number.isFinite(v)&&v>=0)
+ const historical=median(responseHours);const govMap=new Map(governance.map(g=>[g.case_id,g]));const byCase=new Map<string,RiskReview[]>()
+ for(const review of reviews)byCase.set(review.case_id,[...(byCase.get(review.case_id)??[]),review])
+ const items=cases.map(caseRow=>({caseRow,risk:buildPredictiveDecisionRisk({caseRow,governance:govMap.get(caseRow.id),reviews:byCase.get(caseRow.id)??[],historicalMedianResponseHours:historical})})).sort((a,b)=>rank[a.risk.level]-rank[b.risk.level]||b.risk.score-a.risk.score)
+ const counts={critical:items.filter(i=>i.risk.level==="critical").length,high:items.filter(i=>i.risk.level==="high").length,medium:items.filter(i=>i.risk.level==="medium").length,low:items.filter(i=>i.risk.level==="low").length};const elevated=items.filter(i=>i.risk.level==="critical"||i.risk.level==="high")
+ return <div className="mx-auto w-full max-w-[1480px] px-4 py-9 sm:px-6 lg:px-8 lg:py-12">
+  <header className="grid gap-8 border-b border-border pb-9 lg:grid-cols-[0.82fr_1.18fr] lg:items-end"><div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">VIDENTIA / Portafolio / Riesgo operativo</p><h1 className="mt-4 max-w-[11ch] text-4xl font-normal leading-[0.96] tracking-[-0.05em] text-foreground sm:text-5xl lg:text-6xl">Detecta dónde puede atascarse una decisión.</h1></div><div className="max-w-2xl lg:justify-self-end"><p className="text-base leading-7 text-muted-foreground sm:text-lg">La prioridad combina plazos, revisiones pendientes, bloqueos, carga y tiempo sin movimiento. Mostramos las razones observables; el score interno sólo ordena la cola.</p><div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-muted-foreground"><span>Razones visibles</span><span>Riesgo operativo</span><span>Acción humana</span></div></div></header>
+  <section className="grid border-b border-border sm:grid-cols-2 lg:grid-cols-4"><Metric value={counts.critical} label="Crítico" tone="danger"/><Metric value={counts.high} label="Alto" tone="warning"/><Metric value={counts.medium} label="Medio"/><Metric value={counts.low} label="Bajo" tone="success"/></section>
+  <section className="grid gap-10 border-b border-border py-10 xl:grid-cols-[1.3fr_0.7fr]"><div><Heading kicker="Atención prioritaria" title="Casos donde conviene intervenir"/><div className="mt-5 divide-y divide-border border-y border-border">{elevated.length?elevated.slice(0,10).map(({caseRow,risk})=><article key={caseRow.id} className="py-5"><Link href={`/casos/${caseRow.id}/revision`} className="group block outline-none focus-visible:bg-secondary/20"><div className="flex items-center justify-between gap-3"><RiskBadge level={risk.level}/><ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1"/></div><h3 className="mt-3 text-base font-semibold text-foreground">{caseRow.title}</h3><div className="mt-3 space-y-1">{risk.reasons.slice(0,4).map((reason,index)=><p key={index} className="text-xs leading-5 text-muted-foreground">{reason}</p>)}</div><p className="mt-3 text-sm font-medium text-foreground">{risk.recommendedAction}</p></Link><InterventionActions caseId={caseRow.id} priority={caseRow.priority} hasActiveRound={risk.pendingReviews>0}/></article>):<div className="py-10"><ShieldCheck className="h-5 w-5 text-primary"/><p className="mt-3 text-sm font-semibold text-foreground">No hay casos con riesgo alto o crítico.</p></div>}</div></div><aside><Heading kicker="Cómo se interpreta" title="Factores observables"/><div className="mt-5 divide-y divide-border border-y border-border"><Factor icon={TimerReset} title="Espera vs. historia" text={historical===null?"Aún no hay muestra histórica suficiente.":`Mediana histórica de respuesta: ${historical<48?`${historical.toFixed(1)} h`:`${(historical/24).toFixed(1)} d`}.`}/><Factor icon={Clock3} title="Plazo y bloqueos" text="Una ronda gana prioridad cuando entra en su ventana final, vence o recibe solicitud de cambios."/><Factor icon={AlertTriangle} title="Carga y movimiento" text="Más revisiones pendientes y falta de actividad elevan la necesidad de intervención."/></div></aside></section>
+  <section className="py-10"><Heading kicker="Casos activos" title="Orden operativo"/><div className="mt-5 divide-y divide-border border-y border-border">{items.map(({caseRow,risk})=><Link key={caseRow.id} href={`/casos/${caseRow.id}`} className="group grid gap-3 py-5 outline-none hover:bg-secondary/15 focus-visible:bg-secondary/20 sm:grid-cols-[1fr_auto] sm:items-center"><div><div className="flex flex-wrap items-center gap-2"><RiskBadge level={risk.level}/><span className="text-xs text-muted-foreground">{risk.pendingReviews} pendiente{risk.pendingReviews===1?"":"s"}</span></div><h3 className="mt-3 font-semibold text-foreground">{caseRow.title}</h3><p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{risk.reasons[0]??"Sin señales materiales de atraso."}</p></div><ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1"/></Link>)}</div></section>
+ </div>
 }
-
-function Metric({value,label}:{value:number;label:string}){return <div className="rounded-xl bg-background/70 p-4"><div className="text-2xl font-semibold">{value}</div><div className="mt-1 text-xs leading-5 text-muted-foreground">{label}</div></div>}
-function RiskBadge({level}:{level:RiskLevel}){return <Badge variant={level==="critical"||level==="high"?"destructive":"secondary"}>{riskLabel[level]}</Badge>}
-function Factor({icon:Icon,title,text}:{icon:typeof Gauge;title:string;text:string}){return <div className="flex gap-3 rounded-xl border border-border p-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-secondary"><Icon className="h-4 w-4"/></span><div><p className="text-sm font-medium">{title}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{text}</p></div></div>}
+function Heading({kicker,title}:{kicker:string;title:string}){return <div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">{kicker}</p><h2 className="mt-2 text-2xl font-normal tracking-[-0.03em] text-foreground">{title}</h2></div>}
+function Metric({value,label,tone="neutral"}:{value:number;label:string;tone?:"neutral"|"danger"|"warning"|"success"}){const color=tone==="danger"?"text-red-300":tone==="warning"?"text-amber-200":tone==="success"?"text-primary":"text-foreground";return <div className="border-b border-border py-6 sm:border-b-0 sm:border-r sm:px-5 first:pl-0 last:border-r-0"><p className={`text-3xl font-semibold ${color}`}>{value}</p><p className="mt-1 text-sm font-semibold text-foreground">{label}</p></div>}
+function RiskBadge({level}:{level:RiskLevel}){const cls=level==="critical"?"border-red-400/20 bg-red-400/[0.06] text-red-300":level==="high"?"border-amber-300/20 bg-amber-300/[0.06] text-amber-200":level==="low"?"border-primary/20 bg-primary/[0.07] text-primary":"border-border bg-card/30 text-muted-foreground";return <Badge variant="outline" className={`rounded-md ${cls}`}>{riskLabel[level]}</Badge>}
+function Factor({icon:Icon,title,text}:{icon:typeof TimerReset;title:string;text:string}){return <div className="flex gap-3 py-4"><span className="flex h-8 w-8 shrink-0 items-center justify-center border border-border bg-card/40 text-muted-foreground"><Icon className="h-3.5 w-3.5"/></span><div><p className="text-sm font-medium text-foreground">{title}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{text}</p></div></div>}
