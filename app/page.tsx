@@ -11,7 +11,7 @@ const signals = [
 const workflow = [
   ["Busca", "Parte desde un nombre, logo, fotografía o una combinación."],
   ["Entiende", "VIDENTIA ordena antecedentes, señales y evidencia verificable."],
-  ["Revisa", "Identifica por qué un antecedente merece atención sin depender de un score opaco."],
+  ["Decide", "Pone la evidencia en contexto para priorizar qué requiere revisión profesional, sin dictar un resultado jurídico."],
   ["Vigila", "Conserva la investigación y detecta cambios posteriores."],
 ]
 
@@ -57,7 +57,7 @@ export default function LandingPage() {
             <p className="v-kicker"><span /> Inteligencia marcaria para Chile</p>
             <h1>Investiga una marca con <em>evidencia</em> y <em>contexto verificable.</em></h1>
             <p className="v-lede">VIDENTIA reúne antecedentes marcarios, señales denominativas y visuales, contexto del titular y vigilancia en una revisión clara y trazable.</p>
-            <div className="v-actions"><Link href="/demo" className="v-btn v-btn--primary">Analizar una marca <ArrowRight size={16}/></Link><Link href="/contacto" className="v-btn v-btn--ghost">Contacto comercial</Link></div>
+            <div className="v-actions"><Link href="/demo" className="v-btn v-btn--primary">Evaluar una marca <ArrowRight size={16}/></Link><Link href="/contacto" className="v-btn v-btn--ghost">Contacto comercial</Link></div>
             <div className="v-proof-chips"><span>INAPI</span><span>Niza + Viena</span><span>TDPI</span><span>Evidencia trazable</span></div>
           </div>
 
@@ -113,14 +113,14 @@ export default function LandingPage() {
             <span className="v-editorial-note">Fotografía editorial · no representa un expediente real</span>
           </div>
           <div className="v-editorial-frame v-reveal" role="img" aria-label="Escena editorial de revisión documental; imagen atmosférica y no captura del producto">
-            <div className="v-editorial-index"><span>VIDENTIA / FIELD NOTE</span><span>Contexto antes de decisión</span></div>
+            <div className="v-editorial-index"><span>VIDENTIA / NOTA DE CAMPO</span><span>Contexto antes de decidir</span></div>
             <div className="v-editorial-tags"><span>Fuente pública</span><span>Relaciones</span><span>Revisión profesional</span><span>Seguimiento</span></div>
           </div>
         </div>
       </section>
 
       <section id="metodo" className="v-section v-process-section">
-        <div className="v-shell"><div className="v-process-head v-reveal"><p className="v-eyebrow">Cómo funciona</p><h2>De una búsqueda puntual a una investigación continua.</h2></div><div className="v-process-grid v-reveal">{workflow.map(([title,copy],i)=><article key={title} className="v-process-step"><span>0{i+1}</span><i/><h3>{title}</h3><p>{copy}</p></article>)}</div></div>
+        <div className="v-shell"><div className="v-process-head v-reveal"><p className="v-eyebrow">Cómo funciona</p><h2>Busca. Entiende. Decide. Vigila.</h2></div><div className="v-process-grid v-reveal">{workflow.map(([title,copy],i)=><article key={title} className="v-process-step"><span>0{i+1}</span><i/><h3>{title}</h3><p>{copy}</p></article>)}</div></div>
       </section>
 
       <section className="v-section v-compare-section">
@@ -136,7 +136,13 @@ export default function LandingPage() {
       <section id="empresas" className="v-section v-enterprise-section"><div className="v-shell v-enterprise-grid"><div className="v-reveal"><p className="v-eyebrow">Para organizaciones</p><h2>Plataforma o API, con la misma trazabilidad.</h2><p>Integra búsqueda, evaluación, contexto y vigilancia marcaria en la operación de tu equipo.</p></div><div className="v-offers v-reveal"><article><small>Plataforma</small><h3>VIDENTIA Enterprise</h3><p>Investigación, casos, evidencia y vigilancia en una experiencia completa.</p></article><article><small>API</small><h3>VIDENTIA API</h3><p>Capacidades marcarias integradas directamente en sistemas y procesos del cliente.</p></article></div></div><div className="v-shell v-faqs">{faqs.map(([q,a])=><article key={q}><h3>{q}</h3><p>{a}</p></article>)}</div></section>
 
       <section className="v-final"><div className="v-shell v-reveal"><p className="v-eyebrow">VIDENTIA</p><h2>Investiga antes de decidir. Conserva la evidencia después.</h2><div className="v-actions"><Link href="/demo" className="v-btn v-btn--primary">Probar VIDENTIA <ArrowRight size={16}/></Link><Link href="/contacto" className="v-btn v-btn--ghost">Hablar con el equipo</Link></div></div></section>
-      <footer className="v-footer"><div className="v-shell"><span>VIDENTIA · Inteligencia marcaria para Chile</span><span>Una solución de N3uralia</span></div></footer>
+      <footer className="v-footer">
+        <div className="v-shell v-footer-grid">
+          <div className="v-footer-brand"><strong>VIDENTIA</strong><span>Inteligencia para marcas en Chile</span></div>
+          <p>VIDENTIA apoya investigación y revisión de evidencia. No reemplaza la evaluación jurídica profesional ni las fuentes oficiales.</p>
+          <span className="v-footer-credit">Un desarrollo de <a href="https://www.n3uralia.com" target="_blank" rel="noreferrer">N3uralia</a></span>
+        </div>
+      </footer>
     </main>
   )
 }
