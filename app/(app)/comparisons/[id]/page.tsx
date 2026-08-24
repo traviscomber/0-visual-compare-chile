@@ -5,10 +5,9 @@ import { ComparisonResultView } from "@/components/app/comparison-result-view"
 import { DeleteComparisonButton } from "@/components/app/delete-comparison-button"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getOperationalClassificationLabel } from "@/lib/classification-knowledge"
 import { resolveBrandContext, resolveComparisonOcr } from "@/lib/comparison/context"
-import { classificationLabel, classificationTone, formatDateLong } from "@/lib/format"
+import { classificationLabel, formatDateLong } from "@/lib/format"
 import { createSignedImageUrl } from "@/lib/storage"
 import { createClient } from "@/lib/supabase/server"
 import type {
@@ -50,9 +49,7 @@ interface ResultJson {
   brand_context?: BrandTaxonomyContext | null
 }
 
-function exifSummaryFromJson(
-  e: NonNullable<ResultJson["exif"]>["a"] | undefined,
-): ExifSummary | null {
+function exifSummaryFromJson(e: NonNullable<ResultJson["exif"]>["a"] | undefined): ExifSummary | null {
   if (!e) return null
   const camera = [e.camera_make, e.camera_model].filter(Boolean).join(" ").trim() || null
   return {
@@ -64,25 +61,18 @@ function exifSummaryFromJson(
   }
 }
 
-export default async function ComparisonDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
+export default async function ComparisonDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
   let user = null
 
   try {
-    const result = await supabase.auth.getUser()
-    user = result.data.user
+    user = (await supabase.auth.getUser()).data.user
   } catch {
     user = null
   }
 
-  if (!user) {
-    redirect(`/auth/login?redirectTo=${encodeURIComponent(`/comparisons/${id}`)}`)
-  }
+  if (!user) redirect(`/auth/login?redirectTo=${encodeURIComponent(`/comparisons/${id}`)}`)
 
   const { data: comparison, error } = await supabase
     .from("comparisons")
@@ -103,7 +93,6 @@ export default async function ComparisonDetailPage({
 
   const imgA = images?.find((image) => image.id === comparison.image_a_id) ?? null
   const imgB = images?.find((image) => image.id === comparison.image_b_id) ?? null
-
   const resultJson = (comparison.result_json as ResultJson | null) ?? null
   const elaPathA = resultJson?.ela?.a?.storage_path ?? null
   const elaPathB = resultJson?.ela?.b?.storage_path ?? null
@@ -116,9 +105,7 @@ export default async function ComparisonDetailPage({
   const [urlA, urlB, diffUrl, elaUrlA, elaUrlB] = await Promise.all([
     imgA ? createSignedImageUrl(supabase, imgA.storage_path) : Promise.resolve(null),
     imgB ? createSignedImageUrl(supabase, imgB.storage_path) : Promise.resolve(null),
-    comparison.diff_storage_path
-      ? createSignedImageUrl(supabase, comparison.diff_storage_path)
-      : Promise.resolve(null),
+    comparison.diff_storage_path ? createSignedImageUrl(supabase, comparison.diff_storage_path) : Promise.resolve(null),
     elaPathA ? createSignedImageUrl(supabase, elaPathA) : Promise.resolve(null),
     elaPathB ? createSignedImageUrl(supabase, elaPathB) : Promise.resolve(null),
   ])
@@ -140,142 +127,69 @@ export default async function ComparisonDetailPage({
     created_at: comparison.created_at,
   }
 
-  const score = Math.round(Number(result.similarity_score))
-  const tone = classificationTone(result.classification)
-  const phashDistance = result.signals.phash_distance
-  const phashSimilarity = Math.round(result.signals.phash_similarity)
-  const pixelSimilarity =
-    result.signals.pixel_similarity != null ? Math.round(result.signals.pixel_similarity) : null
   const sharedNiza = brandContext?.shared_niza ?? []
   const sharedViena = brandContext?.shared_viena ?? []
-  const forensicsState = result.signals.forensics.ela_alert
-    ? "Alerta ELA"
-    : result.signals.forensics.any_edited
-      ? "Editada"
-      : "Sin alertas"
-  const operationalRisk =
-    result.signals.forensics.ela_alert || score >= 85 || result.classification === "exact_match"
-      ? "Revision prioritaria"
-      : score >= 60 || result.classification === "visually_similar"
-        ? "Revision media"
-        : "Bajo"
   const evidenceCoverage = buildEvidenceCoverage(result)
-  const consultationRoute =
-    sharedNiza.length || sharedViena.length
-      ? `${sharedNiza.length + sharedViena.length} cruces`
-      : "Sin cruce"
-  const nextAction = buildNextAction({
-    operationalRisk,
-    evidenceCoverage,
-    sharedNizaCount: sharedNiza.length,
-    sharedVienaCount: sharedViena.length,
-  })
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-10">
-      <div className="flex items-center justify-between gap-4">
-        <Button variant="ghost" asChild className="gap-1 -ml-2">
+    <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-7 px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+        <Button variant="ghost" asChild className="-ml-3">
           <Link href="/history">
-            <ArrowLeft className="h-4 w-4" />
-            Volver al historial
+            <ArrowLeft className="mr-2 h-4 w-4" /> Volver a Actividad
           </Link>
         </Button>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">{formatDateLong(comparison.created_at)}</span>
+          <span className="text-xs text-muted-foreground">{formatDateLong(comparison.created_at)}</span>
           <DeleteComparisonButton id={comparison.id} redirectTo="/history" />
         </div>
       </div>
 
-      <div>
-        <h1 className="font-serif text-3xl text-foreground">Detalle de comparacion</h1>
-        <p className="mt-1 text-muted-foreground">
-          Analisis completo y senales utilizadas para la clasificacion.
+      <header className="grid gap-6 border-b border-border pb-7 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+        <div>
+          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">VIDENTIA / Evidencia visual</p>
+          <h1 className="mt-3 text-4xl font-medium tracking-[-0.04em] text-foreground sm:text-5xl">Comparación guardada.</h1>
+          <p className="mt-3 max-w-2xl text-base leading-7 text-muted-foreground">
+            Registro técnico de una comparación persistida, con sus imágenes, señales, artefactos y contexto marcario disponible.
+          </p>
+        </div>
+        <p className="border-l border-border pl-5 text-sm leading-6 text-muted-foreground">
+          La comparación organiza evidencia visual. No determina confundibilidad jurídica, registrabilidad ni una decisión de INAPI.
         </p>
-      </div>
+      </header>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="font-serif text-xl">Resumen operativo</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-5">
-          <SummaryStat
-            label="Veredicto"
-            value={classificationLabel(result.classification)}
-            helper={`${score}% de similitud`}
-            tone={tone}
-          />
-          <SummaryStat label="Riesgo" value={operationalRisk} helper={forensicsState} tone={tone} />
-          <SummaryStat
-            label="pHash"
-            value={`${phashSimilarity}%`}
-            helper={phashDistance != null ? `Distancia ${phashDistance} bits` : "Sin dato"}
-            tone="neutral"
-          />
-          <SummaryStat
-            label="Diff visual"
-            value={pixelSimilarity != null ? `${pixelSimilarity}%` : "No disponible"}
-            helper={pixelSimilarity != null ? "Senal principal del motor" : "Fallback pHash + metadatos"}
-            tone="neutral"
-          />
-          <SummaryStat
-            label="Cobertura"
-            value={evidenceCoverage}
-            helper={consultationRoute}
-            tone="neutral"
-          />
-        </CardContent>
-      </Card>
+      <section className="grid border-y border-border sm:grid-cols-4">
+        <DetailStat label="Lectura técnica" value={classificationLabel(result.classification)} />
+        <DetailStat label="Cobertura" value={evidenceCoverage} />
+        <DetailStat label="Niza compartida" value={sharedNiza.length ? String(sharedNiza.length) : "—"} />
+        <DetailStat label="Viena compartida" value={sharedViena.length ? String(sharedViena.length) : "—"} />
+      </section>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="font-serif text-xl">Ruta operativa recomendada</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">{nextAction}</p>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">Clases Niza compartidas</div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {sharedNiza.length > 0 ? (
-                  sharedNiza.map((code) => (
-                    <Link key={`summary-niza-${code}`} href={`/consulta?type=niza&q=${encodeURIComponent(code)}`}>
-                      <Badge variant="outline" className="gap-1 hover:bg-background">
-                        <span>Niza {code}</span>
-                        <span className="text-muted-foreground">
-                          {getOperationalClassificationLabel("niza", code)}
-                        </span>
-                      </Badge>
-                    </Link>
-                  ))
-                ) : (
-                  <Badge variant="secondary">Sin clase Niza compartida</Badge>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">Codigos Viena compartidos</div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {sharedViena.length > 0 ? (
-                  sharedViena.map((code) => (
-                    <Link key={`summary-viena-${code}`} href={`/consulta?type=viena&q=${encodeURIComponent(code)}`}>
-                      <Badge variant="outline" className="gap-1 hover:bg-background">
-                        <span>Viena {code}</span>
-                        <span className="text-muted-foreground">
-                          {getOperationalClassificationLabel("viena", code)}
-                        </span>
-                      </Badge>
-                    </Link>
-                  ))
-                ) : (
-                  <Badge variant="secondary">Sin codigo Viena compartido</Badge>
-                )}
-              </div>
-            </div>
+      {(sharedNiza.length > 0 || sharedViena.length > 0) && (
+        <section className="border-y border-border px-5 py-5 sm:px-6">
+          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Continuar investigación</p>
+          <h2 className="mt-2 text-xl font-medium text-foreground">Clasificaciones compartidas detectadas</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+            Usa estas señales para abrir una investigación más amplia; son contexto, no una conclusión por sí mismas.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {sharedNiza.map((code) => (
+              <Link key={`detail-niza-${code}`} href={`/investigar?q=${encodeURIComponent(code)}`}>
+                <Badge variant="outline" className="gap-1 hover:bg-secondary/30">
+                  Niza {code} · {getOperationalClassificationLabel("niza", code)}
+                </Badge>
+              </Link>
+            ))}
+            {sharedViena.map((code) => (
+              <Link key={`detail-viena-${code}`} href={`/investigar?q=${encodeURIComponent(code)}`}>
+                <Badge variant="outline" className="gap-1 hover:bg-secondary/30">
+                  Viena {code} · {getOperationalClassificationLabel("viena", code)}
+                </Badge>
+              </Link>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        </section>
+      )}
 
       <ComparisonResultView
         result={result}
@@ -286,72 +200,23 @@ export default async function ComparisonDetailPage({
   )
 }
 
-function SummaryStat({
-  label,
-  value,
-  helper,
-  tone,
-}: {
-  label: string
-  value: string
-  helper: string
-  tone: ReturnType<typeof classificationTone> | "neutral"
-}) {
-  const toneStyles =
-    tone === "danger"
-      ? "border-destructive bg-destructive/5 text-destructive"
-      : tone === "warn"
-        ? "border-warning bg-warning/5 text-warning"
-        : tone === "ok"
-          ? "border-success bg-success/5 text-success"
-          : "border-border bg-card text-foreground"
-
+function DetailStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className={`rounded-lg border p-4 ${toneStyles}`}>
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
-        <Badge variant="outline" className="text-[10px]">
-          Operativo
-        </Badge>
-      </div>
-      <div className="mt-2 text-2xl font-serif font-semibold">{value}</div>
-      <p className="mt-1 text-xs text-muted-foreground">{helper}</p>
+    <div className="border-b border-border py-4 sm:border-b-0 sm:border-r sm:px-5 sm:first:pl-0 sm:last:border-r-0">
+      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+      <p className="mt-2 text-lg font-medium text-foreground">{value}</p>
     </div>
   )
 }
 
 function buildEvidenceCoverage(result: ComparisonResultPayload): string {
-  let score = 0
-  if (result.signals.pixel_similarity != null) score += 1
-  if (result.ocr_a?.text || result.ocr_b?.text) score += 1
-  if (result.exif_a || result.exif_b) score += 1
-  if (result.brand_context?.shared_niza?.length || result.brand_context?.shared_viena?.length) score += 1
+  let coverage = 0
+  if (result.signals.pixel_similarity != null) coverage += 1
+  if (result.ocr_a?.text || result.ocr_b?.text) coverage += 1
+  if (result.exif_a || result.exif_b) coverage += 1
+  if (result.brand_context?.shared_niza?.length || result.brand_context?.shared_viena?.length) coverage += 1
 
-  if (score >= 4) return "Alta"
-  if (score >= 2) return "Media"
-  return "Basica"
-}
-
-function buildNextAction({
-  operationalRisk,
-  evidenceCoverage,
-  sharedNizaCount,
-  sharedVienaCount,
-}: {
-  operationalRisk: string
-  evidenceCoverage: string
-  sharedNizaCount: number
-  sharedVienaCount: number
-}) {
-  if (operationalRisk === "Revision prioritaria") {
-    return sharedNizaCount || sharedVienaCount
-      ? "Escala esta comparacion a revision humana y abre Consulta sobre las clasificaciones compartidas antes de aprobar cualquier uso."
-      : "Escala esta comparacion a revision humana. El riesgo es alto aunque aun no haya cruce claro de clasificaciones."
-  }
-
-  if (evidenceCoverage === "Alta") {
-    return "La evidencia es suficiente para seguir con consulta reglada en Niza y Viena desde este mismo resultado."
-  }
-
-  return "Completa la validacion con una nueva carga o una consulta dirigida para reforzar el contexto de marca antes de decidir."
+  if (coverage >= 4) return "Alta"
+  if (coverage >= 2) return "Media"
+  return "Básica"
 }
