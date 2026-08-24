@@ -1,7 +1,6 @@
 import Link from "next/link"
 import { CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { safeInternalRedirect } from "@/lib/redirect"
 
 export default async function SignUpSuccessPage({
@@ -13,23 +12,22 @@ export default async function SignUpSuccessPage({
   const next = safeInternalRedirect(params?.next)
 
   return (
-    <div className="flex min-h-svh w-full items-center justify-center bg-background p-6">
-      <Card className="w-full max-w-md rounded-2xl">
-        <CardHeader>
-          <div className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-            <CheckCircle2 className="h-5 w-5" />
-          </div>
-          <CardTitle>Revisa tu correo</CardTitle>
-          <CardDescription>
-            Te enviamos un correo de confirmacion. Confirma tu cuenta para acceder a Visual Compare Chile.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild variant="outline" className="w-full bg-transparent">
-            <Link href={`/auth/login?redirectTo=${encodeURIComponent(next)}`}>Volver al inicio de sesion</Link>
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+    <main className="min-h-svh bg-background px-5 py-8 text-foreground sm:px-8">
+      <div className="mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-xl flex-col justify-center">
+        <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">VIDENTIA / Confirmar cuenta</p>
+        <CheckCircle2 className="mt-6 h-6 w-6 text-primary" />
+        <h1 className="mt-4 text-4xl font-medium tracking-[-0.045em] sm:text-5xl">Revisa tu correo.</h1>
+        <p className="mt-4 max-w-lg text-sm leading-6 text-muted-foreground">
+          Te enviamos un enlace de confirmación. Al validarlo, volverás a VIDENTIA y podrás continuar hacia tu espacio de trabajo.
+        </p>
+        <div className="mt-8 border-y border-border py-5">
+          <p className="text-sm text-foreground">El enlace confirma la dirección de correo asociada a tu cuenta.</p>
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">Si no lo ves, revisa spam o correo no deseado antes de intentar crear otra cuenta.</p>
+        </div>
+        <Button asChild variant="outline" className="mt-6 w-full sm:w-auto">
+          <Link href={`/auth/login?redirectTo=${encodeURIComponent(next)}`}>Volver al acceso</Link>
+        </Button>
+      </div>
+    </main>
   )
 }
