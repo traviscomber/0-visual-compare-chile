@@ -160,6 +160,8 @@
 @keyframes slide-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes scale-in { from { opacity: 0; transform: scale(0.99); } to { opacity: 1; transform: scale(1); } }
+@keyframes videntia-drift { 0%, 100% { transform: translate3d(0,0,0) scale(1); opacity: .62; } 50% { transform: translate3d(-2.5%,2%,0) scale(1.05); opacity: .9; } }
+@keyframes videntia-pulse { 0%, 100% { opacity: .55; transform: scale(1); } 50% { opacity: .9; transform: scale(1.18); } }
 .animate-slide-up { animation: slide-up 0.28s ease-out; }
 .animate-fade-in { animation: fade-in 0.24s ease-out; }
 .animate-scale-in { animation: scale-in 0.2s ease-out; }
@@ -169,3 +171,180 @@
 .hover-glow { @apply transition duration-200; }
 .smooth-transition { @apply transition-all duration-200 ease-out; }
 .gradient-text { color: #0f766e; }
+
+/* VIDENTIA public-home visual refinement. Scoped via its unique public navigation links. */
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(1200px 680px at 82% 2%, rgba(58, 184, 164, .08), transparent 62%),
+    radial-gradient(900px 540px at -10% 24%, rgba(63, 91, 122, .08), transparent 66%),
+    #090d12;
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"])::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .17;
+  background-image:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(to bottom, #000 0%, transparent 72%);
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > nav {
+  background: rgba(7, 11, 16, .76) !important;
+  border-color: rgba(255,255,255,.075) !important;
+  box-shadow: 0 10px 34px rgba(0,0,0,.18);
+  backdrop-filter: blur(22px) saturate(135%);
+  -webkit-backdrop-filter: blur(22px) saturate(135%);
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > nav > div {
+  height: 80px !important;
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > nav a[aria-label="VIDENTIA"] > span:first-child {
+  background: linear-gradient(145deg, rgba(255,255,255,.085), rgba(255,255,255,.018)) !important;
+  border-color: rgba(126,227,210,.22) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 12px 30px rgba(0,0,0,.24);
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type {
+  min-height: min(900px, 94vh);
+  display: flex;
+  align-items: center;
+  border-color: rgba(255,255,255,.075) !important;
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type::after {
+  content: "";
+  position: absolute;
+  width: 520px;
+  height: 520px;
+  right: 8%;
+  top: 14%;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(66,196,174,.12) 0%, rgba(30,125,112,.055) 36%, transparent 70%);
+  filter: blur(18px);
+  animation: videntia-drift 14s ease-in-out infinite;
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) h1 {
+  text-wrap: balance;
+  text-shadow: 0 14px 54px rgba(0,0,0,.24);
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) h2,
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) h3 {
+  text-wrap: balance;
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) button {
+  transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease !important;
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) a:hover > button {
+  transform: translateY(-1px);
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) a[href="/demo"] > button:not([class*="ghost"]) {
+  box-shadow: 0 10px 28px rgba(0,0,0,.2);
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section article {
+  position: relative;
+  overflow: hidden;
+  transition: transform 220ms ease, border-color 220ms ease, background-color 220ms ease, box-shadow 220ms ease !important;
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section article::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), rgba(100,213,194,.09), transparent 55%);
+  transition: opacity 220ms ease;
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section article:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 52px rgba(0,0,0,.18);
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section article:hover::after {
+  opacity: 1;
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="producto"] article {
+  min-height: 238px;
+  background: linear-gradient(180deg, rgba(17,24,32,.96), rgba(11,17,23,.98)) !important;
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="producto"] article svg {
+  filter: drop-shadow(0 0 18px rgba(100,213,194,.15));
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="empresas"] article {
+  background:
+    linear-gradient(180deg, rgba(17,24,32,.98), rgba(11,17,23,.98)) !important;
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="empresas"] article:first-child {
+  box-shadow: inset 0 1px 0 rgba(126,227,210,.035);
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="empresas"] article:last-child {
+  box-shadow: inset 0 1px 0 rgba(126,227,210,.055);
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section:not(:first-of-type) {
+  position: relative;
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section:not(:first-of-type)::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 50%;
+  width: min(92vw, 1480px);
+  height: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, rgba(126,227,210,.08), transparent);
+  pointer-events: none;
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) footer {
+  background:
+    radial-gradient(600px 180px at 50% 0%, rgba(57,159,143,.05), transparent 70%),
+    #080c11 !important;
+}
+
+@media (max-width: 1023px) {
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type {
+    min-height: auto;
+  }
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type::after {
+    width: 360px;
+    height: 360px;
+    right: -14%;
+    top: 18%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) *,
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) *::before,
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+}
