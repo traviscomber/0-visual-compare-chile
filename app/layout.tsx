@@ -5,6 +5,7 @@ import { AuthProvider } from "@/lib/auth-context"
 import "./globals.css"
 import "./home-v2.css"
 import "./home-unified-hero.css"
+import "./home-cinematic.css"
 
 const CANONICAL_ORIGIN = "https://videntia.app"
 const GOOGLE_SITE_VERIFICATION = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim()
