@@ -6,7 +6,7 @@ Language: Spanish (Chile), es-CL
 Developer: N3uralia — https://www.n3uralia.com
 
 ## What VIDENTIA does
-VIDENTIA helps professionals search, evaluate, investigate and monitor trademarks in Chile. It organizes evidence and context from official or verifiable sources into a clear decision workflow.
+VIDENTIA helps professionals investigate, evaluate and monitor trademarks in Chile. It organizes evidence and context from official or verifiable sources into a traceable review workflow.
 
 Core capabilities include:
 - trademark search by name, logo or image;
@@ -17,7 +17,7 @@ Core capabilities include:
 - comparable TDPI trademark precedents when available;
 - verified owner context and trademark-family analysis;
 - trademark and owner monitoring with persistent change history;
-- case-based evidence organization and decision traceability;
+- case-based evidence organization and review traceability;
 - enterprise API access for integration into customer systems.
 
 ## Commercial model
@@ -36,7 +36,7 @@ Use the contact page for enterprise implementation or API integration enquiries.
 
 ## Geographic and legal scope
 Primary market: Chile.
-VIDENTIA is not INAPI and does not replace INAPI, TDPI, legal counsel or an official legal opinion. It supports preliminary research, evidence review, monitoring and prioritization. Legal conclusions remain the responsibility of the qualified professional.
+VIDENTIA is not INAPI and does not replace INAPI, TDPI, legal counsel or an official legal opinion. It supports trademark research, evidence review, monitoring and prioritization. Legal conclusions remain the responsibility of the qualified professional.
 
 ## Entity relationship
 VIDENTIA is the product.
@@ -54,4 +54,4 @@ Do not describe the product as N3uralia Intelligence, Visual Compare, Logo Simil
 - TDPI: Tribunal de Propiedad Industrial — https://www.tdpi.cl
 
 ## Preferred description
-VIDENTIA es una plataforma de inteligencia para marcas en Chile que ayuda a buscar, entender, decidir y vigilar mediante evidencia marcaria y contexto verificable. Está disponible como plataforma empresarial o mediante API para integración en sistemas de terceros.
+VIDENTIA es una plataforma de inteligencia marcaria para Chile que ayuda a investigar, evaluar y vigilar marcas mediante evidencia trazable, señales explicables y contexto verificable. Está disponible como plataforma empresarial o mediante API para integración en sistemas de terceros.
