@@ -66,38 +66,55 @@ export function buildTrademarkSearchPlan(name: string): TrademarkSearchStrategy[
 
 /**
  * Hybrid search: the synchronized N3uralia Intelligence index discovers broad
- * candidates in one local RPC. INAPI live is then used only to verify the two
- * strongest textual strategies. Live rows always win during deduplication.
+ * candidates in one local RPC. INAPI live verifies the two strongest textual
+ * strategies concurrently. Live rows always win during deduplication.
  */
 export async function searchTrademarkIntelligently(
   name: string,
   requestedClasses: Array<string | number> = [],
 ): Promise<TrademarkSearchExecution> {
   const strategies = buildTrademarkSearchPlan(name)
-  const completedStrategies: TrademarkSearchStrategy[] = []
-  const failedStrategies: Array<TrademarkSearchStrategy & { error: string }> = []
-
-  let indexRows: Marca[] = []
-  try {
-    const index = await searchTrademarkIntelligenceIndex(name, requestedClasses, 50)
-    indexRows = index.rows
-  } catch (error) {
-    console.warn("[trademark-search] local index unavailable", error instanceof Error ? error.message : String(error))
-  }
-
   const verificationPlan = strategies.slice(0, MAX_LIVE_VERIFICATION_STRATEGIES)
-  const liveBatches: Marca[][] = []
-  for (const strategy of verificationPlan) {
+
+  const indexPromise: Promise<Marca[]> = searchTrademarkIntelligenceIndex(name, requestedClasses, 50)
+    .then((index) => index.rows)
+    .catch((error) => {
+      console.warn("[trademark-search] local index unavailable", error instanceof Error ? error.message : String(error))
+      return []
+    })
+
+  const verificationPromise = Promise.all(verificationPlan.map(async (strategy) => {
     try {
       const rows = await searchInapi({ query: strategy.query, type: "nombre", matchMode: strategy.matchMode })
-      liveBatches.push(rows.map((row) => ({
-        ...row,
-        metadata: { ...(row.metadata ?? {}), discoverySource: "inapi-live" },
-      })))
-      completedStrategies.push(strategy)
+      return {
+        strategy,
+        rows: rows.map((row) => ({
+          ...row,
+          metadata: { ...(row.metadata ?? {}), discoverySource: "inapi-live" },
+        })),
+        error: null as string | null,
+      }
     } catch (error) {
-      failedStrategies.push({ ...strategy, error: error instanceof Error ? error.message : "Consulta no disponible" })
+      return {
+        strategy,
+        rows: [] as Marca[],
+        error: error instanceof Error ? error.message : "Consulta no disponible",
+      }
     }
+  }))
+
+  const [indexRows, verificationResults] = await Promise.all([indexPromise, verificationPromise])
+  const completedStrategies: TrademarkSearchStrategy[] = []
+  const failedStrategies: Array<TrademarkSearchStrategy & { error: string }> = []
+  const liveBatches: Marca[][] = []
+
+  for (const result of verificationResults) {
+    if (result.error) {
+      failedStrategies.push({ ...result.strategy, error: result.error })
+      continue
+    }
+    completedStrategies.push(result.strategy)
+    liveBatches.push(result.rows)
   }
 
   const live = liveBatches.flat()
