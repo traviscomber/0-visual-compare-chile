@@ -33,7 +33,7 @@ const apiIncludes = [
 const faqs = [
   ["¿Qué es VIDENTIA?", "Una plataforma de inteligencia marcaria para Chile que reúne búsqueda, evaluación, contexto y vigilancia con evidencia trazable."],
   ["¿VIDENTIA reemplaza a INAPI?", "No. INAPI mantiene la fuente oficial. VIDENTIA organiza antecedentes y contexto para facilitar investigación y seguimiento."],
-  ["¿Cómo se contrata?", "La plataforma empresarial parte desde $5.000.000 CLP y la API desde USD 500 al mes más consumo. El alcance final depende de usuarios, volumen e integración."],
+  ["¿Cómo se contrata?", "VIDENTIA se contrata como plataforma empresarial o como API. Como referencia comercial, la implementación de plataforma parte desde $5.000.000 CLP y la API desde $500.000 CLP al mes más consumo. La propuesta final depende del alcance."],
   ["¿Entrega una opinión legal?", "No. VIDENTIA apoya investigación y priorización. La evaluación jurídica final corresponde al profesional responsable."],
 ]
 
@@ -65,8 +65,8 @@ const structuredData = {
         "@type": "OfferCatalog",
         name: "Modalidades comerciales VIDENTIA",
         itemListElement: [
-          { "@type": "Offer", name: "VIDENTIA Plataforma", priceCurrency: "CLP", price: "5000000", description: "Implementación inicial desde $5.000.000 CLP. El alcance final depende de usuarios, integraciones y soporte." },
-          { "@type": "Offer", name: "VIDENTIA API", priceCurrency: "USD", price: "500", description: "Suscripción desde USD 500 al mes más consumo. El valor final depende del volumen y alcance de integración." },
+          { "@type": "Offer", name: "VIDENTIA Plataforma", priceCurrency: "CLP", price: "5000000", description: "Referencia comercial de implementación desde $5.000.000 CLP. El alcance final depende de usuarios, integraciones y soporte." },
+          { "@type": "Offer", name: "VIDENTIA API", priceCurrency: "CLP", price: "500000", description: "Referencia comercial de suscripción desde $500.000 CLP al mes más consumo. El valor final depende del volumen y alcance de integración." },
         ],
       },
     },
@@ -76,10 +76,6 @@ const structuredData = {
     },
   ],
 }
-
-const border = "border-white/10"
-const muted = "text-[#8F9AA8]"
-const teal = "#64D5C2"
 
 export default function LandingPage() {
   return (
@@ -186,17 +182,17 @@ export default function LandingPage() {
         <div className="mx-auto max-w-[1480px]">
           <div className="grid gap-8 border-b border-white/10 pb-12 lg:grid-cols-[0.72fr_1.28fr] lg:items-end">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#64D5C2]">Contratación</p>
-              <h2 className="mt-4 max-w-2xl text-[clamp(2.5rem,4.3vw,4.7rem)] font-normal leading-[1] tracking-[-0.05em] text-white">Plataforma empresarial o integración por API.</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#64D5C2]">Para organizaciones</p>
+              <h2 className="mt-4 max-w-2xl text-[clamp(2.5rem,4.3vw,4.7rem)] font-normal leading-[1] tracking-[-0.05em] text-white">Dos formas de incorporar VIDENTIA.</h2>
             </div>
-            <p className="max-w-2xl text-lg leading-8 text-[#8F9AA8] lg:justify-self-end">Dos formas de contratar la misma inteligencia, según cómo trabaja tu organización.</p>
+            <p className="max-w-2xl text-lg leading-8 text-[#8F9AA8] lg:justify-self-end">Trabaja directamente en la plataforma o integra sus capacidades en tus propios sistemas.</p>
           </div>
 
           <div className="grid gap-px bg-white/10 lg:grid-cols-2">
-            <CommercialCard label="Plataforma" status="Implementación empresarial" title="VIDENTIA Plataforma" copy="Para estudios jurídicos, áreas legales y empresas que quieren centralizar investigación y vigilancia." price="$5.000.000" unit="CLP" items={platformIncludes} cta="Solicitar propuesta" />
-            <CommercialCard label="API" status="Suscripción + consumo" title="VIDENTIA API" copy="Para compañías y plataformas que necesitan integrar búsqueda y comparación marcaria en sus propios procesos." price="USD 500" unit="/ mes" items={apiIncludes} cta="Cotizar API" />
+            <CommercialCard label="Plataforma" status="Operación completa" title="VIDENTIA Plataforma" copy="Para estudios jurídicos, áreas legales y empresas que quieren centralizar investigación, casos y vigilancia en un solo entorno." reference="Desde $5.000.000 CLP" items={platformIncludes} cta="Solicitar propuesta" />
+            <CommercialCard label="API" status="Integración empresarial" title="VIDENTIA API" copy="Para organizaciones que necesitan incorporar búsqueda y comparación marcaria dentro de sus sistemas, productos o flujos internos." reference="Desde $500.000 CLP/mes + consumo" items={apiIncludes} cta="Conversar sobre la API" />
           </div>
-          <p className="mt-4 max-w-4xl text-xs leading-6 text-[#697582]">Valores iniciales de referencia. Integraciones especiales, SLA, despliegues dedicados y volúmenes superiores se cotizan según alcance.</p>
+          <p className="mt-4 max-w-4xl text-xs leading-6 text-[#697582]">Valores de referencia comercial. Usuarios, volumen, integraciones, SLA, soporte y alcance técnico se definen en la propuesta.</p>
         </div>
       </section>
 
@@ -239,15 +235,18 @@ export default function LandingPage() {
   )
 }
 
-function CommercialCard({ label, status, title, copy, price, unit, items, cta }: { label: string; status: string; title: string; copy: string; price: string; unit: string; items: string[]; cta: string }) {
+function CommercialCard({ label, status, title, copy, reference, items, cta }: { label: string; status: string; title: string; copy: string; reference: string; items: string[]; cta: string }) {
   return (
     <article className="bg-[#0D131A] p-7 sm:p-9 lg:p-11">
       <div className="flex flex-wrap items-center justify-between gap-4"><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#6F7A87]">{label}</p><span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64D5C2]">{status}</span></div>
       <h3 className="mt-7 text-3xl font-normal tracking-[-0.04em] text-white">{title}</h3>
       <p className="mt-3 max-w-xl text-sm leading-7 text-[#8F9AA8]">{copy}</p>
-      <div className="mt-8 border-t border-white/10 pt-7"><p className="text-xs uppercase tracking-[0.14em] text-[#6F7A87]">Desde</p><p className="mt-2 text-[clamp(2.7rem,5vw,4.8rem)] font-normal leading-none tracking-[-0.055em] text-white">{price} <span className="text-lg tracking-normal text-[#8F9AA8]">{unit}</span></p></div>
       <div className="mt-8 border-t border-white/10">{items.map(item => <div key={item} className="flex items-center gap-3 border-b border-white/10 py-4 text-sm text-[#A1ABB6]"><Check className="h-4 w-4 text-[#64D5C2]" />{item}</div>)}</div>
       <Link href="/contacto" className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-[#7EE3D2]">{cta} <ArrowRight className="h-4 w-4" /></Link>
+      <div className="mt-8 flex flex-col gap-2 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <span className="text-[10px] uppercase tracking-[0.14em] text-[#66727F]">Referencia comercial</span>
+        <span className="text-sm font-medium text-[#A1ABB6]">{reference}</span>
+      </div>
     </article>
   )
 }
