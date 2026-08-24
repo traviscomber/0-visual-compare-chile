@@ -42,12 +42,16 @@ export class TrademarkAgent {
 
   async analyze(req: TrademarkAgentRequest): Promise<TrademarkInsightReport> {
     const start = Date.now()
+    const includeExecutiveReport = req.includeExecutiveReport !== false
+    const hasNizaContext = Boolean(req.descripcion?.trim() || req.industria?.trim())
+    const nizaPromise = !includeExecutiveReport && !hasNizaContext
+      ? Promise.resolve(buildNoContextNiza())
+      : this.nizaClassifier.classify({ nombre: req.nombreMarca, descripcion: req.descripcion, industria: req.industria })
     const [viena, niza] = await Promise.all([
       this.vienaClassifier.classify(req.imageBase64, req.imageMimeType),
-      this.nizaClassifier.classify({ nombre: req.nombreMarca, descripcion: req.descripcion, industria: req.industria }),
+      nizaPromise,
     ])
     const conflictos = new ConflictEngine(req.repositorio).analyze({ vienaCodes: viena.codes, nizaClases: niza.clases, visualScore: req.visualScore, nombreMarca: req.nombreMarca })
-    const includeExecutiveReport = req.includeExecutiveReport !== false
     const liveVerificationStrategies = req.liveVerificationStrategies ?? (includeExecutiveReport ? 2 : 1)
     let registrabilidad: TrademarkInsightReport["registrabilidad"]
     try { registrabilidad = await this.searchInapiAvailability(req.nombreMarca, niza.clases, viena, req.imageBase64, liveVerificationStrategies) }
@@ -119,6 +123,17 @@ export class TrademarkAgent {
   }
 }
 
+function buildNoContextNiza(): NizaClassification {
+  return {
+    clases: [],
+    riesgo_sin_registro: "medio",
+    resumen: "Sin una descripción de productos, servicios o industria no se asignan clases Niza en la vista previa.",
+    model_used: "not-used",
+    tokens_used: 0,
+    estimated_cost_usd: 0,
+    routing: { final_tier: "luna", final_model: "not-used", escalated: false, attempts: [] },
+  }
+}
 function chooseReportTier(params: { viena: VienaClassification; niza: NizaClassification; conflictos: ConflictReport; registrabilidad?: TrademarkInsightReport["registrabilidad"] }): ModelTier { const upstreamTier = maxTier(params.viena.routing.final_tier, params.niza.routing.final_tier); const low = params.registrabilidad?.calidad.confianza === "baja"; const high = params.conflictos.nivel_riesgo_global.toUpperCase() === "ALTO"; if (upstreamTier === "sol" || (low && high)) return "sol"; if (upstreamTier === "terra" || low || high) return "terra"; return "luna" }
 function reportConfidence(r?: TrademarkInsightReport["registrabilidad"]) { return r?.calidad.confianza === "alta" ? 0.95 : r?.calidad.confianza === "media" ? 0.75 : 0.45 }
 function buildPreviewReport(nombreMarca: string, conflictos: ConflictReport, registrabilidad?: TrademarkInsightReport["registrabilidad"]) {
