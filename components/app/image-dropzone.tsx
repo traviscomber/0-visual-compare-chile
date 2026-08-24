@@ -4,7 +4,6 @@ import type React from "react"
 import { useCallback, useRef, useState } from "react"
 import { Loader2, Upload, X } from "lucide-react"
 import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
 import { formatBytes } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { validateImageFile } from "@/lib/validations"
@@ -133,12 +132,6 @@ export function ImageDropzone({
           />
         </button>
       )}
-
-      {!image ? (
-        <Button type="button" variant="ghost" className="sr-only" onClick={() => inputRef.current?.click()}>
-          Seleccionar imagen
-        </Button>
-      ) : null}
     </div>
   )
 }
