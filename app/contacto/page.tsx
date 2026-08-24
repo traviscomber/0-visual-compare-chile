@@ -1,12 +1,19 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowLeft, ArrowRight, Mail, MessageCircle } from "lucide-react"
-import { Button } from "@/components/ui/button"
 
 export const metadata: Metadata = {
   title: "Contacto comercial",
   description: "Solicita una propuesta para VIDENTIA Plataforma o cotiza una integración mediante VIDENTIA API en Chile.",
   alternates: { canonical: "/contacto" },
+  openGraph: {
+    title: "Contacto comercial | VIDENTIA",
+    description: "Solicita una propuesta para VIDENTIA Plataforma o cotiza una integración mediante VIDENTIA API en Chile.",
+    url: "https://videntia.app/contacto",
+    siteName: "VIDENTIA",
+    locale: "es_CL",
+    type: "website",
+  },
 }
 
 const enterpriseMail = "mailto:info@n3uralia.com?subject=VIDENTIA%20Plataforma%20Enterprise&body=Hola%20N3uralia%2C%20quiero%20evaluar%20VIDENTIA%20Plataforma%20para%20mi%20empresa.%20Empresa%3A%20%20%7C%20Usuarios%20estimados%3A%20%20%7C%20Necesidad%20principal%3A%20"
@@ -25,13 +32,13 @@ export default function ContactoPage() {
 
       <section className="px-5 py-20 lg:px-10 lg:py-28">
         <div className="mx-auto max-w-[1180px]">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#0F766E]">COMMERCIAL · CHILE</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#0F766E]">CONTRATACIÓN · CHILE</p>
           <h1 className="mt-6 max-w-4xl text-[clamp(2.8rem,6vw,6rem)] font-normal leading-[0.96] tracking-[-0.055em]">Conversemos sobre cómo usar VIDENTIA en tu operación.</h1>
           <p className="mt-7 max-w-2xl text-lg leading-8 text-[#667085]">Dos caminos: implementar la plataforma completa o integrar la inteligencia marcaria mediante API. La propuesta final depende del alcance real.</p>
 
           <div className="mt-14 grid border-y border-black/10 lg:grid-cols-2">
             <article className="py-10 lg:pr-12">
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#98A2B3]">ENTERPRISE / PLATFORM</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#98A2B3]">PLATAFORMA EMPRESARIAL</p>
               <h2 className="mt-6 text-3xl font-normal tracking-[-0.035em]">VIDENTIA Plataforma</h2>
               <p className="mt-4 text-sm leading-7 text-[#667085]">Implementación para estudios jurídicos, áreas legales y empresas que necesitan búsqueda, evaluación, casos y vigilancia en una sola operación.</p>
               <p className="mt-8 text-xs uppercase tracking-[0.14em] text-[#667085]">Implementación desde</p>
@@ -40,7 +47,7 @@ export default function ContactoPage() {
             </article>
 
             <article className="border-t border-black/10 py-10 lg:border-l lg:border-t-0 lg:pl-12">
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#98A2B3]">ENTERPRISE / API</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#98A2B3]">API EMPRESARIAL</p>
               <h2 className="mt-6 text-3xl font-normal tracking-[-0.035em]">VIDENTIA API</h2>
               <p className="mt-4 text-sm leading-7 text-[#667085]">Para integrar capacidades de búsqueda e inteligencia marcaria en sistemas, flujos y productos del cliente.</p>
               <p className="mt-8 text-xs uppercase tracking-[0.14em] text-[#667085]">Suscripción desde</p>
