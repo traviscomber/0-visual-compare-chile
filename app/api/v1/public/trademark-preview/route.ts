@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     }
     if (!nombre) return NextResponse.json({ error: "No pudimos leer una denominación clara en la imagen. Escribe el nombre para completar la búsqueda.", needs_name: true }, { status: 400, headers: previewHeaders(rateHeaders) })
 
-    const report = await new TrademarkAgent().analyze({ imageBase64: cleanImage, imageMimeType, nombreMarca: nombre })
+    const report = await new TrademarkAgent().analyze({ imageBase64: cleanImage, imageMimeType, nombreMarca: nombre, includeExecutiveReport: false })
     const registry = report.registrabilidad
     const antecedentes = (registry?.antecedentes ?? []).slice(0, 4).map((item) => ({
       id: item.id,
