@@ -1,0 +1,29 @@
+<svg width="1200" height="800" viewBox="0 0 1200 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(650 370) rotate(90) scale(360 520)"><stop stop-color="#143A3A"/><stop offset="1" stop-color="#090D12" stop-opacity="0"/></radialGradient>
+  <linearGradient id="line" x1="220" y1="160" x2="960" y2="650" gradientUnits="userSpaceOnUse"><stop stop-color="#77E0D0"/><stop offset="1" stop-color="#25796F"/></linearGradient>
+  <filter id="glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect width="1200" height="800" rx="36" fill="#090D12"/>
+<rect width="1200" height="800" rx="36" fill="url(#bg)"/>
+<g stroke="#6EDCCA" stroke-opacity=".22" stroke-width="1.5">
+<path d="M600 390L317 205"/><path d="M600 390L902 188"/><path d="M600 390L980 420"/><path d="M600 390L855 650"/><path d="M600 390L420 658"/><path d="M600 390L226 444"/>
+<path d="M317 205L226 444" stroke-dasharray="8 10"/><path d="M902 188L980 420" stroke-dasharray="8 10"/><path d="M855 650L420 658" stroke-dasharray="8 10"/><path d="M226 444L420 658" stroke-dasharray="8 10"/>
+</g>
+<g font-family="Arial, Helvetica, sans-serif">
+<circle cx="600" cy="390" r="116" fill="#0D151D" stroke="#73E3D1" stroke-width="3" filter="url(#glow)"/>
+<circle cx="600" cy="390" r="95" fill="#101B24" stroke="#2B746B"/>
+<text x="600" y="373" text-anchor="middle" fill="#F6FAF9" font-size="28" font-weight="700">VIDENTIA</text><text x="600" y="409" text-anchor="middle" fill="#78E4D2" font-size="18">CASO / INVESTIGACIÓN</text><text x="600" y="442" text-anchor="middle" fill="#81909D" font-size="14">evidencia conectada</text>
+<g fill="#0D151D" stroke="url(#line)" stroke-width="2">
+<circle cx="317" cy="205" r="76"/><circle cx="902" cy="188" r="76"/><circle cx="980" cy="420" r="76"/><circle cx="855" cy="650" r="76"/><circle cx="420" cy="658" r="76"/><circle cx="226" cy="444" r="76"/>
+</g>
+<g fill="#F1F6F5" font-size="16" font-weight="700" text-anchor="middle">
+<text x="317" y="200">MARCA</text><text x="902" y="183">TITULAR</text><text x="980" y="415">INAPI</text><text x="855" y="645">EVIDENCIA</text><text x="420" y="653">TDPI</text><text x="226" y="439">NIZA / VIENA</text>
+</g>
+<g fill="#7E8C98" font-size="12" text-anchor="middle">
+<text x="317" y="224">nombre · logo · clase</text><text x="902" y="207">persona · empresa</text><text x="980" y="439">solicitud · registro</text><text x="855" y="669">fuente · documento</text><text x="420" y="677">precedentes</text><text x="226" y="463">clasificación</text>
+</g>
+<g fill="#78E4D2"><circle cx="600" cy="274" r="5"/><circle cx="709" cy="354" r="5"/><circle cx="693" cy="478" r="5"/><circle cx="515" cy="482" r="5"/><circle cx="497" cy="329" r="5"/></g>
+<g font-size="12" fill="#657582"><text x="62" y="72">GRAFO DE INTELIGENCIA MARCARIA</text><text x="62" y="744">INAPI · NIZA · VIENA · TDPI · EVIDENCIA</text><text x="995" y="744">VIDENTIA</text></g>
+</g>
+</svg>
