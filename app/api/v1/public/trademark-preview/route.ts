@@ -48,10 +48,12 @@ export async function POST(request: NextRequest) {
     let imageMimeType: string | undefined
     if (image) {
       const mimeMatch = image.match(/^data:(image\/[a-z0-9.+-]+);base64,/i)
-      imageMimeType = (mimeMatch?.[1] ?? "").toLowerCase()
-      if (!ALLOWED_IMAGE_TYPES.has(imageMimeType)) return NextResponse.json({ error: "Formato de imagen no soportado." }, { status: 415, headers: previewHeaders(rateHeaders) })
-      cleanImage = image.replace(/^data:image\/[a-z0-9.+-]+;base64,/i, "")
-      if (!/^[a-z0-9+/=\r\n]+$/i.test(cleanImage) || cleanImage.length > MAX_IMAGE_BASE64_LENGTH) return NextResponse.json({ error: "La imagen no es válida o supera el máximo aproximado de 4,5 MB." }, { status: 400, headers: previewHeaders(rateHeaders) })
+      const parsedMimeType = (mimeMatch?.[1] ?? "").toLowerCase()
+      if (!ALLOWED_IMAGE_TYPES.has(parsedMimeType)) return NextResponse.json({ error: "Formato de imagen no soportado." }, { status: 415, headers: previewHeaders(rateHeaders) })
+      const parsedImage = image.replace(/^data:image\/[a-z0-9.+-]+;base64,/i, "")
+      if (!/^[a-z0-9+/=\r\n]+$/i.test(parsedImage) || parsedImage.length > MAX_IMAGE_BASE64_LENGTH) return NextResponse.json({ error: "La imagen no es válida o supera el máximo aproximado de 4,5 MB." }, { status: 400, headers: previewHeaders(rateHeaders) })
+      imageMimeType = parsedMimeType
+      cleanImage = parsedImage
     }
 
     let nombre = rawName
