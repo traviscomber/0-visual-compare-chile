@@ -1,25 +1,26 @@
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertTriangle } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 export default function AuthErrorPage() {
   return (
-    <div className="flex min-h-svh w-full items-center justify-center bg-background p-6">
-      <Card className="w-full max-w-md rounded-2xl">
-        <CardHeader>
-          <div className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-            <AlertTriangle className="h-5 w-5" />
-          </div>
-          <CardTitle>Error de autenticación</CardTitle>
-          <CardDescription>No pudimos completar el proceso. Vuelve a intentarlo.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild className="w-full">
-            <Link href="/auth/login">Volver al inicio de sesión</Link>
+    <main className="min-h-svh bg-background px-5 py-8 text-foreground sm:px-8">
+      <div className="mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-xl flex-col justify-center">
+        <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">VIDENTIA / Acceso</p>
+        <AlertTriangle className="mt-6 h-6 w-6 text-warning" />
+        <h1 className="mt-4 text-4xl font-medium tracking-[-0.045em] sm:text-5xl">No pudimos validar el enlace.</h1>
+        <p className="mt-4 max-w-lg text-sm leading-6 text-muted-foreground">
+          El código puede haber expirado, sido utilizado previamente o no corresponder a esta sesión. Ningún cambio fue aplicado.
+        </p>
+        <div className="mt-8 flex flex-wrap gap-2 border-y border-border py-5">
+          <Button asChild>
+            <Link href="/auth/login">Volver al acceso</Link>
           </Button>
-        </CardContent>
-      </Card>
-    </div>
+          <Button asChild variant="outline">
+            <Link href="/auth/forgot-password">Recuperar contraseña</Link>
+          </Button>
+        </div>
+      </div>
+    </main>
   )
 }
