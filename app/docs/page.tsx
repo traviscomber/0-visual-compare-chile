@@ -1,6 +1,21 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowRight, Fingerprint, ImageIcon, Search, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
+
+export const metadata: Metadata = {
+  title: "API empresarial",
+  description: "Documentación técnica de VIDENTIA API para integrar búsqueda, imágenes y comparación marcaria en sistemas empresariales.",
+  alternates: { canonical: "/docs" },
+  openGraph: {
+    title: "VIDENTIA API | Documentación empresarial",
+    description: "Integra capacidades verificadas de búsqueda, imágenes y comparación marcaria mediante VIDENTIA API.",
+    url: "https://videntia.app/docs",
+    siteName: "VIDENTIA",
+    locale: "es_CL",
+    type: "website",
+  },
+}
 
 const endpoints = [
   {
@@ -53,13 +68,13 @@ export default function DocsPage() {
       <section className="border-b border-black/10 px-5 py-20 lg:px-10 lg:py-28">
         <div className="mx-auto grid max-w-[1480px] gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
           <div><p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#0F766E]">VIDENTIA API · CHILE</p><h1 className="mt-6 max-w-4xl text-[clamp(3rem,6vw,6.2rem)] font-normal leading-[0.95] tracking-[-0.055em]">Integra inteligencia marcaria sin depender de la interfaz.</h1></div>
-          <div className="max-w-2xl lg:justify-self-end"><p className="text-lg leading-8 text-[#667085]">Esta documentación publica únicamente contratos técnicos presentes en el código actual. No contiene registros, clientes, métricas ni respuestas simuladas.</p><div className="mt-7 flex gap-3"><Link href="/contacto"><Button className="h-11 gap-2 rounded-lg bg-[#0F766E] px-5 text-white shadow-none hover:bg-[#134E4A]">Cotizar integración <ArrowRight className="h-4 w-4" /></Button></Link><Link href="/consulta"><Button variant="outline" className="h-11 rounded-lg border-black/15 bg-transparent px-5">Ver plataforma</Button></Link></div></div>
+          <div className="max-w-2xl lg:justify-self-end"><p className="text-lg leading-8 text-[#667085]">Esta documentación publica únicamente contratos técnicos presentes en el código actual. No contiene registros, clientes, métricas ni respuestas simuladas.</p><div className="mt-7 flex gap-3"><Link href="/contacto"><Button className="h-11 gap-2 rounded-lg bg-[#0F766E] px-5 text-white shadow-none hover:bg-[#134E4A]">Cotizar integración <ArrowRight className="h-4 w-4" /></Button></Link><Link href="/demo"><Button variant="outline" className="h-11 rounded-lg border-black/15 bg-transparent px-5">Probar VIDENTIA</Button></Link></div></div>
         </div>
       </section>
 
       <section className="bg-[#111827] px-5 py-20 text-white lg:px-10 lg:py-24"><div className="mx-auto max-w-[1480px]"><p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#63C7B8]">CAPACIDADES VERIFICADAS</p><div className="mt-10 grid border-y border-white/15 md:grid-cols-2 lg:grid-cols-4">{capabilities.map(([Icon, title, text], index) => <article key={title} className={`py-8 lg:px-7 ${index > 0 ? 'lg:border-l lg:border-white/15' : ''}`}><Icon className="h-5 w-5 text-[#63C7B8]" /><h2 className="mt-7 text-lg font-medium">{title}</h2><p className="mt-3 text-sm leading-6 text-slate-400">{text}</p></article>)}</div></div></section>
 
-      <section className="px-5 py-20 lg:px-10 lg:py-28"><div className="mx-auto max-w-[1480px]"><div className="grid gap-8 border-b border-black/10 pb-10 lg:grid-cols-[0.7fr_1.3fr] lg:items-end"><div><p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#0F766E]">API CONTRACT</p><h2 className="mt-4 text-[clamp(2.3rem,4vw,4.5rem)] font-normal leading-[1.02] tracking-[-0.045em]">Rutas que puedes contratar hoy.</h2></div><p className="max-w-2xl text-lg leading-8 text-[#667085] lg:justify-self-end">Las operaciones comerciales protegidas usan API key, cuota y medición. La búsqueda web interna de VIDENTIA no forma parte de este contrato público.</p></div><div className="divide-y divide-black/10 border-b border-black/10">{endpoints.map((item, index) => <article key={item.path} className="grid gap-6 py-8 lg:grid-cols-[70px_1fr_1.2fr]"><span className="font-mono text-[11px] text-[#0F766E]">0{index + 1}</span><div><div className="flex items-center gap-2"><span className="rounded-md bg-[#111827] px-2.5 py-1 font-mono text-[11px] font-semibold text-white">{item.method}</span><span className="text-xs text-[#667085]">{item.auth}</span></div><h3 className="mt-4 font-mono text-lg font-semibold">{item.path}</h3><p className="mt-3 text-sm leading-6 text-[#667085]">{item.description}</p></div><pre className="overflow-x-auto rounded-xl border border-black/10 bg-[#EEF1EE] p-4 text-xs leading-6 text-[#344054]"><code>{item.command}</code></pre></article>)}</div></div></section>
+      <section className="px-5 py-20 lg:px-10 lg:py-28"><div className="mx-auto max-w-[1480px]"><div className="grid gap-8 border-b border-black/10 pb-10 lg:grid-cols-[0.7fr_1.3fr] lg:items-end"><div><p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#0F766E]">CONTRATO API</p><h2 className="mt-4 text-[clamp(2.3rem,4vw,4.5rem)] font-normal leading-[1.02] tracking-[-0.045em]">Rutas que puedes contratar hoy.</h2></div><p className="max-w-2xl text-lg leading-8 text-[#667085] lg:justify-self-end">Las operaciones comerciales protegidas usan API key, cuota y medición. La búsqueda web interna de VIDENTIA no forma parte de este contrato público.</p></div><div className="divide-y divide-black/10 border-b border-black/10">{endpoints.map((item, index) => <article key={item.path} className="grid gap-6 py-8 lg:grid-cols-[70px_1fr_1.2fr]"><span className="font-mono text-[11px] text-[#0F766E]">0{index + 1}</span><div><div className="flex items-center gap-2"><span className="rounded-md bg-[#111827] px-2.5 py-1 font-mono text-[11px] font-semibold text-white">{item.method}</span><span className="text-xs text-[#667085]">{item.auth}</span></div><h3 className="mt-4 font-mono text-lg font-semibold">{item.path}</h3><p className="mt-3 text-sm leading-6 text-[#667085]">{item.description}</p></div><pre className="overflow-x-auto rounded-xl border border-black/10 bg-[#EEF1EE] p-4 text-xs leading-6 text-[#344054]"><code>{item.command}</code></pre></article>)}</div></div></section>
 
       <footer className="border-t border-black/10 px-5 py-8 lg:px-10"><div className="mx-auto flex max-w-[1480px] flex-col gap-3 text-xs text-[#667085] sm:flex-row sm:items-center sm:justify-between"><span>VIDENTIA · API empresarial para Chile</span><span>Un desarrollo de N3uralia</span></div></footer>
     </main>
