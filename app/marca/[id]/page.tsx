@@ -1,9 +1,9 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { AlertTriangle, ArrowLeft, ExternalLink, FileText, Search, ShieldCheck, Tags } from "lucide-react"
+import { ArrowLeft, ArrowRight, ExternalLink } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
+import { getOperationalClassificationLabel } from "@/lib/classification-knowledge"
 import { getTrademarkRecordById, searchTrademarkRecords } from "@/lib/trademark-records"
 import {
   buildResultReason,
@@ -21,9 +21,7 @@ export default async function MarcaDetailPage({ params }: MarcaDetailPageProps) 
   const { id } = await params
   const { result: marca } = await getTrademarkRecordById(id)
 
-  if (!marca) {
-    notFound()
-  }
+  if (!marca) notFound()
 
   const relatedResponse = await searchTrademarkRecords({
     query: marca.nombre,
@@ -37,41 +35,33 @@ export default async function MarcaDetailPage({ params }: MarcaDetailPageProps) 
   const summary = buildTrademarkDetailSummary(marca, relatedResults)
   const sourceUrl =
     typeof marca.metadata?.source_url === "string" && marca.metadata.source_url.trim()
-      ? marca.metadata.source_url
+      ? marca.metadata.source_url.trim()
       : null
-  const numeroSolicitud =
-    typeof marca.metadata?.numero_solicitud === "string" && marca.metadata.numero_solicitud.trim()
-      ? marca.metadata.numero_solicitud.trim()
-      : typeof marca.metadata?.numSolicitud === "string" && marca.metadata.numSolicitud.trim()
-        ? marca.metadata.numSolicitud.trim()
-        : "Sin numero"
+  const numeroSolicitud = metadataText(marca.metadata, ["numero_solicitud", "numSolicitud"]) || "—"
+  const sourceName = metadataText(marca.metadata, ["source"]) || "INAPI / base sincronizada"
+  const sourceRecordId = metadataText(marca.metadata, ["source_record_id"]) || marca.id
+  const originalState = metadataText(marca.metadata, ["estadoOriginal"]) || marca.estado
+  const trademarkType = metadataText(marca.metadata, ["tipoMarca"]) || "—"
+  const trademarkSubtype = metadataText(marca.metadata, ["subtipoMarca"]) || "—"
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.16),_transparent_35%),linear-gradient(135deg,_#020617_0%,_#0f172a_40%,_#111827_100%)] text-white">
-      <main className="mx-auto max-w-7xl space-y-6 px-6 py-10">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Button asChild variant="outline" className="border-white/10 bg-white/5 text-slate-100 hover:bg-white/10">
-            <Link href={`/consulta?q=${encodeURIComponent(marca.nombre)}&type=nombre`}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Volver a consulta
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-8 px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+          <Button asChild variant="ghost" className="-ml-3">
+            <Link href={`/consulta-inapi?q=${encodeURIComponent(marca.nombre)}&type=nombre&match=3&autorun=1`}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Volver a fuente INAPI
             </Link>
           </Button>
 
-          <div className="flex flex-wrap gap-3">
-            <Button asChild variant="outline" className="border-white/10 bg-white/5 text-slate-100 hover:bg-white/10">
-              <Link href={`/compare?brand=${encodeURIComponent(marca.nombre)}`}>
-                Cruzar en compare
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="border-white/10 bg-white/5 text-slate-100 hover:bg-white/10">
-              <Link href={`/api/report/pdf?id=${encodeURIComponent(marca.id)}`} target="_blank" rel="noreferrer">
-                Descargar PDF
-              </Link>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link href={`/compare?brand=${encodeURIComponent(marca.nombre)}`}>Comparar evidencia visual</Link>
             </Button>
             {sourceUrl ? (
-              <Button asChild className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:from-blue-500 hover:to-cyan-400">
+              <Button asChild>
                 <Link href={sourceUrl} target="_blank" rel="noreferrer">
-                  Ver fuente
+                  Abrir fuente
                   <ExternalLink className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -79,308 +69,232 @@ export default async function MarcaDetailPage({ params }: MarcaDetailPageProps) 
           </div>
         </div>
 
-        <section className="grid gap-6 xl:grid-cols-[1.5fr_0.9fr]">
-          <Card className="border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <Badge className="border border-blue-400/20 bg-blue-500/15 text-blue-100">Ficha de marca</Badge>
-                <h1 className="mt-4 text-3xl font-semibold text-white">{marca.nombre}</h1>
-                <p className="mt-2 max-w-3xl text-sm text-slate-300">{marca.solicitante || "Solicitante no disponible"}</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 text-right">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Riesgo operativo</p>
-                <p className="mt-2 text-2xl font-semibold text-white">{summary.riskLabel}</p>
-              </div>
-            </div>
+        <header className="grid gap-7 border-b border-border pb-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+          <div>
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">VIDENTIA / Ficha de antecedente</p>
+            <h1 className="mt-3 max-w-4xl text-4xl font-medium tracking-[-0.045em] text-foreground sm:text-5xl lg:text-6xl">
+              {marca.nombre}
+            </h1>
+            <p className="mt-4 max-w-3xl text-base leading-7 text-muted-foreground">
+              {marca.solicitante || "Titular o solicitante no informado en el registro disponible."}
+            </p>
+          </div>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <InfoCard label="Estado" value={marca.estado} />
-              <InfoCard label="Registro" value={marca.numeroRegistro || "Sin numero"} />
-              <InfoCard label="Solicitud" value={numeroSolicitud} />
-              <InfoCard label="Fecha" value={formatTrademarkDate(marca.fecha)} />
-            </div>
+          <div className="border-l border-border pl-5">
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Qué significa esta ficha</p>
+            <p className="mt-2 text-sm leading-6 text-foreground/85">
+              Reúne datos del registro y antecedentes relacionados para facilitar revisión. No determina disponibilidad, confundibilidad jurídica ni registrabilidad.
+            </p>
+            <p className="mt-3 text-xs leading-5 text-muted-foreground">Fuente ≠ análisis ≠ decisión jurídica.</p>
+          </div>
+        </header>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <TaxonomyCard title="Clases Niza" values={marca.niza} tone="blue" emptyLabel="Sin clases visibles" />
-              <TaxonomyCard title="Codigos Viena" values={marca.viena} tone="cyan" emptyLabel="Sin codigos visibles" />
+        <section aria-labelledby="record-facts-title">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">01 / Registro</p>
+              <h2 id="record-facts-title" className="mt-2 text-2xl font-medium tracking-tight">Datos observables</h2>
             </div>
-          </Card>
+            <Badge variant="outline">{sourceName}</Badge>
+          </div>
 
-          <Card className="border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-            <div className="flex items-start gap-3">
-              <div className="rounded-full border border-white/10 bg-white/5 p-3 text-blue-200">
-                {summary.risk === "high" ? <AlertTriangle className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
-              </div>
-              <div>
-                <p className="text-sm uppercase tracking-[0.24em] text-slate-400">Resumen ejecutivo</p>
-                <h2 className="mt-2 text-xl font-semibold text-white">{summary.title}</h2>
-                <p className="mt-3 text-sm leading-relaxed text-slate-300">{summary.recommendation}</p>
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <SummaryStat label="Conflictos altos" value={String(summary.criticalCount)} />
-              <SummaryStat label="Marcas registradas" value={String(summary.registeredCount)} />
-              <SummaryStat label="Clases expuestas" value={summary.topNiza.join(", ") || "Sin dato"} />
-              <SummaryStat label="Estados dominantes" value={summary.topStates.join(" · ") || "Sin dato"} />
-            </div>
-
-            <div className="mt-6 space-y-2">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Siguiente accion</p>
-              <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm text-slate-200">
-                1. Revisar conflictos nominales. 2. Confirmar cobertura Niza. 3. Si usas logo, validar tambien en Compare.
-              </div>
-            </div>
-          </Card>
+          <div className="grid border-y border-border sm:grid-cols-2 lg:grid-cols-5">
+            <Fact label="Estado" value={marca.estado || "—"} />
+            <Fact label="Registro" value={marca.numeroRegistro || "—"} />
+            <Fact label="Solicitud" value={numeroSolicitud} />
+            <Fact label="Fecha" value={formatTrademarkDate(marca.fecha)} />
+            <Fact label="País" value={marca.pais || "—"} />
+          </div>
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-          <Card className="border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-            <div className="flex items-center gap-3">
-              <Search className="h-5 w-5 text-cyan-200" />
-              <div>
-                <h2 className="text-xl font-semibold text-white">Conflictos relacionados</h2>
-                <p className="text-sm text-slate-300">Ranking directo para decidir si esta marca requiere revision adicional.</p>
-              </div>
-            </div>
+        <section className="grid gap-7 lg:grid-cols-[1.05fr_0.95fr]" aria-labelledby="taxonomy-title">
+          <div>
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">02 / Clasificación</p>
+            <h2 id="taxonomy-title" className="mt-2 text-2xl font-medium tracking-tight">Ámbito visible del antecedente</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+              Las clases y códigos ayudan a ubicar el registro. Abre una investigación para revisar contexto, coexistencia y otros antecedentes.
+            </p>
+          </div>
 
-            <div className="mt-5 space-y-3">
-              {relatedResults.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/40 p-5 text-sm text-slate-300">
-                  No aparecieron conflictos nominales directos en la base sincronizada para esta marca.
-                </div>
-              ) : (
-                relatedResults.map((result) => {
-                  const risk = buildResultRiskLevel(result, marca.nombre, "nombre")
-                  const reason = buildResultReason(result, marca.nombre, "nombre")
-                  return (
-                    <Link
-                      key={result.marca.id}
-                      href={`/marca/${result.marca.id}`}
-                      className="block rounded-2xl border border-white/10 bg-slate-950/45 p-4 transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium text-white">{result.marca.nombre}</p>
-                          <p className="mt-1 text-sm text-slate-300">{result.marca.solicitante || "Titular no disponible"}</p>
-                        </div>
-                        <Badge className={badgeClassName(risk)}>{formatRiskLabel(risk)}</Badge>
-                      </div>
-                      <p className="mt-3 text-sm text-slate-200">{reason}</p>
-                      <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
-                        <span>Relevancia {result.relevancia}%</span>
-                        <span>{result.marca.estado}</span>
-                        <span>Niza {result.marca.niza.slice(0, 2).join(", ") || "sin dato"}</span>
-                      </div>
-                    </Link>
-                  )
-                })
-              )}
-            </div>
-
-            {relatedResults.length ? (
-              <div className="mt-6">
-                <div className="mb-3">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Objetivo vs conflicto</p>
-                  <p className="mt-1 text-sm text-slate-300">Resumen operativo para entender por que el motor eleva cada alerta.</p>
-                </div>
-
-                <div className="space-y-3">
-                  {relatedResults.slice(0, 3).map((result) => {
-                    const risk = buildResultRiskLevel(result, marca.nombre, "nombre")
-                    const reason = buildResultReason(result, marca.nombre, "nombre")
-                    const sharedNiza = intersectCodes(marca.niza, result.marca.niza)
-                    const sharedViena = intersectCodes(marca.viena, result.marca.viena)
-
-                    return (
-                      <div key={`brief-${result.marca.id}`} className="rounded-2xl border border-white/10 bg-slate-950/45 p-4">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-medium text-white">
-                              {marca.nombre} vs {result.marca.nombre}
-                            </p>
-                            <p className="mt-1 text-sm text-slate-300">{reason}</p>
-                          </div>
-                          <Badge className={badgeClassName(risk)}>{formatRiskLabel(risk)}</Badge>
-                        </div>
-
-                        <div className="mt-4 grid gap-3 md:grid-cols-2">
-                          <ComparisonColumn
-                            title="Marca objetivo"
-                            name={marca.nombre}
-                            subtitle={marca.estado}
-                            taxonomy={`Niza ${marca.niza.slice(0, 3).join(", ") || "sin dato"} · Viena ${marca.viena.slice(0, 2).join(", ") || "sin dato"}`}
-                          />
-                          <ComparisonColumn
-                            title="Marca conflicto"
-                            name={result.marca.nombre}
-                            subtitle={result.marca.estado}
-                            taxonomy={`Niza ${result.marca.niza.slice(0, 3).join(", ") || "sin dato"} · Viena ${result.marca.viena.slice(0, 2).join(", ") || "sin dato"}`}
-                          />
-                        </div>
-
-                        <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-300">
-                          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                            Relevancia {result.relevancia}%
-                          </span>
-                          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                            Niza compartida {sharedNiza.join(", ") || "ninguna"}
-                          </span>
-                          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                            Viena compartida {sharedViena.join(", ") || "ninguno"}
-                          </span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            ) : null}
-          </Card>
-
-          <Card className="border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-            <div className="flex items-center gap-3">
-              <FileText className="h-5 w-5 text-blue-200" />
-              <div>
-                <h2 className="text-xl font-semibold text-white">Metadata visible</h2>
-                <p className="text-sm text-slate-300">Solo el detalle que sirve para decision y trazabilidad.</p>
-              </div>
-            </div>
-
-            <div className="mt-5 space-y-4 text-sm">
-              <MetadataRow label="Source" value={String(marca.metadata?.source ?? "inapi")} />
-              <MetadataRow label="Source record id" value={String(marca.metadata?.source_record_id ?? marca.id)} />
-              <MetadataRow label="Estado original" value={String(marca.metadata?.estadoOriginal ?? marca.estado)} />
-              <MetadataRow label="Tipo marca" value={String(marca.metadata?.tipoMarca ?? "Sin dato")} />
-              <MetadataRow label="Subtipo" value={String(marca.metadata?.subtipoMarca ?? "Sin dato")} />
-              <MetadataRow label="Pais" value={marca.pais} />
-            </div>
-
-            <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/45 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Atajos</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {marca.niza.slice(0, 3).map((code) => (
-                  <Link
-                    key={`niza-${code}`}
-                    href={`/consulta?type=niza&q=${encodeURIComponent(code)}`}
-                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-100 transition hover:bg-white/10"
-                  >
-                    Niza {code}
-                  </Link>
-                ))}
-                {marca.viena.slice(0, 3).map((code) => (
-                  <Link
-                    key={`viena-${code}`}
-                    href={`/consulta?type=viena&q=${encodeURIComponent(code)}`}
-                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-100 transition hover:bg-white/10"
-                  >
-                    Viena {code}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </Card>
+          <div className="divide-y divide-border border-y border-border">
+            <TaxonomyRow title="Clases Niza" values={marca.niza} kind="niza" emptyLabel="Sin clases visibles" />
+            <TaxonomyRow title="Códigos Viena" values={marca.viena} kind="viena" emptyLabel="Sin códigos visibles" />
+          </div>
         </section>
-      </main>
-    </div>
+
+        <section aria-labelledby="review-title">
+          <div className="grid gap-6 border-y border-border py-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
+            <div>
+              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">03 / Contexto relacionado</p>
+              <h2 id="review-title" className="mt-2 text-2xl font-medium tracking-tight">{summary.title}</h2>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">{summary.recommendation}</p>
+            </div>
+            <div className="grid grid-cols-3 border-l border-border pl-5">
+              <CompactFact label="Prioridad" value={summary.riskLabel} />
+              <CompactFact label="Antecedentes" value={String(relatedResults.length)} />
+              <CompactFact label="Registrados" value={String(summary.registeredCount)} />
+            </div>
+          </div>
+
+          <div className="divide-y divide-border">
+            {relatedResults.length === 0 ? (
+              <div className="py-8">
+                <p className="text-sm font-medium text-foreground">Sin antecedentes relacionados en esta muestra.</p>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                  Esto describe únicamente la consulta disponible y no equivale a disponibilidad o registrabilidad.
+                </p>
+              </div>
+            ) : (
+              relatedResults.map((result) => {
+                const priority = buildResultRiskLevel(result, marca.nombre, "nombre")
+                const reason = buildResultReason(result, marca.nombre, "nombre")
+                const sharedNiza = intersectCodes(marca.niza, result.marca.niza)
+                const sharedViena = intersectCodes(marca.viena, result.marca.viena)
+
+                return (
+                  <Link
+                    key={result.marca.id}
+                    href={`/marca/${result.marca.id}`}
+                    className="grid gap-4 py-5 transition-colors hover:bg-secondary/20 sm:px-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start"
+                  >
+                    <div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <h3 className="font-medium text-foreground">{result.marca.nombre}</h3>
+                        <span className={priorityClassName(priority)}>Prioridad {formatRiskLabel(priority).toLowerCase()}</span>
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{reason}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {result.marca.solicitante || "Titular no informado"} · {result.marca.estado}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 lg:max-w-sm lg:justify-end">
+                      {sharedNiza.slice(0, 3).map((code) => <Badge key={`${result.marca.id}-niza-${code}`} variant="outline">Niza {code}</Badge>)}
+                      {sharedViena.slice(0, 3).map((code) => <Badge key={`${result.marca.id}-viena-${code}`} variant="outline">Viena {code}</Badge>)}
+                      {!sharedNiza.length && !sharedViena.length ? <Badge variant="outline">Sin clase compartida visible</Badge> : null}
+                    </div>
+                  </Link>
+                )
+              })
+            )}
+          </div>
+        </section>
+
+        <section className="grid gap-7 lg:grid-cols-[1fr_1fr]" aria-labelledby="trace-title">
+          <div>
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">04 / Trazabilidad</p>
+            <h2 id="trace-title" className="mt-2 text-2xl font-medium tracking-tight">Metadatos disponibles</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+              Se muestran únicamente campos que ayudan a rastrear el origen y estado del registro sincronizado.
+            </p>
+          </div>
+          <div className="divide-y divide-border border-y border-border">
+            <MetadataRow label="Fuente" value={sourceName} />
+            <MetadataRow label="ID en la fuente" value={sourceRecordId} />
+            <MetadataRow label="Estado original" value={originalState} />
+            <MetadataRow label="Tipo de marca" value={trademarkType} />
+            <MetadataRow label="Subtipo" value={trademarkSubtype} />
+          </div>
+        </section>
+
+        <section className="border-y border-border py-6">
+          <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div>
+              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Siguiente acción</p>
+              <p className="mt-2 text-lg font-medium text-foreground">Profundiza sólo donde la evidencia lo justifique.</p>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+                Revisa la fuente oficial, abre antecedentes relacionados y usa comparación visual cuando exista un signo gráfico relevante.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="outline">
+                <Link href={`/investigar?q=${encodeURIComponent(marca.nombre)}`}>Investigar contexto</Link>
+              </Button>
+              <Button asChild>
+                <Link href={`/compare?brand=${encodeURIComponent(marca.nombre)}`}>
+                  Comparar evidencia
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
   )
 }
 
-function InfoCard({ label, value }: { label: string; value: string }) {
+function metadataText(metadata: Record<string, unknown> | undefined, keys: string[]) {
+  for (const key of keys) {
+    const value = metadata?.[key]
+    if (typeof value === "string" && value.trim()) return value.trim()
+    if (typeof value === "number") return String(value)
+  }
+  return ""
+}
+
+function Fact({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4">
-      <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{label}</p>
-      <p className="mt-2 text-sm font-medium text-white">{value}</p>
+    <div className="border-b border-border py-4 sm:border-b-0 sm:border-r sm:px-5 sm:first:pl-0 sm:last:border-r-0">
+      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+      <p className="mt-2 text-sm font-medium text-foreground">{value}</p>
     </div>
   )
 }
 
-function TaxonomyCard({
+function CompactFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-r border-border px-4 last:border-r-0">
+      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+      <p className="mt-2 text-lg font-medium text-foreground">{value}</p>
+    </div>
+  )
+}
+
+function TaxonomyRow({
   title,
   values,
-  tone,
+  kind,
   emptyLabel,
 }: {
   title: string
   values: string[]
-  tone: "blue" | "cyan"
+  kind: "niza" | "viena"
   emptyLabel: string
 }) {
-  const toneClassName =
-    tone === "blue"
-      ? "border-blue-400/30 text-blue-100"
-      : "border-cyan-400/30 text-cyan-100"
-
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4">
-      <div className="flex items-center gap-2">
-        <Tags className="h-4 w-4 text-slate-300" />
-        <p className="text-sm font-medium text-white">{title}</p>
-      </div>
+    <div className="py-4">
+      <p className="text-sm font-medium text-foreground">{title}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {values.length ? (
           values.map((value) => (
-            <Badge key={value} variant="outline" className={toneClassName}>
-              {value}
-            </Badge>
+            <Link key={`${kind}-${value}`} href={`/investigar?q=${encodeURIComponent(value)}`}>
+              <Badge variant="outline" className="gap-1 hover:bg-secondary/30">
+                {kind === "niza" ? "Niza" : "Viena"} {value}
+                <span className="text-muted-foreground">· {getOperationalClassificationLabel(kind, value)}</span>
+              </Badge>
+            </Link>
           ))
         ) : (
-          <span className="text-sm text-slate-400">{emptyLabel}</span>
+          <span className="text-sm text-muted-foreground">{emptyLabel}</span>
         )}
       </div>
     </div>
   )
 }
 
-function SummaryStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4">
-      <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{label}</p>
-      <p className="mt-2 text-sm font-medium text-white">{value}</p>
-    </div>
-  )
-}
-
 function MetadataRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-4 py-3">
-      <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{label}</p>
-      <p className="mt-2 text-sm text-slate-100">{value}</p>
+    <div className="grid gap-2 py-3 sm:grid-cols-[160px_minmax(0,1fr)] sm:items-baseline">
+      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+      <p className="break-words text-sm text-foreground">{value || "—"}</p>
     </div>
   )
 }
 
-function badgeClassName(risk: "high" | "medium" | "low") {
-  if (risk === "high") {
-    return "border border-red-400/30 bg-red-500/15 text-red-100"
-  }
-
-  if (risk === "medium") {
-    return "border border-amber-400/30 bg-amber-500/15 text-amber-100"
-  }
-
-  return "border border-emerald-400/30 bg-emerald-500/15 text-emerald-100"
-}
-
-function ComparisonColumn({
-  title,
-  name,
-  subtitle,
-  taxonomy,
-}: {
-  title: string
-  name: string
-  subtitle: string
-  taxonomy: string
-}) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-      <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{title}</p>
-      <p className="mt-2 text-sm font-medium text-white">{name}</p>
-      <p className="mt-1 text-sm text-slate-300">{subtitle}</p>
-      <p className="mt-2 text-xs leading-relaxed text-slate-400">{taxonomy}</p>
-    </div>
-  )
+function priorityClassName(priority: "high" | "medium" | "low") {
+  if (priority === "high") return "font-mono text-[10px] uppercase tracking-[0.14em] text-destructive"
+  if (priority === "medium") return "font-mono text-[10px] uppercase tracking-[0.14em] text-warning"
+  return "font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground"
 }
 
 function intersectCodes(left: string[], right: string[]) {
