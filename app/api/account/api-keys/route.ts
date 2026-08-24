@@ -127,6 +127,13 @@ export async function POST(request: Request) {
       )
     }
 
+    if (plan.id === "high-volume" && user.app_metadata?.role !== "admin") {
+      return NextResponse.json(
+        { error: "El plan High Volume requiere habilitación administrativa." },
+        { status: 403, headers: PRIVATE_HEADERS },
+      )
+    }
+
     if (expiresAt && (Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= Date.now())) {
       return NextResponse.json(
         { error: "La fecha de expiración debe ser válida y futura." },
