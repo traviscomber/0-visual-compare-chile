@@ -10,36 +10,35 @@ export const metadata: Metadata = {
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabaseReady = !!(tryGetSupabaseUrl() && tryGetSupabaseAnonKey())
+  if (!supabaseReady) redirect("/auth/login?error=configuration")
 
   let user = null
   let profile: { full_name: string | null; company_name: string | null } | null = null
 
-  if (supabaseReady) {
-    try {
-      const { createClient } = await import("@/lib/supabase/server")
-      const supabase = await createClient()
-      const result = await supabase.auth.getUser()
-      user = result.data.user ?? null
+  try {
+    const { createClient } = await import("@/lib/supabase/server")
+    const supabase = await createClient()
+    const result = await supabase.auth.getUser()
+    user = result.data.user ?? null
 
-      if (user) {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("full_name, company_name")
-          .eq("id", user.id)
-          .maybeSingle()
-        if (!error) profile = data ?? null
-      }
-    } catch {
-      user = null
+    if (user) {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("full_name, company_name")
+        .eq("id", user.id)
+        .maybeSingle()
+      if (!error) profile = data ?? null
     }
-
-    if (!user) redirect("/auth/login")
+  } catch {
+    user = null
   }
 
+  if (!user) redirect("/auth/login")
+
   return (
-    <div className="min-h-svh bg-background flex flex-col">
+    <div className="flex min-h-svh flex-col bg-background">
       <AppNav
-        userEmail={user?.email ?? "demo@videntia.app"}
+        userEmail={user.email ?? ""}
         fullName={profile?.full_name ?? null}
         companyName={profile?.company_name ?? null}
       />
