@@ -13,7 +13,7 @@ import { analyzeTrademarkVisualCandidates } from "@/lib/image/trademark-visual-s
 import { buildAttempt, maxTier, modelForTier, totalRoutingCostUsd, type ModelAttempt, type ModelRoutingSummary, type ModelTier } from "@/lib/ai/model-router"
 import type { Marca } from "@/types/marca"
 
-export interface TrademarkAgentRequest { imageBase64?: string; imageMimeType?: string; nombreMarca: string; descripcion?: string; industria?: string; visualScore?: number; repositorio?: Marca[]; includeExecutiveReport?: boolean }
+export interface TrademarkAgentRequest { imageBase64?: string; imageMimeType?: string; nombreMarca: string; descripcion?: string; industria?: string; visualScore?: number; repositorio?: Marca[]; includeExecutiveReport?: boolean; liveVerificationStrategies?: number }
 export interface TrademarkInsightReport {
   marca: string; timestamp: string; costo_estimado_usd: number; tokens_totales: number
   routing: { max_tier_used: ModelTier; escalated: boolean; report: ModelRoutingSummary }
@@ -47,12 +47,13 @@ export class TrademarkAgent {
       this.nizaClassifier.classify({ nombre: req.nombreMarca, descripcion: req.descripcion, industria: req.industria }),
     ])
     const conflictos = new ConflictEngine(req.repositorio).analyze({ vienaCodes: viena.codes, nizaClases: niza.clases, visualScore: req.visualScore, nombreMarca: req.nombreMarca })
+    const includeExecutiveReport = req.includeExecutiveReport !== false
+    const liveVerificationStrategies = req.liveVerificationStrategies ?? (includeExecutiveReport ? 2 : 1)
     let registrabilidad: TrademarkInsightReport["registrabilidad"]
-    try { registrabilidad = await this.searchInapiAvailability(req.nombreMarca, niza.clases, viena, req.imageBase64) }
+    try { registrabilidad = await this.searchInapiAvailability(req.nombreMarca, niza.clases, viena, req.imageBase64, liveVerificationStrategies) }
     catch (error) { console.error("[trademark-agent] INAPI unavailable", error); registrabilidad = buildUnavailableInapiResult(req.nombreMarca) }
     const visual_fingerprint = { codes: viena.codes.map((item) => item.code), categories: [...new Set(viena.codes.map((item) => item.code.split(".")[0]))], divisions: [...new Set(viena.codes.map((item) => item.code.split(".").slice(0, 2).join(".")))], labels: viena.codes.map((item) => item.titulo) }
     const reportTier = chooseReportTier({ viena, niza, conflictos, registrabilidad })
-    const includeExecutiveReport = req.includeExecutiveReport !== false
     const informe = includeExecutiveReport
       ? await this.generateReport({ nombreMarca: req.nombreMarca, viena, niza, conflictos, registrabilidad, visualScore: req.visualScore, tier: reportTier })
       : buildPreviewReport(req.nombreMarca, conflictos, registrabilidad)
@@ -76,10 +77,10 @@ export class TrademarkAgent {
     return { data: { resumen_ejecutivo: parsed.resumen_ejecutivo, analisis_conflictos: parsed.analisis_conflictos, nivel_riesgo_global: normalizeRisk(parsed.nivel_riesgo_global, conflictos.nivel_riesgo_global), recomendaciones: parsed.recomendaciones.slice(0, 5), proximos_pasos: parsed.proximos_pasos.slice(0, 4), disclaimer: "Evaluación preliminar basada en las fuentes disponibles. No constituye una decisión de INAPI ni reemplaza asesoría jurídica." }, tokens_used: attempts.reduce((sum, attempt) => sum + attempt.total_tokens, 0), estimated_cost_usd: totalRoutingCostUsd(attempts), routing: { final_tier: tier, final_model: model, escalated: tier !== "luna", attempts } satisfies ModelRoutingSummary }
   }
 
-  private async searchInapiAvailability(nombreMarca: string, nizaClases: NizaClassification["clases"], viena: VienaClassification, imageBase64?: string): Promise<TrademarkInsightReport["registrabilidad"]> {
+  private async searchInapiAvailability(nombreMarca: string, nizaClases: NizaClassification["clases"], viena: VienaClassification, imageBase64?: string, liveVerificationStrategies = 2): Promise<TrademarkInsightReport["registrabilidad"]> {
     const consultedAt = new Date().toISOString()
-    const execution = await searchTrademarkIntelligently(nombreMarca)
     const requestedClasses = new Set(nizaClases.map((clase) => String(clase.numero)))
+    const execution = await searchTrademarkIntelligently(nombreMarca, [...requestedClasses], liveVerificationStrategies)
     const ranked = rankTrademarkSearchResults(execution, nombreMarca, [...requestedClasses])
     const visualAnalysis = await analyzeTrademarkVisualCandidates(imageBase64, viena.codes, ranked.slice(0, 6).map(({ marca }) => marca))
     const enrichedById = new Map(visualAnalysis.candidates.map((item) => [item.id, item]))
