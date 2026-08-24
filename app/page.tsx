@@ -62,14 +62,39 @@ export default function LandingPage() {
           </div>
 
           <div className="v-hero-product v-reveal" aria-label="Visual representativo de una investigación VIDENTIA">
-            <div className="v-window-bar"><span>Investigación marcaria</span><span className="v-live"><i/> Evidencia conectada</span></div>
-            <div className="v-hero-case">
-              <div className="v-case-query"><small>Marca consultada</small><Mark variant="a"/><strong>Consulta marcaria</strong><p>Antecedentes organizados por fuente y contexto.</p></div>
-              <div className="v-evidence-rail">
-                <div><span>Fuente oficial</span><b>Disponible</b></div><div><span>Denominación</span><b>Comparada</b></div><div><span>Visual</span><b>Cuando aplica</b></div><div><span>Ámbito</span><b>Contextualizado</b></div><div><span>Precedentes</span><b>Revisables</b></div>
-              </div>
+            <div className="v-window-bar"><span>Espacio de investigación</span><span className="v-live"><i/> Evidencia conectada</span></div>
+            <div className="v-research-shell">
+              <section className="v-research-query" aria-label="Consulta marcaria representativa">
+                <div className="v-query-index"><span>01 / consulta</span><b>Visual representativo</b></div>
+                <div className="v-query-core">
+                  <Mark variant="a"/>
+                  <div><small>Marca consultada</small><strong>Consulta marcaria</strong><p>Nombre, signo o imagen como punto de partida.</p></div>
+                </div>
+                <div className="v-query-flags"><span>Denominación</span><span>Visual</span><span>Ámbito</span></div>
+              </section>
+
+              <section className="v-research-evidence" aria-label="Evidencia organizada">
+                <header><span>02 / evidencia</span><b>Fuente antes que conclusión</b></header>
+                <div className="v-evidence-stack">
+                  <article><span className="v-evidence-number">A</span><div><small>Fuente oficial</small><strong>Antecedente verificable</strong><p>Solicitud, registro, estado y campos públicos cuando están disponibles.</p></div><em>Fuente visible</em></article>
+                  <article><span className="v-evidence-number">B</span><div><small>Señales comparables</small><strong>Denominación y visual</strong><p>Los indicios se explican por separado, sin depender de un score opaco.</p></div><em>Explicable</em></article>
+                  <article><span className="v-evidence-number">C</span><div><small>Ámbito</small><strong>Clases y relación comercial</strong><p>El contexto ayuda a entender por qué un antecedente merece revisión.</p></div><em>Contextualizado</em></article>
+                </div>
+              </section>
+
+              <aside className="v-research-context" aria-label="Contexto de la investigación">
+                <header><span>03 / contexto</span><b>Qué se conecta</b></header>
+                <div className="v-context-node"><small>Titular</small><strong>Sólo si está verificado</strong></div>
+                <div className="v-context-node"><small>Precedentes</small><strong>Comparables y revisables</strong></div>
+                <div className="v-context-node"><small>Historial</small><strong>Con fuente visible</strong></div>
+                <div className="v-context-node"><small>Vigilancia</small><strong>Cambios posteriores</strong></div>
+              </aside>
             </div>
-            <div className="v-hero-foot"><span>Visual representativo</span><span>Sin score opaco</span></div>
+            <div className="v-decision-band">
+              <div><span>Qué significa esto</span><strong>La evidencia queda organizada para decidir qué requiere revisión profesional.</strong></div>
+              <span className="v-decision-rule">Fuente ≠ análisis ≠ decisión jurídica</span>
+            </div>
+            <div className="v-hero-foot"><span>Visual representativo · no contiene un expediente real</span><span>Sin score opaco</span></div>
           </div>
         </div>
       </section>
