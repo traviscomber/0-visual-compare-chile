@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { redirect } from "next/navigation"
 import { KeyRound, Settings2, ShieldCheck, UserRound } from "lucide-react"
 import { ApiKeyManager } from "@/components/app/api-key-manager"
@@ -64,6 +65,6 @@ export default async function SettingsPage() {
   )
 }
 
-function SectionLabel({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+function SectionLabel({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return <div className="flex items-center gap-2 text-primary">{icon}<p className="text-[10px] font-semibold uppercase tracking-[0.16em]">{children}</p></div>
 }
