@@ -73,7 +73,6 @@ export async function POST(request: NextRequest) {
       clases: item.clases,
       numero_registro: item.numero_registro,
       numero_solicitud: item.numero_solicitud,
-      relevancia: item.puntaje_relevancia,
       razones: item.razones.slice(0, 5),
       similitud_denominativa: item.similitud_denominativa,
       similitud_fonetica: item.similitud_fonetica,
@@ -83,6 +82,19 @@ export async function POST(request: NextRequest) {
       elementos_visuales_compartidos: item.elementos_visuales_compartidos,
       imagen_url: item.imagen_url,
     }))
+
+    const resultadosUnicos = registry?.calidad.resultados_totales ?? 0
+    const resultadosActivos = registry?.calidad.resultados_activos ?? 0
+    const advertencias = registry?.calidad.advertencias ?? []
+    const hasVisualEvidence = report.viena.codes.length > 0 || report.viena.elementos_detectados.length > 0
+    const publicReading = buildPublicReading({
+      nombre,
+      resultadosUnicos,
+      resultadosActivos,
+      antecedentesMostrados: antecedentes.length,
+      hasVisualEvidence,
+      warningCount: advertencias.length,
+    })
 
     return NextResponse.json({
       marca: nombre,
@@ -100,25 +112,21 @@ export async function POST(request: NextRequest) {
         estrategias_ejecutadas: registry?.calidad.estrategias_ejecutadas ?? 0,
         estrategias: registry?.calidad.estrategias ?? [],
         resultados_brutos: registry?.calidad.resultados_brutos ?? 0,
-        resultados_unicos: registry?.calidad.resultados_totales ?? 0,
+        resultados_unicos: resultadosUnicos,
         duplicados_eliminados: registry?.calidad.duplicados_eliminados ?? 0,
-        estrategias_fallidas: (registry?.calidad.advertencias ?? []).filter((item) => item.includes("estrategia(s)")).length,
+        estrategias_fallidas: advertencias.filter((item) => item.includes("estrategia(s)")).length,
       },
       evidencia: {
         fuente: "INAPI",
         consultado_en: registry?.fuente.consultado_en ?? report.timestamp,
-        resultados_totales: registry?.calidad.resultados_totales ?? 0,
-        resultados_activos: registry?.calidad.resultados_activos ?? 0,
+        resultados_totales: resultadosUnicos,
+        resultados_activos: resultadosActivos,
         confianza: registry?.calidad.confianza ?? "baja",
         imagenes_comparadas: registry?.calidad.imagenes_comparadas ?? 0,
         antecedentes_con_viena: registry?.calidad.antecedentes_con_viena ?? 0,
-        advertencias: registry?.calidad.advertencias ?? [],
+        advertencias,
       },
-      lectura: {
-        nivel: report.informe.nivel_riesgo_global,
-        resumen: report.informe.resumen_ejecutivo,
-        recomendacion: registry?.recomendacion ?? report.informe.recomendaciones[0] ?? "Revisar antecedentes antes de decidir.",
-      },
+      lectura: publicReading,
       antecedentes,
       preview: true,
       locked_count: Math.max(0, (registry?.antecedentes.length ?? 0) - antecedentes.length),
@@ -133,6 +141,47 @@ async function detectTrademarkName(imageBase64: string, imageMimeType: string) {
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   const response = await client.chat.completions.parse({ model: "gpt-5.6-luna", max_completion_tokens: 160, messages: [{ role: "system", content: "Identifica únicamente la denominación marcaria visible y principal. No inventes texto. Si no hay texto suficientemente claro, devuelve null. Ignora slogans secundarios, etiquetas legales, precios y texto ambiental." }, { role: "user", content: [{ type: "text", text: "Lee la denominación principal de esta marca o logo." }, { type: "image_url", image_url: { url: `data:${imageMimeType};base64,${imageBase64}`, detail: "low" } }] }], response_format: zodResponseFormat(DetectedNameSchema, "public_detected_trademark_name") })
   return response.choices[0]?.message.parsed ?? { denominacion: null, confidence: 0 }
+}
+
+function buildPublicReading({
+  nombre,
+  resultadosUnicos,
+  resultadosActivos,
+  antecedentesMostrados,
+  hasVisualEvidence,
+  warningCount,
+}: {
+  nombre: string
+  resultadosUnicos: number
+  resultadosActivos: number
+  antecedentesMostrados: number
+  hasVisualEvidence: boolean
+  warningCount: number
+}) {
+  if (resultadosUnicos === 0) {
+    return {
+      resumen: `La consulta sobre ${nombre} no devolvió registros únicos en esta revisión. Ese resultado no demuestra disponibilidad ni registrabilidad.`,
+      recomendacion: "Amplía la investigación con clases Niza, variantes denominativas y revisión visual cuando corresponda, y confirma siempre los antecedentes directamente en la fuente oficial.",
+    }
+  }
+
+  const activeCopy = resultadosActivos > 0
+    ? ` ${resultadosActivos} aparecen con estado activo dentro de la cobertura observada.`
+    : " No se identificaron registros activos dentro de la cobertura observada."
+  const displayedCopy = antecedentesMostrados > 0
+    ? ` La demo muestra ${antecedentesMostrados} antecedente${antecedentesMostrados === 1 ? "" : "s"} para revisión inicial.`
+    : ""
+  const visualCopy = hasVisualEvidence
+    ? " La imagen aportó señales figurativas que se muestran por separado."
+    : " No hubo evidencia visual suficiente para añadir señales figurativas comparables."
+  const warningCopy = warningCount > 0
+    ? " La consulta también reportó limitaciones que deben leerse junto a los resultados."
+    : ""
+
+  return {
+    resumen: `La consulta sobre ${nombre} devolvió ${resultadosUnicos} registro${resultadosUnicos === 1 ? "" : "s"} único${resultadosUnicos === 1 ? "" : "s"}.${activeCopy}${displayedCopy}${visualCopy}${warningCopy}`,
+    recomendacion: "Revisa primero los antecedentes mostrados, confirma estado, titular y clases en INAPI y utiliza las señales denominativas, fonéticas y visuales sólo como apoyo para decidir qué merece revisión profesional.",
+  }
 }
 
 function previewHeaders(extra: Record<string, string> = {}) {
