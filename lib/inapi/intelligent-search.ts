@@ -66,15 +66,18 @@ export function buildTrademarkSearchPlan(name: string): TrademarkSearchStrategy[
 
 /**
  * Hybrid search: the synchronized N3uralia Intelligence index discovers broad
- * candidates in one local RPC. INAPI live verifies the two strongest textual
- * strategies concurrently. Live rows always win during deduplication.
+ * candidates in one local RPC. INAPI live verifies the strongest textual
+ * strategies. Callers may lower the live verification count for latency-sensitive
+ * previews while the full product keeps the default two live checks.
  */
 export async function searchTrademarkIntelligently(
   name: string,
   requestedClasses: Array<string | number> = [],
+  liveVerificationLimit = MAX_LIVE_VERIFICATION_STRATEGIES,
 ): Promise<TrademarkSearchExecution> {
   const strategies = buildTrademarkSearchPlan(name)
-  const verificationPlan = strategies.slice(0, MAX_LIVE_VERIFICATION_STRATEGIES)
+  const safeLiveLimit = Math.max(0, Math.min(MAX_LIVE_VERIFICATION_STRATEGIES, Math.floor(liveVerificationLimit)))
+  const verificationPlan = strategies.slice(0, safeLiveLimit)
 
   const indexPromise: Promise<Marca[]> = searchTrademarkIntelligenceIndex(name, requestedClasses, 50)
     .then((index) => index.rows)
