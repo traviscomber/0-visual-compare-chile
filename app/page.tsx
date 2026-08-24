@@ -182,9 +182,9 @@ export default function LandingPage() {
                 <span className="v-compare-state">Coincidencia alta</span>
               </div>
               <div className="v-compare-pair">
-                <div className="v-compare-side"><span className="v-compare-label">Referencia A</span><Image src="/certificate-a.jpg" alt="Primer certificado usado como ejemplo representativo de comparación visual" fill sizes="(max-width: 700px) 42vw, 29vw" /></div>
+                <div className="v-compare-side"><span className="v-compare-label">Referencia A</span><Image src="/certificate-a.jpg" alt="Certificado base usado como referencia A en una comparación visual de alta similitud" fill sizes="(max-width: 700px) 42vw, 29vw" /></div>
                 <div className="v-compare-divider"><span className="v-compare-vs">VS</span></div>
-                <div className="v-compare-side"><span className="v-compare-label">Referencia B</span><Image src="/certificate-b.jpg" alt="Segundo certificado usado como ejemplo representativo de comparación visual" fill sizes="(max-width: 700px) 42vw, 29vw" /></div>
+                <div className="v-compare-side"><span className="v-compare-label">Referencia B</span><Image src="/certificate-a.jpg" alt="Mismo certificado base usado como referencia B para representar una composición prácticamente idéntica" fill sizes="(max-width: 700px) 42vw, 29vw" /></div>
               </div>
               <div className="v-compare-meta"><span><strong>Lectura</strong> · estructura y elementos gráficos</span><span>Ejemplo representativo</span></div>
             </article>
