@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Bell, BellRing, BriefcaseBusiness, ClipboardCheck, History, LayoutDashboard, LogOut, Menu, Search, Settings, Waypoints, X } from "lucide-react"
+import { Bell, BriefcaseBusiness, History, LayoutDashboard, LogOut, Menu, Search, Settings, Waypoints, X, BellRing } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const primaryItems = [
@@ -18,8 +18,6 @@ const primaryItems = [
 
 const workspaceItems = [
   { href: "/dashboard", label: "Resumen", icon: LayoutDashboard },
-  { href: "/casos/pendientes", label: "Pendientes", icon: ClipboardCheck },
-  { href: "/notificaciones", label: "Notificaciones", icon: Bell },
   { href: "/history", label: "Actividad", icon: History },
 ]
 
@@ -69,7 +67,6 @@ export function AppNav({ userEmail, fullName, companyName }: { userEmail: string
             <DropdownMenuContent align="end" className="w-72 rounded-lg border-[#DFE3DF] p-1.5 shadow-lg">
               <DropdownMenuLabel className="px-2 py-2 font-normal"><span className="block text-sm font-medium text-[#111827]">{fullName ?? "Usuario"}</span><span className="mt-0.5 block truncate text-xs text-[#667085]">{userEmail}</span></DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <p className="px-2 pb-1 pt-2 font-mono text-[9px] font-medium uppercase tracking-[0.18em] text-[#98A2B3]">Área de trabajo</p>
               {workspaceItems.map(item => { const Icon = item.icon; return <DropdownMenuItem key={item.href} asChild><Link href={item.href} className="cursor-pointer rounded-md"><Icon className="mr-2 h-3.5 w-3.5" />{item.label}</Link></DropdownMenuItem> })}
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild><Link href="/settings" className="rounded-md"><Settings className="mr-2 h-3.5 w-3.5" />Configuración</Link></DropdownMenuItem>
@@ -79,7 +76,7 @@ export function AppNav({ userEmail, fullName, companyName }: { userEmail: string
         </div>
       </div>
 
-      {mobileOpen ? <nav className="border-t border-black/10 bg-[#F7F8F6] px-4 py-4 lg:hidden" aria-label="Navegación móvil"><div className="mx-auto grid max-w-[1480px] gap-1">{primaryItems.map(item => { const Icon = item.icon; const active = activePrimary(item); return <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={cn("flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium", active ? "bg-[#E8EFEC] text-[#134E4A]" : "text-[#667085] hover:bg-black/5")}><Icon className="h-4 w-4" />{item.label}</Link> })}<div className="my-2 h-px bg-black/10" />{workspaceItems.map(item => { const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm text-[#667085] hover:bg-black/5"><Icon className="h-4 w-4" />{item.label}</Link> })}</div></nav> : null}
+      {mobileOpen ? <nav className="border-t border-black/10 bg-[#F7F8F6] px-4 py-4 lg:hidden" aria-label="Navegación móvil"><div className="mx-auto grid max-w-[1480px] gap-1">{primaryItems.map(item => { const Icon = item.icon; const active = activePrimary(item); return <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={cn("flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium", active ? "bg-[#E8EFEC] text-[#134E4A]" : "text-[#667085] hover:bg-black/5")}><Icon className="h-4 w-4" />{item.label}</Link> })}<div className="my-2 h-px bg-black/10" />{workspaceItems.map(item => { const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm text-[#667085] hover:bg-black/5"><Icon className="h-4 w-4" />{item.label}</Link> })}<Link href="/settings" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm text-[#667085] hover:bg-black/5"><Settings className="h-4 w-4" />Configuración</Link></div></nav> : null}
     </header>
   )
 }
