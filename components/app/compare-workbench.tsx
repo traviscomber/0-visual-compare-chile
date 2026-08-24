@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation"
 import { GitCompareArrows, Loader2, RotateCcw } from "lucide-react"
 import { ImageDropzone } from "@/components/app/image-dropzone"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { toast } from "sonner"
 import type { ComparisonResultPayload } from "@/types/comparison"
 
@@ -23,12 +22,10 @@ const ComparisonResultView = dynamic(
   () => import("@/components/app/comparison-result-view").then((mod) => mod.ComparisonResultView),
   {
     loading: () => (
-      <Card>
-        <CardContent className="flex items-center gap-3 py-8">
-          <Loader2 className="h-5 w-5 animate-spin text-primary" />
-          <div className="text-sm text-foreground">Cargando resultado detallado...</div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center gap-3 border-y border-border py-8 text-sm text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin text-primary motion-reduce:animate-none" />
+        Cargando evidencia de la comparación…
+      </div>
     ),
   },
 )
@@ -50,16 +47,13 @@ export function CompareWorkbench() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ image_a_id: imageA.id, image_b_id: imageB.id }),
       })
-      const json = await res.json()
-
-      if (!res.ok) {
-        throw new Error(json.error ?? "Error al comparar")
-      }
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error ?? "No fue posible comparar las imágenes.")
 
       setResult(json as ComparisonResultPayload)
-      toast.success("Comparacion completada")
+      toast.success("Comparación guardada en tu actividad")
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Error al comparar")
+      toast.error(err instanceof Error ? err.message : "No fue posible comparar las imágenes.")
     } finally {
       setComparing(false)
     }
@@ -73,15 +67,17 @@ export function CompareWorkbench() {
 
   if (result) {
     return (
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-foreground">Resultado guardado en tu historial.</div>
-          <div className="flex gap-2">
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3 border-y border-border py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-primary">Comparación persistida</p>
+            <p className="mt-1 text-sm text-muted-foreground">La evidencia quedó disponible en Actividad y en el detalle técnico.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={handleReset}>
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Nueva comparacion
+              <RotateCcw className="mr-2 h-4 w-4" /> Nueva comparación
             </Button>
-            <Button onClick={() => router.push(`/comparisons/${result.id}`)}>Ver detalle</Button>
+            <Button onClick={() => router.push(`/comparisons/${result.id}`)}>Abrir detalle</Button>
           </div>
         </div>
         <ComparisonResultView
@@ -94,40 +90,31 @@ export function CompareWorkbench() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <ImageDropzone label="Imagen A" image={imageA} onChange={setImageA} />
-        <ImageDropzone label="Imagen B" image={imageB} onChange={setImageB} />
+    <div className="flex flex-col gap-5">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <ImageDropzone label="01 / Imagen A" image={imageA} onChange={setImageA} />
+        <ImageDropzone label="02 / Imagen B" image={imageB} onChange={setImageB} />
       </div>
 
-      <Card>
-        <CardContent className="flex flex-col items-start justify-between gap-4 py-5 sm:flex-row sm:items-center">
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-foreground">Listo para analizar</span>
-            <span className="text-sm text-foreground">
-              Sube ambas imagenes y ejecuta el analisis. El resultado se guarda automaticamente.
-            </span>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleReset} disabled={!imageA && !imageB}>
-              Limpiar
-            </Button>
-            <Button onClick={handleCompare} disabled={!imageA || !imageB || comparing}>
-              {comparing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Analizando...
-                </>
-              ) : (
-                <>
-                  <GitCompareArrows className="mr-2 h-4 w-4" />
-                  Comparar
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col gap-4 border-y border-border py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">03 / Comparar</p>
+          <p className="mt-1 text-sm font-medium text-foreground">
+            {imageA && imageB ? "Ambas evidencias están listas." : "Selecciona dos imágenes para habilitar la comparación."}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">El resultado se guarda automáticamente y conserva sus señales técnicas.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="ghost" onClick={handleReset} disabled={!imageA && !imageB}>Limpiar</Button>
+          <Button onClick={handleCompare} disabled={!imageA || !imageB || comparing}>
+            {comparing ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" />Comparando…</>
+            ) : (
+              <><GitCompareArrows className="mr-2 h-4 w-4" />Comparar evidencia</>
+            )}
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }
