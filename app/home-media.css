@@ -1,98 +1,293 @@
-/* VIDENTIA homepage — media/storytelling layer. Kept isolated from product UI. */
-body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(3)::after,
+/* VIDENTIA homepage — Blaster cinematic photography + motion layer.
+   Uses only repository-owned visual assets and keeps motion progressive. */
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) {
+  --blaster-teal: #72dfcf;
+  --blaster-line: rgba(255,255,255,.08);
+  --blaster-shadow: 0 42px 120px rgba(0,0,0,.42);
+}
+
+/* HERO — turn the opening viewport into a photographic/product composition. */
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type {
+  isolation: isolate;
+  min-height: min(920px, 100svh);
+  background:
+    linear-gradient(90deg, #090d12 0%, rgba(9,13,18,.97) 38%, rgba(9,13,18,.66) 67%, rgba(9,13,18,.76) 100%),
+    linear-gradient(180deg, rgba(9,13,18,.08), #090d12 98%),
+    url('/images/brand-comparison-hero.png') 76% center / min(68vw, 1080px) auto no-repeat,
+    #090d12 !important;
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 0 56%, rgba(114,223,207,.08) 56.08%, transparent 56.16%),
+    linear-gradient(180deg, transparent 0 72%, rgba(255,255,255,.055) 72.08%, transparent 72.16%);
+  mask-image: linear-gradient(180deg, transparent, #000 18%, #000 80%, transparent);
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type::after {
+  content: "EVIDENCIA · CONTEXTO · VIGILANCIA";
+  position: absolute;
+  right: clamp(1.25rem, 3vw, 3.75rem);
+  bottom: 1.4rem;
+  z-index: 3;
+  font: 500 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .22em;
+  color: rgba(216,232,228,.42);
+  pointer-events: none;
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type > div:last-child {
+  min-height: 640px;
+}
+
+/* Keep the product UI dominant while letting the photograph read behind it. */
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type > div:last-child > div:last-child {
+  position: relative;
+  z-index: 2;
+  transform-origin: 55% 58%;
+  animation: blaster-product-float 8s ease-in-out infinite;
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type > div:last-child > div:last-child::after {
+  content: "";
+  position: absolute;
+  inset: 14% -4% -9% 12%;
+  z-index: -1;
+  border-radius: 50%;
+  background: rgba(20,164,144,.18);
+  filter: blur(82px);
+  opacity: .52;
+  pointer-events: none;
+}
+
+/* Hero CTA gets a restrained light sweep. */
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type a[href="/demo"] > button {
+  position: relative;
+  overflow: hidden;
+}
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type a[href="/demo"] > button::after {
+  content: "";
+  position: absolute;
+  inset: -100% auto -100% -45%;
+  width: 28%;
+  transform: rotate(18deg);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.24), transparent);
+  transition: transform .7s cubic-bezier(.2,.75,.2,1);
+}
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type a[href="/demo"]:hover > button::after {
+  transform: translateX(520%) rotate(18deg);
+}
+
+/* PRODUCT — use real comparison imagery as the photographic payoff behind evidence. */
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="producto"] {
+  position: relative;
+  overflow: clip;
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="producto"]::after {
+  aspect-ratio: 16 / 9 !important;
+  width: min(1360px, calc(100% - 80px)) !important;
+  max-height: 720px !important;
+  margin-top: clamp(3rem, 7vw, 6.5rem) !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+  border-radius: 28px !important;
+  background:
+    linear-gradient(90deg, rgba(7,11,15,.08), rgba(7,11,15,.18)),
+    linear-gradient(180deg, transparent 58%, rgba(7,11,15,.62)),
+    url('/images/logo-comparison-hero.jpg') center / cover no-repeat !important;
+  box-shadow: var(--blaster-shadow), inset 0 1px 0 rgba(255,255,255,.05) !important;
+  transform-origin: center bottom;
+}
+
+/* Capability instruments get a more physical hover response. */
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="producto"] article {
+  transform-style: preserve-3d;
+  transition: transform .45s cubic-bezier(.2,.75,.2,1), border-color .35s ease, box-shadow .45s ease !important;
+}
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="producto"] article:hover {
+  transform: translateY(-8px) perspective(900px) rotateX(1.5deg) !important;
+  box-shadow: 0 34px 74px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.05) !important;
+}
+
+/* WORKFLOW — add a documentary/product scene before the graph comparison. */
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(3) {
+  position: relative;
+  overflow: clip;
+  background:
+    linear-gradient(90deg, #0a0f15 0%, rgba(10,15,21,.98) 46%, rgba(10,15,21,.76) 72%, #0a0f15 100%),
+    url('/images/comparison-example-1.jpg') 100% 44% / min(52vw, 820px) auto no-repeat,
+    #0a0f15 !important;
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(3)::after {
+  content: "";
+  display: block;
+  width: min(1240px, calc(100% - 96px));
+  aspect-ratio: 1400 / 900;
+  max-height: 820px;
+  margin: clamp(3.5rem, 7vw, 6.8rem) auto 0;
+  border: 1px solid rgba(255,255,255,.085);
+  border-radius: 28px;
+  background: url('/videntia-compare.svg') center / contain no-repeat, #090d12;
+  box-shadow: var(--blaster-shadow), inset 0 1px 0 rgba(255,255,255,.035);
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(3) > div > div:last-child > div {
+  backdrop-filter: blur(18px);
+  background: rgba(9,14,20,.70) !important;
+  transition: transform .35s ease, background .35s ease, border-color .35s ease !important;
+}
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(3) > div > div:last-child > div:hover {
+  transform: translateX(8px);
+  background: rgba(15,23,31,.88) !important;
+}
+
+/* CONTEXT — swap the generic graph-only moment for a photographic legal/trademark scene. */
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(4) {
+  position: relative;
+  overflow: clip;
+}
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(4)::after {
+  aspect-ratio: 16 / 8.5 !important;
+  width: min(1180px, calc(100% - 96px)) !important;
+  max-height: 660px !important;
+  margin-top: clamp(3rem, 6vw, 5.5rem) !important;
+  border-radius: 28px !important;
+  background:
+    linear-gradient(90deg, rgba(7,11,15,.04), rgba(7,11,15,.12)),
+    linear-gradient(180deg, transparent 56%, rgba(7,11,15,.66)),
+    url('/images/trademark-protection.png') center / cover no-repeat !important;
+  box-shadow: var(--blaster-shadow), inset 0 1px 0 rgba(255,255,255,.045) !important;
+}
+
+/* ENTERPRISE — keep operational monitoring UI, but give the section photographic depth. */
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="empresas"] {
+  position: relative;
+  overflow: clip;
+  background:
+    linear-gradient(90deg, #0a0f15 0%, rgba(10,15,21,.96) 55%, rgba(10,15,21,.78) 100%),
+    url('/images/comparison-example-3.jpg') 100% 24% / min(46vw, 760px) auto no-repeat,
+    #0a0f15 !important;
+}
 body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="empresas"]::after {
   content: "";
   display: block;
-  width: min(1280px, calc(100% - 40px));
-  margin-inline: auto;
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 26px;
-  background-color: #090d12;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: contain;
-  box-shadow:
-    0 38px 110px rgba(0,0,0,.30),
-    inset 0 1px 0 rgba(255,255,255,.035);
-}
-
-/* Comparison becomes the visual payoff after the four-step workflow. */
-body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(3)::after {
+  width: min(1240px, calc(100% - 96px));
   aspect-ratio: 1400 / 900;
   max-height: 820px;
-  margin-top: clamp(3rem, 7vw, 6.5rem);
-  background-image: url('/videntia-compare.svg');
+  margin: clamp(3.5rem, 7vw, 6.8rem) auto 0;
+  border: 1px solid rgba(255,255,255,.085);
+  border-radius: 28px;
+  background: url('/videntia-watch.svg') center / contain no-repeat, #090d12;
+  box-shadow: var(--blaster-shadow), inset 0 1px 0 rgba(255,255,255,.035);
 }
 
-/* Monitoring closes the enterprise story with an operational view. */
-body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="empresas"]::after {
-  aspect-ratio: 1400 / 900;
-  max-height: 820px;
-  margin-top: clamp(3rem, 7vw, 6.5rem);
-  background-image: url('/videntia-watch.svg');
+/* Ambient motion: calm, product-led, never decorative noise. */
+@keyframes blaster-product-float {
+  0%, 100% { transform: translate3d(0,0,0) rotateY(-.5deg); }
+  50% { transform: translate3d(0,-9px,0) rotateY(.35deg); }
 }
 
-/* Give the media sections a wider editorial cadence without creating another card system. */
-body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(3),
-body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="empresas"] {
-  overflow: hidden;
+@keyframes blaster-media-reveal {
+  from { opacity: .30; transform: translateY(54px) scale(.965); filter: saturate(.72) brightness(.78); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: saturate(1) brightness(1); }
 }
 
-body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(3)::before,
-body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="empresas"]::before {
-  content: "";
-  pointer-events: none;
-  position: absolute;
-  width: 36rem;
-  height: 36rem;
-  border-radius: 999px;
-  filter: blur(90px);
-  opacity: .10;
-  background: #3ab7a5;
+@keyframes blaster-photo-drift {
+  from { background-position: 80% 50%; }
+  to { background-position: 74% 46%; }
 }
 
-body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(3) {
-  position: relative;
-}
-
-body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(3)::before {
-  right: -18rem;
-  bottom: 4rem;
-}
-
-body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="empresas"] {
-  position: relative;
-}
-
-body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="empresas"]::before {
-  left: -20rem;
-  bottom: 2rem;
-}
-
-@media (min-width: 1024px) {
+@supports (animation-timeline: view()) {
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="producto"]::after,
   body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(3)::after,
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(4)::after,
   body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="empresas"]::after {
-    width: min(1240px, calc(100% - 96px));
+    animation: blaster-media-reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 5% cover 36%;
+  }
+
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type {
+    animation: blaster-photo-drift linear both;
+    animation-timeline: scroll(root block);
+    animation-range: 0 34vh;
+  }
+}
+
+@media (max-width: 1023px) {
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type {
+    min-height: auto;
+    background:
+      linear-gradient(180deg, rgba(9,13,18,.64), #090d12 65%),
+      url('/images/brand-comparison-hero.png') 70% 12% / 1040px auto no-repeat,
+      #090d12 !important;
+  }
+
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type > div:last-child {
+    min-height: auto;
+  }
+
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(3),
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="empresas"] {
+    background: #0a0f15 !important;
+  }
+
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="producto"]::after,
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(3)::after,
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(4)::after,
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="empresas"]::after {
+    width: calc(100% - 40px) !important;
+    border-radius: 20px !important;
   }
 }
 
 @media (max-width: 640px) {
-  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(3)::after,
-  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="empresas"]::after {
-    width: calc(100% - 28px);
-    border-radius: 16px;
-    margin-top: 2.5rem;
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type {
+    background:
+      linear-gradient(180deg, rgba(9,13,18,.58), #090d12 52%),
+      url('/images/brand-comparison-hero.png') 62% 7% / 760px auto no-repeat,
+      #090d12 !important;
   }
 
-  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(3)::before,
-  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="empresas"]::before {
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type::after {
     display: none;
+  }
+
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type > div:last-child > div:last-child {
+    animation-duration: 10s;
+  }
+
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="producto"]::after,
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(3)::after,
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(4)::after,
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="empresas"]::after {
+    width: calc(100% - 28px) !important;
+    border-radius: 15px !important;
+    margin-top: 2.5rem !important;
+  }
+
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="producto"]::after,
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(4)::after {
+    aspect-ratio: 4 / 5 !important;
+    background-position: center !important;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type,
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type > div:last-child > div:last-child,
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="producto"]::after,
   body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(3)::after,
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(4)::after,
   body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="empresas"]::after {
-    transform: none;
+    animation: none !important;
+    transform: none !important;
   }
 }
