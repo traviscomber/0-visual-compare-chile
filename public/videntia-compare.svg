@@ -1,0 +1,47 @@
+<svg width="1400" height="900" viewBox="0 0 1400 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1400" y2="900"><stop stop-color="#081016"/><stop offset="1" stop-color="#0D151D"/></linearGradient>
+  <linearGradient id="teal" x1="220" y1="160" x2="1120" y2="760"><stop stop-color="#83E7D7"/><stop offset="1" stop-color="#17796E"/></linearGradient>
+  <radialGradient id="halo"><stop stop-color="#2EA695" stop-opacity=".18"/><stop offset="1" stop-color="#2EA695" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="1400" height="900" rx="42" fill="url(#bg)"/>
+<circle cx="1050" cy="250" r="310" fill="url(#halo)"/>
+<g font-family="Arial, Helvetica, sans-serif">
+<text x="72" y="82" fill="#667581" font-size="13" letter-spacing="2">COMPARACIÓN VISUAL · VIDENTIA</text>
+<text x="72" y="134" fill="#F4F8F7" font-size="38" font-weight="700">Ver la similitud antes de discutirla.</text>
+<text x="72" y="174" fill="#8D9AA6" font-size="17">Composición, elementos figurativos y contexto se presentan por separado.</text>
+<rect x="72" y="232" width="596" height="520" rx="30" fill="#0B1219" stroke="#FFFFFF" stroke-opacity=".09"/>
+<rect x="732" y="232" width="596" height="520" rx="30" fill="#0B1219" stroke="#FFFFFF" stroke-opacity=".09"/>
+<text x="108" y="280" fill="#6E7D89" font-size="12" letter-spacing="1.5">MARCA CONSULTADA</text>
+<text x="768" y="280" fill="#6E7D89" font-size="12" letter-spacing="1.5">ANTECEDENTE RELEVANTE</text>
+<g transform="translate(158 340)">
+  <rect width="420" height="220" rx="28" fill="#F1F0EA"/>
+  <circle cx="120" cy="110" r="64" fill="#153E42"/>
+  <path d="M82 116C115 73 142 73 177 116C148 99 115 99 82 116Z" fill="#75DCCB"/>
+  <text x="220" y="102" fill="#142128" font-size="42" font-weight="700">NOVA</text>
+  <text x="220" y="134" fill="#65727A" font-size="15" letter-spacing="3">STUDIO</text>
+</g>
+<g transform="translate(818 340)">
+  <rect width="420" height="220" rx="28" fill="#F1F0EA"/>
+  <circle cx="120" cy="110" r="64" fill="#19474A"/>
+  <path d="M78 119C112 77 146 77 181 119C151 101 114 101 78 119Z" fill="#63CDBD"/>
+  <text x="220" y="102" fill="#142128" font-size="42" font-weight="700">NOVO</text>
+  <text x="220" y="134" fill="#65727A" font-size="15" letter-spacing="3">LAB</text>
+</g>
+<g fill="#0F1A21" stroke="#FFFFFF" stroke-opacity=".08">
+  <rect x="108" y="600" width="524" height="108" rx="18"/>
+  <rect x="768" y="600" width="524" height="108" rx="18"/>
+</g>
+<text x="136" y="636" fill="#72DFCF" font-size="13">SEÑALES OBSERVABLES</text>
+<text x="136" y="667" fill="#A6B0B8" font-size="14">Forma circular · onda central · contraste teal</text>
+<text x="136" y="692" fill="#71808C" font-size="13">La explicación visual queda separada del análisis jurídico.</text>
+<text x="796" y="636" fill="#72DFCF" font-size="13">FUENTE Y CONTEXTO</text>
+<text x="796" y="667" fill="#A6B0B8" font-size="14">Antecedente · clase · titular · fecha · estado</text>
+<text x="796" y="692" fill="#71808C" font-size="13">Cada dato conserva procedencia y trazabilidad.</text>
+<path d="M668 492H732" stroke="url(#teal)" stroke-width="2" stroke-dasharray="7 7"/>
+<circle cx="700" cy="492" r="9" fill="#0C171D" stroke="#72DFCF"/>
+<rect x="72" y="790" width="1256" height="54" rx="16" fill="#091017" stroke="#FFFFFF" stroke-opacity=".06"/>
+<circle cx="100" cy="817" r="5" fill="#72DFCF"/>
+<text x="120" y="822" fill="#A5B0BA" font-size="14">Ejemplo visual de interfaz: VIDENTIA muestra señales y evidencia; no reemplaza el criterio profesional.</text>
+</g>
+</svg>
