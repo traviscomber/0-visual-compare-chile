@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="900" gradientUnits="userSpaceOnUse"><stop stop-color="#07101A"/><stop offset="1" stop-color="#03070B"/></linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(610 430) rotate(90) scale(360 470)"><stop stop-color="#1B6F68" stop-opacity=".22"/><stop offset="1" stop-color="#07101A" stop-opacity="0"/></radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#E1BD79"/><stop offset="1" stop-color="#8C6B38"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#000" flood-opacity=".42"/></filter>
+    <filter id="tealGlow" x="-200%" y="-200%" width="400%" height="400%"><feGaussianBlur stdDeviation="5"/></filter>
+  </defs>
+  <rect width="1200" height="900" rx="30" fill="url(#bg)"/>
+  <rect width="1200" height="900" rx="30" fill="url(#glow)"/>
+  <g opacity=".12" stroke="#7EE0D1"><path d="M0 180H1200M0 360H1200M0 540H1200M0 720H1200"/><path d="M200 0V900M400 0V900M600 0V900M800 0V900M1000 0V900"/></g>
+  <g stroke="#66D8C7" stroke-opacity=".48" stroke-width="2">
+    <path d="M382 250H465C495 250 500 290 530 290"/><path d="M382 470H454C500 470 496 450 530 450"/><path d="M390 700H470C510 700 500 610 545 610"/>
+    <path d="M670 260H740C770 260 766 220 812 220"/><path d="M680 450H760C790 450 790 480 824 480"/><path d="M660 650H756C790 650 790 700 822 700"/>
+  </g>
+  <g fill="#7EE0D1"><circle cx="382" cy="250" r="4"/><circle cx="530" cy="290" r="4"/><circle cx="382" cy="470" r="4"/><circle cx="530" cy="450" r="4"/><circle cx="390" cy="700" r="4"/><circle cx="545" cy="610" r="4"/><circle cx="670" cy="260" r="4"/><circle cx="812" cy="220" r="4"/><circle cx="680" cy="450" r="4"/><circle cx="824" cy="480" r="4"/><circle cx="660" cy="650" r="4"/><circle cx="822" cy="700" r="4"/></g>
+  <g filter="url(#shadow)">
+    <rect x="450" y="180" width="300" height="500" rx="22" fill="#0B1620" stroke="#C79D5C" stroke-opacity=".72"/>
+    <path d="M480 180H635L665 208H720" stroke="#C79D5C" stroke-opacity=".7"/>
+    <text x="486" y="240" fill="#8D9AA6" font-family="Arial,sans-serif" font-size="15" letter-spacing="3">EXPEDIENTE MARCARIO</text>
+    <text x="486" y="292" fill="#F3F7F5" font-family="Arial,sans-serif" font-size="42" font-weight="600">CASO VIDENTIA</text>
+    <text x="486" y="326" fill="#7EE0D1" font-family="Arial,sans-serif" font-size="16">● Contexto verificable</text>
+    <line x1="486" y1="360" x2="714" y2="360" stroke="#253540"/>
+    <text x="486" y="405" fill="#AEB9C2" font-family="Arial,sans-serif" font-size="15">Antecedente oficial conectado</text>
+    <text x="486" y="435" fill="#71808C" font-family="Arial,sans-serif" font-size="14">Titular · familia · clases · historial</text>
+    <text x="486" y="466" fill="#71808C" font-family="Arial,sans-serif" font-size="14">precedentes · estado del expediente</text>
+    <rect x="486" y="510" width="102" height="34" rx="17" fill="#122A29" stroke="#2F8D82"/><text x="507" y="532" fill="#9BE7DA" font-family="Arial,sans-serif" font-size="13">Verificado</text>
+    <text x="486" y="590" fill="#8D9AA6" font-family="Arial,sans-serif" font-size="13" letter-spacing="2">CLASES</text>
+    <g><rect x="486" y="610" width="44" height="38" rx="8" fill="#10232A"/><rect x="540" y="610" width="44" height="38" rx="8" fill="#10232A"/><rect x="594" y="610" width="44" height="38" rx="8" fill="#10232A"/><text x="500" y="635" fill="#BDECE4" font-family="Arial" font-size="14">09</text><text x="554" y="635" fill="#BDECE4" font-family="Arial" font-size="14">35</text><text x="608" y="635" fill="#BDECE4" font-family="Arial" font-size="14">42</text></g>
+    <circle cx="687" cy="262" r="34" fill="#13232B" stroke="#8E6D3B"/><text x="677" y="273" fill="url(#gold)" font-family="Arial" font-size="34" font-weight="700">V</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="86" y="128" width="296" height="188" rx="18" fill="#0A141D" stroke="#294A56"/>
+    <text x="118" y="168" fill="#B7C4CB" font-family="Arial" font-size="14" letter-spacing="2">TITULAR VERIFICADO</text>
+    <text x="118" y="210" fill="#F0F4F2" font-family="Arial" font-size="22">Titular del expediente</text>
+    <text x="118" y="242" fill="#758591" font-family="Arial" font-size="14">Fuente oficial disponible</text>
+    <text x="118" y="274" fill="#7EE0D1" font-family="Arial" font-size="13">● identidad confirmada</text>
+    <rect x="88" y="360" width="294" height="218" rx="18" fill="#0A141D" stroke="#294A56"/>
+    <text x="118" y="402" fill="#B7C4CB" font-family="Arial" font-size="14" letter-spacing="2">HISTORIAL</text>
+    <line x1="130" y1="432" x2="130" y2="532" stroke="#35535D"/><circle cx="130" cy="450" r="4" fill="#7EE0D1"/><circle cx="130" cy="492" r="4" fill="#748691"/><circle cx="130" cy="532" r="4" fill="#C79D5C"/>
+    <text x="150" y="455" fill="#C4CDD1" font-family="Arial" font-size="14">Solicitud presentada</text><text x="150" y="497" fill="#87949E" font-family="Arial" font-size="14">Admitida a trámite</text><text x="150" y="537" fill="#D2AE72" font-family="Arial" font-size="14">Estado actual</text>
+    <rect x="80" y="632" width="310" height="176" rx="18" fill="#0A141D" stroke="#294A56"/>
+    <text x="112" y="674" fill="#B7C4CB" font-family="Arial" font-size="14" letter-spacing="2">PRECEDENTES</text>
+    <text x="112" y="716" fill="#E7ECE9" font-family="Arial" font-size="16">Antecedente relacionado</text><text x="112" y="744" fill="#72808A" font-family="Arial" font-size="13">Fuente y resolución visibles</text><text x="112" y="778" fill="#7EE0D1" font-family="Arial" font-size="13">Contexto, no predicción</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="812" y="115" width="304" height="214" rx="18" fill="#0A141D" stroke="#294A56"/>
+    <text x="844" y="157" fill="#B7C4CB" font-family="Arial" font-size="14" letter-spacing="2">FAMILIA MARCARIA</text>
+    <text x="844" y="201" fill="#E7ECE9" font-family="Arial" font-size="17">Marca relacionada A</text><text x="1030" y="201" fill="#7EE0D1" font-family="Arial" font-size="12">VIGENTE</text>
+    <text x="844" y="239" fill="#E7ECE9" font-family="Arial" font-size="17">Marca relacionada B</text><text x="1022" y="239" fill="#D2AE72" font-family="Arial" font-size="12">TRÁMITE</text>
+    <text x="844" y="277" fill="#E7ECE9" font-family="Arial" font-size="17">Marca relacionada C</text><text x="1022" y="277" fill="#87949E" font-family="Arial" font-size="12">HISTÓRICA</text>
+    <rect x="824" y="382" width="292" height="188" rx="18" fill="#0A141D" stroke="#294A56"/>
+    <text x="856" y="424" fill="#B7C4CB" font-family="Arial" font-size="14" letter-spacing="2">CLASES Y ÁMBITO</text>
+    <g fill="#0F2528" stroke="#2E776E"><rect x="856" y="452" width="42" height="34" rx="8"/><rect x="856" y="496" width="42" height="34" rx="8"/><text x="868" y="474" fill="#AAE8DE" font-family="Arial" font-size="13">35</text><text x="868" y="518" fill="#AAE8DE" font-family="Arial" font-size="13">42</text></g>
+    <text x="914" y="474" fill="#B1BCC2" font-family="Arial" font-size="14">Servicios relacionados</text><text x="914" y="518" fill="#B1BCC2" font-family="Arial" font-size="14">Tecnología y análisis</text>
+    <rect x="822" y="630" width="294" height="178" rx="18" fill="#0A141D" stroke="#294A56"/>
+    <text x="854" y="672" fill="#B7C4CB" font-family="Arial" font-size="14" letter-spacing="2">FUENTES OFICIALES</text>
+    <text x="854" y="716" fill="#E7ECE9" font-family="Arial" font-size="16">INAPI · TDPI · registros</text><text x="854" y="748" fill="#788792" font-family="Arial" font-size="13">Trazabilidad conservada</text>
+    <circle cx="1068" cy="728" r="18" fill="#10302D"/><path d="M1059 728l6 6 12-14" stroke="#7EE0D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <g opacity=".8"><circle cx="600" cy="760" r="5" fill="#7EE0D1"/><circle cx="600" cy="760" r="18" fill="#7EE0D1" opacity=".08" filter="url(#tealGlow)"/></g>
+  <text x="600" y="846" text-anchor="middle" fill="#61717D" font-family="Arial" font-size="13" letter-spacing="3">CONTEXTO MARCARIO · EVIDENCIA CONECTADA</text>
+</svg>
