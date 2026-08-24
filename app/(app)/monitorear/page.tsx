@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { FormEvent, useEffect, useMemo, useState } from "react"
-import { BellRing, Building2, Check, Clock3, Eye, History, Loader2, Pause, Play, Plus, RefreshCw, Search, ShieldCheck, Sparkles, Trash2 } from "lucide-react"
+import { BellRing, Building2, Check, Clock3, Eye, History, Loader2, Pause, Play, Plus, RefreshCw, Search, ShieldCheck, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -63,10 +63,10 @@ export default function MonitorearPage() {
   const [showHistory, setShowHistory] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const active = useMemo(() => watches.filter(item => item.is_active), [watches])
-  const newSignals = useMemo(() => signals.filter(item => item.is_new), [signals])
+  const active = useMemo(() => watches.filter((item) => item.is_active), [watches])
+  const newSignals = useMemo(() => signals.filter((item) => item.is_new), [signals])
   const visibleSignals = useMemo(() => showHistory ? signals : newSignals, [showHistory, signals, newSignals])
-  const lastHumanReview = useMemo(() => watches.map(item => item.last_reviewed_at).filter(Boolean).sort().at(-1) ?? null, [watches])
+  const lastHumanReview = useMemo(() => watches.map((item) => item.last_reviewed_at).filter(Boolean).sort().at(-1) ?? null, [watches])
 
   async function load() {
     setLoading(true)
@@ -90,7 +90,21 @@ export default function MonitorearPage() {
     }
   }
 
-  useEffect(() => { void load() }, [])
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const brand = params.get("brand")?.trim()
+    const owner = params.get("owner")?.trim()
+    if (brand) {
+      setType("brand")
+      setQuery(brand.slice(0, 160))
+      setShowCreate(true)
+    } else if (owner) {
+      setType("owner")
+      setQuery(owner.slice(0, 160))
+      setShowCreate(true)
+    }
+    void load()
+  }, [])
 
   async function createWatch(event: FormEvent) {
     event.preventDefault()
@@ -98,7 +112,7 @@ export default function MonitorearPage() {
     setSaving(true)
     setError(null)
     try {
-      const niza = classes.split(/[\s,;]+/).map(Number).filter(value => Number.isInteger(value) && value >= 1 && value <= 45)
+      const niza = classes.split(/[\s,;]+/).map(Number).filter((value) => Number.isInteger(value) && value >= 1 && value <= 45)
       const response = await fetch("/api/intelligence/watchlist", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -154,83 +168,85 @@ export default function MonitorearPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1380px] px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
-      <header className="grid gap-7 border-b border-slate-200 pb-9 lg:grid-cols-[1fr_auto] lg:items-end">
-        <div className="max-w-4xl">
-          <p className="text-sm font-semibold text-teal-700">Vigilancia de marcas</p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-5xl">Qué cambió desde que lo revisaste.</h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">Seguimos marcas y titulares contra INAPI y TDPI. Guardamos el historial y separamos lo nuevo de lo que ya revisaste.</p>
+    <div className="mx-auto w-full max-w-[1480px] px-4 py-9 sm:px-6 lg:px-8 lg:py-12">
+      <header className="grid gap-8 border-b border-border pb-9 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">VIDENTIA / Vigilar</p>
+          <h1 className="mt-4 max-w-[10ch] text-4xl font-normal leading-[0.96] tracking-[-0.05em] text-foreground sm:text-5xl lg:text-6xl">Qué cambió desde tu última revisión.</h1>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => void load()} disabled={loading}><RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}/>Actualizar</Button>
-          <Button onClick={() => setShowCreate(value => !value)} className="bg-teal-700 hover:bg-teal-800"><Plus className="mr-2 h-4 w-4"/>Añadir vigilancia</Button>
+        <div className="max-w-2xl lg:justify-self-end">
+          <p className="text-base leading-7 text-muted-foreground sm:text-lg">Vigila marcas y titulares con señales provenientes de INAPI y TDPI. VIDENTIA separa lo nuevo del historial y conserva la fuente, la fecha y el motivo de cada alerta.</p>
+          <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-muted-foreground"><span>INAPI + TDPI</span><span>Revisión humana</span><span>Historial trazable</span></div>
         </div>
       </header>
 
-      <section className="grid border-b border-slate-200 sm:grid-cols-4">
-        <Metric label="Nuevos" value={summary.new_count} detail="Desde tu última revisión" emphasis={summary.new_count > 0}/>
-        <Metric label="Prioritarios" value={summary.high_new_count} detail="Nuevos con relación alta" emphasis={summary.high_new_count > 0}/>
-        <Metric label="Vigilancias" value={active.length} detail="Marcas y titulares activos"/>
-        <Metric label="Historial" value={summary.total_history} detail="Señales conservadas"/>
+      <div className="flex flex-wrap justify-end gap-2 border-b border-border py-4">
+        <Button variant="outline" onClick={() => void load()} disabled={loading}><RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`} />Actualizar</Button>
+        <Button onClick={() => setShowCreate((value) => !value)}><Plus className="mr-2 h-4 w-4" />Añadir vigilancia</Button>
+      </div>
+
+      <section className="grid border-b border-border sm:grid-cols-4">
+        <Metric label="Nuevos" value={summary.new_count} detail="Desde tu última revisión" emphasis={summary.new_count > 0} />
+        <Metric label="Prioritarios" value={summary.high_new_count} detail="Nuevos con relación alta" emphasis={summary.high_new_count > 0} />
+        <Metric label="Vigilancias" value={active.length} detail="Marcas y titulares activos" />
+        <Metric label="Historial" value={summary.total_history} detail="Señales conservadas" />
       </section>
 
       {summary.new_count > 0 ? (
-        <section className="my-7 overflow-hidden rounded-2xl border border-teal-200 bg-teal-50/60">
-          <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-            <div className="flex gap-3"><Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-teal-700"/><div><p className="font-semibold text-slate-950">Hay {summary.new_count} cambio{summary.new_count === 1 ? "" : "s"} desde tu última revisión</p><p className="mt-1 text-sm leading-6 text-slate-600">{summary.inapi_new_count} desde INAPI · {summary.tdpi_new_count} desde TDPI{lastHumanReview ? ` · última revisión ${formatDateTime(lastHumanReview)}` : ""}</p></div></div>
-            <Button onClick={() => void markReviewed()} disabled={reviewing} className="shrink-0 bg-teal-700 hover:bg-teal-800">{reviewing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Check className="mr-2 h-4 w-4"/>}Marcar todo revisado</Button>
-          </div>
+        <section className="my-7 flex flex-col gap-5 border-y border-primary/25 bg-primary/[0.04] px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <div className="flex gap-3"><BellRing className="mt-0.5 h-5 w-5 shrink-0 text-primary" /><div><p className="font-semibold text-foreground">Hay {summary.new_count} cambio{summary.new_count === 1 ? "" : "s"} desde tu última revisión</p><p className="mt-1 text-sm leading-6 text-muted-foreground">{summary.inapi_new_count} desde INAPI · {summary.tdpi_new_count} desde TDPI{lastHumanReview ? ` · última revisión ${formatDateTime(lastHumanReview)}` : ""}</p></div></div>
+          <Button onClick={() => void markReviewed()} disabled={reviewing} className="shrink-0">{reviewing ? <Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" /> : <Check className="mr-2 h-4 w-4" />}Marcar todo revisado</Button>
         </section>
       ) : active.length > 0 && !loading ? (
-        <section className="my-7 flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-teal-700"/><div><p className="font-semibold text-slate-950">No hay cambios nuevos por revisar</p><p className="mt-1 text-sm leading-6 text-slate-600">El historial permanece disponible. Actualizar vuelve a consultar las fuentes sin convertir antecedentes antiguos en alertas nuevas.</p></div></section>
+        <section className="my-7 flex items-start gap-3 border-y border-border py-5"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" /><div><p className="font-semibold text-foreground">No hay cambios nuevos por revisar</p><p className="mt-1 text-sm leading-6 text-muted-foreground">El historial permanece disponible. Actualizar vuelve a consultar las fuentes sin convertir antecedentes antiguos en alertas nuevas.</p></div></section>
       ) : null}
 
       {showCreate ? (
-        <section className="border-y border-slate-200 py-8">
-          <form onSubmit={createWatch} className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-            <div className="mb-5"><h2 className="text-lg font-semibold text-slate-950">¿Qué quieres seguir?</h2><p className="mt-1 text-sm text-slate-500">Marca o titular. Las clases Niza son opcionales y ayudan a reducir ruido.</p></div>
+        <section className="border-y border-border py-7">
+          <form onSubmit={createWatch} className="bg-card/30 p-5 sm:p-6">
+            <div className="mb-5"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Nueva vigilancia</p><h2 className="mt-2 text-xl font-normal tracking-[-0.025em] text-foreground">¿Qué quieres seguir?</h2><p className="mt-2 text-sm text-muted-foreground">Marca o titular. Las clases Niza son opcionales y ayudan a reducir ruido.</p></div>
             <div className="grid gap-3 lg:grid-cols-[220px_1fr_180px_auto]">
-              <div className="flex rounded-lg border border-slate-200 p-1">
-                <Button type="button" size="sm" variant={type === "brand" ? "secondary" : "ghost"} className="flex-1" onClick={() => setType("brand")}><Search className="mr-1.5 h-4 w-4"/>Marca</Button>
-                <Button type="button" size="sm" variant={type === "owner" ? "secondary" : "ghost"} className="flex-1" onClick={() => setType("owner")}><Building2 className="mr-1.5 h-4 w-4"/>Titular</Button>
+              <div className="flex border border-border p-1">
+                <Button type="button" size="sm" variant={type === "brand" ? "secondary" : "ghost"} className="flex-1" onClick={() => setType("brand")}><Search className="mr-1.5 h-4 w-4" />Marca</Button>
+                <Button type="button" size="sm" variant={type === "owner" ? "secondary" : "ghost"} className="flex-1" onClick={() => setType("owner")}><Building2 className="mr-1.5 h-4 w-4" />Titular</Button>
               </div>
-              <Input value={query} onChange={event => setQuery(event.target.value)} placeholder={type === "brand" ? "Ej: N3URALIA" : "Ej: EMPRESA SPA"} maxLength={160}/>
-              <Input value={classes} onChange={event => setClasses(event.target.value)} placeholder="Niza: 9, 35, 42"/>
-              <Button disabled={query.trim().length < 2 || saving} className="bg-teal-700 hover:bg-teal-800">{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Plus className="mr-2 h-4 w-4"/>}Empezar a vigilar</Button>
+              <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={type === "brand" ? "Ej: N3URALIA" : "Ej: EMPRESA SPA"} maxLength={160} />
+              <Input value={classes} onChange={(event) => setClasses(event.target.value)} placeholder="Niza: 9, 35, 42" />
+              <Button disabled={query.trim().length < 2 || saving}>{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" /> : <Plus className="mr-2 h-4 w-4" />}Empezar a vigilar</Button>
             </div>
           </form>
         </section>
       ) : null}
 
-      {error ? <div role="alert" className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div> : null}
+      {error ? <div role="alert" className="mt-6 border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">{error}</div> : null}
 
       <section className="grid gap-8 py-10 xl:grid-cols-[1.42fr_0.58fr]">
         <div>
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-            <div><p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">Línea de tiempo</p><h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">{showHistory ? "Historial de vigilancia" : "Nuevo desde tu última revisión"}</h2></div>
-            <Button variant="ghost" size="sm" onClick={() => setShowHistory(value => !value)}>{showHistory ? <><BellRing className="mr-2 h-4 w-4"/>Ver sólo lo nuevo</> : <><History className="mr-2 h-4 w-4"/>Ver historial</>}</Button>
+            <div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Línea de tiempo</p><h2 className="mt-2 text-2xl font-normal tracking-[-0.03em] text-foreground">{showHistory ? "Historial de vigilancia" : "Nuevo desde tu última revisión"}</h2></div>
+            <Button variant="ghost" size="sm" onClick={() => setShowHistory((value) => !value)}>{showHistory ? <><BellRing className="mr-2 h-4 w-4" />Ver sólo lo nuevo</> : <><History className="mr-2 h-4 w-4" />Ver historial</>}</Button>
           </div>
 
-          {loading ? <div className="flex items-center gap-2 py-10 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin"/>Revisando INAPI y TDPI…</div> : visibleSignals.length === 0 ? <Empty hasWatches={active.length > 0} hasHistory={signals.length > 0} onCreate={() => setShowCreate(true)} onHistory={() => setShowHistory(true)}/> : (
-            <div className="relative border-l border-slate-200 pl-5 sm:pl-7">
-              {visibleSignals.map(signal => <TimelineSignal key={signal.id} signal={signal}/>) }
+          {loading ? <div className="flex items-center gap-2 border-y border-border py-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />Revisando INAPI y TDPI…</div> : visibleSignals.length === 0 ? <Empty hasWatches={active.length > 0} hasHistory={signals.length > 0} onCreate={() => setShowCreate(true)} onHistory={() => setShowHistory(true)} /> : (
+            <div className="relative border-l border-border pl-5 sm:pl-7">
+              {visibleSignals.map((signal) => <TimelineSignal key={signal.id} signal={signal} />)}
             </div>
           )}
         </div>
 
         <aside>
-          <div className="mb-5"><p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">En seguimiento</p><h2 className="mt-2 text-xl font-semibold text-slate-950">Tus vigilancias</h2></div>
-          {watches.length ? <div className="space-y-3">{watches.map(watch => {
-            const watchNew = signals.filter(signal => signal.watch_id === watch.id && signal.is_new).length
-            return <div key={watch.id} className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="mb-5"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">En seguimiento</p><h2 className="mt-2 text-xl font-normal tracking-[-0.025em] text-foreground">Tus vigilancias</h2></div>
+          {watches.length ? <div className="divide-y divide-border border-y border-border">{watches.map((watch) => {
+            const watchNew = signals.filter((signal) => signal.watch_id === watch.id && signal.is_new).length
+            return <div key={watch.id} className="py-4">
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline">{watch.watch_type === "brand" ? "Marca" : "Titular"}</Badge>{!watch.is_active ? <Badge variant="secondary">Pausada</Badge> : null}{watchNew > 0 ? <Badge className="bg-teal-50 text-teal-800 hover:bg-teal-50">{watchNew} nuevo{watchNew === 1 ? "" : "s"}</Badge> : null}</div><p className="mt-3 font-semibold text-slate-950">{watch.query}</p>{watch.nice_classes.length ? <p className="mt-1 text-xs text-slate-500">Niza {watch.nice_classes.join(", ")}</p> : <p className="mt-1 text-xs text-slate-400">Todas las clases</p>}<p className="mt-2 text-[11px] text-slate-400">{watch.last_checked_at ? `Última consulta ${formatDateTime(watch.last_checked_at)}` : "Preparando primera línea base"}</p></div>
-                <div className="flex gap-1"><Button size="icon" variant="ghost" onClick={() => void toggle(watch)} aria-label={watch.is_active ? "Pausar vigilancia" : "Activar vigilancia"}>{watch.is_active ? <Pause className="h-4 w-4"/> : <Play className="h-4 w-4"/>}</Button><Button size="icon" variant="ghost" onClick={() => void remove(watch.id)} aria-label="Eliminar vigilancia"><Trash2 className="h-4 w-4"/></Button></div>
+                <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="rounded-md">{watch.watch_type === "brand" ? "Marca" : "Titular"}</Badge>{!watch.is_active ? <Badge variant="secondary" className="rounded-md">Pausada</Badge> : null}{watchNew > 0 ? <Badge className="rounded-md border-primary/25 bg-primary/[0.06] text-primary">{watchNew} nuevo{watchNew === 1 ? "" : "s"}</Badge> : null}</div><p className="mt-3 font-semibold text-foreground">{watch.query}</p>{watch.nice_classes.length ? <p className="mt-1 text-xs text-muted-foreground">Niza {watch.nice_classes.join(", ")}</p> : <p className="mt-1 text-xs text-muted-foreground">Todas las clases</p>}<p className="mt-2 text-[11px] text-muted-foreground">{watch.last_checked_at ? `Última consulta ${formatDateTime(watch.last_checked_at)}` : "Preparando primera línea base"}</p></div>
+                <div className="flex gap-1"><Button size="icon" variant="ghost" onClick={() => void toggle(watch)} aria-label={watch.is_active ? "Pausar vigilancia" : "Activar vigilancia"}>{watch.is_active ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}</Button><Button size="icon" variant="ghost" onClick={() => void remove(watch.id)} aria-label="Eliminar vigilancia"><Trash2 className="h-4 w-4" /></Button></div>
               </div>
             </div>
-          })}</div> : <div className="rounded-2xl border border-dashed border-slate-300 p-7 text-center"><Eye className="mx-auto h-6 w-6 text-slate-400"/><p className="mt-3 text-sm font-semibold text-slate-800">Aún no sigues ninguna marca</p><Button onClick={() => setShowCreate(true)} variant="outline" size="sm" className="mt-4">Añadir vigilancia</Button></div>}
+          })}</div> : <div className="border border-dashed border-border p-7 text-center"><Eye className="mx-auto h-6 w-6 text-muted-foreground" /><p className="mt-3 text-sm font-semibold text-foreground">Aún no sigues ninguna marca</p><Button onClick={() => setShowCreate(true)} variant="outline" size="sm" className="mt-4">Añadir vigilancia</Button></div>}
 
-          <div className="mt-6 rounded-2xl bg-slate-950 p-5 text-white"><ShieldCheck className="h-5 w-5 text-teal-300"/><h3 className="mt-4 font-semibold">Cada señal conserva evidencia.</h3><p className="mt-2 text-sm leading-6 text-slate-300">La fecha de detección, la fuente y el antecedente quedan en el historial. N3uralia prioriza; la decisión jurídica sigue siendo humana.</p></div>
+          <div className="mt-7 border-l-2 border-primary/35 pl-4"><ShieldCheck className="h-4 w-4 text-primary" /><h3 className="mt-3 font-semibold text-foreground">Cada señal conserva evidencia.</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">La fecha de detección, la fuente y el antecedente permanecen en el historial. VIDENTIA prioriza la revisión; la decisión jurídica sigue siendo humana.</p></div>
         </aside>
       </section>
     </div>
@@ -238,27 +254,44 @@ export default function MonitorearPage() {
 }
 
 function TimelineSignal({ signal }: { signal: Signal }) {
-  return <article className="relative border-b border-slate-100 py-6 first:pt-0 last:border-0">
-    <span className={`absolute -left-[27px] top-7 h-3 w-3 rounded-full border-2 border-white sm:-left-[35px] ${signal.is_new ? "bg-teal-600" : "bg-slate-300"}`}/>
-    <div className="rounded-2xl border border-slate-200 bg-white p-5">
+  return <article className="relative border-b border-border py-6 first:pt-0 last:border-0">
+    <span className={`absolute -left-[27px] top-7 h-3 w-3 rounded-full border-2 border-background sm:-left-[35px] ${signal.is_new ? "bg-primary" : "bg-muted-foreground/35"}`} />
+    <div className="border border-border bg-card/25 p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">{signal.is_new ? <Badge className="bg-teal-50 text-teal-800 hover:bg-teal-50">Nuevo</Badge> : null}<Badge className={signal.relevance === "alta" ? "bg-amber-100 text-amber-800 hover:bg-amber-100" : "bg-slate-100 text-slate-700 hover:bg-slate-100"}>{signal.relevance === "alta" ? "Revisión prioritaria" : "Relacionado"}</Badge><Badge variant="outline">{signal.source}</Badge><Badge variant="outline">{signal.watch_query}</Badge></div>
-          <h3 className="mt-3 text-lg font-semibold text-slate-950">{signal.mark_name}</h3>
-          <p className="mt-1 text-sm text-slate-500">{signal.applicant_name || "Titular no informado"}</p>
-          <p className="mt-3 text-sm leading-6 text-slate-600">{signal.reason}</p>
+          <div className="flex flex-wrap items-center gap-2">{signal.is_new ? <Badge className="rounded-md border-primary/25 bg-primary/[0.06] text-primary">Nuevo</Badge> : null}<Badge className={signal.relevance === "alta" ? "rounded-md border-amber-400/25 bg-amber-400/[0.06] text-amber-200" : "rounded-md border-border bg-secondary/30 text-muted-foreground"}>{signal.relevance === "alta" ? "Revisión prioritaria" : "Relacionado"}</Badge><Badge variant="outline" className="rounded-md">{signal.source}</Badge><Badge variant="outline" className="rounded-md">{signal.watch_query}</Badge></div>
+          <h3 className="mt-3 text-lg font-semibold text-foreground">{signal.mark_name}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{signal.applicant_name || "Titular no informado"}</p>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">{signal.reason}</p>
         </div>
-        <div className="text-right"><p className="text-xs text-slate-400">Detectado</p><p className="mt-1 text-sm font-medium text-slate-700">{formatDateTime(signal.first_seen_at)}</p></div>
+        <div className="text-left sm:text-right"><p className="text-xs text-muted-foreground">Detectado</p><p className="mt-1 text-sm font-medium text-foreground">{formatDateTime(signal.first_seen_at)}</p></div>
       </div>
-      <dl className="mt-4 grid gap-3 border-t border-slate-100 pt-4 text-sm sm:grid-cols-3"><Fact label="Solicitud" value={signal.application_number || "—"}/><Fact label="Evento" value={formatDate(signal.event_date)}/><Fact label="Estado" value={signal.state || "—"}/></dl>
-      {signal.nice_classes.length ? <div className="mt-4 flex flex-wrap gap-1.5">{signal.nice_classes.slice(0, 10).map(code => <Badge key={`${signal.id}-${code}`} variant="secondary">Niza {code}</Badge>)}</div> : null}
-      <div className="mt-5 flex flex-wrap gap-2">{signal.source_url ? <Button asChild size="sm" className="bg-teal-700 hover:bg-teal-800"><a href={signal.source_url} target="_blank" rel="noreferrer">Ver fuente</a></Button> : null}<Button asChild size="sm" variant="outline"><Link href={`/evaluar?nombre=${encodeURIComponent(signal.mark_name)}`}>Evaluar marca</Link></Button><SaveToCaseAction itemType="alert" sourceId={signal.signal_key} title={`${signal.source}: ${signal.mark_name}`} contextType="brand" contextQuery={signal.watch_query} suggestedCaseTitle={`Marca ${signal.watch_query}`} metadata={{ source: signal.source, application: signal.application_number, applicant: signal.applicant_name, date: signal.event_date, detectedAt: signal.first_seen_at, reason: signal.reason, sourceUrl: signal.source_url }}/></div>
+      <dl className="mt-4 grid gap-3 border-t border-border pt-4 text-sm sm:grid-cols-3"><Fact label="Solicitud" value={signal.application_number || "—"} /><Fact label="Evento" value={formatDate(signal.event_date)} /><Fact label="Estado" value={signal.state || "—"} /></dl>
+      {signal.nice_classes.length ? <div className="mt-4 flex flex-wrap gap-1.5">{signal.nice_classes.slice(0, 10).map((code) => <Badge key={`${signal.id}-${code}`} variant="secondary" className="rounded-md">Niza {code}</Badge>)}</div> : null}
+      <div className="mt-5 flex flex-wrap gap-2">{signal.source_url ? <Button asChild size="sm"><a href={signal.source_url} target="_blank" rel="noreferrer">Ver fuente</a></Button> : null}<Button asChild size="sm" variant="outline"><Link href={`/evaluar?brand=${encodeURIComponent(signal.mark_name)}`}>Evaluar marca</Link></Button><SaveToCaseAction itemType="alert" sourceId={signal.signal_key} title={`${signal.source}: ${signal.mark_name}`} contextType="brand" contextQuery={signal.watch_query} suggestedCaseTitle={`Marca ${signal.watch_query}`} metadata={{ source: signal.source, application: signal.application_number, applicant: signal.applicant_name, date: signal.event_date, detectedAt: signal.first_seen_at, reason: signal.reason, sourceUrl: signal.source_url }} /></div>
     </div>
   </article>
 }
 
-function Metric({ label, value, detail, emphasis = false }: { label: string; value: number; detail: string; emphasis?: boolean }) { return <div className="border-b border-slate-200 py-6 sm:border-b-0 sm:border-r sm:px-5 first:pl-0 last:border-r-0"><p className={`text-3xl font-semibold tracking-tight ${emphasis ? "text-teal-700" : "text-slate-950"}`}>{value}</p><p className="mt-1 text-sm font-semibold text-slate-700">{label}</p><p className="mt-1 text-xs leading-5 text-slate-400">{detail}</p></div> }
-function Fact({ label, value }: { label: string; value: string }) { return <div><dt className="text-xs text-slate-400">{label}</dt><dd className="mt-1 font-medium text-slate-700">{value}</dd></div> }
-function formatDate(value: string | null) { if (!value) return "—"; const date = new Date(`${value}T12:00:00Z`); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("es-CL", { dateStyle: "medium" }).format(date) }
-function formatDateTime(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("es-CL", { dateStyle: "medium", timeStyle: "short" }).format(date) }
-function Empty({ hasWatches, hasHistory, onCreate, onHistory }: { hasWatches: boolean; hasHistory: boolean; onCreate: () => void; onHistory: () => void }) { return <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/50 px-6 py-12 text-center"><Clock3 className="mx-auto h-6 w-6 text-slate-400"/><p className="mt-4 font-semibold text-slate-800">{!hasWatches ? "Añade una marca para empezar" : hasHistory ? "No hay cambios nuevos" : "Estamos construyendo tu línea base"}</p><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">{!hasWatches ? "Vigilaremos nuevas solicitudes y movimientos relacionados." : hasHistory ? "Todo lo anterior sigue guardado en el historial." : "La primera consulta sirve de referencia; lo que aparezca después sí contará como nuevo."}</p><div className="mt-5 flex justify-center gap-2">{!hasWatches ? <Button onClick={onCreate} className="bg-teal-700 hover:bg-teal-800">Añadir vigilancia</Button> : hasHistory ? <Button onClick={onHistory} variant="outline"><History className="mr-2 h-4 w-4"/>Ver historial</Button> : null}</div></div> }
+function Metric({ label, value, detail, emphasis = false }: { label: string; value: number; detail: string; emphasis?: boolean }) {
+  return <div className="border-b border-border py-6 sm:border-b-0 sm:border-r sm:px-5 first:pl-0 last:border-r-0"><p className={`text-3xl font-semibold tracking-[-0.04em] ${emphasis ? "text-primary" : "text-foreground"}`}>{value}</p><p className="mt-1 text-sm font-semibold text-foreground">{label}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p></div>
+}
+
+function Fact({ label, value }: { label: string; value: string }) {
+  return <div><dt className="text-xs text-muted-foreground">{label}</dt><dd className="mt-1 font-medium text-foreground">{value}</dd></div>
+}
+
+function formatDate(value: string | null) {
+  if (!value) return "—"
+  const date = new Date(`${value}T12:00:00Z`)
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("es-CL", { dateStyle: "medium" }).format(date)
+}
+
+function formatDateTime(value: string) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("es-CL", { dateStyle: "medium", timeStyle: "short" }).format(date)
+}
+
+function Empty({ hasWatches, hasHistory, onCreate, onHistory }: { hasWatches: boolean; hasHistory: boolean; onCreate: () => void; onHistory: () => void }) {
+  return <div className="border-y border-border px-6 py-12 text-center"><Clock3 className="mx-auto h-6 w-6 text-muted-foreground" /><p className="mt-4 font-semibold text-foreground">{!hasWatches ? "Añade una marca para empezar" : hasHistory ? "No hay cambios nuevos" : "Estamos construyendo tu línea base"}</p><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">{!hasWatches ? "Vigilaremos nuevas solicitudes y movimientos relacionados." : hasHistory ? "Todo lo anterior sigue guardado en el historial." : "La primera consulta sirve de referencia; lo que aparezca después sí contará como nuevo."}</p><div className="mt-5 flex justify-center gap-2">{!hasWatches ? <Button onClick={onCreate}>Añadir vigilancia</Button> : hasHistory ? <Button onClick={onHistory} variant="outline"><History className="mr-2 h-4 w-4" />Ver historial</Button> : null}</div></div>
+}
