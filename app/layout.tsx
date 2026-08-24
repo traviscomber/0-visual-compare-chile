@@ -43,11 +43,12 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#F7F8F6",
+  themeColor: "#090D12",
+  colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="es-CL"><body className="bg-background font-sans text-foreground antialiased"><AuthProvider>{children}</AuthProvider><Toaster richColors position="top-right" /></body></html>
+  return <html lang="es-CL"><body className="bg-[#090D12] font-sans text-foreground antialiased"><AuthProvider>{children}</AuthProvider><Toaster richColors position="top-right" /></body></html>
 }
