@@ -182,6 +182,51 @@ body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) footer {
   background: #070b10 !important;
 }
 
+/* Visual storytelling: surface the two canonical VIDENTIA graphics as first-class evidence. */
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="producto"]::after,
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(4)::after {
+  content: "";
+  display: block;
+  width: min(1480px, calc(100% - 40px));
+  margin-inline: auto;
+  border: 1px solid rgba(255,255,255,.075);
+  border-radius: 24px;
+  background-color: #090d12;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  box-shadow: 0 34px 100px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.03);
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="producto"]::after {
+  aspect-ratio: 1200 / 760;
+  max-height: 760px;
+  margin-top: clamp(2rem, 5vw, 5rem);
+  background-image: url('/videntia-evidence.svg');
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(4) {
+  overflow: hidden;
+}
+
+body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(4)::after {
+  aspect-ratio: 1200 / 800;
+  max-height: 800px;
+  margin-top: clamp(2.5rem, 6vw, 5.5rem);
+  background-image: url('/videntia-graph.svg');
+  background-size: contain;
+}
+
+@media (min-width: 1024px) {
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="producto"]::after {
+    width: min(1320px, calc(100% - 80px));
+  }
+
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(4)::after {
+    width: min(1180px, calc(100% - 80px));
+  }
+}
+
 @media (max-width: 1023px) {
   body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:first-of-type > div:last-child > div:last-child > div:nth-child(2) {
     transform: none;
@@ -201,6 +246,12 @@ body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) footer {
   body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="producto"] article,
   body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="empresas"] article {
     border-radius: 15px;
+  }
+
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) section[id="producto"]::after,
+  body > main:has(nav a[href="/demo"]):has(nav a[href="/auth/login"]) > section:nth-of-type(4)::after {
+    width: calc(100% - 32px);
+    border-radius: 16px;
   }
 }
 
