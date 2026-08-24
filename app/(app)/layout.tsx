@@ -1,7 +1,12 @@
 import type React from "react"
+import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { tryGetSupabaseUrl, tryGetSupabaseAnonKey } from "@/lib/supabase/env"
 import { AppNav } from "@/components/app/app-nav"
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false, nocache: true },
+}
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabaseReady = !!(tryGetSupabaseUrl() && tryGetSupabaseAnonKey())
