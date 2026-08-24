@@ -45,13 +45,14 @@ export async function ensureAccountBootstrap(user: User) {
   const organizationName = buildOrganizationName(user)
   const organizationSlug = buildOrganizationSlug(user)
   const profileMetadata = user.user_metadata ?? {}
+  const trustedRole = normalizeRole(user.app_metadata?.role)
 
   const { error: userError } = await admin.from("users").upsert(
     {
       id: user.id,
       email: user.email ?? null,
       name: displayName,
-      role: normalizeRole(profileMetadata.role),
+      role: trustedRole,
     },
     { onConflict: "id" },
   )
@@ -63,7 +64,7 @@ export async function ensureAccountBootstrap(user: User) {
       id: user.id,
       full_name: typeof profileMetadata.full_name === "string" ? profileMetadata.full_name.trim() : null,
       company_name: typeof profileMetadata.company_name === "string" ? profileMetadata.company_name.trim() : null,
-      role: normalizeRole(profileMetadata.role),
+      role: trustedRole,
     },
     { onConflict: "id" },
   )
