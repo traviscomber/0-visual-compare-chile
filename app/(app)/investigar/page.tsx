@@ -233,7 +233,7 @@ export default function InvestigarPage() {
 
           {result.failures.length > 0 && <div className="mt-5 flex items-start gap-3 border border-amber-500/25 bg-amber-500/[0.06] p-4"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" /><div><p className="text-sm font-medium text-foreground">Panorama parcial</p><p className="mt-1 text-xs leading-5 text-muted-foreground">No respondieron: {result.failures.join(", ")}. Los resultados disponibles se mantienen visibles sin completar esos vacíos por inferencia.</p></div></div>}
 
-          {result.brands && <BrandSection data={result.brands} />}
+          {result.brands && <BrandSection data={result.brands} query={query} />}
           {result.company && <CompanySection data={result.company} query={query} />}
           {result.patents && <PatentSection data={result.patents} />}
         </section>
@@ -256,11 +256,11 @@ function SourceStrip({ result }: { result: ResearchResult }) {
   return <div className="flex flex-wrap items-center gap-2">{sources.map(([label, available]) => <span key={label} className={`inline-flex items-center gap-1.5 border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${available ? "border-primary/25 text-primary" : "border-border text-muted-foreground"}`}><span className={`h-1.5 w-1.5 rounded-full ${available ? "bg-primary" : "bg-muted-foreground/35"}`} />{label}</span>)}</div>
 }
 
-function BrandSection({ data }: { data: BrandResponse }) {
+function BrandSection({ data, query }: { data: BrandResponse; query: string }) {
   const rows = (data.results ?? []).slice(0, 6)
   return (
     <section className="border-b border-border py-8">
-      <SectionHeading index="01" title="Marcas relacionadas" meta={`${data.total ?? data.results?.length ?? 0} antecedentes encontrados`} action={<Link href="/consulta-inapi" className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground hover:underline">Profundizar en marcas <ArrowRight className="h-4 w-4" /></Link>} />
+      <SectionHeading index="01" title="Marcas relacionadas" meta={`${data.total ?? data.results?.length ?? 0} antecedentes encontrados`} action={<Link href={`/consulta-inapi?q=${encodeURIComponent(query.trim())}&type=nombre&match=3&autorun=1`} className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground hover:underline">Profundizar en marcas <ArrowRight className="h-4 w-4" /></Link>} />
       {rows.length > 0 ? <div className="mt-5 divide-y divide-border border-y border-border">{rows.map((brand) => <div key={brand.id} className="grid gap-4 py-4 md:grid-cols-[1fr_auto] md:items-center"><div><div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-foreground">{brand.nombre || "Marca sin nombre"}</p><Badge variant="outline" className="rounded-md">{brand.estado || "Sin estado"}</Badge></div><p className="mt-1 text-xs text-muted-foreground">{brand.solicitante || "Titular no informado"}</p><p className="mt-2 text-xs text-muted-foreground">Niza {brand.niza?.join(", ") || "—"} · Registro {brand.numeroRegistro || "—"}</p></div>{brand.nombre && <Button asChild size="sm" variant="ghost" className="justify-self-start px-0 md:justify-self-end"><Link href={`/evaluar?brand=${encodeURIComponent(brand.nombre)}`}>Evaluar esta marca <ArrowRight className="ml-1.5 h-3.5 w-3.5" /></Link></Button>}</div>)}</div> : <EmptyLine copy="No encontramos antecedentes marcarios para este término." />}
       {data.source && <p className="mt-3 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Fuente reportada: {data.source}</p>}
     </section>
