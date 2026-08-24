@@ -60,7 +60,7 @@ export async function GET() {
 
   const ranked = ((data ?? []) as SignalRow[])
     .map((signal) => rankSignal(signal, analyses))
-    .filter((item): item is NonNullable<typeof item> => Boolean(item) && item.relevance >= 60)
+    .filter((item): item is NonNullable<typeof item> => item !== null && item.relevance >= 60)
     .sort((a, b) => b.relevance - a.relevance || dateValue(b.signal.source_date) - dateValue(a.signal.source_date))
     .slice(0, 20)
     .map(({ signal, relevance, matchedAnalysis, reasons }) => ({ ...signal, relevance, matched_analysis: matchedAnalysis, reasons }))
