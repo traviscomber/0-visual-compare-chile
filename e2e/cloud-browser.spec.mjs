@@ -523,7 +523,7 @@ test.describe("VIDENTIA production cloud browser", () => {
 
   test("cross-browser public routes: semantic structure remains valid", async ({ page, browserName }, testInfo) => {
     const health = attachBrowserHealth(page)
-    const publicRoutes = ["/", "/demo", "/contacto", "/privacidad", "/terminos"]
+    const publicRoutes = ["/", "/demo", "/contacto", "/docs", "/privacidad", "/terminos"]
 
     for (const route of publicRoutes) {
       await page.setViewportSize({ width: 1365, height: 900 })
