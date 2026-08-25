@@ -7,7 +7,7 @@ export const maxDuration = 60
 export async function GET(request: NextRequest) {
   try {
     const origin = request.nextUrl.origin
-    const imageResponse = await fetch(`${origin}/images/legal-protection-icon.jpg`, { cache: "no-store" })
+    const imageResponse = await fetch(`${origin}/images/fraud-detection-icon.jpg`, { cache: "no-store" })
     if (!imageResponse.ok) {
       return NextResponse.json({ ok: false, stage: "image", status: imageResponse.status }, { status: 502 })
     }
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "User-Agent": "videntia-real-visual-smoke/1.0",
+        "User-Agent": "videntia-real-visual-smoke/2.0",
       },
       body: JSON.stringify({ image: `data:image/jpeg;base64,${imageBase64}` }),
       cache: "no-store",
