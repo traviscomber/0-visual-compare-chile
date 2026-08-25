@@ -1,0 +1,46 @@
+name: One-shot Browserin result contrast fix
+
+on:
+  push:
+    paths:
+      - ".github/workflows/tmp-browserin-result-contrast-fix.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch-result-contrast:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fix trademark-result identifier contrast
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("app/demo/page.tsx")
+          text = path.read_text(encoding="utf-8")
+          old = 'text-[#64727D]'
+          new = 'text-[#8994A1]'
+          count = text.count(old)
+          if count != 1:
+              raise SystemExit(f"expected exactly one {old}, found {count}")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          print("patched one trademark-result identifier contrast token")
+          PY
+
+      - name: Commit result contrast fix
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/demo/page.tsx
+          git diff --cached --check
+          git diff --cached --quiet && exit 1
+          git commit -m "fix(demo): raise trademark identifier contrast"
+          git push origin HEAD:main
