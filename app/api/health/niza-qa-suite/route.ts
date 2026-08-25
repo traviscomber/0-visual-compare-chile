@@ -41,6 +41,9 @@ export async function GET() {
       classify("legal", "LEXGUARD", "servicios jurídicos, asesoría legal y representación de clientes"),
       classify("saas", "CLOUDOPS", "software como servicio SaaS para análisis de datos empresariales"),
       classify("beverage", "FRESHWAVE", "bebidas no alcohólicas, jugos y aguas saborizadas"),
+      classify("marketing", "GROWTHLAB", "servicios de publicidad y marketing para terceros"),
+      classify("legal-tech-saas", "CASEFLOW", "software como servicio SaaS para gestión de expedientes jurídicos"),
+      classify("hybrid-software", "DATAPULSE", "software como servicio SaaS y aplicación móvil descargable para análisis de datos"),
     ])
 
     const signatures = repetitions.map((item) => signature(item.classes))
@@ -51,12 +54,16 @@ export async function GET() {
     )
 
     const assertions = {
-      videntiaStableExactSet: uniqueSignatures.length === 1,
-      videntiaCore42AlwaysPresent: repetitions.every((item) => item.classes.includes("42")),
+      videntiaStableExactSet: uniqueSignatures.length === 1 && uniqueSignatures[0] === "09",
+      videntiaProductSoftwareIs09: repetitions.every((item) => item.classes.includes("09") && !item.classes.includes("42")),
       videntiaNoCommercial35: repetitions.every((item) => !item.classes.includes("35")),
+      videntiaNoLegal45: repetitions.every((item) => !item.classes.includes("45")),
       legalIncludes45: controls[0].classes.includes("45"),
-      saasIncludes42: controls[1].classes.includes("42"),
-      beverageIncludes32: controls[2].classes.includes("32"),
+      saasIs42Without09: controls[1].classes.includes("42") && !controls[1].classes.includes("09"),
+      beverageIncludes32Without35: controls[2].classes.includes("32") && !controls[2].classes.includes("35"),
+      explicitMarketingIncludes35: controls[3].classes.includes("35"),
+      legalTechSaasIs42Not45: controls[4].classes.includes("42") && !controls[4].classes.includes("45") && !controls[4].classes.includes("09"),
+      hybridSoftwareIncludes09And42: controls[5].classes.includes("09") && controls[5].classes.includes("42"),
     }
 
     return NextResponse.json({
