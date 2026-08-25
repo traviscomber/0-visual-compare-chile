@@ -32,8 +32,26 @@ function attachBrowserHealth(page) {
   return { consoleErrors, pageErrors }
 }
 
+async function expectNoHorizontalOverflow(page) {
+  const overflow = await page.evaluate(() => ({
+    viewport: window.innerWidth,
+    documentWidth: document.documentElement.scrollWidth,
+    bodyWidth: document.body.scrollWidth,
+  }))
+
+  expect(overflow.documentWidth).toBeLessThanOrEqual(overflow.viewport + 1)
+  expect(overflow.bodyWidth).toBeLessThanOrEqual(overflow.viewport + 1)
+}
+
+function expectHealthyBrowser(health) {
+  expect(health.pageErrors, `page errors: ${health.pageErrors.join(" | ")}`).toEqual([])
+  expect(health.consoleErrors, `console errors: ${health.consoleErrors.join(" | ")}`).toEqual([])
+}
+
 test.describe("VIDENTIA production cloud browser", () => {
-  test("desktop: real upload + investigation + contact continuity", async ({ page }, testInfo) => {
+  test("chromium desktop: real upload + investigation + contact continuity", async ({ page, browserName }, testInfo) => {
+    test.skip(browserName !== "chromium", "The live public investigation runs once per suite to protect quota and external dependencies")
+
     await page.setViewportSize({ width: 1440, height: 1000 })
     const health = attachBrowserHealth(page)
 
@@ -64,7 +82,7 @@ test.describe("VIDENTIA production cloud browser", () => {
     await expect(nameInput).toBeDisabled()
     await expect(activityInput).toBeDisabled()
     await expect(fileInput).toBeDisabled()
-    await page.screenshot({ path: testInfo.outputPath("desktop-loading.png"), fullPage: false })
+    await page.screenshot({ path: testInfo.outputPath("chromium-desktop-loading.png"), fullPage: false })
 
     const resultMarker = page.getByText("Investigación completada", { exact: true })
     const visibleError = page.getByRole("alert").filter({ hasText: /\S/ })
@@ -80,7 +98,7 @@ test.describe("VIDENTIA production cloud browser", () => {
 
     const continueButton = page.getByRole("button", { name: /Continuar investigación/i })
     await expect(continueButton).toBeVisible()
-    await page.screenshot({ path: testInfo.outputPath("desktop-results.png"), fullPage: true })
+    await page.screenshot({ path: testInfo.outputPath("chromium-desktop-results.png"), fullPage: true })
 
     await continueButton.click()
     await page.waitForURL(/\/contacto\?/, { timeout: 15_000 })
@@ -93,13 +111,48 @@ test.describe("VIDENTIA production cloud browser", () => {
 
     await expect(page.getByText("Investigación iniciada en la demo", { exact: true })).toBeVisible()
     await expect(page.getByText("VIDENTIA", { exact: true }).first()).toBeVisible()
-    await page.screenshot({ path: testInfo.outputPath("desktop-contact.png"), fullPage: true })
+    await page.screenshot({ path: testInfo.outputPath("chromium-desktop-contact.png"), fullPage: true })
 
-    expect(health.pageErrors, `page errors: ${health.pageErrors.join(" | ")}`).toEqual([])
-    expect(health.consoleErrors, `console errors: ${health.consoleErrors.join(" | ")}`).toEqual([])
+    expectHealthyBrowser(health)
   })
 
-  test("mobile: demo layout and upload remain usable without consuming a second search", async ({ page }, testInfo) => {
+  test("cross-browser desktop: demo upload and contact context render", async ({ page, browserName }, testInfo) => {
+    await page.setViewportSize({ width: 1365, height: 900 })
+    const health = attachBrowserHealth(page)
+
+    await page.goto("/demo", { waitUntil: "domcontentloaded" })
+    await expect(page).toHaveTitle(/VIDENTIA/i)
+    await expect(page.getByRole("heading", { name: /Entrega la marca\. Revisa la evidencia\./i })).toBeVisible()
+
+    const nameInput = page.getByLabel("Nombre de la marca")
+    const activityInput = page.getByLabel("Productos o servicios de la marca")
+    const fileInput = page.locator('input[type="file"]')
+
+    await nameInput.fill(`VIDENTIA ${browserName.toUpperCase()} QA`)
+    await activityInput.fill("software para análisis de datos")
+    await fileInput.setInputFiles({
+      name: `videntia-${browserName}-desktop.png`,
+      mimeType: "image/png",
+      buffer: FIXTURE_PNG,
+    })
+
+    await expect(page.getByAltText("Marca cargada")).toBeVisible()
+    await expect(page.getByText("Imagen lista para investigar")).toBeVisible()
+    await expect(page.getByRole("button", { name: /Investigar marca/i })).toBeEnabled()
+    await expectNoHorizontalOverflow(page)
+    await page.screenshot({ path: testInfo.outputPath(`${browserName}-desktop-upload.png`), fullPage: true })
+
+    await page.goto("/contacto?origen=demo&marca=VIDENTIA&resultados=50", { waitUntil: "domcontentloaded" })
+    await expect(page.getByRole("heading", { name: /Continúa la investigación con el contexto que ya levantaste\./i })).toBeVisible()
+    await expect(page.getByText("Investigación iniciada en la demo", { exact: true })).toBeVisible()
+    await expect(page.getByText(/50 resultados observados/i)).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+    await page.screenshot({ path: testInfo.outputPath(`${browserName}-desktop-contact.png`), fullPage: true })
+
+    expectHealthyBrowser(health)
+  })
+
+  test("cross-browser mobile: demo layout and upload remain usable", async ({ page, browserName }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 })
     const health = attachBrowserHealth(page)
 
@@ -110,28 +163,20 @@ test.describe("VIDENTIA production cloud browser", () => {
     const activityInput = page.getByLabel("Productos o servicios de la marca")
     const fileInput = page.locator('input[type="file"]')
 
-    await nameInput.fill("VIDENTIA MOBILE QA")
+    await nameInput.fill(`VIDENTIA ${browserName.toUpperCase()} MOBILE QA`)
     await activityInput.fill("software para análisis de datos")
     await fileInput.setInputFiles({
-      name: "videntia-mobile-e2e.png",
+      name: `videntia-${browserName}-mobile.png`,
       mimeType: "image/png",
       buffer: FIXTURE_PNG,
     })
 
     await expect(page.getByAltText("Marca cargada")).toBeVisible()
     await expect(page.getByRole("button", { name: /Investigar marca/i })).toBeVisible()
+    await expectNoHorizontalOverflow(page)
 
-    const overflow = await page.evaluate(() => ({
-      viewport: window.innerWidth,
-      documentWidth: document.documentElement.scrollWidth,
-      bodyWidth: document.body.scrollWidth,
-    }))
-    expect(overflow.documentWidth).toBeLessThanOrEqual(overflow.viewport + 1)
-    expect(overflow.bodyWidth).toBeLessThanOrEqual(overflow.viewport + 1)
+    await page.screenshot({ path: testInfo.outputPath(`${browserName}-mobile-upload.png`), fullPage: true })
 
-    await page.screenshot({ path: testInfo.outputPath("mobile-upload.png"), fullPage: true })
-
-    expect(health.pageErrors, `page errors: ${health.pageErrors.join(" | ")}`).toEqual([])
-    expect(health.consoleErrors, `console errors: ${health.consoleErrors.join(" | ")}`).toEqual([])
+    expectHealthyBrowser(health)
   })
 })
