@@ -70,6 +70,10 @@ async function expectNoHorizontalOverflow(page) {
   expect(overflow.bodyWidth).toBeLessThanOrEqual(overflow.viewport + 1)
 }
 
+async function expectNoNestedInteractiveControls(page) {
+  expect(await page.locator("a button, button a").count()).toBe(0)
+}
+
 function expectHealthyBrowser(health) {
   expect(health.pageErrors, `page errors: ${health.pageErrors.join(" | ")}`).toEqual([])
   expect(health.consoleErrors, `console errors: ${health.consoleErrors.join(" | ")}`).toEqual([])
@@ -86,6 +90,7 @@ test.describe("VIDENTIA production cloud browser", () => {
     await gotoInteractive(page, "/demo")
     await expect(page).toHaveTitle(/VIDENTIA/i)
     await expect(page.getByRole("heading", { name: /Entrega la marca\. Revisa la evidencia\./i })).toBeVisible()
+    await expectNoNestedInteractiveControls(page)
 
     const { nameInput, investigate } = await proveDemoHydration(page, "VIDENTIA")
     const activityInput = page.getByLabel("Productos o servicios de la marca")
@@ -120,12 +125,13 @@ test.describe("VIDENTIA production cloud browser", () => {
     await expect(page.getByRole("heading", { name: "VIDENTIA", exact: true })).toBeVisible()
     await expect(page.getByText(/Niza 09/).first()).toBeVisible()
     await expect(page.getByText(/Fuente N3uralia Intelligence \+ INAPI live/i)).toBeVisible()
+    await expectNoNestedInteractiveControls(page)
 
-    const continueButton = page.getByRole("button", { name: /Continuar investigación/i })
-    await expect(continueButton).toBeVisible()
+    const continueLink = page.getByRole("link", { name: /Continuar investigación/i })
+    await expect(continueLink).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath("chromium-desktop-results.png"), fullPage: true })
 
-    await continueButton.click()
+    await continueLink.click()
     await page.waitForURL(/\/contacto\?/, { timeout: 15_000 })
 
     const contactUrl = new URL(page.url())
@@ -136,6 +142,7 @@ test.describe("VIDENTIA production cloud browser", () => {
 
     await expect(page.getByText("Investigación iniciada en la demo", { exact: true })).toBeVisible()
     await expect(page.getByText("VIDENTIA", { exact: true }).first()).toBeVisible()
+    await expectNoNestedInteractiveControls(page)
     await page.screenshot({ path: testInfo.outputPath("chromium-desktop-contact.png"), fullPage: true })
 
     expectHealthyBrowser(health)
@@ -148,6 +155,7 @@ test.describe("VIDENTIA production cloud browser", () => {
     await gotoInteractive(page, "/demo")
     await expect(page).toHaveTitle(/VIDENTIA/i)
     await expect(page.getByRole("heading", { name: /Entrega la marca\. Revisa la evidencia\./i })).toBeVisible()
+    await expectNoNestedInteractiveControls(page)
 
     const { investigate } = await proveDemoHydration(page, `VIDENTIA ${browserName.toUpperCase()} QA`)
     const activityInput = page.getByLabel("Productos o servicios de la marca")
@@ -170,6 +178,7 @@ test.describe("VIDENTIA production cloud browser", () => {
     await expect(page.getByRole("heading", { name: /Continúa la investigación con el contexto que ya levantaste\./i })).toBeVisible()
     await expect(page.getByText("Investigación iniciada en la demo", { exact: true })).toBeVisible()
     await expect(page.getByText(/50 resultados observados/i)).toBeVisible()
+    await expectNoNestedInteractiveControls(page)
     await expectNoHorizontalOverflow(page)
     await page.screenshot({ path: testInfo.outputPath(`${browserName}-desktop-contact.png`), fullPage: true })
 
@@ -182,6 +191,7 @@ test.describe("VIDENTIA production cloud browser", () => {
 
     await gotoInteractive(page, "/demo")
     await expect(page.getByRole("heading", { name: /Entrega la marca\. Revisa la evidencia\./i })).toBeVisible()
+    await expectNoNestedInteractiveControls(page)
 
     const { investigate } = await proveDemoHydration(page, `VIDENTIA ${browserName.toUpperCase()} MOBILE QA`)
     const activityInput = page.getByLabel("Productos o servicios de la marca")
@@ -209,6 +219,7 @@ test.describe("VIDENTIA production cloud browser", () => {
     const health = attachBrowserHealth(page)
 
     await gotoInteractive(page, "/demo")
+    await expectNoNestedInteractiveControls(page)
     const uploadButton = page.getByRole("button", { name: /Arrastra un logo o una fotografía/i })
     const nameInput = page.getByLabel("Nombre de la marca")
     const activityInput = page.getByLabel("Productos o servicios de la marca")
@@ -240,6 +251,7 @@ test.describe("VIDENTIA production cloud browser", () => {
     await gotoInteractive(page, "/privacidad")
     await expect(page.getByRole("heading", { name: "Política de privacidad", exact: true })).toBeVisible()
     await expect(page.getByText(/Última actualización: 24 de agosto de 2026/i)).toBeVisible()
+    await expectNoNestedInteractiveControls(page)
     const termsLink = page.getByRole("link", { name: "Términos de uso", exact: true })
     await termsLink.focus()
     await expect(termsLink).toBeFocused()
@@ -247,6 +259,7 @@ test.describe("VIDENTIA production cloud browser", () => {
     await page.waitForURL(/\/terminos$/)
     await expect(page.getByRole("heading", { name: "Términos de uso", exact: true })).toBeVisible()
     await expect(page.getByRole("link", { name: "Política de privacidad", exact: true })).toBeVisible()
+    await expectNoNestedInteractiveControls(page)
     await expectNoHorizontalOverflow(page)
 
     expectHealthyBrowser(health)
