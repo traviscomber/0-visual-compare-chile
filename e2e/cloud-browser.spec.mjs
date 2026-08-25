@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test"
 import pngjs from "pngjs"
 
 const { PNG } = pngjs
+const RUN_LIVE_INVESTIGATION = process.env.E2E_LIVE === "1"
 
 function buildFixturePng() {
   const png = new PNG({ width: 128, height: 128 })
@@ -65,6 +66,7 @@ function expectHealthyBrowser(health) {
 
 test.describe("VIDENTIA production cloud browser", () => {
   test("chromium desktop: real upload + investigation + contact continuity", async ({ page, browserName }, testInfo) => {
+    test.skip(!RUN_LIVE_INVESTIGATION, "The real public investigation is opt-in so smoke runs do not consume public quota or external AI/INAPI capacity")
     test.skip(browserName !== "chromium", "The live public investigation runs once per suite to protect quota and external dependencies")
 
     await page.setViewportSize({ width: 1440, height: 1000 })
