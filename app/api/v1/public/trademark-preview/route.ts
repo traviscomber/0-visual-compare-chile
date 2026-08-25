@@ -1,10 +1,12 @@
-import { NextRequest, NextResponse } from "next/server"
+import { after, NextRequest, NextResponse } from "next/server"
+import { track } from "@vercel/analytics/server"
 import OpenAI from "openai"
 import { zodResponseFormat } from "openai/helpers/zod"
 import { z } from "zod"
 import { TrademarkAgent } from "@/lib/agent/trademark-agent"
 import { VienaClassifier } from "@/lib/agent/viena-classifier"
 import { NizaClassifier } from "@/lib/agent/niza-classifier"
+import { buildDemoRequestAnalytics, buildDemoResultAnalytics } from "@/lib/analytics/privacy"
 import {
   getPublicDemoIdentity,
   getPublicDemoRateHeaders,
@@ -75,6 +77,13 @@ export async function POST(request: NextRequest) {
       cleanImage = parsedImage
     }
 
+    const analyticsRequest = buildDemoRequestAnalytics({
+      hasName: Boolean(rawName),
+      hasImage: Boolean(cleanImage),
+      hasActivity: Boolean(actividad),
+    })
+    scheduleAnalytics("Demo Request", analyticsRequest)
+
     let nombre = rawName
     let denominationConfidence: number | null = null
     if (!nombre && cleanImage && imageMimeType) {
@@ -87,13 +96,20 @@ export async function POST(request: NextRequest) {
     }
 
     if (!nombre && cleanImage && imageMimeType) {
-      return buildVisualOnlyPreview({
+      const response = await buildVisualOnlyPreview({
         imageBase64: cleanImage,
         imageMimeType,
         actividad,
         denominationConfidence,
         rateHeaders,
       })
+      scheduleAnalytics("Demo Result", buildDemoResultAnalytics({
+        hasName: Boolean(rawName),
+        hasImage: true,
+        hasActivity: Boolean(actividad),
+        analysisMode: "visual-only",
+      }))
+      return response
     }
 
     if (!nombre) return NextResponse.json({ error: "No pudimos identificar una entrada válida para investigar." }, { status: 400, headers: previewHeaders(rateHeaders) })
@@ -137,6 +153,13 @@ export async function POST(request: NextRequest) {
       warningCount: advertencias.length,
     })
 
+    scheduleAnalytics("Demo Result", buildDemoResultAnalytics({
+      hasName: Boolean(rawName),
+      hasImage: Boolean(cleanImage),
+      hasActivity: Boolean(actividad),
+      analysisMode: "trademark",
+    }))
+
     return NextResponse.json({
       analysis_mode: "trademark",
       marca: nombre,
@@ -178,6 +201,7 @@ export async function POST(request: NextRequest) {
     }, { headers: previewHeaders(rateHeaders) })
   } catch (error) {
     console.error("[public-trademark-preview] failed", error instanceof Error ? error.message : String(error))
+    scheduleAnalytics("Demo Error", { category: "processing" })
     return NextResponse.json({ error: "No fue posible completar la demostración." }, { status: 500, headers: previewHeaders(rateHeaders) })
   }
 }
@@ -365,6 +389,16 @@ function buildPublicReading({
     resumen: `La consulta sobre ${nombre} devolvió ${resultadosUnicos} registro${resultadosUnicos === 1 ? "" : "s"} único${resultadosUnicos === 1 ? "" : "s"}.${activeCopy}${displayedCopy}${visualCopy}${warningCopy}`,
     recomendacion: "Revisa primero los antecedentes mostrados, confirma estado, titular y clases en INAPI y utiliza las señales denominativas, fonéticas y visuales sólo como apoyo para decidir qué merece revisión profesional.",
   }
+}
+
+function scheduleAnalytics(name: string, properties: Record<string, string | number | boolean>) {
+  after(async () => {
+    try {
+      await track(name, properties)
+    } catch (error) {
+      console.warn("[public-trademark-preview] analytics unavailable", error instanceof Error ? error.message : String(error))
+    }
+  })
 }
 
 function previewHeaders(extra: Record<string, string> = {}) {
