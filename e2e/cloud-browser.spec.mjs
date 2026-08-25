@@ -67,10 +67,10 @@ test.describe("VIDENTIA production cloud browser", () => {
     await page.screenshot({ path: testInfo.outputPath("desktop-loading.png"), fullPage: false })
 
     const resultMarker = page.getByText("Investigación completada", { exact: true })
-    const alert = page.getByRole("alert")
+    const visibleError = page.getByRole("alert").filter({ hasText: /\S/ })
     const outcome = await Promise.race([
       resultMarker.waitFor({ state: "visible", timeout: 70_000 }).then(() => ({ kind: "success", text: "" })),
-      alert.waitFor({ state: "visible", timeout: 70_000 }).then(async () => ({ kind: "error", text: await alert.innerText() })),
+      visibleError.waitFor({ state: "visible", timeout: 70_000 }).then(async () => ({ kind: "error", text: await visibleError.innerText() })),
     ])
     expect(outcome.kind, outcome.text || "La investigación no llegó al estado completado").toBe("success")
 
