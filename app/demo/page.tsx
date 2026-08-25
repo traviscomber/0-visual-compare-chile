@@ -188,8 +188,8 @@ export default function DemoPage() {
             </Link>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/auth/login"><Button variant="ghost" className="hidden rounded-lg text-[#A8B0BA] hover:bg-white/[0.06] hover:text-white sm:inline-flex">Iniciar sesión</Button></Link>
-            <Link href="/contacto"><Button className="rounded-lg bg-white text-[#0A0E13] shadow-none hover:bg-[#E7ECEA]">Solicitar acceso</Button></Link>
+            <Button asChild variant="ghost" className="hidden rounded-lg text-[#A8B0BA] hover:bg-white/[0.06] hover:text-white sm:inline-flex"><Link href="/auth/login">Iniciar sesión</Link></Button>
+            <Button asChild className="rounded-lg bg-white text-[#0A0E13] shadow-none hover:bg-[#E7ECEA]"><Link href="/contacto">Solicitar acceso</Link></Button>
           </div>
         </div>
       </nav>
@@ -401,7 +401,7 @@ function Results({ preview, imagePreview, reset, refine }: { preview: Preview; i
           </EvidenceColumn>
         </div>
 
-        {!visualOnly && preview.locked_count > 0 ? <div className="mt-6 flex flex-col gap-4 border border-white/10 bg-[#0A0F15] p-6 text-white sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">Hay {preview.locked_count} antecedentes adicionales en la investigación.</p><p className="mt-1 text-sm text-[#8F9AA8]">Continúa con esta misma marca para conservar el caso, abrir evidencia completa y activar vigilancia.</p></div><Link href={contactHref}><Button className="shrink-0 gap-2 rounded-lg bg-white text-[#111827] hover:bg-[#E7ECEA]">Continuar investigación <ArrowRight className="h-4 w-4" /></Button></Link></div> : null}
+        {!visualOnly && preview.locked_count > 0 ? <div className="mt-6 flex flex-col gap-4 border border-white/10 bg-[#0A0F15] p-6 text-white sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">Hay {preview.locked_count} antecedentes adicionales en la investigación.</p><p className="mt-1 text-sm text-[#8F9AA8]">Continúa con esta misma marca para conservar el caso, abrir evidencia completa y activar vigilancia.</p></div><Button asChild className="shrink-0 gap-2 rounded-lg bg-white text-[#111827] hover:bg-[#E7ECEA]"><Link href={contactHref}>Continuar investigación <ArrowRight className="h-4 w-4" /></Link></Button></div> : null}
 
         {preview.evidencia.advertencias.length > 0 ? <section className="mt-6 border border-amber-300/20 bg-amber-300/[0.05] p-6"><div className="flex items-start gap-3"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-200" /><div><p className="text-sm font-semibold text-amber-100">Limitaciones de esta consulta</p><div className="mt-3 space-y-2">{preview.evidencia.advertencias.map((warning) => <p key={warning} className="text-xs leading-5 text-amber-100/75">{warning}</p>)}</div></div></div></section> : null}
 
