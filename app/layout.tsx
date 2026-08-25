@@ -1,7 +1,6 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Toaster } from "@/components/ui/sonner"
-import { PublicLegalFooter } from "@/components/public-legal-footer"
 import { AuthProvider } from "@/lib/auth-context"
 import "./globals.css"
 import "./home-premium.css"
@@ -52,5 +51,5 @@ export const viewport: Viewport = {
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="es-CL"><body className="bg-[#090D12] font-sans text-foreground antialiased"><AuthProvider>{children}</AuthProvider><PublicLegalFooter /><Toaster richColors position="top-right" /></body></html>
+  return <html lang="es-CL"><body className="bg-[#090D12] font-sans text-foreground antialiased"><AuthProvider>{children}</AuthProvider><Toaster richColors position="top-right" /></body></html>
 }
