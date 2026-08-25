@@ -295,7 +295,7 @@ async function readTrademarkName(
 ): Promise<DetectedName> {
   const response = await client.chat.completions.parse({
     model: "gpt-5.6-luna",
-    max_completion_tokens: 160,
+    max_completion_tokens: 512,
     messages: [
       {
         role: "system",
