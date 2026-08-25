@@ -6,5 +6,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: "https://videntia.app/demo", changeFrequency: "weekly", priority: 0.8 },
     { url: "https://videntia.app/contacto", changeFrequency: "monthly", priority: 0.7 },
     { url: "https://videntia.app/docs", changeFrequency: "monthly", priority: 0.6 },
+    { url: "https://videntia.app/privacidad", changeFrequency: "monthly", priority: 0.4 },
+    { url: "https://videntia.app/terminos", changeFrequency: "monthly", priority: 0.4 },
   ]
 }
