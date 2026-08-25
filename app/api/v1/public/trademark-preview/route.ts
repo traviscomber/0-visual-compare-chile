@@ -17,6 +17,18 @@ const MAX_NAME_LENGTH = 120
 const MAX_ACTIVITY_LENGTH = 400
 const MAX_IMAGE_BASE64_LENGTH = 6 * 1024 * 1024
 const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"])
+const INVALID_DETECTED_DENOMINATIONS = new Set([
+  "null",
+  "none",
+  "undefined",
+  "n/a",
+  "na",
+  "no text",
+  "no hay texto",
+  "sin texto",
+  "sin denominacion",
+  "sin denominación",
+])
 const DetectedNameSchema = z.object({ denominacion: z.string().nullable(), confidence: z.number().min(0).max(1) })
 
 export async function POST(request: NextRequest) {
@@ -63,7 +75,7 @@ export async function POST(request: NextRequest) {
     let denominationConfidence: number | null = null
     if (!nombre && cleanImage && imageMimeType) {
       const detected = await detectTrademarkName(cleanImage, imageMimeType)
-      nombre = detected.denominacion?.trim().slice(0, MAX_NAME_LENGTH) ?? ""
+      nombre = normalizeDetectedDenomination(detected.denominacion)
       denominationConfidence = detected.confidence
     }
     if (!nombre) return NextResponse.json({ error: "No pudimos leer una denominación clara en la imagen. Escribe el nombre para completar la búsqueda.", needs_name: true }, { status: 400, headers: previewHeaders(rateHeaders) })
@@ -155,6 +167,18 @@ async function detectTrademarkName(imageBase64: string, imageMimeType: string) {
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   const response = await client.chat.completions.parse({ model: "gpt-5.6-luna", max_completion_tokens: 160, messages: [{ role: "system", content: "Identifica únicamente la denominación marcaria visible y principal. No inventes texto. Si no hay texto suficientemente claro, devuelve null. Ignora slogans secundarios, etiquetas legales, precios y texto ambiental." }, { role: "user", content: [{ type: "text", text: "Lee la denominación principal de esta marca o logo." }, { type: "image_url", image_url: { url: `data:${imageMimeType};base64,${imageBase64}`, detail: "low" } }] }], response_format: zodResponseFormat(DetectedNameSchema, "public_detected_trademark_name") })
   return response.choices[0]?.message.parsed ?? { denominacion: null, confidence: 0 }
+}
+
+function normalizeDetectedDenomination(value: string | null | undefined) {
+  const candidate = (value ?? "")
+    .trim()
+    .replace(/^['"`]+|['"`]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+
+  if (!candidate) return ""
+  if (INVALID_DETECTED_DENOMINATIONS.has(candidate.toLowerCase())) return ""
+  return candidate.slice(0, MAX_NAME_LENGTH)
 }
 
 function buildPublicReading({
