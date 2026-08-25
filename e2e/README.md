@@ -12,7 +12,8 @@ Browserin valida `https://videntia.app` con Playwright en Chromium, Firefox y We
 
 - `E2E_LIVE=0` en pushes normales.
 - El frontend, hidratación, navegación y render React/Next.js son reales incluso cuando la respuesta del preview está mockeada.
-- Las rutas públicas `/`, `/demo`, `/contacto`, `/privacidad` y `/terminos` se auditan por status HTTP, H1 único, exactamente un landmark `main`, IDs únicos, ausencia de controles interactivos anidados y overflow horizontal en desktop/mobile.
+- Las rutas públicas indexables declaradas en el sitemap —`/`, `/demo`, `/contacto`, `/docs`, `/privacidad` y `/terminos`— se auditan por status HTTP, H1 único, exactamente un landmark `main`, IDs únicos, ausencia de controles interactivos anidados y overflow horizontal en desktop/mobile.
 - Cada ruta pública debe publicar exactamente un `meta[name=description]` útil y un `link[rel=canonical]` cuyo pathname coincida con la ruta visitada.
+- `robots.txt` debe mantener `/api/` fuera del rastreo y declarar `https://videntia.app/sitemap.xml`; el sitemap es la referencia para ampliar la matriz cuando se publica una nueva ruta indexable.
 - WebKit de Playwright no se reporta como Safari real.
 - Antes de cambiar producto por un fallo, revisar trace/screenshot y clasificar si el defecto pertenece al harness o a la aplicación.
