@@ -6,11 +6,13 @@ Validación real de `https://videntia.app` ejecutada con Browserin mediante el f
 
 Resultado de validación viva: **PASS — 7 pruebas ejecutadas correctamente + 2 skips deliberados**.
 
+Estado automático seguro actual: **PASS — 18 pruebas ejecutadas correctamente + 3 skips deliberados, 0 fallos**, con `E2E_LIVE=0` y sin investigación pública real.
+
 Cobertura:
 
-- Chromium: E2E real de producción + smoke desktop + smoke mobile.
-- Firefox: smoke desktop + smoke mobile.
-- WebKit: smoke desktop + smoke mobile.
+- Chromium: E2E real de producción opt-in + smoke, resultados controlados, teclado, rutas públicas y responsive.
+- Firefox: smoke, resultados controlados, teclado, rutas públicas y responsive.
+- WebKit: smoke, resultados controlados, teclado, rutas públicas y responsive.
 - Safari real/macOS: **no probado**. WebKit es cobertura del motor Playwright en Linux y no debe presentarse como Safari real.
 
 ## Infraestructura
@@ -21,6 +23,7 @@ Suite:
 
 - `e2e/playwright.config.mjs`
 - `e2e/cloud-browser.spec.mjs`
+- `e2e/README.md`
 
 Runner final:
 
@@ -34,7 +37,7 @@ Runner final:
 - `workers: 1`
 - base URL `https://videntia.app`
 
-La suite tiene dos modos. Los pushes ejecutan smoke cross-browser sin una investigación pública real. El recorrido vivo requiere `workflow_dispatch` con `live=true` y mantiene una sola investigación pública real, en Chromium, para no multiplicar cuota, coste ni variabilidad de OpenAI/INAPI. Firefox y WebKit validan interacción, upload, navegación, responsive y salud del browser sin segundo submit real.
+La suite tiene tres niveles. Los pushes ejecutan smoke y estados de resultado controlados cross-browser sin una investigación pública real. El recorrido vivo requiere `workflow_dispatch` con `live=true` y mantiene una sola investigación pública real, en Chromium, para no multiplicar cuota, coste ni variabilidad de OpenAI/INAPI. Firefox y WebKit no repiten el submit vivo.
 
 ## Matriz final
 
@@ -169,10 +172,11 @@ Commits:
 Semántica actual:
 
 - push que cambia `e2e/**` o el workflow: smoke Chromium/Firefox/WebKit, sin investigación pública intencional;
-- `workflow_dispatch` con `live=false`: mismo smoke seguro;
-- `workflow_dispatch` con `live=true`: smoke cross-browser + una única investigación pública real en Chromium.
+- estados `trademark` y `visual-only`: respuesta del endpoint público interceptada dentro del browser; frontend, hidratación, navegación y render siguen siendo reales;
+- `workflow_dispatch` con `live=false`: misma matriz segura;
+- `workflow_dispatch` con `live=true`: matriz segura + una única investigación pública real en Chromium.
 
-Validación del modo seguro:
+Validación inicial del modo seguro:
 
 - run `32802818781`;
 - `E2E_LIVE=0` confirmado en logs;
@@ -185,6 +189,84 @@ Validación del modo seguro:
 - no se ejecutó el submit público real en ese push.
 
 Para el mismo commit `31bc1b2dd0c22ee55443937176a4095e1e620cda`, CI pasó Niza regression, Analytics privacy regression, TypeScript y Next.js production build; CodeQL también terminó en success. El deployment de producción quedó READY.
+
+## Hallazgo semántico y fix de producto
+
+Al ampliar la cobertura de teclado Browserin detectó HTML interactivo anidado en `/demo`: tres CTA usaban el patrón `Link > Button`. Aunque podían funcionar con mouse, esa composición genera semántica inválida y puede producir navegación/foco inconsistente para tecnologías asistivas.
+
+Se corrigieron los tres casos usando la composición soportada por Radix/shadcn:
+
+- `Button asChild` + `Link` para `Iniciar sesión`;
+- `Button asChild` + `Link` para `Solicitar acceso`;
+- `Button asChild` + `Link` para `Continuar investigación`.
+
+Commit de producto: `70f79bfc2f1892d40c4f8225c2191a4f288ba79b`.
+
+Después del fix, el CTA `Continuar investigación` expone correctamente rol de enlace y la suite mantiene una regresión explícita que exige cero coincidencias para `a button, button a`.
+
+Commit de la guardia: `09c46cc81de74b0e054c8c1320d26f2a27129ea5`.
+
+## Cobertura automática segura actual
+
+La matriz automática fue ampliada sin aumentar consumo de OpenAI, INAPI ni cuota pública.
+
+Incluye, por motor:
+
+- smoke desktop de `/demo` y continuidad hacia `/contacto`;
+- smoke mobile 390×844;
+- upload real de un PNG generado y preview;
+- hidratación React observable antes de acciones stateful;
+- teclado: foco, tabulación, `Enter` sobre upload y continuidad del formulario;
+- navegación por teclado entre `/privacidad` y `/terminos`;
+- estado `trademark` controlado: antecedentes, Niza, fuente, resultados bloqueados y CTA contextual;
+- estado `visual-only` controlado: sin denominación inventada, señales Viena, sin antecedentes denominativos y retorno con imagen conservada;
+- auditoría de rutas públicas `/`, `/demo`, `/contacto`, `/privacidad`, `/terminos`;
+- status HTTP < 400;
+- título VIDENTIA;
+- exactamente un H1 visible;
+- landmark `main` presente;
+- IDs DOM únicos;
+- cero controles interactivos anidados;
+- cero overflow horizontal en desktop y mobile;
+- cero `pageerror` y cero console errors relevantes.
+
+Commits principales de esta ampliación:
+
+- `70f5c1eb1a2cccf5d1db7d4334b9aafe5ecbd02f` — teclado y rutas legales;
+- `09c46cc81de74b0e054c8c1320d26f2a27129ea5` — guardia semántica;
+- `92bc84dc2dc842d9afb33f0a403b9b0cc6a6cbb9` — estados de resultado `trademark` y `visual-only` controlados;
+- `cbb9378ce71e67384a87347140c9dc1605690e64` — auditoría semántica de rutas públicas;
+- `509b92632346b2b4943b07aecde3061d10b7a95b` — documentación del contrato smoke/mock/live y validación final de la matriz.
+
+### Run seguro final
+
+Run ID: `32804145359`.
+
+- `E2E_LIVE=0` confirmado en logs;
+- **21 casos definidos**;
+- **18 PASS**;
+- **3 SKIP deliberados**;
+- **0 FAIL**;
+- duración de tests: **1.2 min**;
+- Chromium, Firefox y WebKit: PASS dentro del alcance seguro definido;
+- no se ejecutó ninguna investigación pública real en esta corrida.
+
+Los tres skips corresponden al test de investigación pública real, una vez por proyecto de browser. Sólo queda habilitado cuando el workflow se ejecuta manualmente con `live=true`.
+
+Artifact:
+
+- nombre `videntia-cloud-browser-cross-browser-evidence`;
+- artifact ID `9547581341`;
+- 22 archivos;
+- tamaño `3,159,204` bytes;
+- SHA-256 `34563d354a42f65021c3c9a90b1105589be5b15479c1dca91b1857c4cc675566`;
+- retención 14 días.
+
+Verificación del mismo commit `509b92632346b2b4943b07aecde3061d10b7a95b`:
+
+- CI run `32804145363`: success; Niza regression, Analytics privacy regression, TypeScript y Next.js production build en verde;
+- CodeQL run `32804145388`, job `97670783341`: success;
+- deployment Vercel `dpl_GrCqChMKKEKEBby6WSgJTHgzrtz7`: production READY.
 
 ## Revisión visual
 
@@ -207,17 +289,20 @@ También incorpora los aprendizajes de esta ronda:
 
 - matriz Chromium/Firefox/WebKit;
 - smoke por defecto sin consumo de APIs con cuota/coste;
+- estados de resultado controlados para cubrir UI sin consumo externo;
 - live submit como opt-in explícito;
 - sólo un live submit cuando hay cuota/coste;
 - fixtures de upload no degenerados;
 - ignorar `role=alert` vacío como falso positivo;
 - demostrar hidratación React antes de acciones stateful;
+- validar teclado y semántica de controles;
+- auditar rutas públicas, H1, `main`, IDs y overflow;
 - revisar trace antes de cambiar producto;
 - normalizar scroll para screenshots full-page con elementos sticky;
 - no llamar Safari a Playwright WebKit.
 
 ## Estado
 
-**PASS cross-browser del alcance definido, con smoke automático seguro y E2E vivo opt-in.**
+**PASS cross-browser del alcance definido. El runner automático seguro cubre 18 casos efectivos en tres motores, con 3 skips deliberados para la investigación viva y sin consumo de cuota en pushes normales.**
 
 Riesgo residual principal: Safari real en macOS/iOS y dispositivos físicos no están cubiertos por este runner Linux. Para esas plataformas se requiere infraestructura macOS/device-cloud específica.
