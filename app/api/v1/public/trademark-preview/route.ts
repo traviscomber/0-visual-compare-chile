@@ -33,6 +33,7 @@ const INVALID_DETECTED_DENOMINATIONS = new Set([
   "sin denominación",
 ])
 const DetectedNameSchema = z.object({ denominacion: z.string().nullable(), confidence: z.number().min(0).max(1) })
+type DetectedName = z.infer<typeof DetectedNameSchema>
 
 export async function POST(request: NextRequest) {
   const quota = await reservePublicDemoQuota(getPublicDemoIdentity(request.headers))
@@ -266,20 +267,44 @@ async function buildVisualOnlyPreview({
   }, { headers: previewHeaders(rateHeaders) })
 }
 
-async function detectTrademarkName(imageBase64: string, imageMimeType: string) {
+async function detectTrademarkName(imageBase64: string, imageMimeType: string): Promise<DetectedName> {
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  const [primary, verification] = await Promise.all([
+    readTrademarkName(client, imageBase64, imageMimeType, "Transcribe la denominación principal respetando exactamente el orden visual natural."),
+    readTrademarkName(client, imageBase64, imageMimeType, "Haz una lectura independiente desde cero de la denominación principal; no uses contexto ni completes letras dudosas."),
+  ])
+
+  const primaryName = normalizeDetectedDenomination(primary.denominacion)
+  const verificationName = normalizeDetectedDenomination(verification.denominacion)
+  if (!primaryName || !verificationName) return { denominacion: null, confidence: 0 }
+
+  const matches = primaryName.localeCompare(verificationName, "es", { sensitivity: "base" }) === 0
+  if (!matches) return { denominacion: null, confidence: 0 }
+
+  return {
+    denominacion: primaryName,
+    confidence: Math.min(primary.confidence, verification.confidence),
+  }
+}
+
+async function readTrademarkName(
+  client: OpenAI,
+  imageBase64: string,
+  imageMimeType: string,
+  instruction: string,
+): Promise<DetectedName> {
   const response = await client.chat.completions.parse({
     model: "gpt-5.6-luna",
     max_completion_tokens: 160,
     messages: [
       {
         role: "system",
-        content: "Transcribe únicamente la denominación marcaria principal que sea realmente visible. Conserva exactamente el orden de letras y palabras según su lectura visual natural; no reordenas iniciales, no completas letras dudosas y no deduzcas un nombre por el símbolo o el contexto. Si una letra relevante no puede leerse con seguridad o no existe texto marcario claro, devuelve null. Ignora slogans secundarios, etiquetas legales, precios y texto ambiental.",
+        content: "Transcribe únicamente la denominación marcaria principal que sea realmente visible. Conserva exactamente el orden de letras y palabras según su lectura visual natural. No reordenes iniciales, no completes letras dudosas y no deduzcas un nombre por el símbolo o el contexto. Si una letra relevante no puede leerse con seguridad o no existe texto marcario claro, devuelve null. Ignora slogans secundarios, etiquetas legales, precios y texto ambiental.",
       },
       {
         role: "user",
         content: [
-          { type: "text", text: "Observa el logo con detalle y transcribe sólo su denominación principal, respetando el orden visual exacto." },
+          { type: "text", text: instruction },
           { type: "image_url", image_url: { url: `data:${imageMimeType};base64,${imageBase64}`, detail: "high" } },
         ],
       },
