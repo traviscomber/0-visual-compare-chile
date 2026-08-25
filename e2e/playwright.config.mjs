@@ -15,11 +15,15 @@ export default defineConfig({
   outputDir: "test-results",
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "https://videntia.app",
-    browserName: "chromium",
     headless: true,
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
     trace: "retain-on-failure",
     video: "retain-on-failure",
   },
+  projects: [
+    { name: "chromium", use: { browserName: "chromium" } },
+    { name: "firefox", use: { browserName: "firefox" } },
+    { name: "webkit", use: { browserName: "webkit" } },
+  ],
 })
