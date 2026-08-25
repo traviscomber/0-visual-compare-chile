@@ -26,8 +26,9 @@ const MAX_FILE_BYTES = 4_500_000
 const MAX_ACTIVITY_LENGTH = 400
 
 type Preview = {
+  analysis_mode: "trademark" | "visual-only"
   marca: string
-  denomination_source: "user" | "image-detected"
+  denomination_source: "user" | "image-detected" | "not-detected"
   denomination_confidence: number | null
   niza_context_provided: boolean
   visual: {
@@ -84,12 +85,13 @@ export default function DemoPage() {
   const [actividad, setActividad] = useState("")
   const [loading, setLoading] = useState(false)
   const [loadingStage, setLoadingStage] = useState(0)
+  const [loadingWithNizaContext, setLoadingWithNizaContext] = useState(false)
+  const [loadingFromImageOnly, setLoadingFromImageOnly] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<Preview | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const loadingTimers = useRef<number[]>([])
   const canRun = Boolean((image || nombre.trim()) && !loading)
-  const withNizaContext = Boolean(actividad.trim())
 
   const clearLoadingTimers = () => {
     for (const timer of loadingTimers.current) window.clearTimeout(timer)
@@ -97,6 +99,7 @@ export default function DemoPage() {
   }
 
   const handleFile = (file: File) => {
+    if (loading) return
     setError(null)
     setPreview(null)
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) return setError("Usa PNG, JPEG, WebP o GIF.")
@@ -113,15 +116,19 @@ export default function DemoPage() {
 
   const run = async () => {
     if (!canRun) return
+    const requestHasNizaContext = Boolean(actividad.trim())
+    const requestStartsFromImageOnly = Boolean(image && !nombre.trim())
     clearLoadingTimers()
     setLoading(true)
     setLoadingStage(0)
+    setLoadingWithNizaContext(requestHasNizaContext)
+    setLoadingFromImageOnly(requestStartsFromImageOnly)
     setError(null)
     setPreview(null)
     loadingTimers.current = [
       window.setTimeout(() => setLoadingStage(1), 1200),
-      window.setTimeout(() => setLoadingStage(2), withNizaContext ? 4500 : 3000),
-      ...(withNizaContext ? [window.setTimeout(() => setLoadingStage(3), 8000)] : []),
+      window.setTimeout(() => setLoadingStage(2), requestHasNizaContext ? 4500 : 3000),
+      ...(requestHasNizaContext ? [window.setTimeout(() => setLoadingStage(3), 8000)] : []),
     ]
     try {
       const response = await fetch("/api/v1/public/trademark-preview", {
@@ -136,7 +143,7 @@ export default function DemoPage() {
       const data = await response.json().catch(() => ({}))
       if (!response.ok) return setError(data.error ?? "No pudimos completar la búsqueda.")
       setPreview(data as Preview)
-      if (!nombre.trim() && data.marca) setNombre(data.marca)
+      if (!nombre.trim() && data.analysis_mode !== "visual-only" && data.marca) setNombre(data.marca)
     } catch {
       setError("No pudimos conectar con el servicio.")
     } finally {
@@ -155,6 +162,18 @@ export default function DemoPage() {
     setNombre("")
     setActividad("")
     setLoadingStage(0)
+    setLoadingWithNizaContext(false)
+    setLoadingFromImageOnly(false)
+  }
+
+  const refine = () => {
+    clearLoadingTimers()
+    setPreview(null)
+    setError(null)
+    setNombre("")
+    setLoadingStage(0)
+    setLoadingWithNizaContext(false)
+    setLoadingFromImageOnly(false)
   }
 
   return (
@@ -185,7 +204,7 @@ export default function DemoPage() {
                 <h1 className="mt-5 max-w-[9ch] text-[clamp(3.2rem,6vw,6.6rem)] font-normal leading-[0.92] tracking-[-0.06em] text-white">Entrega la marca. Revisa la evidencia.</h1>
               </div>
               <div className="max-w-2xl lg:justify-self-end">
-                <p className="text-lg leading-8 text-[#A0ABB6]">Empieza con un nombre, una imagen o ambos. Si agregas qué productos o servicios identifica la marca, VIDENTIA también sugiere clases Niza con ese contexto.</p>
+                <p className="text-lg leading-8 text-[#A0ABB6]">Empieza con un nombre, una imagen o ambos. Si la imagen no contiene texto, VIDENTIA igualmente analiza sus señales figurativas sin inventar una denominación. Agrega productos o servicios para contextualizar Niza.</p>
                 <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#70808B]"><span>Fuente oficial</span><span>Señales separadas</span><span>Sin veredicto automático</span></div>
               </div>
             </div>
@@ -196,14 +215,15 @@ export default function DemoPage() {
                   <div className="mb-5 flex items-center justify-between gap-4"><div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#64D5C2]">01 / Consulta</p><h2 className="mt-2 text-2xl font-normal tracking-[-0.03em] text-white">¿Qué quieres investigar?</h2></div><span className="hidden text-xs text-[#66727F] sm:block">PNG · JPEG · WebP · GIF</span></div>
                   <button
                     type="button"
+                    disabled={loading}
                     onClick={() => fileRef.current?.click()}
-                    onDrop={(event) => { event.preventDefault(); const file = event.dataTransfer.files[0]; if (file) handleFile(file) }}
+                    onDrop={(event) => { event.preventDefault(); if (loading) return; const file = event.dataTransfer.files[0]; if (file) handleFile(file) }}
                     onDragOver={(event) => event.preventDefault()}
-                    className="group flex min-h-[250px] w-full items-center justify-center border border-dashed border-white/15 bg-[#080D12] p-7 text-center outline-none transition hover:border-[#64D5C2]/45 hover:bg-[#0B1218] focus-visible:border-[#64D5C2] focus-visible:ring-2 focus-visible:ring-[#64D5C2]/25"
+                    className="group flex min-h-[250px] w-full items-center justify-center border border-dashed border-white/15 bg-[#080D12] p-7 text-center outline-none transition hover:border-[#64D5C2]/45 hover:bg-[#0B1218] focus-visible:border-[#64D5C2] focus-visible:ring-2 focus-visible:ring-[#64D5C2]/25 disabled:cursor-wait disabled:opacity-60"
                   >
-                    <input ref={fileRef} type="file" accept={ACCEPTED_IMAGE_TYPES.join(",")} className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) handleFile(file) }} />
+                    <input ref={fileRef} type="file" disabled={loading} accept={ACCEPTED_IMAGE_TYPES.join(",")} className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) handleFile(file) }} />
                     {imagePreview ? (
-                      <div><div className="mx-auto flex h-40 w-56 items-center justify-center border border-white/10 bg-[#101820] p-4"><img src={imagePreview} alt="Marca cargada" className="max-h-full max-w-full object-contain" /></div><p className="mt-4 text-sm font-medium text-[#E7ECEA]">Imagen lista para investigar</p><p className="mt-1 text-xs text-[#6F7A87]">Haz clic para reemplazarla</p></div>
+                      <div><div className="mx-auto flex h-40 w-56 items-center justify-center border border-white/10 bg-[#101820] p-4"><img src={imagePreview} alt="Marca cargada" className="max-h-full max-w-full object-contain" /></div><p className="mt-4 text-sm font-medium text-[#E7ECEA]">Imagen lista para investigar</p><p className="mt-1 text-xs text-[#6F7A87]">{loading ? "Analizando esta imagen" : "Haz clic para reemplazarla"}</p></div>
                     ) : (
                       <div className="max-w-md"><span className="mx-auto flex h-12 w-12 items-center justify-center border border-[#64D5C2]/20 bg-[#64D5C2]/[0.05] text-[#64D5C2]"><Upload className="h-5 w-5" /></span><p className="mt-5 text-base font-semibold text-white">Arrastra un logo o una fotografía</p><p className="mt-2 text-sm leading-6 text-[#8994A1]">La imagen puede aportar denominación visible, elementos figurativos y códigos Viena cuando la evidencia permite inferirlos.</p></div>
                     )}
@@ -211,23 +231,23 @@ export default function DemoPage() {
 
                   <div className="my-6 flex items-center gap-4"><div className="h-px flex-1 bg-white/10" /><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#66727F]">datos de búsqueda</span><div className="h-px flex-1 bg-white/10" /></div>
                   <div className="flex flex-col gap-3 sm:flex-row">
-                    <Input value={nombre} onChange={(event) => setNombre(event.target.value)} onKeyDown={(event) => event.key === "Enter" && canRun && void run()} placeholder="Nombre de la marca" aria-label="Nombre de la marca" className="h-12 flex-1 rounded-lg border-white/15 bg-[#080D12] text-base text-white shadow-none placeholder:text-[#66727F] focus-visible:border-[#64D5C2] focus-visible:ring-[#64D5C2]/20" />
+                    <Input disabled={loading} value={nombre} onChange={(event) => setNombre(event.target.value)} onKeyDown={(event) => event.key === "Enter" && canRun && void run()} placeholder="Nombre de la marca" aria-label="Nombre de la marca" className="h-12 flex-1 rounded-lg border-white/15 bg-[#080D12] text-base text-white shadow-none placeholder:text-[#66727F] focus-visible:border-[#64D5C2] focus-visible:ring-[#64D5C2]/20" />
                     <Button onClick={() => void run()} disabled={!canRun} size="lg" className="h-12 gap-2 rounded-lg bg-[#1B8F80] px-6 text-white shadow-none hover:bg-[#16796C]">{loading ? <><Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />Investigando</> : <><Search className="h-4 w-4" />Investigar marca</>}</Button>
                   </div>
                   <div className="mt-3">
-                    <Input value={actividad} onChange={(event) => setActividad(event.target.value)} onKeyDown={(event) => event.key === "Enter" && canRun && void run()} maxLength={MAX_ACTIVITY_LENGTH} placeholder="Productos o servicios (opcional)" aria-label="Productos o servicios de la marca" className="h-12 rounded-lg border-white/15 bg-[#080D12] text-sm text-white shadow-none placeholder:text-[#66727F] focus-visible:border-[#64D5C2] focus-visible:ring-[#64D5C2]/20" />
-                    <p className="mt-2 text-xs leading-5 text-[#6F7A87]">Añádelo para sugerir clases Niza con contexto. Si lo omites, no inferimos clases sólo a partir del nombre.</p>
+                    <Input disabled={loading} value={actividad} onChange={(event) => setActividad(event.target.value)} onKeyDown={(event) => event.key === "Enter" && canRun && void run()} maxLength={MAX_ACTIVITY_LENGTH} placeholder="Productos o servicios (opcional)" aria-label="Productos o servicios de la marca" className="h-12 rounded-lg border-white/15 bg-[#080D12] text-sm text-white shadow-none placeholder:text-[#66727F] focus-visible:border-[#64D5C2] focus-visible:ring-[#64D5C2]/20" />
+                    <p className="mt-2 text-xs leading-5 text-[#6F7A87]">Añádelo para sugerir clases Niza con contexto. Si lo omites, no inferimos clases sólo a partir del nombre o de la imagen.</p>
                   </div>
-                  {loading ? <LoadingStatus stage={loadingStage} withNizaContext={withNizaContext} /> : null}
+                  {loading ? <LoadingStatus stage={loadingStage} withNizaContext={loadingWithNizaContext} fromImageOnly={loadingFromImageOnly} /> : null}
                   {error && <div role="alert" className="mt-4 flex items-start gap-2 border border-red-400/20 bg-red-400/[0.06] p-4 text-sm text-red-200"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}
                 </div>
 
                 <aside className="border-t border-white/10 bg-[#080D12] p-6 sm:p-8 lg:border-l lg:border-t-0 lg:p-10">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#64D5C2]">02 / Qué recibirás</p>
                   <div className="mt-5 border-t border-white/10">
-                    <Step icon={Search} number="A" title="Búsqueda trazable" copy="Estrategias ejecutadas y cobertura observada en la fuente." />
+                    <Step icon={Search} number="A" title="Búsqueda trazable" copy="Estrategias ejecutadas y cobertura observada cuando existe una denominación fiable." />
                     <Step icon={Waves} number="B" title="Señales separadas" copy="Nombre, fonética, visual y figurativa se muestran sin fundirlas en un veredicto." />
-                    <Step icon={Fingerprint} number="C" title="Contexto visual" copy="Viena y elementos compartidos sólo cuando existe evidencia comparable." />
+                    <Step icon={Fingerprint} number="C" title="Contexto visual" copy="La imagen se analiza aunque no contenga texto; Viena y elementos figurativos se reportan por separado." />
                     <Step icon={ShieldCheck} number="D" title="Limitaciones visibles" copy="Advertencias y faltantes permanecen visibles junto a los resultados." />
                   </div>
                   <div className="mt-7 border-l-2 border-[#64D5C2]/35 pl-4"><p className="text-sm font-medium text-[#DDE6E3]">Fuente ≠ análisis ≠ decisión jurídica</p><p className="mt-2 text-xs leading-5 text-[#71808B]">INAPI permanece como fuente oficial. VIDENTIA organiza la evidencia para investigación y seguimiento.</p></div>
@@ -237,16 +257,17 @@ export default function DemoPage() {
           </div>
         </section>
       ) : (
-        <Results preview={preview} imagePreview={imagePreview} reset={reset} />
+        <Results preview={preview} imagePreview={imagePreview} reset={reset} refine={refine} />
       )}
     </main>
   )
 }
 
-function LoadingStatus({ stage, withNizaContext }: { stage: number; withNizaContext: boolean }) {
-  const steps = withNizaContext
-    ? ["Preparando la investigación", "Contrastando cobertura y antecedentes", "Ordenando señales para revisión", "Incorporando el contexto de productos y servicios"]
+function LoadingStatus({ stage, withNizaContext, fromImageOnly }: { stage: number; withNizaContext: boolean; fromImageOnly: boolean }) {
+  const baseSteps = fromImageOnly
+    ? ["Leyendo la imagen", "Clasificando señales figurativas", "Ordenando la evidencia visual"]
     : ["Preparando la investigación", "Contrastando cobertura y antecedentes", "Ordenando señales para revisión"]
+  const steps = withNizaContext ? [...baseSteps, "Incorporando el contexto de productos y servicios"] : baseSteps
   const activeStage = Math.min(stage, steps.length - 1)
 
   return (
@@ -258,7 +279,7 @@ function LoadingStatus({ stage, withNizaContext }: { stage: number; withNizaCont
             <p className="text-sm font-medium text-[#DDE9E6]">{steps[activeStage]}</p>
             <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#65827D]">progreso orientativo</span>
           </div>
-          <p className="mt-1 text-xs leading-5 text-[#7F918E]">La respuesta llega completa cuando termina la consulta; estos estados sólo explican la espera y no representan un porcentaje real.</p>
+          <p className="mt-1 text-xs leading-5 text-[#7F918E]">La respuesta llega completa cuando termina el análisis; estos estados explican la espera y no representan un porcentaje real.</p>
           <div className="mt-3 flex flex-wrap gap-2" aria-hidden="true">
             {steps.map((step, index) => (
               <span key={step} className={`inline-flex items-center gap-1.5 border px-2 py-1 text-[10px] ${index < activeStage ? "border-[#64D5C2]/20 text-[#8FC8BE]" : index === activeStage ? "border-[#64D5C2]/35 bg-[#64D5C2]/[0.06] text-[#C4E8E1]" : "border-white/10 text-[#5E6B74]"}`}>
@@ -273,8 +294,9 @@ function LoadingStatus({ stage, withNizaContext }: { stage: number; withNizaCont
   )
 }
 
-function Results({ preview, imagePreview, reset }: { preview: Preview; imagePreview: string | null; reset: () => void }) {
+function Results({ preview, imagePreview, reset, refine }: { preview: Preview; imagePreview: string | null; reset: () => void; refine: () => void }) {
   const consultedAt = formatConsultedAt(preview.evidencia.consultado_en)
+  const visualOnly = preview.analysis_mode === "visual-only"
   const hasVisualEvidence = preview.visual.viena.length > 0 || preview.visual.elementos.length > 0
   const contactHref = {
     pathname: "/contacto",
@@ -291,7 +313,7 @@ function Results({ preview, imagePreview, reset }: { preview: Preview; imagePrev
         <header className="border-b border-white/10 pb-8">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-4xl">
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] font-semibold uppercase tracking-[0.14em]"><span className="text-[#64D5C2]">Investigación completada</span><span className="text-[#70808B]">Fuente {preview.evidencia.fuente}</span>{consultedAt && <span className="text-[#70808B]">Consultada {consultedAt}</span>}</div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] font-semibold uppercase tracking-[0.14em]"><span className="text-[#64D5C2]">{visualOnly ? "Análisis visual completado" : "Investigación completada"}</span><span className="text-[#70808B]">Fuente {preview.evidencia.fuente}</span>{consultedAt && <span className="text-[#70808B]">Consultada {consultedAt}</span>}</div>
               <h1 className="mt-4 text-[clamp(3rem,5vw,5.6rem)] font-normal leading-[0.95] tracking-[-0.055em] text-white">{preview.marca}</h1>
               <p className="mt-5 max-w-3xl text-base leading-7 text-[#A0ABB6]">{preview.lectura.resumen}</p>
             </div>
@@ -305,25 +327,48 @@ function Results({ preview, imagePreview, reset }: { preview: Preview; imagePrev
             <div className="mt-5 flex min-h-44 items-center justify-center border border-white/10 bg-[#080D12] p-5">
               {imagePreview ? <img src={imagePreview} alt={preview.marca} className="max-h-40 max-w-[88%] object-contain" /> : <div className="text-center text-[#66727F]"><ImageIcon className="mx-auto h-7 w-7" /><p className="mt-2 text-xs">Búsqueda denominativa</p></div>}
             </div>
-            {preview.denomination_source === "image-detected" && <p className="mt-3 text-xs leading-5 text-[#8FDCCD]">La denominación fue detectada desde la imagen y luego utilizada como entrada de búsqueda.</p>}
+            {preview.denomination_source === "image-detected" ? <p className="mt-3 text-xs leading-5 text-[#8FDCCD]">La denominación fue detectada desde la imagen y luego utilizada como entrada de búsqueda.</p> : null}
+            {visualOnly ? <p className="mt-3 text-xs leading-5 text-[#8FDCCD]">No se detectó texto marcario con confianza suficiente. La imagen fue analizada como evidencia figurativa, sin inventar un nombre.</p> : null}
 
-            <div className="mt-7 grid grid-cols-2 gap-x-5 gap-y-6 border-t border-white/10 pt-6">
-              <Stat label="Estrategias ejecutadas" value={preview.busqueda.estrategias_ejecutadas} />
-              <Stat label="Resultados únicos" value={preview.busqueda.resultados_unicos} />
-              <Stat label="Activos observados" value={preview.evidencia.resultados_activos} />
-              <Stat label="Imágenes comparadas" value={preview.evidencia.imagenes_comparadas} />
-            </div>
+            {visualOnly ? (
+              <div className="mt-7 grid grid-cols-2 gap-x-5 gap-y-6 border-t border-white/10 pt-6">
+                <Stat label="Elementos detectados" value={preview.visual.elementos.length} />
+                <Stat label="Códigos Viena" value={preview.visual.viena.length} />
+                <Stat label="Colores observados" value={preview.visual.colores.length} />
+                <Stat label="Confianza visual" value={capitalize(preview.evidencia.confianza)} />
+              </div>
+            ) : (
+              <div className="mt-7 grid grid-cols-2 gap-x-5 gap-y-6 border-t border-white/10 pt-6">
+                <Stat label="Estrategias ejecutadas" value={preview.busqueda.estrategias_ejecutadas} />
+                <Stat label="Resultados únicos" value={preview.busqueda.resultados_unicos} />
+                <Stat label="Activos observados" value={preview.evidencia.resultados_activos} />
+                <Stat label="Imágenes comparadas" value={preview.evidencia.imagenes_comparadas} />
+              </div>
+            )}
 
-            {preview.busqueda.estrategias.length > 0 && <div className="mt-7 border-t border-white/10 pt-5"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#70808B]">Estrategias ejecutadas</p><div className="mt-3 flex flex-wrap gap-2">{preview.busqueda.estrategias.map((item) => <Badge key={item.id} variant="outline" className="rounded-md border-white/10 bg-[#080D12] text-[#A1ABB6]">{item.label}</Badge>)}</div></div>}
+            {!visualOnly && preview.busqueda.estrategias.length > 0 ? <div className="mt-7 border-t border-white/10 pt-5"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#70808B]">Estrategias ejecutadas</p><div className="mt-3 flex flex-wrap gap-2">{preview.busqueda.estrategias.map((item) => <Badge key={item.id} variant="outline" className="rounded-md border-white/10 bg-[#080D12] text-[#A1ABB6]">{item.label}</Badge>)}</div></div> : null}
           </aside>
 
           <div className="py-8 lg:pl-8">
             <div className="flex flex-col gap-4 border-b border-white/10 pb-6 sm:flex-row sm:items-end sm:justify-between">
-              <div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#64D5C2]">02 / Antecedentes</p><h2 className="mt-2 text-3xl font-normal tracking-[-0.04em] text-white">Qué merece revisión y por qué</h2></div>
-              <p className="max-w-sm text-xs leading-5 text-[#70808B]">Cada señal se presenta por separado. La posición en esta lista no equivale a registrabilidad ni a una conclusión jurídica.</p>
+              <div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#64D5C2]">02 / {visualOnly ? "Alcance" : "Antecedentes"}</p><h2 className="mt-2 text-3xl font-normal tracking-[-0.04em] text-white">{visualOnly ? "Análisis figurativo, sin inventar antecedentes" : "Qué merece revisión y por qué"}</h2></div>
+              <p className="max-w-sm text-xs leading-5 text-[#70808B]">{visualOnly ? "La lectura de la imagen y la búsqueda registral son capas distintas. Esta vista muestra sólo lo que la evidencia permite afirmar." : "Cada señal se presenta por separado. La posición en esta lista no equivale a registrabilidad ni a una conclusión jurídica."}</p>
             </div>
 
-            {preview.antecedentes.length > 0 ? (
+            {visualOnly ? (
+              <div className="grid gap-px bg-white/10 md:grid-cols-2">
+                <div className="bg-[#080D12] p-6 sm:p-8">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#64D5C2]">Lo que sí se analizó</p>
+                  <p className="mt-3 text-sm leading-6 text-[#A8B3B9]">Elementos figurativos, composición visual, colores dominantes y códigos de Clasificación Viena cuando la evidencia alcanza el umbral de confianza.</p>
+                  {preview.visual.elementos.length > 0 ? <div className="mt-5 flex flex-wrap gap-2">{preview.visual.elementos.map((item) => <Badge key={item} variant="outline" className="rounded-md border-white/10 bg-[#0D131A] text-[#B7C4C7]">{item}</Badge>)}</div> : null}
+                </div>
+                <div className="bg-[#080D12] p-6 sm:p-8">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#64D5C2]">Lo que no se afirmó</p>
+                  <p className="mt-3 text-sm leading-6 text-[#A8B3B9]">No se ejecutó una búsqueda por nombre ni se presentó una búsqueda exhaustiva de similitud por imagen como si fuera evidencia oficial disponible.</p>
+                  <Button onClick={refine} variant="outline" className="mt-5 h-10 gap-2 rounded-lg border-white/15 bg-transparent text-white hover:bg-white/[0.06] hover:text-white"><Search className="h-4 w-4" />Añadir denominación</Button>
+                </div>
+              </div>
+            ) : preview.antecedentes.length > 0 ? (
               <div className="divide-y divide-white/10">
                 {preview.antecedentes.map((item, index) => <Antecedent key={item.id} item={item} index={index} />)}
               </div>
@@ -339,13 +384,15 @@ function Results({ preview, imagePreview, reset }: { preview: Preview; imagePrev
               <div className="space-y-4">{preview.niza.map((item) => <div key={`${item.numero}-${item.titulo}`} className="border-t border-white/10 pt-4 first:border-t-0 first:pt-0"><div className="flex items-baseline gap-3"><span className="font-mono text-xs text-[#64D5C2]">Niza {item.numero}</span><strong className="text-sm font-medium text-[#E5ECEA]">{item.titulo}</strong></div><p className="mt-2 text-xs leading-5 text-[#81909A]">{item.razon}</p></div>)}</div>
             ) : preview.niza_context_provided ? (
               <p className="text-sm leading-6 text-[#788792]">No se devolvieron clases Niza sugeridas con el contexto entregado.</p>
+            ) : visualOnly ? (
+              <div><p className="text-sm leading-6 text-[#A8B3B9]">No asignamos clases Niza sólo a partir de una imagen.</p><p className="mt-2 text-xs leading-5 text-[#6F7A87]">Agrega productos o servicios en una nueva investigación para obtener una sugerencia contextual.</p></div>
             ) : (
               <div><p className="text-sm leading-6 text-[#A8B3B9]">No asignamos clases Niza sólo a partir del nombre.</p><p className="mt-2 text-xs leading-5 text-[#6F7A87]">En una nueva investigación agrega los productos o servicios de la marca para obtener una sugerencia contextual.</p></div>
             )}
           </EvidenceColumn>
 
           <EvidenceColumn index="04" title="Señales visuales" icon={<Fingerprint className="h-4 w-4" />}>
-            {hasVisualEvidence ? <><div className="flex flex-wrap gap-2">{preview.visual.viena.slice(0, 8).map((item) => <Badge key={item.code} variant="outline" className="rounded-md border-[#64D5C2]/20 bg-[#64D5C2]/[0.04] text-[#A8DDD4]">{item.code} · {item.titulo}</Badge>)}</div>{preview.visual.elementos.length > 0 && <p className="mt-4 text-xs leading-5 text-[#81909A]">{preview.visual.elementos.join(" · ")}</p>}</> : <p className="text-sm leading-6 text-[#788792]">No hubo evidencia visual suficiente para mostrar códigos o elementos comparables.</p>}
+            {hasVisualEvidence ? <><div className="flex flex-wrap gap-2">{preview.visual.viena.slice(0, 8).map((item) => <Badge key={item.code} variant="outline" className="rounded-md border-[#64D5C2]/20 bg-[#64D5C2]/[0.04] text-[#A8DDD4]">{item.code} · {item.titulo}</Badge>)}</div>{preview.visual.elementos.length > 0 ? <p className="mt-4 text-xs leading-5 text-[#81909A]">{preview.visual.elementos.join(" · ")}</p> : null}{preview.visual.colores.length > 0 ? <div className="mt-4 border-t border-white/10 pt-4"><p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#66727F]">Colores observados</p><div className="mt-2 flex flex-wrap gap-2">{preview.visual.colores.map((color) => <span key={color} className="border border-white/10 px-2 py-1 text-[10px] text-[#9EABB1]">{color}</span>)}</div></div> : null}</> : <p className="text-sm leading-6 text-[#788792]">No hubo evidencia visual suficiente para mostrar códigos o elementos comparables.</p>}
           </EvidenceColumn>
 
           <EvidenceColumn index="05" title="Lectura asistida" icon={<ShieldCheck className="h-4 w-4" />}>
@@ -354,9 +401,9 @@ function Results({ preview, imagePreview, reset }: { preview: Preview; imagePrev
           </EvidenceColumn>
         </div>
 
-        {preview.locked_count > 0 && <div className="mt-6 flex flex-col gap-4 border border-white/10 bg-[#0A0F15] p-6 text-white sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">Hay {preview.locked_count} antecedentes adicionales en la investigación.</p><p className="mt-1 text-sm text-[#8F9AA8]">Continúa con esta misma marca para conservar el caso, abrir evidencia completa y activar vigilancia.</p></div><Link href={contactHref}><Button className="shrink-0 gap-2 rounded-lg bg-white text-[#111827] hover:bg-[#E7ECEA]">Continuar investigación <ArrowRight className="h-4 w-4" /></Button></Link></div>}
+        {!visualOnly && preview.locked_count > 0 ? <div className="mt-6 flex flex-col gap-4 border border-white/10 bg-[#0A0F15] p-6 text-white sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">Hay {preview.locked_count} antecedentes adicionales en la investigación.</p><p className="mt-1 text-sm text-[#8F9AA8]">Continúa con esta misma marca para conservar el caso, abrir evidencia completa y activar vigilancia.</p></div><Link href={contactHref}><Button className="shrink-0 gap-2 rounded-lg bg-white text-[#111827] hover:bg-[#E7ECEA]">Continuar investigación <ArrowRight className="h-4 w-4" /></Button></Link></div> : null}
 
-        {preview.evidencia.advertencias.length > 0 && <section className="mt-6 border border-amber-300/20 bg-amber-300/[0.05] p-6"><div className="flex items-start gap-3"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-200" /><div><p className="text-sm font-semibold text-amber-100">Limitaciones de esta consulta</p><div className="mt-3 space-y-2">{preview.evidencia.advertencias.map((warning) => <p key={warning} className="text-xs leading-5 text-amber-100/75">{warning}</p>)}</div></div></div></section>}
+        {preview.evidencia.advertencias.length > 0 ? <section className="mt-6 border border-amber-300/20 bg-amber-300/[0.05] p-6"><div className="flex items-start gap-3"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-200" /><div><p className="text-sm font-semibold text-amber-100">Limitaciones de esta consulta</p><div className="mt-3 space-y-2">{preview.evidencia.advertencias.map((warning) => <p key={warning} className="text-xs leading-5 text-amber-100/75">{warning}</p>)}</div></div></div></section> : null}
 
         <footer className="mt-8 flex flex-col gap-4 border-t border-white/10 pt-6 text-xs leading-5 text-[#66727F] sm:flex-row sm:items-center sm:justify-between"><p>VIDENTIA organiza evidencia y señales de investigación. INAPI permanece como fuente oficial.</p><span className="font-medium text-[#8997A0]">Fuente ≠ análisis ≠ decisión jurídica</span></footer>
       </div>
@@ -374,7 +421,7 @@ function Antecedent({ item, index }: { item: Preview["antecedentes"][number]; in
         <div className="flex h-[112px] items-center justify-center border border-white/10 bg-[#080D12] p-3">{item.imagen_url ? <img src={item.imagen_url} alt={item.nombre} className="max-h-full max-w-full object-contain" /> : <ImageIcon className="h-6 w-6 text-[#53606D]" />}</div>
         <div className="min-w-0">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#70808B]">Antecedente {String(index + 1).padStart(2, "0")}</p><h3 className="mt-1 text-xl font-semibold tracking-[-0.02em] text-white">{item.nombre}</h3><p className="mt-1 text-xs leading-5 text-[#8F9AA8]">{item.titular || "Titular no informado"}{item.clases.length > 0 ? ` · Niza ${item.clases.join(", ")}` : ""}</p>{identifiers.length > 0 && <p className="mt-1 font-mono text-[10px] text-[#64727D]">{identifiers.join(" · ")}</p>}</div>
+            <div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#70808B]">Antecedente {String(index + 1).padStart(2, "0")}</p><h3 className="mt-1 text-xl font-semibold tracking-[-0.02em] text-white">{item.nombre}</h3><p className="mt-1 text-xs leading-5 text-[#8F9AA8]">{item.titular || "Titular no informado"}{item.clases.length > 0 ? ` · Niza ${item.clases.join(", ")}` : ""}</p>{identifiers.length > 0 ? <p className="mt-1 font-mono text-[10px] text-[#64727D]">{identifiers.join(" · ")}</p> : null}</div>
             <span className="self-start border border-white/10 bg-[#080D12] px-3 py-1 text-xs font-medium text-[#B6C0C5]">{item.estado}</span>
           </div>
 
@@ -385,8 +432,8 @@ function Antecedent({ item, index }: { item: Preview["antecedentes"][number]; in
             <Signal label="Figurativa" value={item.similitud_figurativa} />
           </div>
 
-          {reasons.length > 0 && <div className="mt-4 border-l-2 border-[#64D5C2]/35 pl-4"><p className="text-xs font-semibold text-[#E7ECEA]">Por qué apareció</p><p className="mt-1 text-xs leading-5 text-[#8F9AA8]">{reasons.join(" · ")}</p></div>}
-          {item.viena_compartida.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{item.viena_compartida.slice(0, 6).map((code) => <span key={code} className="border border-white/10 px-2 py-1 font-mono text-[10px] text-[#82919B]">Viena {code}</span>)}</div>}
+          {reasons.length > 0 ? <div className="mt-4 border-l-2 border-[#64D5C2]/35 pl-4"><p className="text-xs font-semibold text-[#E7ECEA]">Por qué apareció</p><p className="mt-1 text-xs leading-5 text-[#8F9AA8]">{reasons.join(" · ")}</p></div> : null}
+          {item.viena_compartida.length > 0 ? <div className="mt-3 flex flex-wrap gap-2">{item.viena_compartida.slice(0, 6).map((code) => <span key={code} className="border border-white/10 px-2 py-1 font-mono text-[10px] text-[#82919B]">Viena {code}</span>)}</div> : null}
         </div>
       </div>
     </article>
@@ -402,12 +449,17 @@ function Step({ icon: Icon, number, title, copy }: { icon: typeof Search; number
   return <div className="grid grid-cols-[38px_1fr] gap-3 border-b border-white/10 py-5 last:border-b-0"><span className="flex h-8 w-8 items-center justify-center border border-white/10 bg-[#0D131A] text-[#64D5C2]"><Icon className="h-4 w-4" /></span><div><div className="flex items-center gap-2"><span className="font-mono text-[10px] text-[#66727F]">{number}</span><p className="text-sm font-semibold text-white">{title}</p></div><p className="mt-1 text-xs leading-5 text-[#8F9AA8]">{copy}</p></div></div>
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({ label, value }: { label: string; value: number | string }) {
   return <div><p className="text-2xl font-semibold tracking-[-0.03em] tabular-nums text-white">{value}</p><p className="mt-1 text-xs leading-5 text-[#8F9AA8]">{label}</p></div>
 }
 
 function EvidenceColumn({ index, title, icon, children }: { index: string; title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return <section className="border-b border-white/10 py-7 lg:border-b-0 lg:border-r lg:px-7 lg:first:pl-0 lg:last:border-r-0 lg:last:pr-0"><div className="flex items-center justify-between gap-4"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#64D5C2]">{index} / contexto</p><h3 className="mt-2 text-xl font-normal tracking-[-0.025em] text-white">{title}</h3></div><span className="text-[#64D5C2]">{icon}</span></div><div className="mt-5">{children}</div></section>
+}
+
+function capitalize(value: string) {
+  if (!value) return "—"
+  return value.charAt(0).toUpperCase() + value.slice(1)
 }
 
 function formatConsultedAt(value: string) {
