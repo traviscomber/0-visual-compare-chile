@@ -83,10 +83,18 @@ export default function DemoPage() {
   const [nombre, setNombre] = useState("")
   const [actividad, setActividad] = useState("")
   const [loading, setLoading] = useState(false)
+  const [loadingStage, setLoadingStage] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<Preview | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const loadingTimers = useRef<number[]>([])
   const canRun = Boolean((image || nombre.trim()) && !loading)
+  const withNizaContext = Boolean(actividad.trim())
+
+  const clearLoadingTimers = () => {
+    for (const timer of loadingTimers.current) window.clearTimeout(timer)
+    loadingTimers.current = []
+  }
 
   const handleFile = (file: File) => {
     setError(null)
@@ -105,9 +113,16 @@ export default function DemoPage() {
 
   const run = async () => {
     if (!canRun) return
+    clearLoadingTimers()
     setLoading(true)
+    setLoadingStage(0)
     setError(null)
     setPreview(null)
+    loadingTimers.current = [
+      window.setTimeout(() => setLoadingStage(1), 1200),
+      window.setTimeout(() => setLoadingStage(2), withNizaContext ? 4500 : 3000),
+      ...(withNizaContext ? [window.setTimeout(() => setLoadingStage(3), 8000)] : []),
+    ]
     try {
       const response = await fetch("/api/v1/public/trademark-preview", {
         method: "POST",
@@ -125,17 +140,21 @@ export default function DemoPage() {
     } catch {
       setError("No pudimos conectar con el servicio.")
     } finally {
+      clearLoadingTimers()
       setLoading(false)
+      setLoadingStage(0)
     }
   }
 
   const reset = () => {
+    clearLoadingTimers()
     setPreview(null)
     setError(null)
     setImage(null)
     setImagePreview(null)
     setNombre("")
     setActividad("")
+    setLoadingStage(0)
   }
 
   return (
@@ -199,6 +218,7 @@ export default function DemoPage() {
                     <Input value={actividad} onChange={(event) => setActividad(event.target.value)} onKeyDown={(event) => event.key === "Enter" && canRun && void run()} maxLength={MAX_ACTIVITY_LENGTH} placeholder="Productos o servicios (opcional)" aria-label="Productos o servicios de la marca" className="h-12 rounded-lg border-white/15 bg-[#080D12] text-sm text-white shadow-none placeholder:text-[#66727F] focus-visible:border-[#64D5C2] focus-visible:ring-[#64D5C2]/20" />
                     <p className="mt-2 text-xs leading-5 text-[#6F7A87]">Añádelo para sugerir clases Niza con contexto. Si lo omites, no inferimos clases sólo a partir del nombre.</p>
                   </div>
+                  {loading ? <LoadingStatus stage={loadingStage} withNizaContext={withNizaContext} /> : null}
                   {error && <div role="alert" className="mt-4 flex items-start gap-2 border border-red-400/20 bg-red-400/[0.06] p-4 text-sm text-red-200"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}
                 </div>
 
@@ -220,6 +240,36 @@ export default function DemoPage() {
         <Results preview={preview} imagePreview={imagePreview} reset={reset} />
       )}
     </main>
+  )
+}
+
+function LoadingStatus({ stage, withNizaContext }: { stage: number; withNizaContext: boolean }) {
+  const steps = withNizaContext
+    ? ["Preparando la investigación", "Contrastando cobertura y antecedentes", "Ordenando señales para revisión", "Incorporando el contexto de productos y servicios"]
+    : ["Preparando la investigación", "Contrastando cobertura y antecedentes", "Ordenando señales para revisión"]
+  const activeStage = Math.min(stage, steps.length - 1)
+
+  return (
+    <div role="status" aria-live="polite" aria-atomic="true" className="mt-4 border border-[#64D5C2]/20 bg-[#64D5C2]/[0.045] p-4">
+      <div className="flex items-start gap-3">
+        <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-[#64D5C2] motion-reduce:animate-none" />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-sm font-medium text-[#DDE9E6]">{steps[activeStage]}</p>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#65827D]">progreso orientativo</span>
+          </div>
+          <p className="mt-1 text-xs leading-5 text-[#7F918E]">La respuesta llega completa cuando termina la consulta; estos estados sólo explican la espera y no representan un porcentaje real.</p>
+          <div className="mt-3 flex flex-wrap gap-2" aria-hidden="true">
+            {steps.map((step, index) => (
+              <span key={step} className={`inline-flex items-center gap-1.5 border px-2 py-1 text-[10px] ${index < activeStage ? "border-[#64D5C2]/20 text-[#8FC8BE]" : index === activeStage ? "border-[#64D5C2]/35 bg-[#64D5C2]/[0.06] text-[#C4E8E1]" : "border-white/10 text-[#5E6B74]"}`}>
+                {index < activeStage ? <Check className="h-3 w-3" /> : <span className="h-1.5 w-1.5 rounded-full border border-current" />}
+                {step}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
