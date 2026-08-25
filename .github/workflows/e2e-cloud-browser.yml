@@ -18,7 +18,7 @@ concurrency:
 jobs:
   production-browser:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       CI: "1"
       E2E_BASE_URL: "https://videntia.app"
@@ -45,17 +45,17 @@ jobs:
       - name: Install isolated Playwright test runtime
         run: pnpm add --save-dev --ignore-workspace-root-check --lockfile=false @playwright/test@1.55.0
 
-      - name: Install Chromium
-        run: pnpm exec playwright install --with-deps chromium
+      - name: Install Chromium Firefox and WebKit
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
 
-      - name: Run production browser journey
+      - name: Run production cross-browser journey
         run: pnpm exec playwright test --config=e2e/playwright.config.mjs
 
       - name: Upload browser evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: videntia-cloud-browser-evidence
+          name: videntia-cloud-browser-cross-browser-evidence
           path: |
             e2e/test-results/
             e2e/playwright-report/
