@@ -22,27 +22,28 @@ const sections = [
     body: [
       "Cuando utilizas la demo podemos procesar el nombre de la marca, la descripción opcional de productos o servicios, una imagen opcional y los datos técnicos necesarios para recibir y responder la solicitud.",
       "Para limitar el abuso de la demostración se utiliza una identidad técnica derivada de la dirección IP y del user-agent. El mecanismo de cuota transforma esa combinación mediante HMAC antes de registrarla; la clave de cuota almacenada por ese mecanismo no contiene la IP ni el user-agent en texto legible.",
+      "También podemos procesar métricas de navegación y eventos operativos agregados para entender el uso y rendimiento del sitio. La configuración de analítica de VIDENTIA elimina los parámetros de consulta de la URL antes de enviar pageviews. Los atributos personalizados de los eventos de la demo describen únicamente modalidad de entrada, presencia o ausencia de contexto y tipo de resultado; no incluyen el nombre de la marca, el texto de actividad ni la imagen enviada.",
       "Si nos contactas por correo, WhatsApp o para contratar el servicio, trataremos además la información que voluntariamente entregues para responder, preparar una propuesta, gestionar la relación comercial o prestar el servicio solicitado.",
     ],
   },
   {
     title: "3. Finalidades",
     body: [
-      "Usamos la información para ejecutar la investigación solicitada, analizar señales denominativas o figurativas, sugerir clases cuando existe contexto, consultar o contrastar fuentes de información, prevenir abuso, mantener seguridad y disponibilidad, diagnosticar fallos y responder solicitudes comerciales o de soporte.",
+      "Usamos la información para ejecutar la investigación solicitada, analizar señales denominativas o figurativas, sugerir clases cuando existe contexto, consultar o contrastar fuentes de información, prevenir abuso, mantener seguridad y disponibilidad, diagnosticar fallos, medir de forma agregada el uso del producto y responder solicitudes comerciales o de soporte.",
       "No utilizamos la demo pública para emitir una decisión jurídica automatizada sobre registrabilidad. Los resultados son apoyo a la investigación y deben contrastarse con las fuentes oficiales y, cuando corresponda, con asesoría profesional.",
     ],
   },
   {
     title: "4. Proveedores y fuentes externas",
     body: [
-      "VIDENTIA utiliza proveedores tecnológicos necesarios para operar infraestructura, almacenamiento, seguridad y procesamiento automatizado. Una solicitud puede ser transmitida a esos proveedores únicamente en la medida necesaria para ejecutar la función solicitada y bajo las condiciones aplicables al servicio contratado por N3uralia.",
+      "VIDENTIA utiliza proveedores tecnológicos necesarios para operar infraestructura, almacenamiento, seguridad, analítica y procesamiento automatizado. Una solicitud o señal técnica puede ser transmitida a esos proveedores únicamente en la medida necesaria para ejecutar la función solicitada u operar el servicio y bajo las condiciones aplicables al servicio contratado por N3uralia.",
       "La plataforma también consulta, sincroniza o contrasta información de fuentes externas relacionadas con propiedad industrial. La disponibilidad y exactitud de esas fuentes dependen de sus respectivos operadores.",
     ],
   },
   {
     title: "5. Conservación",
     body: [
-      "La demo pública no está concebida como un expediente persistente del usuario. Sin embargo, información técnica o de operación puede conservarse durante el tiempo razonablemente necesario para seguridad, prevención de abuso, diagnóstico, cumplimiento y continuidad del servicio.",
+      "La demo pública no está concebida como un expediente persistente del usuario. Sin embargo, información técnica o de operación puede conservarse durante el tiempo razonablemente necesario para seguridad, prevención de abuso, diagnóstico, medición agregada, cumplimiento y continuidad del servicio.",
       "Cuando una investigación se convierte en una cuenta, caso, contrato o solicitud comercial, la información asociada puede conservarse durante la relación y posteriormente por los plazos necesarios para cumplir obligaciones legales, contractuales, contables o de defensa de derechos.",
     ],
   },
