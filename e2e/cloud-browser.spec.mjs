@@ -211,6 +211,27 @@ async function expectNoNestedInteractiveControls(page) {
   expect(await page.locator("a button, button a").count()).toBe(0)
 }
 
+async function expectUniqueDomIds(page) {
+  const duplicates = await page.evaluate(() => {
+    const counts = new Map()
+    for (const element of document.querySelectorAll("[id]")) {
+      if (!element.id) continue
+      counts.set(element.id, (counts.get(element.id) ?? 0) + 1)
+    }
+    return [...counts.entries()].filter(([, count]) => count > 1)
+  })
+  expect(duplicates).toEqual([])
+}
+
+async function expectPublicRouteSemantics(page) {
+  await expect(page.locator("h1")).toHaveCount(1)
+  await expect(page.locator("h1")).toBeVisible()
+  expect(await page.locator("main").count()).toBeGreaterThanOrEqual(1)
+  await expectUniqueDomIds(page)
+  await expectNoNestedInteractiveControls(page)
+  await expectNoHorizontalOverflow(page)
+}
+
 function expectHealthyBrowser(health) {
   expect(health.pageErrors, `page errors: ${health.pageErrors.join(" | ")}`).toEqual([])
   expect(health.consoleErrors, `console errors: ${health.consoleErrors.join(" | ")}`).toEqual([])
@@ -487,4 +508,29 @@ test.describe("VIDENTIA production cloud browser", () => {
 
     expectHealthyBrowser(health)
   })
+
+  test("cross-browser public routes: semantic structure remains valid", async ({ page, browserName }, testInfo) => {
+    const health = attachBrowserHealth(page)
+    const publicRoutes = ["/", "/demo", "/contacto", "/privacidad", "/terminos"]
+
+    for (const route of publicRoutes) {
+      await page.setViewportSize({ width: 1365, height: 900 })
+      const response = await page.goto(route, { waitUntil: "domcontentloaded" })
+      expect(response, `${route} did not return a navigation response`).not.toBeNull()
+      expect(response.status(), `${route} returned HTTP ${response.status()}`).toBeLessThan(400)
+      await page.waitForLoadState("networkidle")
+      await expect(page).toHaveTitle(/VIDENTIA/i)
+      await expectPublicRouteSemantics(page)
+
+      await page.setViewportSize({ width: 390, height: 844 })
+      await expectPublicRouteSemantics(page)
+
+      if (route === "/") {
+        await page.screenshot({ path: testInfo.outputPath(`${browserName}-public-home-mobile.png`), fullPage: false })
+      }
+    }
+
+    expectHealthyBrowser(health)
+  })
+
 })
