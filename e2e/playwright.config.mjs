@@ -2,7 +2,7 @@ import { defineConfig } from "@playwright/test"
 
 export default defineConfig({
   testDir: ".",
-  testMatch: /cloud-browser\.spec\.mjs/,
+  testMatch: /(cloud-browser|accessibility)\.spec\.mjs/,
   timeout: 90_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
