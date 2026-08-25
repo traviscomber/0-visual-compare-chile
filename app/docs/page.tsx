@@ -61,14 +61,14 @@ export default function DocsPage() {
       <nav className="sticky top-0 z-50 border-b border-black/10 bg-[#F7F8F6]/95 backdrop-blur-xl">
         <div className="mx-auto flex h-[72px] max-w-[1480px] items-center justify-between px-5 lg:px-10">
           <Link href="/" className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-[10px] bg-[#111827] text-sm font-semibold text-white">V</span><span><span className="block text-[15px] font-semibold tracking-[0.16em]">VIDENTIA</span><span className="mt-1 block text-[9px] uppercase tracking-[0.18em] text-[#64748B]">by N3uralia</span></span></Link>
-          <Link href="/contacto"><Button className="h-10 rounded-lg bg-[#111827] px-5 text-white shadow-none hover:bg-[#273244]">Contratar API</Button></Link>
+          <Button asChild className="h-10 rounded-lg bg-[#111827] px-5 text-white shadow-none hover:bg-[#273244]"><Link href="/contacto">Contratar API</Link></Button>
         </div>
       </nav>
 
       <section className="border-b border-black/10 px-5 py-20 lg:px-10 lg:py-28">
         <div className="mx-auto grid max-w-[1480px] gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
           <div><p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#0F766E]">VIDENTIA API · CHILE</p><h1 className="mt-6 max-w-4xl text-[clamp(3rem,6vw,6.2rem)] font-normal leading-[0.95] tracking-[-0.055em]">Integra inteligencia marcaria sin depender de la interfaz.</h1></div>
-          <div className="max-w-2xl lg:justify-self-end"><p className="text-lg leading-8 text-[#667085]">Esta documentación publica únicamente contratos técnicos presentes en el código actual. No contiene registros, clientes, métricas ni respuestas simuladas.</p><div className="mt-7 flex gap-3"><Link href="/contacto"><Button className="h-11 gap-2 rounded-lg bg-[#0F766E] px-5 text-white shadow-none hover:bg-[#134E4A]">Cotizar integración <ArrowRight className="h-4 w-4" /></Button></Link><Link href="/demo"><Button variant="outline" className="h-11 rounded-lg border-black/15 bg-transparent px-5">Probar VIDENTIA</Button></Link></div></div>
+          <div className="max-w-2xl lg:justify-self-end"><p className="text-lg leading-8 text-[#667085]">Esta documentación publica únicamente contratos técnicos presentes en el código actual. No contiene registros, clientes, métricas ni respuestas simuladas.</p><div className="mt-7 flex gap-3"><Button asChild className="h-11 gap-2 rounded-lg bg-[#0F766E] px-5 text-white shadow-none hover:bg-[#134E4A]"><Link href="/contacto">Cotizar integración <ArrowRight className="h-4 w-4" /></Link></Button><Button asChild variant="outline" className="h-11 rounded-lg border-black/15 bg-transparent px-5"><Link href="/demo">Probar VIDENTIA</Link></Button></div></div>
         </div>
       </section>
 
