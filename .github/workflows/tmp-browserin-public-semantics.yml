@@ -1,0 +1,101 @@
+name: One-shot Browserin public semantics patch
+
+on:
+  push:
+    paths:
+      - ".github/workflows/tmp-browserin-public-semantics.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add public-route semantics audit
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("e2e/cloud-browser.spec.mjs")
+          text = path.read_text(encoding="utf-8")
+
+          helper_marker = "function expectHealthyBrowser(health) {"
+          helper = '''async function expectUniqueDomIds(page) {
+            const duplicates = await page.evaluate(() => {
+              const counts = new Map()
+              for (const element of document.querySelectorAll("[id]")) {
+                if (!element.id) continue
+                counts.set(element.id, (counts.get(element.id) ?? 0) + 1)
+              }
+              return [...counts.entries()].filter(([, count]) => count > 1)
+            })
+            expect(duplicates).toEqual([])
+          }
+
+          async function expectPublicRouteSemantics(page) {
+            await expect(page.locator("h1")).toHaveCount(1)
+            await expect(page.locator("h1")).toBeVisible()
+            expect(await page.locator("main").count()).toBeGreaterThanOrEqual(1)
+            await expectUniqueDomIds(page)
+            await expectNoNestedInteractiveControls(page)
+            await expectNoHorizontalOverflow(page)
+          }
+
+          '''
+          if helper_marker not in text:
+              raise SystemExit("Helper insertion marker not found")
+          if "expectPublicRouteSemantics" in text:
+              raise SystemExit("Public route semantics helper already exists")
+          text = text.replace(helper_marker, helper + helper_marker, 1)
+
+          closing_marker = "\n})\n"
+          test_block = '''
+
+            test("cross-browser public routes: semantic structure remains valid", async ({ page, browserName }, testInfo) => {
+              const health = attachBrowserHealth(page)
+              const publicRoutes = ["/", "/demo", "/contacto", "/privacidad", "/terminos"]
+
+              for (const route of publicRoutes) {
+                await page.setViewportSize({ width: 1365, height: 900 })
+                const response = await page.goto(route, { waitUntil: "domcontentloaded" })
+                expect(response, `${route} did not return a navigation response`).not.toBeNull()
+                expect(response.status(), `${route} returned HTTP ${response.status()}`).toBeLessThan(400)
+                await page.waitForLoadState("networkidle")
+                await expect(page).toHaveTitle(/VIDENTIA/i)
+                await expectPublicRouteSemantics(page)
+
+                await page.setViewportSize({ width: 390, height: 844 })
+                await expectPublicRouteSemantics(page)
+
+                if (route === "/") {
+                  await page.screenshot({ path: testInfo.outputPath(`${browserName}-public-home-mobile.png`), fullPage: false })
+                }
+              }
+
+              expectHealthyBrowser(health)
+            })
+          '''
+          index = text.rfind(closing_marker)
+          if index < 0:
+              raise SystemExit("Describe closing marker not found")
+          text = text[:index] + test_block + text[index:]
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Commit Browserin audit
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add e2e/cloud-browser.spec.mjs
+          git diff --cached --check
+          git diff --cached --quiet && exit 1
+          git commit -m "test(e2e): audit public route semantics cross-browser"
+          git push origin HEAD:main
