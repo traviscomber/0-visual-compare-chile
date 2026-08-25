@@ -223,10 +223,22 @@ async function expectUniqueDomIds(page) {
   expect(duplicates).toEqual([])
 }
 
-async function expectPublicRouteSemantics(page) {
+async function expectPublicRouteSemantics(page, expectedPath) {
   await expect(page.locator("h1")).toHaveCount(1)
   await expect(page.locator("h1")).toBeVisible()
-  expect(await page.locator("main").count()).toBeGreaterThanOrEqual(1)
+  await expect(page.locator("main")).toHaveCount(1)
+
+  const description = page.locator('meta[name="description"]')
+  await expect(description).toHaveCount(1)
+  const descriptionContent = (await description.getAttribute("content"))?.trim() ?? ""
+  expect(descriptionContent.length).toBeGreaterThan(20)
+
+  const canonical = page.locator('link[rel="canonical"]')
+  await expect(canonical).toHaveCount(1)
+  const canonicalHref = await canonical.getAttribute("href")
+  expect(canonicalHref).toBeTruthy()
+  expect(new URL(canonicalHref, "https://videntia.app").pathname).toBe(expectedPath)
+
   await expectUniqueDomIds(page)
   await expectNoNestedInteractiveControls(page)
   await expectNoHorizontalOverflow(page)
@@ -520,10 +532,10 @@ test.describe("VIDENTIA production cloud browser", () => {
       expect(response.status(), `${route} returned HTTP ${response.status()}`).toBeLessThan(400)
       await page.waitForLoadState("networkidle")
       await expect(page).toHaveTitle(/VIDENTIA/i)
-      await expectPublicRouteSemantics(page)
+      await expectPublicRouteSemantics(page, route)
 
       await page.setViewportSize({ width: 390, height: 844 })
-      await expectPublicRouteSemantics(page)
+      await expectPublicRouteSemantics(page, route)
 
       if (route === "/") {
         await page.screenshot({ path: testInfo.outputPath(`${browserName}-public-home-mobile.png`), fullPage: false })
