@@ -276,6 +276,14 @@ function LoadingStatus({ stage, withNizaContext }: { stage: number; withNizaCont
 function Results({ preview, imagePreview, reset }: { preview: Preview; imagePreview: string | null; reset: () => void }) {
   const consultedAt = formatConsultedAt(preview.evidencia.consultado_en)
   const hasVisualEvidence = preview.visual.viena.length > 0 || preview.visual.elementos.length > 0
+  const contactHref = {
+    pathname: "/contacto",
+    query: {
+      origen: "demo",
+      marca: preview.marca,
+      resultados: String(preview.evidencia.resultados_totales),
+    },
+  }
 
   return (
     <section className="px-5 py-8 lg:px-10 lg:py-12">
@@ -346,7 +354,7 @@ function Results({ preview, imagePreview, reset }: { preview: Preview; imagePrev
           </EvidenceColumn>
         </div>
 
-        {preview.locked_count > 0 && <div className="mt-6 flex flex-col gap-4 border border-white/10 bg-[#0A0F15] p-6 text-white sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">Hay {preview.locked_count} antecedentes adicionales en la investigación.</p><p className="mt-1 text-sm text-[#8F9AA8]">Solicita acceso para conservar el caso, abrir evidencia completa y activar vigilancia.</p></div><Link href="/contacto"><Button className="shrink-0 gap-2 rounded-lg bg-white text-[#111827] hover:bg-[#E7ECEA]">Solicitar acceso <ArrowRight className="h-4 w-4" /></Button></Link></div>}
+        {preview.locked_count > 0 && <div className="mt-6 flex flex-col gap-4 border border-white/10 bg-[#0A0F15] p-6 text-white sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">Hay {preview.locked_count} antecedentes adicionales en la investigación.</p><p className="mt-1 text-sm text-[#8F9AA8]">Continúa con esta misma marca para conservar el caso, abrir evidencia completa y activar vigilancia.</p></div><Link href={contactHref}><Button className="shrink-0 gap-2 rounded-lg bg-white text-[#111827] hover:bg-[#E7ECEA]">Continuar investigación <ArrowRight className="h-4 w-4" /></Button></Link></div>}
 
         {preview.evidencia.advertencias.length > 0 && <section className="mt-6 border border-amber-300/20 bg-amber-300/[0.05] p-6"><div className="flex items-start gap-3"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-200" /><div><p className="text-sm font-semibold text-amber-100">Limitaciones de esta consulta</p><div className="mt-3 space-y-2">{preview.evidencia.advertencias.map((warning) => <p key={warning} className="text-xs leading-5 text-amber-100/75">{warning}</p>)}</div></div></div></section>}
 
