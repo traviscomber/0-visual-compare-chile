@@ -7,6 +7,7 @@ import OpenAI from 'openai'
 import { zodResponseFormat } from 'openai/helpers/zod'
 import { z } from 'zod'
 import { API_PORTAL_NIZA } from '@/lib/api-portal-data'
+import { applyNizaSemanticGuardrails } from '@/lib/agent/niza-guardrails'
 import {
   buildAttempt,
   confidenceThreshold,
@@ -171,7 +172,11 @@ Recomienda las clases principales y, sólo cuando exista soporte explícito en l
       }]
     })
 
-    const clases = applySemanticGuardrails(params, modelClasses)
+    const clases: NizaClass[] = applyNizaSemanticGuardrails(
+      params,
+      modelClasses,
+      (numero) => API_PORTAL_NIZA.find((item) => item.codigo === numero)?.titulo,
+    )
 
     return {
       clases,
@@ -202,138 +207,6 @@ Recomienda las clases principales y, sólo cuando exista soporte explícito en l
       },
     }
   }
-}
-
-function applySemanticGuardrails(
-  params: { nombre: string; descripcion?: string; industria?: string },
-  modelClasses: NizaClass[],
-): NizaClass[] {
-  const context = normalizeForMatch(`${params.descripcion ?? ''} ${params.industria ?? ''}`)
-  if (!context) return stableClassOrder(dedupeClasses(modelClasses))
-
-  const hasSoftware = matchesAny(context, [
-    /\bsoftware\b/,
-    /\baplicacion(?:es)?\b/,
-    /\bapp(?:s)?\b/,
-    /\bprograma(?:s)? informaticos?\b/,
-  ])
-  const hasDownloadableSoftware = matchesAny(context, [
-    /\bsoftware (?:descargable|instalable|grabado)\b/,
-    /\baplicacion(?:es)? (?:descargable|instalable|movil|moviles)\b/,
-    /\bapp(?:s)? movil(?:es)?\b/,
-    /\bprograma(?:s)? informaticos? (?:descargable|instalable|grabado)s?\b/,
-  ])
-  const hasSoftwareService = matchesAny(context, [
-    /\bsaas\b/,
-    /\bsoftware como (?:un )?servicio\b/,
-    /\bpaas\b/,
-    /\bplataforma como (?:un )?servicio\b/,
-    /\bplataforma (?:web|en linea|online|cloud|en la nube)\b/,
-    /\bdesarrollo de software\b/,
-    /\bdiseno de software\b/,
-    /\bprogramacion informatica\b/,
-    /\bhosting\b/,
-    /\balojamiento (?:de|para) (?:software|servidores|sitios web)\b/,
-  ])
-  const hasClass35Service = matchesAny(context, [
-    /\bservicios? de publicidad\b/,
-    /\bagencia de (?:publicidad|marketing)\b/,
-    /\bservicios? de marketing\b/,
-    /\bgestion comercial (?:para|de) terceros\b/,
-    /\badministracion de empresas\b/,
-    /\badministracion comercial\b/,
-    /\bservicios? de retail\b/,
-    /\bventa al por (?:menor|mayor)\b/,
-    /\bmarketplace\b/,
-    /\bintermediacion comercial\b/,
-  ])
-  const hasClass45Service = matchesAny(context, [
-    /\bservicios? juridicos?\b/,
-    /\bservicios? legales?\b/,
-    /\basesoria legal\b/,
-    /\brepresentacion legal\b/,
-    /\babogad(?:o|a|os|as)\b/,
-    /\blitig(?:io|ios|acion)\b/,
-    /\barbitraje\b/,
-    /\bmediacion legal\b/,
-    /\bauditoria de cumplimiento (?:legal|normativo)\b/,
-    /\bregistro de marcas\b/,
-    /\btramitacion de marcas\b/,
-    /\bservicios? de seguridad (?:fisica|personal)\b/,
-    /\binvestigacion privada\b/,
-  ])
-
-  let classes = modelClasses.filter((item) => {
-    if (item.numero === '35' && !hasClass35Service) return false
-    if (item.numero === '45' && !hasClass45Service) return false
-    if (item.numero === '09' && hasSoftwareService && !hasDownloadableSoftware) return false
-    if (item.numero === '42' && hasSoftware && !hasSoftwareService && !hasDownloadableSoftware) return false
-    return true
-  })
-
-  if (hasSoftwareService) {
-    classes = ensureClass(classes, '42', 'principal', 'La descripción ofrece software como servicio, plataforma tecnológica, hosting o desarrollo de software, modalidad propia de la clase 42.', 0.97)
-  } else if (hasSoftware) {
-    classes = ensureClass(classes, '09', 'principal', 'La descripción ofrece software como producto sin indicar una modalidad SaaS/PaaS; con la información disponible corresponde tratarlo como software de clase 09.', 0.97)
-  }
-
-  if (hasDownloadableSoftware) {
-    classes = ensureClass(classes, '09', 'principal', 'La descripción indica software o aplicaciones descargables/instalables, propios de la clase 09.', 0.98)
-  }
-  if (hasClass45Service) {
-    classes = ensureClass(classes, '45', 'principal', 'La descripción ofrece expresamente servicios jurídicos, de representación o seguridad propios de la clase 45.', 0.97)
-  }
-
-  return stableClassOrder(dedupeClasses(classes))
-}
-
-function ensureClass(
-  classes: NizaClass[],
-  numero: string,
-  tipo: 'principal' | 'defensiva',
-  razon: string,
-  confidence: number,
-) {
-  const existing = classes.find((item) => item.numero === numero)
-  if (existing) {
-    if (tipo === 'principal' && existing.tipo !== 'principal') existing.tipo = 'principal'
-    return classes
-  }
-  const catalog = API_PORTAL_NIZA.find((item) => item.codigo === numero)
-  if (!catalog) return classes
-  return [...classes, { numero, titulo: catalog.titulo, tipo, razon, confidence }]
-}
-
-function dedupeClasses(classes: NizaClass[]) {
-  const byNumber = new Map<string, NizaClass>()
-  for (const item of classes) {
-    const current = byNumber.get(item.numero)
-    if (!current || item.tipo === 'principal' || item.confidence > current.confidence) {
-      byNumber.set(item.numero, item)
-    }
-  }
-  return [...byNumber.values()]
-}
-
-function stableClassOrder(classes: NizaClass[]) {
-  return [...classes].sort((a, b) => {
-    if (a.tipo !== b.tipo) return a.tipo === 'principal' ? -1 : 1
-    return Number(a.numero) - Number(b.numero)
-  })
-}
-
-function normalizeForMatch(value: string) {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-function matchesAny(value: string, patterns: RegExp[]) {
-  return patterns.some((pattern) => pattern.test(value))
 }
 
 function averageConfidence(clases: NizaClass[]) {
