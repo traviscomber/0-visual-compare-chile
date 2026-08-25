@@ -17,6 +17,7 @@ Browserin valida `https://videntia.app` con Playwright en Chromium, Firefox y We
 - Cada ruta pública debe publicar exactamente un `meta[name=description]` útil y un `link[rel=canonical]` cuyo pathname coincida con la ruta visitada.
 - `robots.txt` debe mantener `/api/` fuera del rastreo y declarar `https://videntia.app/sitemap.xml`; las rutas del sitemap deben coincidir exactamente con la matriz pública de Browserin.
 - Los enlaces internos descubiertos en las seis rutas públicas deben resolver sin error HTTP ni redirección fuera de `videntia.app`.
+- Los enlaces públicos hacia `/auth/login` no usan prefetch especulativo de Next.js; la navegación al login ocurre sólo cuando la persona la solicita, evitando tráfico RSC innecesario contra una superficie protegida.
 - Axe adjunta evidencia JSON por ruta y no se silencian reglas para ocultar defectos de producto; una violación seria o crítica debe corregirse en la aplicación o clasificarse explícitamente como problema del harness antes de modificar la puerta.
 - Los hallazgos de Axe se acumulan para las seis rutas antes de fallar, de modo que una corrida entregue el mapa completo y no sólo el primer defecto.
 - Los bloques de código horizontalmente desplazables de `/docs` deben permanecer accesibles por teclado.
