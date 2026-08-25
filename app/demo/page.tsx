@@ -188,7 +188,7 @@ export default function DemoPage() {
             </Link>
           </div>
           <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" className="hidden rounded-lg text-[#A8B0BA] hover:bg-white/[0.06] hover:text-white sm:inline-flex"><Link href="/auth/login">Iniciar sesión</Link></Button>
+            <Button asChild variant="ghost" className="hidden rounded-lg text-[#A8B0BA] hover:bg-white/[0.06] hover:text-white sm:inline-flex"><Link href="/auth/login" prefetch={false}>Iniciar sesión</Link></Button>
             <Button asChild className="rounded-lg bg-white text-[#0A0E13] shadow-none hover:bg-[#E7ECEA]"><Link href="/contacto">Solicitar acceso</Link></Button>
           </div>
         </div>

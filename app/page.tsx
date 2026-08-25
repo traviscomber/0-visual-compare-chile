@@ -24,7 +24,7 @@ export default function LandingPage() {
             <Link href="#producto">Producto</Link>
             <Link href="#metodo">Cómo funciona</Link>
             <Link href="#empresas">Empresas y API</Link>
-            <Link href="/auth/login" className="px-btn px-btn-ghost">Iniciar sesión</Link>
+            <Link href="/auth/login" prefetch={false} className="px-btn px-btn-ghost">Iniciar sesión</Link>
             <Link href="/demo" className="px-btn px-btn-light">Probar sin cuenta <ArrowRight size={15} /></Link>
           </div>
         </div>
@@ -129,7 +129,7 @@ export default function LandingPage() {
           <p className="px-eyebrow">VIDENTIA · by N3uralia</p>
           <h2>Busca tu marca. <em>Revisa antes de avanzar.</em></h2>
           <p>Empieza con una búsqueda pública. Sin cuenta.</p>
-          <div className="px-actions"><Link href="/demo" className="px-btn px-btn-primary">Buscar una marca <ArrowRight size={16} /></Link><Link href="/auth/login" className="px-btn px-btn-ghost">Iniciar sesión</Link></div>
+          <div className="px-actions"><Link href="/demo" className="px-btn px-btn-primary">Buscar una marca <ArrowRight size={16} /></Link><Link href="/auth/login" prefetch={false} className="px-btn px-btn-ghost">Iniciar sesión</Link></div>
         </div>
       </section>
 
