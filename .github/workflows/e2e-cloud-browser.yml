@@ -13,7 +13,7 @@ permissions:
 
 concurrency:
   group: videntia-cloud-browser-e2e
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   production-browser:
