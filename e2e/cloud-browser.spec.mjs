@@ -21,6 +21,132 @@ function buildFixturePng() {
 
 const FIXTURE_PNG = buildFixturePng()
 
+function buildMockTrademarkPreview(brand) {
+  return {
+    analysis_mode: "trademark",
+    marca: brand,
+    denomination_source: "user",
+    denomination_confidence: null,
+    niza_context_provided: true,
+    visual: {
+      elementos: ["círculo", "líneas geométricas"],
+      colores: ["verde", "blanco"],
+      viena: [
+        { code: "26.01.01", titulo: "Círculos", elemento: "círculo", confidence: 0.92 },
+      ],
+      fingerprint: {
+        codes: ["26.01.01"],
+        categories: ["26"],
+        divisions: ["26.01"],
+        labels: ["Círculos"],
+      },
+    },
+    niza: [
+      {
+        numero: "09",
+        titulo: "Software y aparatos científicos",
+        tipo: "productos",
+        razon: "El contexto entregado describe software para análisis de datos.",
+      },
+    ],
+    busqueda: {
+      estrategias_planificadas: 1,
+      estrategias_ejecutadas: 1,
+      estrategias: [{ id: "exact-name", label: "Nombre exacto", query: brand }],
+      resultados_brutos: 52,
+      resultados_unicos: 50,
+      duplicados_eliminados: 2,
+      estrategias_fallidas: 0,
+    },
+    evidencia: {
+      fuente: "N3uralia Intelligence + INAPI live",
+      consultado_en: "2026-08-25T03:10:00.000Z",
+      resultados_totales: 50,
+      resultados_activos: 39,
+      confianza: "alta",
+      imagenes_comparadas: 12,
+      antecedentes_con_viena: 1,
+      advertencias: [
+        "Esta prueba usa evidencia sintética para validar la interfaz; la investigación real puede cambiar con la fuente oficial.",
+      ],
+    },
+    lectura: {
+      resumen: `La consulta sobre ${brand} devolvió 50 registros únicos y priorizó señales denominativas, fonéticas y visuales para revisión.`,
+      recomendacion: "Revisar los antecedentes priorizados y confirmar alcance, clases y estado directamente en la fuente oficial.",
+    },
+    antecedentes: [
+      {
+        id: "mock-antecedent-1",
+        nombre: "ANTECEDENTE QA",
+        titular: "Titular de prueba",
+        estado: "Vigente",
+        clases: ["09"],
+        numero_registro: "1234567",
+        numero_solicitud: "2026123456",
+        razones: ["Coincidencia denominativa relevante", "Clase Niza compartida"],
+        similitud_denominativa: 0.88,
+        similitud_fonetica: 0.76,
+        similitud_visual: 0.64,
+        similitud_figurativa: 0.58,
+        viena_compartida: ["26.01.01"],
+        elementos_visuales_compartidos: ["círculo"],
+      },
+    ],
+    locked_count: 49,
+  }
+}
+
+function buildMockVisualOnlyPreview() {
+  return {
+    analysis_mode: "visual-only",
+    marca: "Marca figurativa sin denominación",
+    denomination_source: "not-detected",
+    denomination_confidence: 0.18,
+    niza_context_provided: false,
+    visual: {
+      elementos: ["círculo", "silueta abstracta"],
+      colores: ["verde", "blanco"],
+      viena: [
+        { code: "26.01.01", titulo: "Círculos", elemento: "círculo", confidence: 0.91 },
+      ],
+      fingerprint: {
+        codes: ["26.01.01"],
+        categories: ["26"],
+        divisions: ["26.01"],
+        labels: ["Círculos"],
+      },
+    },
+    niza: [],
+    busqueda: {
+      estrategias_planificadas: 0,
+      estrategias_ejecutadas: 0,
+      estrategias: [],
+      resultados_brutos: 0,
+      resultados_unicos: 0,
+      duplicados_eliminados: 0,
+      estrategias_fallidas: 0,
+    },
+    evidencia: {
+      fuente: "Análisis visual VIDENTIA",
+      consultado_en: "2026-08-25T03:10:00.000Z",
+      resultados_totales: 0,
+      resultados_activos: 0,
+      confianza: "media",
+      imagenes_comparadas: 0,
+      antecedentes_con_viena: 0,
+      advertencias: [
+        "No se ejecutó una búsqueda por nombre porque no se detectó una denominación con confianza suficiente.",
+      ],
+    },
+    lectura: {
+      resumen: "La imagen contiene señales figurativas suficientes para describir elementos y códigos Viena sin inventar una denominación.",
+      recomendacion: "Añade una denominación si quieres contrastar antecedentes por nombre y contextualizar la búsqueda con productos o servicios.",
+    },
+    antecedentes: [],
+    locked_count: 0,
+  }
+}
+
 function attachBrowserHealth(page) {
   const consoleErrors = []
   const pageErrors = []
@@ -46,6 +172,17 @@ async function proveDemoHydration(page, name) {
   await expect(investigate).toBeEnabled()
 
   return { nameInput, investigate }
+}
+
+async function installMockPreviewApi(page, responseBody) {
+  await page.route("**/api/v1/public/trademark-preview", async (route) => {
+    expect(route.request().method()).toBe("POST")
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(responseBody),
+    })
+  })
 }
 
 async function focusViaKeyboard(page, locator, maxTabs = 16) {
@@ -181,6 +318,92 @@ test.describe("VIDENTIA production cloud browser", () => {
     await expectNoNestedInteractiveControls(page)
     await expectNoHorizontalOverflow(page)
     await page.screenshot({ path: testInfo.outputPath(`${browserName}-desktop-contact.png`), fullPage: true })
+
+    expectHealthyBrowser(health)
+  })
+
+  test("cross-browser mocked trademark result: evidence, responsive layout and contact CTA", async ({ page, browserName }, testInfo) => {
+    await page.setViewportSize({ width: 1365, height: 900 })
+    const health = attachBrowserHealth(page)
+    const brand = `VIDENTIA ${browserName.toUpperCase()} MOCK`
+    await installMockPreviewApi(page, buildMockTrademarkPreview(brand))
+
+    await gotoInteractive(page, "/demo")
+    const { investigate } = await proveDemoHydration(page, brand)
+    await page.getByLabel("Productos o servicios de la marca").fill("software para análisis de datos")
+    await investigate.click()
+
+    await expect(page.getByText("Investigación completada", { exact: true })).toBeVisible()
+    await expect(page.getByRole("heading", { name: brand, exact: true })).toBeVisible()
+    await expect(page.getByRole("heading", { name: "ANTECEDENTE QA", exact: true })).toBeVisible()
+    await expect(page.getByText(/Niza 09/).first()).toBeVisible()
+    await expect(page.getByText(/Fuente N3uralia Intelligence \+ INAPI live/i)).toBeVisible()
+    await expect(page.getByText(/Hay 49 antecedentes adicionales/i)).toBeVisible()
+    await expectNoNestedInteractiveControls(page)
+    await expectNoHorizontalOverflow(page)
+
+    const continueLink = page.getByRole("link", { name: /Continuar investigación/i })
+    await expect(continueLink).toBeVisible()
+    const href = await continueLink.getAttribute("href")
+    expect(href).toBeTruthy()
+    const contactHref = new URL(href, "https://videntia.app")
+    expect(contactHref.pathname).toBe("/contacto")
+    expect(contactHref.searchParams.get("origen")).toBe("demo")
+    expect(contactHref.searchParams.get("marca")).toBe(brand)
+    expect(contactHref.searchParams.get("resultados")).toBe("50")
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    await expectNoHorizontalOverflow(page)
+    await expect(continueLink).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath(`${browserName}-mock-trademark-mobile.png`), fullPage: false })
+
+    await continueLink.click()
+    await page.waitForURL(/\/contacto\?/, { timeout: 15_000 })
+    const contactUrl = new URL(page.url())
+    expect(contactUrl.searchParams.get("marca")).toBe(brand)
+    expect(contactUrl.searchParams.get("resultados")).toBe("50")
+    await expect(page.getByText("Investigación iniciada en la demo", { exact: true })).toBeVisible()
+    await expectNoNestedInteractiveControls(page)
+    await expectNoHorizontalOverflow(page)
+
+    expectHealthyBrowser(health)
+  })
+
+  test("cross-browser mocked visual-only result: no invented denomination or antecedents", async ({ page, browserName }, testInfo) => {
+    await page.setViewportSize({ width: 1365, height: 900 })
+    const health = attachBrowserHealth(page)
+    await installMockPreviewApi(page, buildMockVisualOnlyPreview())
+
+    await gotoInteractive(page, "/demo")
+    const investigate = page.getByRole("button", { name: /Investigar marca/i })
+    const fileInput = page.locator('input[type="file"]')
+    await fileInput.setInputFiles({
+      name: `videntia-${browserName}-visual-only.png`,
+      mimeType: "image/png",
+      buffer: FIXTURE_PNG,
+    })
+    await expect(page.getByAltText("Marca cargada")).toBeVisible()
+    await expect(investigate).toBeEnabled()
+    await investigate.click()
+
+    await expect(page.getByText("Análisis visual completado", { exact: true })).toBeVisible()
+    await expect(page.getByRole("heading", { name: "Marca figurativa sin denominación", exact: true })).toBeVisible()
+    await expect(page.getByText(/No se detectó texto marcario con confianza suficiente/i)).toBeVisible()
+    await expect(page.getByRole("heading", { name: /Análisis figurativo, sin inventar antecedentes/i })).toBeVisible()
+    await expect(page.getByText(/26\.01\.01 · Círculos/i)).toBeVisible()
+    await expect(page.getByRole("link", { name: /Continuar investigación/i })).toHaveCount(0)
+    await expectNoNestedInteractiveControls(page)
+    await expectNoHorizontalOverflow(page)
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    await expectNoHorizontalOverflow(page)
+    await page.screenshot({ path: testInfo.outputPath(`${browserName}-mock-visual-only-mobile.png`), fullPage: false })
+
+    await page.getByRole("button", { name: /Añadir denominación/i }).click()
+    await expect(page.getByRole("heading", { name: /Entrega la marca\. Revisa la evidencia\./i })).toBeVisible()
+    await expect(page.getByAltText("Marca cargada")).toBeVisible()
+    await expect(page.getByLabel("Nombre de la marca")).toHaveValue("")
+    await expectNoNestedInteractiveControls(page)
 
     expectHealthyBrowser(health)
   })
