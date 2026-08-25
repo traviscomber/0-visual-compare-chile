@@ -129,7 +129,9 @@ export async function POST(request: NextRequest) {
         estrategias_fallidas: advertencias.filter((item) => item.includes("estrategia(s)")).length,
       },
       evidencia: {
-        fuente: "INAPI",
+        fuente: "N3uralia Intelligence + INAPI live",
+        fuente_oficial: "INAPI",
+        metodo: "índice sincronizado + verificación live",
         consultado_en: registry?.fuente.consultado_en ?? report.timestamp,
         resultados_totales: resultadosUnicos,
         resultados_activos: resultadosActivos,
