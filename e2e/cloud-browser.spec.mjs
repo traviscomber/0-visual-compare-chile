@@ -32,6 +32,21 @@ function attachBrowserHealth(page) {
   return { consoleErrors, pageErrors }
 }
 
+async function gotoInteractive(page, path) {
+  await page.goto(path, { waitUntil: "domcontentloaded" })
+  await page.waitForLoadState("networkidle")
+}
+
+async function proveDemoHydration(page, name) {
+  const nameInput = page.getByLabel("Nombre de la marca")
+  const investigate = page.getByRole("button", { name: /Investigar marca/i })
+
+  await nameInput.fill(name)
+  await expect(investigate).toBeEnabled()
+
+  return { nameInput, investigate }
+}
+
 async function expectNoHorizontalOverflow(page) {
   const overflow = await page.evaluate(() => ({
     viewport: window.innerWidth,
@@ -55,14 +70,15 @@ test.describe("VIDENTIA production cloud browser", () => {
     await page.setViewportSize({ width: 1440, height: 1000 })
     const health = attachBrowserHealth(page)
 
-    await page.goto("/demo", { waitUntil: "domcontentloaded" })
+    await gotoInteractive(page, "/demo")
     await expect(page).toHaveTitle(/VIDENTIA/i)
     await expect(page.getByRole("heading", { name: /Entrega la marca\. Revisa la evidencia\./i })).toBeVisible()
 
-    const nameInput = page.getByLabel("Nombre de la marca")
+    const { nameInput, investigate } = await proveDemoHydration(page, "VIDENTIA")
     const activityInput = page.getByLabel("Productos o servicios de la marca")
     const fileInput = page.locator('input[type="file"]')
 
+    await activityInput.fill("software para análisis de datos")
     await fileInput.setInputFiles({
       name: "videntia-cloud-e2e.png",
       mimeType: "image/png",
@@ -71,10 +87,6 @@ test.describe("VIDENTIA production cloud browser", () => {
     await expect(page.getByAltText("Marca cargada")).toBeVisible()
     await expect(page.getByText("Imagen lista para investigar")).toBeVisible()
 
-    await nameInput.fill("VIDENTIA")
-    await activityInput.fill("software para análisis de datos")
-
-    const investigate = page.getByRole("button", { name: /Investigar marca/i })
     await expect(investigate).toBeEnabled()
     await investigate.click()
 
@@ -120,15 +132,14 @@ test.describe("VIDENTIA production cloud browser", () => {
     await page.setViewportSize({ width: 1365, height: 900 })
     const health = attachBrowserHealth(page)
 
-    await page.goto("/demo", { waitUntil: "domcontentloaded" })
+    await gotoInteractive(page, "/demo")
     await expect(page).toHaveTitle(/VIDENTIA/i)
     await expect(page.getByRole("heading", { name: /Entrega la marca\. Revisa la evidencia\./i })).toBeVisible()
 
-    const nameInput = page.getByLabel("Nombre de la marca")
+    const { investigate } = await proveDemoHydration(page, `VIDENTIA ${browserName.toUpperCase()} QA`)
     const activityInput = page.getByLabel("Productos o servicios de la marca")
     const fileInput = page.locator('input[type="file"]')
 
-    await nameInput.fill(`VIDENTIA ${browserName.toUpperCase()} QA`)
     await activityInput.fill("software para análisis de datos")
     await fileInput.setInputFiles({
       name: `videntia-${browserName}-desktop.png`,
@@ -138,11 +149,11 @@ test.describe("VIDENTIA production cloud browser", () => {
 
     await expect(page.getByAltText("Marca cargada")).toBeVisible()
     await expect(page.getByText("Imagen lista para investigar")).toBeVisible()
-    await expect(page.getByRole("button", { name: /Investigar marca/i })).toBeEnabled()
+    await expect(investigate).toBeEnabled()
     await expectNoHorizontalOverflow(page)
     await page.screenshot({ path: testInfo.outputPath(`${browserName}-desktop-upload.png`), fullPage: true })
 
-    await page.goto("/contacto?origen=demo&marca=VIDENTIA&resultados=50", { waitUntil: "domcontentloaded" })
+    await gotoInteractive(page, "/contacto?origen=demo&marca=VIDENTIA&resultados=50")
     await expect(page.getByRole("heading", { name: /Continúa la investigación con el contexto que ya levantaste\./i })).toBeVisible()
     await expect(page.getByText("Investigación iniciada en la demo", { exact: true })).toBeVisible()
     await expect(page.getByText(/50 resultados observados/i)).toBeVisible()
@@ -156,14 +167,13 @@ test.describe("VIDENTIA production cloud browser", () => {
     await page.setViewportSize({ width: 390, height: 844 })
     const health = attachBrowserHealth(page)
 
-    await page.goto("/demo", { waitUntil: "domcontentloaded" })
+    await gotoInteractive(page, "/demo")
     await expect(page.getByRole("heading", { name: /Entrega la marca\. Revisa la evidencia\./i })).toBeVisible()
 
-    const nameInput = page.getByLabel("Nombre de la marca")
+    const { investigate } = await proveDemoHydration(page, `VIDENTIA ${browserName.toUpperCase()} MOBILE QA`)
     const activityInput = page.getByLabel("Productos o servicios de la marca")
     const fileInput = page.locator('input[type="file"]')
 
-    await nameInput.fill(`VIDENTIA ${browserName.toUpperCase()} MOBILE QA`)
     await activityInput.fill("software para análisis de datos")
     await fileInput.setInputFiles({
       name: `videntia-${browserName}-mobile.png`,
@@ -172,7 +182,8 @@ test.describe("VIDENTIA production cloud browser", () => {
     })
 
     await expect(page.getByAltText("Marca cargada")).toBeVisible()
-    await expect(page.getByRole("button", { name: /Investigar marca/i })).toBeVisible()
+    await expect(investigate).toBeVisible()
+    await expect(investigate).toBeEnabled()
     await expectNoHorizontalOverflow(page)
 
     await page.screenshot({ path: testInfo.outputPath(`${browserName}-mobile-upload.png`), fullPage: true })
