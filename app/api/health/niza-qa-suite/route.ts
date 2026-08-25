@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { NizaClassifier } from "@/lib/agent/niza-classifier"
 
 export const runtime = "nodejs"
@@ -26,11 +26,30 @@ async function classify(label: string, nombre: string, descripcion: string): Pro
   }
 }
 
+async function previewSmoke(origin: string, descripcion: string) {
+  const response = await fetch(`${origin}/api/v1/public/trademark-preview`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "videntia-niza-qa-e2e/1.0",
+    },
+    body: JSON.stringify({ nombre: "VIDENTIA", actividad: descripcion }),
+    cache: "no-store",
+  })
+  const payload = await response.json().catch(() => ({}))
+  return {
+    status: response.status,
+    classes: (payload.niza ?? []).map((item: { numero?: string }) => item.numero),
+    contextProvided: payload.niza_context_provided ?? null,
+    error: payload.error ?? null,
+  }
+}
+
 function signature(classes: string[]) {
   return [...classes].sort().join(",")
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const videntiaDescription = "software para análisis, búsqueda y vigilancia de marcas comerciales"
     const repetitions = await Promise.all(
@@ -46,6 +65,7 @@ export async function GET() {
       classify("hybrid-software", "DATAPULSE", "software como servicio SaaS y aplicación móvil descargable para análisis de datos"),
     ])
 
+    const preview = await previewSmoke(request.nextUrl.origin, videntiaDescription)
     const signatures = repetitions.map((item) => signature(item.classes))
     const uniqueSignatures = [...new Set(signatures)]
     const allClasses = repetitions.flatMap((item) => item.classes)
@@ -64,6 +84,7 @@ export async function GET() {
       explicitMarketingIncludes35: controls[3].classes.includes("35"),
       legalTechSaasIs42Not45: controls[4].classes.includes("42") && !controls[4].classes.includes("45") && !controls[4].classes.includes("09"),
       hybridSoftwareIncludes09And42: controls[5].classes.includes("09") && controls[5].classes.includes("42"),
+      publicPreviewUsesStableNiza: preview.status === 200 && preview.contextProvided === true && signature(preview.classes) === "09",
     }
 
     return NextResponse.json({
@@ -77,6 +98,7 @@ export async function GET() {
         repetitions,
       },
       controls,
+      preview,
     }, { headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow, noarchive" } })
   } catch (error) {
     return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : String(error) }, { status: 500 })
