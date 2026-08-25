@@ -17,6 +17,8 @@ test.describe("VIDENTIA public accessibility", () => {
   test("public routes have no serious or critical WCAG violations", async ({ page, browserName }, testInfo) => {
     test.skip(browserName !== "chromium", "Axe rules are deterministic; Chromium is the accessibility gate while Firefox/WebKit remain interaction coverage.")
 
+    const blockingFindings = []
+
     for (const route of PUBLIC_ROUTES) {
       const response = await page.goto(route, { waitUntil: "domcontentloaded" })
       expect(response, `${route} did not return a navigation response`).not.toBeNull()
@@ -41,10 +43,15 @@ test.describe("VIDENTIA public accessibility", () => {
         contentType: "application/json",
       })
 
-      expect(
-        blocking,
-        `${route} has blocking accessibility violations:\n${blocking.map(summarizeViolation).join("\n")}`,
-      ).toEqual([])
+      for (const violation of blocking) blockingFindings.push({ route, violation })
+    }
+
+    if (blockingFindings.length > 0) {
+      throw new Error(
+        `Blocking accessibility violations:\n${blockingFindings
+          .map(({ route, violation }) => `${route}: ${summarizeViolation(violation)}`)
+          .join("\n")}`,
+      )
     }
   })
 })
