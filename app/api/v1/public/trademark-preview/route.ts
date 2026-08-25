@@ -14,6 +14,7 @@ export const maxDuration = 60
 export const dynamic = "force-dynamic"
 
 const MAX_NAME_LENGTH = 120
+const MAX_ACTIVITY_LENGTH = 400
 const MAX_IMAGE_BASE64_LENGTH = 6 * 1024 * 1024
 const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"])
 const DetectedNameSchema = z.object({ denominacion: z.string().nullable(), confidence: z.number().min(0).max(1) })
@@ -40,8 +41,10 @@ export async function POST(request: NextRequest) {
     if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: "La demostración no está disponible en este momento." }, { status: 503, headers: previewHeaders(rateHeaders) })
     const body = await request.json()
     const rawName = typeof body.nombre === "string" ? body.nombre.trim() : ""
+    const actividad = typeof body.actividad === "string" ? body.actividad.trim() : ""
     const image = typeof body.image === "string" ? body.image.trim() : ""
     if (rawName.length > MAX_NAME_LENGTH) return NextResponse.json({ error: `El nombre no puede superar ${MAX_NAME_LENGTH} caracteres.` }, { status: 400, headers: previewHeaders(rateHeaders) })
+    if (actividad.length > MAX_ACTIVITY_LENGTH) return NextResponse.json({ error: `La actividad no puede superar ${MAX_ACTIVITY_LENGTH} caracteres.` }, { status: 400, headers: previewHeaders(rateHeaders) })
     if (!rawName && !image) return NextResponse.json({ error: "Sube una imagen o escribe el nombre de la marca." }, { status: 400, headers: previewHeaders(rateHeaders) })
 
     let cleanImage: string | undefined
@@ -65,7 +68,13 @@ export async function POST(request: NextRequest) {
     }
     if (!nombre) return NextResponse.json({ error: "No pudimos leer una denominación clara en la imagen. Escribe el nombre para completar la búsqueda.", needs_name: true }, { status: 400, headers: previewHeaders(rateHeaders) })
 
-    const report = await new TrademarkAgent().analyze({ imageBase64: cleanImage, imageMimeType, nombreMarca: nombre, includeExecutiveReport: false })
+    const report = await new TrademarkAgent().analyze({
+      imageBase64: cleanImage,
+      imageMimeType,
+      nombreMarca: nombre,
+      descripcion: actividad || undefined,
+      includeExecutiveReport: false,
+    })
     const registry = report.registrabilidad
     const antecedentes = (registry?.antecedentes ?? []).slice(0, 4).map((item) => ({
       id: item.id,
@@ -102,6 +111,7 @@ export async function POST(request: NextRequest) {
       marca: nombre,
       denomination_source: rawName ? "user" : "image-detected",
       denomination_confidence: denominationConfidence,
+      niza_context_provided: Boolean(actividad),
       visual: {
         elementos: report.viena.elementos_detectados.slice(0, 6),
         colores: report.viena.colores_dominantes.slice(0, 5),
