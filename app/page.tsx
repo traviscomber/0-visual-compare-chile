@@ -133,7 +133,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="px-footer"><div className="px-shell px-footer-grid"><strong>VIDENTIA</strong><span>VIDENTIA apoya investigación y revisión de evidencia. No reemplaza la evaluación jurídica profesional ni las fuentes oficiales.</span><span>Un desarrollo de N3uralia</span></div></footer>
+      <footer className="px-footer">
+        <div className="px-shell px-footer-grid">
+          <strong>VIDENTIA</strong>
+          <span>VIDENTIA apoya investigación y revisión de evidencia. No reemplaza la evaluación jurídica profesional ni las fuentes oficiales.</span>
+          <span>Un desarrollo de N3uralia · <Link href="/privacidad">Privacidad</Link> · <Link href="/terminos">Términos</Link></span>
+        </div>
+      </footer>
     </main>
   )
 }
