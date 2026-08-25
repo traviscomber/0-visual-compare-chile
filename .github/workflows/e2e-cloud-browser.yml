@@ -2,6 +2,12 @@ name: Cloud Browser E2E
 
 on:
   workflow_dispatch:
+    inputs:
+      live:
+        description: "Run one real public investigation against OpenAI/INAPI"
+        required: false
+        default: false
+        type: boolean
   push:
     branches: [main]
     paths:
@@ -22,6 +28,7 @@ jobs:
     env:
       CI: "1"
       E2E_BASE_URL: "https://videntia.app"
+      E2E_LIVE: ${{ github.event_name == 'workflow_dispatch' && inputs.live && '1' || '0' }}
 
     steps:
       - name: Checkout
