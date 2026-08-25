@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
       lectura: publicReading,
       antecedentes,
       preview: true,
-      locked_count: Math.max(0, (registry?.antecedentes.length ?? 0) - antecedentes.length),
+      locked_count: Math.max(0, resultadosUnicos - antecedentes.length),
     }, { headers: previewHeaders(rateHeaders) })
   } catch (error) {
     console.error("[public-trademark-preview] failed", error instanceof Error ? error.message : String(error))
