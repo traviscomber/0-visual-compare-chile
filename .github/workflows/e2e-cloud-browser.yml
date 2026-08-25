@@ -46,6 +46,9 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Verify public indexing contract
+        run: node e2e/check-public-indexing.mjs
+
       - name: Install project dependencies
         run: pnpm install --frozen-lockfile
 
