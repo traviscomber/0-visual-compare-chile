@@ -6,6 +6,7 @@ Browserin valida `https://videntia.app` con Playwright en Chromium, Firefox y We
 
 - **Smoke seguro (default en push):** navegación, upload, teclado, responsive, rutas públicas, semántica DOM y continuidad hacia contacto. No ejecuta la investigación pública real.
 - **Resultados mockeados (default en push):** intercepta únicamente `/api/v1/public/trademark-preview` dentro del browser para renderizar y validar los estados `trademark` y `visual-only` sin consumir OpenAI, INAPI ni cuota pública.
+- **Accesibilidad automática (default en push):** Axe recorre en Chromium las seis rutas públicas indexables y bloquea violaciones WCAG de impacto `serious` o `critical`. Firefox y WebKit mantienen la cobertura de interacción cross-browser sin triplicar reglas determinísticas de Axe.
 - **Live (manual):** `workflow_dispatch` con `live=true`. Ejecuta una sola investigación pública real en Chromium; Firefox y WebKit no repiten el submit vivo.
 
 ## Invariantes de la suite
@@ -14,6 +15,8 @@ Browserin valida `https://videntia.app` con Playwright en Chromium, Firefox y We
 - El frontend, hidratación, navegación y render React/Next.js son reales incluso cuando la respuesta del preview está mockeada.
 - Las rutas públicas indexables declaradas en el sitemap —`/`, `/demo`, `/contacto`, `/docs`, `/privacidad` y `/terminos`— se auditan por status HTTP, H1 único, exactamente un landmark `main`, IDs únicos, ausencia de controles interactivos anidados y overflow horizontal en desktop/mobile.
 - Cada ruta pública debe publicar exactamente un `meta[name=description]` útil y un `link[rel=canonical]` cuyo pathname coincida con la ruta visitada.
-- `robots.txt` debe mantener `/api/` fuera del rastreo y declarar `https://videntia.app/sitemap.xml`; el sitemap es la referencia para ampliar la matriz cuando se publica una nueva ruta indexable.
+- `robots.txt` debe mantener `/api/` fuera del rastreo y declarar `https://videntia.app/sitemap.xml`; las rutas del sitemap deben coincidir exactamente con la matriz pública de Browserin.
+- Los enlaces internos descubiertos en las seis rutas públicas deben resolver sin error HTTP ni redirección fuera de `videntia.app`.
+- Axe adjunta evidencia JSON por ruta y no se silencian reglas para ocultar defectos de producto; una violación seria o crítica debe corregirse en la aplicación o clasificarse explícitamente como problema del harness antes de modificar la puerta.
 - WebKit de Playwright no se reporta como Safari real.
 - Antes de cambiar producto por un fallo, revisar trace/screenshot y clasificar si el defecto pertenece al harness o a la aplicación.
