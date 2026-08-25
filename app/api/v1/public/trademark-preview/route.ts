@@ -78,9 +78,10 @@ export async function POST(request: NextRequest) {
     let denominationConfidence: number | null = null
     if (!nombre && cleanImage && imageMimeType) {
       const detected = await detectTrademarkName(cleanImage, imageMimeType)
-      denominationConfidence = detected.confidence
-      if (detected.confidence >= MIN_DETECTED_DENOMINATION_CONFIDENCE) {
-        nombre = normalizeDetectedDenomination(detected.denominacion)
+      const detectedName = normalizeDetectedDenomination(detected.denominacion)
+      if (detectedName && detected.confidence >= MIN_DETECTED_DENOMINATION_CONFIDENCE) {
+        nombre = detectedName
+        denominationConfidence = detected.confidence
       }
     }
 
