@@ -4,7 +4,7 @@
 
 Validación real de `https://videntia.app` ejecutada con Browserin mediante el fallback cloud Playwright autorizado en GitHub Hosted Actions.
 
-Resultado final: **PASS — 7 pruebas ejecutadas correctamente + 2 skips deliberados**.
+Resultado de validación viva: **PASS — 7 pruebas ejecutadas correctamente + 2 skips deliberados**.
 
 Cobertura:
 
@@ -26,7 +26,6 @@ Runner final:
 
 - GitHub Hosted Compute Agent
 - Ubuntu 24.04.4 LTS
-- Azure region `centralus`
 - Node.js 22.23.2
 - Playwright 1.55.0
 - Chromium 140.0.7339.16 / Playwright build v1187
@@ -35,7 +34,7 @@ Runner final:
 - `workers: 1`
 - base URL `https://videntia.app`
 
-La suite mantiene una sola investigación pública real por run para no multiplicar cuota, coste ni variabilidad de OpenAI/INAPI. El recorrido vivo se ejecuta en Chromium; Firefox y WebKit validan interacción, upload, navegación, responsive y salud del browser sin segundo submit real.
+La suite tiene dos modos. Los pushes ejecutan smoke cross-browser sin una investigación pública real. El recorrido vivo requiere `workflow_dispatch` con `live=true` y mantiene una sola investigación pública real, en Chromium, para no multiplicar cuota, coste ni variabilidad de OpenAI/INAPI. Firefox y WebKit validan interacción, upload, navegación, responsive y salud del browser sin segundo submit real.
 
 ## Matriz final
 
@@ -136,7 +135,7 @@ La suite ahora:
 
 Esto convierte la hidratación en una condición observable y evita falsos defectos de upload en browsers rápidos.
 
-## Run final
+## Run vivo validado
 
 Run ID: `32801999461`.
 
@@ -158,6 +157,35 @@ Artifact:
 - tamaño aproximado 2.69 MB;
 - retención 14 días.
 
+## Runner seguro: smoke vs live
+
+Después de validar el recorrido real se endureció el runner para impedir consumo involuntario de cuota al modificar el harness.
+
+Commits:
+
+- `30a98ea48cb1fcd5e915d7852451be3cbc26aec6` — el test vivo sólo corre cuando `E2E_LIVE=1`;
+- `31bc1b2dd0c22ee55443937176a4095e1e620cda` — `workflow_dispatch` expone un booleano `live`, mientras los pushes fuerzan `E2E_LIVE=0`.
+
+Semántica actual:
+
+- push que cambia `e2e/**` o el workflow: smoke Chromium/Firefox/WebKit, sin investigación pública intencional;
+- `workflow_dispatch` con `live=false`: mismo smoke seguro;
+- `workflow_dispatch` con `live=true`: smoke cross-browser + una única investigación pública real en Chromium.
+
+Validación del modo seguro:
+
+- run `32802818781`;
+- `E2E_LIVE=0` confirmado en logs;
+- 9 casos definidos;
+- **6 PASS**;
+- **3 SKIP** del test vivo;
+- 0 FAIL;
+- duración de tests: **24.1 s**;
+- artifact `9547120353`, 10 archivos, ~1.96 MB;
+- no se ejecutó el submit público real en ese push.
+
+Para el mismo commit `31bc1b2dd0c22ee55443937176a4095e1e620cda`, CI pasó Niza regression, Analytics privacy regression, TypeScript y Next.js production build; CodeQL también terminó en success. El deployment de producción quedó READY.
+
 ## Revisión visual
 
 Se revisaron screenshots desktop y mobile de Chromium, Firefox y WebKit.
@@ -178,6 +206,8 @@ La Skill Browserin quedó ampliada para usar esta arquitectura como fallback rea
 También incorpora los aprendizajes de esta ronda:
 
 - matriz Chromium/Firefox/WebKit;
+- smoke por defecto sin consumo de APIs con cuota/coste;
+- live submit como opt-in explícito;
 - sólo un live submit cuando hay cuota/coste;
 - fixtures de upload no degenerados;
 - ignorar `role=alert` vacío como falso positivo;
@@ -188,6 +218,6 @@ También incorpora los aprendizajes de esta ronda:
 
 ## Estado
 
-**PASS cross-browser del alcance definido.**
+**PASS cross-browser del alcance definido, con smoke automático seguro y E2E vivo opt-in.**
 
 Riesgo residual principal: Safari real en macOS/iOS y dispositivos físicos no están cubiertos por este runner Linux. Para esas plataformas se requiere infraestructura macOS/device-cloud específica.
