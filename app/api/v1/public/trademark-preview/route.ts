@@ -268,7 +268,24 @@ async function buildVisualOnlyPreview({
 
 async function detectTrademarkName(imageBase64: string, imageMimeType: string) {
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-  const response = await client.chat.completions.parse({ model: "gpt-5.6-luna", max_completion_tokens: 160, messages: [{ role: "system", content: "Identifica únicamente la denominación marcaria visible y principal. No inventes texto. Si no hay texto suficientemente claro, devuelve null. Ignora slogans secundarios, etiquetas legales, precios y texto ambiental." }, { role: "user", content: [{ type: "text", text: "Lee la denominación principal de esta marca o logo." }, { type: "image_url", image_url: { url: `data:${imageMimeType};base64,${imageBase64}`, detail: "low" } }] }], response_format: zodResponseFormat(DetectedNameSchema, "public_detected_trademark_name") })
+  const response = await client.chat.completions.parse({
+    model: "gpt-5.6-luna",
+    max_completion_tokens: 160,
+    messages: [
+      {
+        role: "system",
+        content: "Transcribe únicamente la denominación marcaria principal que sea realmente visible. Conserva exactamente el orden de letras y palabras según su lectura visual natural; no reordenas iniciales, no completas letras dudosas y no deduzcas un nombre por el símbolo o el contexto. Si una letra relevante no puede leerse con seguridad o no existe texto marcario claro, devuelve null. Ignora slogans secundarios, etiquetas legales, precios y texto ambiental.",
+      },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "Observa el logo con detalle y transcribe sólo su denominación principal, respetando el orden visual exacto." },
+          { type: "image_url", image_url: { url: `data:${imageMimeType};base64,${imageBase64}`, detail: "high" } },
+        ],
+      },
+    ],
+    response_format: zodResponseFormat(DetectedNameSchema, "public_detected_trademark_name"),
+  })
   return response.choices[0]?.message.parsed ?? { denominacion: null, confidence: 0 }
 }
 
