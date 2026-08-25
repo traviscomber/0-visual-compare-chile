@@ -57,7 +57,7 @@ jobs:
         with:
           name: videntia-cloud-browser-evidence
           path: |
-            test-results/
-            playwright-report/
+            e2e/test-results/
+            e2e/playwright-report/
           if-no-files-found: warn
           retention-days: 14
