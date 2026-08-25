@@ -1,0 +1,63 @@
+name: Cloud Browser E2E
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "e2e/**"
+      - ".github/workflows/e2e-cloud-browser.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: videntia-cloud-browser-e2e
+  cancel-in-progress: false
+
+jobs:
+  production-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI: "1"
+      E2E_BASE_URL: "https://videntia.app"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install project dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install isolated Playwright test runtime
+        run: pnpm add --save-dev --ignore-workspace-root-check --lockfile=false @playwright/test@1.55.0
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run production browser journey
+        run: pnpm exec playwright test --config=e2e/playwright.config.mjs
+
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: videntia-cloud-browser-evidence
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: warn
+          retention-days: 14
