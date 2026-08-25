@@ -1,7 +1,7 @@
 import { updateSession } from "@/lib/supabase/proxy"
 import { NextResponse, type NextRequest } from "next/server"
 
-const PUBLIC_INDEXABLE_PATHS = new Set(["/", "/demo", "/contacto", "/docs"])
+const PUBLIC_INDEXABLE_PATHS = new Set(["/", "/demo", "/contacto", "/docs", "/privacidad", "/terminos"])
 const LEGACY_REDIRECTS: Record<string, string> = {
   "/consulta": "/demo",
   "/comparador": "/demo",
