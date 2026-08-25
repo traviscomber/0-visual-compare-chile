@@ -101,7 +101,7 @@ function buildMockVisualOnlyPreview() {
     analysis_mode: "visual-only",
     marca: "Marca figurativa sin denominación",
     denomination_source: "not-detected",
-    denomination_confidence: 0.18,
+    denomination_confidence: null,
     niza_context_provided: false,
     visual: {
       elementos: ["círculo", "silueta abstracta"],
