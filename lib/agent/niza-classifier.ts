@@ -56,12 +56,18 @@ const SYSTEM_PROMPT = `Eres un experto en Clasificación Niza (NCL 13a edición,
 Catálogo completo (45 clases):
 ${NIZA_CATALOG_DIGEST}
 
-Tu tarea: dado el nombre y descripción de una marca, recomendar las clases Niza correctas para su protección.
+Tu tarea: dado el nombre y descripción de una marca, recomendar únicamente las clases Niza respaldadas por los productos o servicios efectivamente descritos.
 
 Reglas:
-- Clases PRINCIPALES: las 1-3 clases donde opera el negocio central
-- Clases DEFENSIVAS: las 1-2 clases adicionales recomendadas para protección amplia
+- Clases PRINCIPALES: las 1-3 clases que corresponden directamente a los productos o servicios ofrecidos
+- Clases DEFENSIVAS: 0-2 clases adicionales sólo cuando la descripción contenga una base concreta para ellas; no agregues clases por cobertura genérica
 - Usa SOLO números de clase presentes en el catálogo anterior
+- Clasifica la modalidad ofrecida, no el tema sobre el que opera un producto o servicio
+- Software grabado, descargable o presentado genéricamente como producto de software corresponde a clase 09; SaaS/PaaS, hosting, diseño o desarrollo de software corresponde a clase 42
+- No agregues clase 09 a un SaaS puro salvo que también se describa software descargable o instalable
+- Un software que analiza, busca o vigila materias jurídicas o marcas NO es por eso un servicio jurídico de clase 45; clase 45 requiere que se ofrezcan servicios jurídicos, representación, tramitación, arbitraje, mediación, seguridad física u otros servicios propios de esa clase
+- No agregues clase 35 por el mero hecho de vender o comercializar los propios productos. Clase 35 requiere servicios de publicidad, marketing, gestión/administración comercial, retail, marketplace o intermediación comercial efectivamente ofrecidos
+- Si la modalidad necesaria para distinguir entre clases no está descrita, no inventes hechos; elige la clase respaldada literalmente y explica la limitación
 - Razonamiento claro y específico para Chile (mencionar INAPI cuando sea relevante)
 - Riesgo sin registro: alto = industria muy competida, medio = moderada, bajo = nicho`
 
@@ -138,7 +144,7 @@ export class NizaClassifier {
 - Descripción: "${descripcion || 'No especificada'}"
 - Industria: "${industria || 'No especificada'}"
 
-Recomienda las clases principales y, sólo cuando tenga sentido, clases defensivas. Devuelve una razón breve y un confidence entre 0 y 1 para cada clase.`
+Recomienda las clases principales y, sólo cuando exista soporte explícito en la descripción, clases defensivas. No infieras productos o servicios únicamente a partir del nombre de la marca. Devuelve una razón breve y un confidence entre 0 y 1 para cada clase.`
 
     const response = await this.client.chat.completions.parse({
       model,
@@ -153,7 +159,7 @@ Recomienda las clases principales y, sólo cuando tenga sentido, clases defensiv
     const parsed = response.choices[0]?.message.parsed
     if (!parsed) throw new Error('Niza classifier returned no schema-valid output')
 
-    const clases: NizaClass[] = parsed.clases.flatMap(c => {
+    const modelClasses: NizaClass[] = parsed.clases.flatMap(c => {
       const catalog = API_PORTAL_NIZA.find(n => n.codigo === c.numero)
       if (!catalog) return []
       return [{
@@ -164,6 +170,8 @@ Recomienda las clases principales y, sólo cuando tenga sentido, clases defensiv
         confidence: Math.max(0, Math.min(1, c.confidence)),
       }]
     })
+
+    const clases = applySemanticGuardrails(params, modelClasses)
 
     return {
       clases,
@@ -194,6 +202,138 @@ Recomienda las clases principales y, sólo cuando tenga sentido, clases defensiv
       },
     }
   }
+}
+
+function applySemanticGuardrails(
+  params: { nombre: string; descripcion?: string; industria?: string },
+  modelClasses: NizaClass[],
+): NizaClass[] {
+  const context = normalizeForMatch(`${params.descripcion ?? ''} ${params.industria ?? ''}`)
+  if (!context) return stableClassOrder(dedupeClasses(modelClasses))
+
+  const hasSoftware = matchesAny(context, [
+    /\bsoftware\b/,
+    /\baplicacion(?:es)?\b/,
+    /\bapp(?:s)?\b/,
+    /\bprograma(?:s)? informaticos?\b/,
+  ])
+  const hasDownloadableSoftware = matchesAny(context, [
+    /\bsoftware (?:descargable|instalable|grabado)\b/,
+    /\baplicacion(?:es)? (?:descargable|instalable|movil|moviles)\b/,
+    /\bapp(?:s)? movil(?:es)?\b/,
+    /\bprograma(?:s)? informaticos? (?:descargable|instalable|grabado)s?\b/,
+  ])
+  const hasSoftwareService = matchesAny(context, [
+    /\bsaas\b/,
+    /\bsoftware como (?:un )?servicio\b/,
+    /\bpaas\b/,
+    /\bplataforma como (?:un )?servicio\b/,
+    /\bplataforma (?:web|en linea|online|cloud|en la nube)\b/,
+    /\bdesarrollo de software\b/,
+    /\bdiseno de software\b/,
+    /\bprogramacion informatica\b/,
+    /\bhosting\b/,
+    /\balojamiento (?:de|para) (?:software|servidores|sitios web)\b/,
+  ])
+  const hasClass35Service = matchesAny(context, [
+    /\bservicios? de publicidad\b/,
+    /\bagencia de (?:publicidad|marketing)\b/,
+    /\bservicios? de marketing\b/,
+    /\bgestion comercial (?:para|de) terceros\b/,
+    /\badministracion de empresas\b/,
+    /\badministracion comercial\b/,
+    /\bservicios? de retail\b/,
+    /\bventa al por (?:menor|mayor)\b/,
+    /\bmarketplace\b/,
+    /\bintermediacion comercial\b/,
+  ])
+  const hasClass45Service = matchesAny(context, [
+    /\bservicios? juridicos?\b/,
+    /\bservicios? legales?\b/,
+    /\basesoria legal\b/,
+    /\brepresentacion legal\b/,
+    /\babogad(?:o|a|os|as)\b/,
+    /\blitig(?:io|ios|acion)\b/,
+    /\barbitraje\b/,
+    /\bmediacion legal\b/,
+    /\bauditoria de cumplimiento (?:legal|normativo)\b/,
+    /\bregistro de marcas\b/,
+    /\btramitacion de marcas\b/,
+    /\bservicios? de seguridad (?:fisica|personal)\b/,
+    /\binvestigacion privada\b/,
+  ])
+
+  let classes = modelClasses.filter((item) => {
+    if (item.numero === '35' && !hasClass35Service) return false
+    if (item.numero === '45' && !hasClass45Service) return false
+    if (item.numero === '09' && hasSoftwareService && !hasDownloadableSoftware) return false
+    if (item.numero === '42' && hasSoftware && !hasSoftwareService && !hasDownloadableSoftware) return false
+    return true
+  })
+
+  if (hasSoftwareService) {
+    classes = ensureClass(classes, '42', 'principal', 'La descripción ofrece software como servicio, plataforma tecnológica, hosting o desarrollo de software, modalidad propia de la clase 42.', 0.97)
+  } else if (hasSoftware) {
+    classes = ensureClass(classes, '09', 'principal', 'La descripción ofrece software como producto sin indicar una modalidad SaaS/PaaS; con la información disponible corresponde tratarlo como software de clase 09.', 0.97)
+  }
+
+  if (hasDownloadableSoftware) {
+    classes = ensureClass(classes, '09', 'principal', 'La descripción indica software o aplicaciones descargables/instalables, propios de la clase 09.', 0.98)
+  }
+  if (hasClass45Service) {
+    classes = ensureClass(classes, '45', 'principal', 'La descripción ofrece expresamente servicios jurídicos, de representación o seguridad propios de la clase 45.', 0.97)
+  }
+
+  return stableClassOrder(dedupeClasses(classes))
+}
+
+function ensureClass(
+  classes: NizaClass[],
+  numero: string,
+  tipo: 'principal' | 'defensiva',
+  razon: string,
+  confidence: number,
+) {
+  const existing = classes.find((item) => item.numero === numero)
+  if (existing) {
+    if (tipo === 'principal' && existing.tipo !== 'principal') existing.tipo = 'principal'
+    return classes
+  }
+  const catalog = API_PORTAL_NIZA.find((item) => item.codigo === numero)
+  if (!catalog) return classes
+  return [...classes, { numero, titulo: catalog.titulo, tipo, razon, confidence }]
+}
+
+function dedupeClasses(classes: NizaClass[]) {
+  const byNumber = new Map<string, NizaClass>()
+  for (const item of classes) {
+    const current = byNumber.get(item.numero)
+    if (!current || item.tipo === 'principal' || item.confidence > current.confidence) {
+      byNumber.set(item.numero, item)
+    }
+  }
+  return [...byNumber.values()]
+}
+
+function stableClassOrder(classes: NizaClass[]) {
+  return [...classes].sort((a, b) => {
+    if (a.tipo !== b.tipo) return a.tipo === 'principal' ? -1 : 1
+    return Number(a.numero) - Number(b.numero)
+  })
+}
+
+function normalizeForMatch(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function matchesAny(value: string, patterns: RegExp[]) {
+  return patterns.some((pattern) => pattern.test(value))
 }
 
 function averageConfidence(clases: NizaClass[]) {
