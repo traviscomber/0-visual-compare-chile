@@ -1,0 +1,80 @@
+name: One-shot Browserin metadata guard patch
+
+on:
+  push:
+    paths:
+      - ".github/workflows/tmp-browserin-metadata-guard.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Harden public metadata semantics
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("e2e/cloud-browser.spec.mjs")
+          text = path.read_text(encoding="utf-8")
+
+          old_helper = '''async function expectPublicRouteSemantics(page) {
+            await expect(page.locator("h1")).toHaveCount(1)
+            await expect(page.locator("h1")).toBeVisible()
+            expect(await page.locator("main").count()).toBeGreaterThanOrEqual(1)
+            await expectUniqueDomIds(page)
+            await expectNoNestedInteractiveControls(page)
+            await expectNoHorizontalOverflow(page)
+          }'''
+
+          new_helper = '''async function expectPublicRouteSemantics(page, expectedPath) {
+            await expect(page.locator("h1")).toHaveCount(1)
+            await expect(page.locator("h1")).toBeVisible()
+            await expect(page.locator("main")).toHaveCount(1)
+
+            const description = page.locator('meta[name="description"]')
+            await expect(description).toHaveCount(1)
+            const descriptionContent = (await description.getAttribute("content"))?.trim() ?? ""
+            expect(descriptionContent.length).toBeGreaterThan(20)
+
+            const canonical = page.locator('link[rel="canonical"]')
+            await expect(canonical).toHaveCount(1)
+            const canonicalHref = await canonical.getAttribute("href")
+            expect(canonicalHref).toBeTruthy()
+            expect(new URL(canonicalHref, "https://videntia.app").pathname).toBe(expectedPath)
+
+            await expectUniqueDomIds(page)
+            await expectNoNestedInteractiveControls(page)
+            await expectNoHorizontalOverflow(page)
+          }'''
+
+          if text.count(old_helper) != 1:
+              raise SystemExit(f"Expected one public semantics helper, found {text.count(old_helper)}")
+          text = text.replace(old_helper, new_helper, 1)
+
+          call = "await expectPublicRouteSemantics(page)"
+          if text.count(call) != 2:
+              raise SystemExit(f"Expected two public semantics calls, found {text.count(call)}")
+          text = text.replace(call, "await expectPublicRouteSemantics(page, route)")
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Commit Browserin metadata guard
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add e2e/cloud-browser.spec.mjs
+          git diff --cached --check
+          git diff --cached --quiet && exit 1
+          git commit -m "test(e2e): guard public canonical metadata"
+          git push origin HEAD:main
