@@ -23,11 +23,13 @@ import { Input } from "@/components/ui/input"
 
 const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"]
 const MAX_FILE_BYTES = 4_500_000
+const MAX_ACTIVITY_LENGTH = 400
 
 type Preview = {
   marca: string
   denomination_source: "user" | "image-detected"
   denomination_confidence: number | null
+  niza_context_provided: boolean
   visual: {
     elementos: string[]
     colores: string[]
@@ -54,7 +56,7 @@ type Preview = {
     antecedentes_con_viena: number
     advertencias: string[]
   }
-  lectura: { nivel: "ALTO" | "MEDIO" | "BAJO"; resumen: string; recomendacion: string }
+  lectura: { resumen: string; recomendacion: string }
   antecedentes: Array<{
     id: string
     nombre: string
@@ -63,7 +65,6 @@ type Preview = {
     clases: string[]
     numero_registro: string
     numero_solicitud: string
-    relevancia: number
     razones: string[]
     similitud_denominativa: number
     similitud_fonetica: number
@@ -80,6 +81,7 @@ export default function DemoPage() {
   const [image, setImage] = useState<string | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [nombre, setNombre] = useState("")
+  const [actividad, setActividad] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<Preview | null>(null)
@@ -110,7 +112,11 @@ export default function DemoPage() {
       const response = await fetch("/api/v1/public/trademark-preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre: nombre.trim(), ...(image ? { image } : {}) }),
+        body: JSON.stringify({
+          nombre: nombre.trim(),
+          ...(actividad.trim() ? { actividad: actividad.trim() } : {}),
+          ...(image ? { image } : {}),
+        }),
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) return setError(data.error ?? "No pudimos completar la búsqueda.")
@@ -129,6 +135,7 @@ export default function DemoPage() {
     setImage(null)
     setImagePreview(null)
     setNombre("")
+    setActividad("")
   }
 
   return (
@@ -159,7 +166,7 @@ export default function DemoPage() {
                 <h1 className="mt-5 max-w-[9ch] text-[clamp(3.2rem,6vw,6.6rem)] font-normal leading-[0.92] tracking-[-0.06em] text-white">Entrega la marca. Revisa la evidencia.</h1>
               </div>
               <div className="max-w-2xl lg:justify-self-end">
-                <p className="text-lg leading-8 text-[#A0ABB6]">Empieza con un nombre, una imagen o ambos. VIDENTIA consulta antecedentes, separa señales y conserva la fuente visible para que puedas decidir qué requiere revisión profesional.</p>
+                <p className="text-lg leading-8 text-[#A0ABB6]">Empieza con un nombre, una imagen o ambos. Si agregas qué productos o servicios identifica la marca, VIDENTIA también sugiere clases Niza con ese contexto.</p>
                 <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#70808B]"><span>Fuente oficial</span><span>Señales separadas</span><span>Sin veredicto automático</span></div>
               </div>
             </div>
@@ -183,10 +190,14 @@ export default function DemoPage() {
                     )}
                   </button>
 
-                  <div className="my-6 flex items-center gap-4"><div className="h-px flex-1 bg-white/10" /><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#66727F]">nombre de la marca</span><div className="h-px flex-1 bg-white/10" /></div>
+                  <div className="my-6 flex items-center gap-4"><div className="h-px flex-1 bg-white/10" /><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#66727F]">datos de búsqueda</span><div className="h-px flex-1 bg-white/10" /></div>
                   <div className="flex flex-col gap-3 sm:flex-row">
-                    <Input value={nombre} onChange={(event) => setNombre(event.target.value)} onKeyDown={(event) => event.key === "Enter" && canRun && void run()} placeholder="Escribe el nombre de la marca" aria-label="Nombre de la marca" className="h-12 flex-1 rounded-lg border-white/15 bg-[#080D12] text-base text-white shadow-none placeholder:text-[#66727F] focus-visible:border-[#64D5C2] focus-visible:ring-[#64D5C2]/20" />
+                    <Input value={nombre} onChange={(event) => setNombre(event.target.value)} onKeyDown={(event) => event.key === "Enter" && canRun && void run()} placeholder="Nombre de la marca" aria-label="Nombre de la marca" className="h-12 flex-1 rounded-lg border-white/15 bg-[#080D12] text-base text-white shadow-none placeholder:text-[#66727F] focus-visible:border-[#64D5C2] focus-visible:ring-[#64D5C2]/20" />
                     <Button onClick={() => void run()} disabled={!canRun} size="lg" className="h-12 gap-2 rounded-lg bg-[#1B8F80] px-6 text-white shadow-none hover:bg-[#16796C]">{loading ? <><Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />Investigando</> : <><Search className="h-4 w-4" />Investigar marca</>}</Button>
+                  </div>
+                  <div className="mt-3">
+                    <Input value={actividad} onChange={(event) => setActividad(event.target.value)} onKeyDown={(event) => event.key === "Enter" && canRun && void run()} maxLength={MAX_ACTIVITY_LENGTH} placeholder="Productos o servicios (opcional)" aria-label="Productos o servicios de la marca" className="h-12 rounded-lg border-white/15 bg-[#080D12] text-sm text-white shadow-none placeholder:text-[#66727F] focus-visible:border-[#64D5C2] focus-visible:ring-[#64D5C2]/20" />
+                    <p className="mt-2 text-xs leading-5 text-[#6F7A87]">Añádelo para sugerir clases Niza con contexto. Si lo omites, no inferimos clases sólo a partir del nombre.</p>
                   </div>
                   {error && <div role="alert" className="mt-4 flex items-start gap-2 border border-red-400/20 bg-red-400/[0.06] p-4 text-sm text-red-200"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}
                 </div>
@@ -266,7 +277,13 @@ function Results({ preview, imagePreview, reset }: { preview: Preview; imagePrev
 
         <div className="grid border-b border-white/10 lg:grid-cols-3">
           <EvidenceColumn index="03" title="Clases y ámbito" icon={<Layers3 className="h-4 w-4" />}>
-            {preview.niza.length > 0 ? <div className="space-y-4">{preview.niza.map((item) => <div key={`${item.numero}-${item.titulo}`} className="border-t border-white/10 pt-4 first:border-t-0 first:pt-0"><div className="flex items-baseline gap-3"><span className="font-mono text-xs text-[#64D5C2]">Niza {item.numero}</span><strong className="text-sm font-medium text-[#E5ECEA]">{item.titulo}</strong></div><p className="mt-2 text-xs leading-5 text-[#81909A]">{item.razon}</p></div>)}</div> : <p className="text-sm leading-6 text-[#788792]">No se devolvieron clases sugeridas en esta consulta.</p>}
+            {preview.niza.length > 0 ? (
+              <div className="space-y-4">{preview.niza.map((item) => <div key={`${item.numero}-${item.titulo}`} className="border-t border-white/10 pt-4 first:border-t-0 first:pt-0"><div className="flex items-baseline gap-3"><span className="font-mono text-xs text-[#64D5C2]">Niza {item.numero}</span><strong className="text-sm font-medium text-[#E5ECEA]">{item.titulo}</strong></div><p className="mt-2 text-xs leading-5 text-[#81909A]">{item.razon}</p></div>)}</div>
+            ) : preview.niza_context_provided ? (
+              <p className="text-sm leading-6 text-[#788792]">No se devolvieron clases Niza sugeridas con el contexto entregado.</p>
+            ) : (
+              <div><p className="text-sm leading-6 text-[#A8B3B9]">No asignamos clases Niza sólo a partir del nombre.</p><p className="mt-2 text-xs leading-5 text-[#6F7A87]">En una nueva investigación agrega los productos o servicios de la marca para obtener una sugerencia contextual.</p></div>
+            )}
           </EvidenceColumn>
 
           <EvidenceColumn index="04" title="Señales visuales" icon={<Fingerprint className="h-4 w-4" />}>
