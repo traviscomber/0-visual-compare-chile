@@ -421,7 +421,7 @@ function Antecedent({ item, index }: { item: Preview["antecedentes"][number]; in
         <div className="flex h-[112px] items-center justify-center border border-white/10 bg-[#080D12] p-3">{item.imagen_url ? <img src={item.imagen_url} alt={item.nombre} className="max-h-full max-w-full object-contain" /> : <ImageIcon className="h-6 w-6 text-[#53606D]" />}</div>
         <div className="min-w-0">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#70808B]">Antecedente {String(index + 1).padStart(2, "0")}</p><h3 className="mt-1 text-xl font-semibold tracking-[-0.02em] text-white">{item.nombre}</h3><p className="mt-1 text-xs leading-5 text-[#8F9AA8]">{item.titular || "Titular no informado"}{item.clases.length > 0 ? ` · Niza ${item.clases.join(", ")}` : ""}</p>{identifiers.length > 0 ? <p className="mt-1 font-mono text-[10px] text-[#64727D]">{identifiers.join(" · ")}</p> : null}</div>
+            <div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#70808B]">Antecedente {String(index + 1).padStart(2, "0")}</p><h3 className="mt-1 text-xl font-semibold tracking-[-0.02em] text-white">{item.nombre}</h3><p className="mt-1 text-xs leading-5 text-[#8F9AA8]">{item.titular || "Titular no informado"}{item.clases.length > 0 ? ` · Niza ${item.clases.join(", ")}` : ""}</p>{identifiers.length > 0 ? <p className="mt-1 font-mono text-[10px] text-[#8994A1]">{identifiers.join(" · ")}</p> : null}</div>
             <span className="self-start border border-white/10 bg-[#080D12] px-3 py-1 text-xs font-medium text-[#B6C0C5]">{item.estado}</span>
           </div>
 
