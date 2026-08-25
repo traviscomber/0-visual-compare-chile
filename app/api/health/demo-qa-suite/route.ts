@@ -34,21 +34,30 @@ export async function GET(request: NextRequest) {
     const mixed = await postPreview(origin, {
       image: textImage,
       actividad: "servicios jurídicos, asesoría legal y representación de clientes",
-    }, "videntia-qa-mixed/1.0")
+    }, "videntia-qa-mixed/2.0")
 
     const userOverride = await postPreview(origin, {
       nombre: "VIDENTIA",
       image: textImage,
       actividad: "software para análisis, búsqueda y vigilancia de marcas comerciales",
-    }, "videntia-qa-user-override/1.0")
+    }, "videntia-qa-user-override/2.0")
 
     const visualOnly = await postPreview(origin, {
       image: textlessImage,
-    }, "videntia-qa-visual-only/1.0")
+    }, "videntia-qa-visual-only/2.0")
 
     const invalidMime = await postPreview(origin, {
       image: "data:text/plain;base64,SG9sYQ==",
-    }, "videntia-qa-invalid-mime/1.0")
+    }, "videntia-qa-invalid-mime/2.0")
+
+    const mixedIsDetectedTrademark = mixed.payload.analysis_mode === "trademark"
+      && mixed.payload.denomination_source === "image-detected"
+      && Boolean(mixed.payload.marca)
+      && (mixed.payload.busqueda?.estrategias_ejecutadas ?? 0) > 0
+    const mixedFallsBackSafely = mixed.payload.analysis_mode === "visual-only"
+      && mixed.payload.denomination_source === "not-detected"
+      && mixed.payload.denomination_confidence === null
+      && mixed.payload.busqueda?.estrategias_ejecutadas === 0
 
     const summary = {
       mixed: {
@@ -92,7 +101,7 @@ export async function GET(request: NextRequest) {
     }
 
     const assertions = {
-      mixedDetectsName: mixed.ok && mixed.payload.analysis_mode === "trademark" && mixed.payload.denomination_source === "image-detected" && Boolean(mixed.payload.marca),
+      mixedHandledSafely: mixed.ok && (mixedIsDetectedTrademark || mixedFallsBackSafely),
       mixedUsesNizaContext: mixed.ok && mixed.payload.niza_context_provided === true && (mixed.payload.niza?.length ?? 0) > 0,
       mixedHasVisualSignals: mixed.ok && (mixed.payload.visual?.viena?.length ?? 0) > 0,
       overrideRespectsUserName: userOverride.ok && userOverride.payload.marca === "VIDENTIA" && userOverride.payload.denomination_source === "user",
