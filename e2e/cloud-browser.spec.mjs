@@ -48,6 +48,17 @@ async function proveDemoHydration(page, name) {
   return { nameInput, investigate }
 }
 
+async function focusViaKeyboard(page, locator, maxTabs = 16) {
+  await expect(locator).toBeVisible()
+
+  for (let index = 0; index <= maxTabs; index += 1) {
+    if (await locator.evaluate((element) => document.activeElement === element)) return
+    await page.keyboard.press("Tab")
+  }
+
+  throw new Error(`Keyboard focus did not reach ${await locator.getAttribute("aria-label") ?? await locator.innerText().catch(() => "target")}`)
+}
+
 async function expectNoHorizontalOverflow(page) {
   const overflow = await page.evaluate(() => ({
     viewport: window.innerWidth,
@@ -189,6 +200,54 @@ test.describe("VIDENTIA production cloud browser", () => {
     await expectNoHorizontalOverflow(page)
 
     await page.screenshot({ path: testInfo.outputPath(`${browserName}-mobile-upload.png`), fullPage: true })
+
+    expectHealthyBrowser(health)
+  })
+
+  test("cross-browser keyboard: demo controls and legal routes remain accessible", async ({ page, browserName }, testInfo) => {
+    await page.setViewportSize({ width: 1365, height: 900 })
+    const health = attachBrowserHealth(page)
+
+    await gotoInteractive(page, "/demo")
+    const uploadButton = page.getByRole("button", { name: /Arrastra un logo o una fotografía/i })
+    const nameInput = page.getByLabel("Nombre de la marca")
+    const activityInput = page.getByLabel("Productos o servicios de la marca")
+    const investigate = page.getByRole("button", { name: /Investigar marca/i })
+
+    await focusViaKeyboard(page, uploadButton)
+    await expect(uploadButton).toBeFocused()
+
+    const fileChooserPromise = page.waitForEvent("filechooser")
+    await page.keyboard.press("Enter")
+    const fileChooser = await fileChooserPromise
+    await fileChooser.setFiles({
+      name: `videntia-${browserName}-keyboard.png`,
+      mimeType: "image/png",
+      buffer: FIXTURE_PNG,
+    })
+    await expect(page.getByAltText("Marca cargada")).toBeVisible()
+
+    await focusViaKeyboard(page, nameInput)
+    await page.keyboard.type(`VIDENTIA ${browserName.toUpperCase()} KEYBOARD QA`)
+    await expect(investigate).toBeEnabled()
+
+    await focusViaKeyboard(page, activityInput)
+    await page.keyboard.type("software para análisis de datos")
+    await page.keyboard.press("Shift+Tab")
+    await expect(investigate).toBeFocused()
+    await page.screenshot({ path: testInfo.outputPath(`${browserName}-keyboard-focus.png`), fullPage: false })
+
+    await gotoInteractive(page, "/privacidad")
+    await expect(page.getByRole("heading", { name: "Política de privacidad", exact: true })).toBeVisible()
+    await expect(page.getByText(/Última actualización: 24 de agosto de 2026/i)).toBeVisible()
+    const termsLink = page.getByRole("link", { name: "Términos de uso", exact: true })
+    await termsLink.focus()
+    await expect(termsLink).toBeFocused()
+    await page.keyboard.press("Enter")
+    await page.waitForURL(/\/terminos$/)
+    await expect(page.getByRole("heading", { name: "Términos de uso", exact: true })).toBeVisible()
+    await expect(page.getByRole("link", { name: "Política de privacidad", exact: true })).toBeVisible()
+    await expectNoHorizontalOverflow(page)
 
     expectHealthyBrowser(health)
   })
