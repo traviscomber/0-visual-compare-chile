@@ -25,7 +25,8 @@
     "gate:phase1": "node scripts/phase1-gate.mjs",
     "verify:quota": "node scripts/verify-api-quota.mjs",
     "audit:deploy": "node scripts/audit-deployment.mjs",
-    "release:gate": "node scripts/release-gate.mjs"
+    "release:gate": "node scripts/release-gate.mjs",
+    "test:niza": "node scripts/niza-regression.mts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
