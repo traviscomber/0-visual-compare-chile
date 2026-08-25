@@ -76,7 +76,7 @@ export default function PrivacidadPage() {
       <header className="border-b border-white/10 px-5 py-5 lg:px-10">
         <div className="mx-auto flex max-w-[980px] items-center justify-between gap-6">
           <Link href="/" className="inline-flex items-center gap-2 text-sm text-[#8F9AA8] transition hover:text-white"><ArrowLeft className="h-4 w-4" />Volver a VIDENTIA</Link>
-          <div className="text-right"><p className="text-sm font-semibold tracking-[0.14em] text-white">VIDENTIA</p><p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-[#66727F]">by N3uralia</p></div>
+          <div className="text-right"><p className="text-sm font-semibold tracking-[0.14em] text-white">VIDENTIA</p><p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-[#8994A1]">by N3uralia</p></div>
         </div>
       </header>
 

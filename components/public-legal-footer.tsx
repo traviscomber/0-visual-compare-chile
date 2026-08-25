@@ -2,7 +2,7 @@ import Link from "next/link"
 
 export function PublicLegalFooter() {
   return (
-    <footer className="border-t border-white/10 bg-[#080C11] px-5 py-5 text-[#6F7A87] lg:px-10">
+    <footer className="border-t border-white/10 bg-[#080C11] px-5 py-5 text-[#8994A1] lg:px-10">
       <div className="mx-auto flex max-w-[1480px] flex-col gap-3 text-[11px] sm:flex-row sm:items-center sm:justify-between">
         <span>VIDENTIA · un desarrollo de N3uralia</span>
         <nav aria-label="Información legal" className="flex flex-wrap gap-x-5 gap-y-2">

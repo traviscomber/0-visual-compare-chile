@@ -38,7 +38,7 @@ export default async function ContactoPage({ searchParams }: { searchParams: Pro
       <header className="border-b border-white/10 px-5 py-5 lg:px-10">
         <div className="mx-auto flex max-w-[1180px] items-center justify-between">
           <Link href={fromDemo ? "/demo" : "/"} className="inline-flex items-center gap-2 text-sm text-[#8F9AA8] hover:text-white"><ArrowLeft className="h-4 w-4" />{fromDemo ? "Volver a la demo" : "Volver a VIDENTIA"}</Link>
-          <div className="text-right"><p className="text-sm font-semibold tracking-[0.14em] text-white">VIDENTIA</p><p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-[#66727F]">by N3uralia</p></div>
+          <div className="text-right"><p className="text-sm font-semibold tracking-[0.14em] text-white">VIDENTIA</p><p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-[#8994A1]">by N3uralia</p></div>
         </div>
       </header>
 
@@ -60,30 +60,30 @@ export default async function ContactoPage({ searchParams }: { searchParams: Pro
 
           <div className="mt-14 grid gap-px bg-white/10 lg:grid-cols-2">
             <article className="bg-[#0D131A] p-7 sm:p-9 lg:p-11">
-              <div className="flex items-center justify-between gap-4"><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#66727F]">Plataforma empresarial</p><span className="text-[10px] uppercase tracking-[0.14em] text-[#64D5C2]">Operación completa</span></div>
+              <div className="flex items-center justify-between gap-4"><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#8994A1]">Plataforma empresarial</p><span className="text-[10px] uppercase tracking-[0.14em] text-[#64D5C2]">Operación completa</span></div>
               <h2 className="mt-7 text-3xl font-normal tracking-[-0.04em] text-white">VIDENTIA Plataforma</h2>
               <p className="mt-4 text-sm leading-7 text-[#8F9AA8]">Para estudios jurídicos, áreas legales y empresas que quieren trabajar directamente en VIDENTIA y centralizar investigación y vigilancia.</p>
               <div className="mt-8 border-t border-white/10">{platformPoints.map(item => <div key={item} className="flex items-center gap-3 border-b border-white/10 py-4 text-sm text-[#A1ABB6]"><Check className="h-4 w-4 text-[#64D5C2]" />{item}</div>)}</div>
               <a href={enterpriseMail} className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-[#7EE3D2]">{fromDemo ? "Continuar esta investigación" : "Solicitar propuesta empresarial"} <ArrowRight className="h-4 w-4" /></a>
-              <div className="mt-8 flex flex-col gap-2 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between"><span className="text-[10px] uppercase tracking-[0.14em] text-[#66727F]">Referencia comercial</span><span className="text-sm text-[#A1ABB6]">Desde $5.000.000 CLP</span></div>
+              <div className="mt-8 flex flex-col gap-2 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between"><span className="text-[10px] uppercase tracking-[0.14em] text-[#8994A1]">Referencia comercial</span><span className="text-sm text-[#A1ABB6]">Desde $5.000.000 CLP</span></div>
             </article>
 
             <article className="bg-[#0D131A] p-7 sm:p-9 lg:p-11">
-              <div className="flex items-center justify-between gap-4"><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#66727F]">API empresarial</p><span className="text-[10px] uppercase tracking-[0.14em] text-[#64D5C2]">Integración</span></div>
+              <div className="flex items-center justify-between gap-4"><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#8994A1]">API empresarial</p><span className="text-[10px] uppercase tracking-[0.14em] text-[#64D5C2]">Integración</span></div>
               <h2 className="mt-7 text-3xl font-normal tracking-[-0.04em] text-white">VIDENTIA API</h2>
               <p className="mt-4 text-sm leading-7 text-[#8F9AA8]">Para organizaciones que necesitan incorporar capacidades de VIDENTIA en sus sistemas, productos o procesos existentes.</p>
               <div className="mt-8 border-t border-white/10">{apiPoints.map(item => <div key={item} className="flex items-center gap-3 border-b border-white/10 py-4 text-sm text-[#A1ABB6]"><Check className="h-4 w-4 text-[#64D5C2]" />{item}</div>)}</div>
               <a href={apiMail} className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-[#7EE3D2]">Conversar sobre la API <ArrowRight className="h-4 w-4" /></a>
-              <div className="mt-8 flex flex-col gap-2 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between"><span className="text-[10px] uppercase tracking-[0.14em] text-[#66727F]">Referencia comercial</span><span className="text-sm text-[#A1ABB6]">Desde $500.000 CLP/mes + consumo</span></div>
+              <div className="mt-8 flex flex-col gap-2 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between"><span className="text-[10px] uppercase tracking-[0.14em] text-[#8994A1]">Referencia comercial</span><span className="text-sm text-[#A1ABB6]">Desde $500.000 CLP/mes + consumo</span></div>
             </article>
           </div>
 
           <div className="mt-12 grid gap-4 sm:grid-cols-2">
-            <a href={generalMail} className="flex items-center justify-between border border-white/10 bg-[#0D131A] p-5 hover:bg-[#111820]"><span className="flex items-center gap-3"><Mail className="h-4 w-4 text-[#64D5C2]" /><span className="text-sm font-medium text-white">info@n3uralia.com</span></span><ArrowRight className="h-4 w-4 text-[#66727F]" /></a>
-            <a href={whatsapp} target="_blank" rel="noreferrer" className="flex items-center justify-between border border-white/10 bg-[#0D131A] p-5 hover:bg-[#111820]"><span className="flex items-center gap-3"><MessageCircle className="h-4 w-4 text-[#64D5C2]" /><span className="text-sm font-medium text-white">WhatsApp · +56 9 9382 6127</span></span><ArrowRight className="h-4 w-4 text-[#66727F]" /></a>
+            <a href={generalMail} className="flex items-center justify-between border border-white/10 bg-[#0D131A] p-5 hover:bg-[#111820]"><span className="flex items-center gap-3"><Mail className="h-4 w-4 text-[#64D5C2]" /><span className="text-sm font-medium text-white">info@n3uralia.com</span></span><ArrowRight className="h-4 w-4 text-[#8994A1]" /></a>
+            <a href={whatsapp} target="_blank" rel="noreferrer" className="flex items-center justify-between border border-white/10 bg-[#0D131A] p-5 hover:bg-[#111820]"><span className="flex items-center gap-3"><MessageCircle className="h-4 w-4 text-[#64D5C2]" /><span className="text-sm font-medium text-white">WhatsApp · +56 9 9382 6127</span></span><ArrowRight className="h-4 w-4 text-[#8994A1]" /></a>
           </div>
 
-          <p className="mt-8 max-w-3xl text-xs leading-6 text-[#66727F]">Los valores son referencias comerciales. Usuarios, volumen, integraciones, SLA, migraciones, soporte y despliegues especiales se definen según alcance.</p>
+          <p className="mt-8 max-w-3xl text-xs leading-6 text-[#8994A1]">Los valores son referencias comerciales. Usuarios, volumen, integraciones, SLA, migraciones, soporte y despliegues especiales se definen según alcance.</p>
         </div>
       </section>
     </main>

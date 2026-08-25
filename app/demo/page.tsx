@@ -212,7 +212,7 @@ export default function DemoPage() {
             <div className="mt-12 overflow-hidden border border-white/10 bg-[#0B1118] shadow-[0_35px_100px_rgba(0,0,0,0.28)]">
               <div className="grid lg:grid-cols-[1.15fr_0.85fr]">
                 <div className="p-5 sm:p-8 lg:p-10">
-                  <div className="mb-5 flex items-center justify-between gap-4"><div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#64D5C2]">01 / Consulta</p><h2 className="mt-2 text-2xl font-normal tracking-[-0.03em] text-white">¿Qué quieres investigar?</h2></div><span className="hidden text-xs text-[#66727F] sm:block">PNG · JPEG · WebP · GIF</span></div>
+                  <div className="mb-5 flex items-center justify-between gap-4"><div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#64D5C2]">01 / Consulta</p><h2 className="mt-2 text-2xl font-normal tracking-[-0.03em] text-white">¿Qué quieres investigar?</h2></div><span className="hidden text-xs text-[#8994A1] sm:block">PNG · JPEG · WebP · GIF</span></div>
                   <button
                     type="button"
                     disabled={loading}
@@ -223,20 +223,20 @@ export default function DemoPage() {
                   >
                     <input ref={fileRef} type="file" disabled={loading} accept={ACCEPTED_IMAGE_TYPES.join(",")} className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) handleFile(file) }} />
                     {imagePreview ? (
-                      <div><div className="mx-auto flex h-40 w-56 items-center justify-center border border-white/10 bg-[#101820] p-4"><img src={imagePreview} alt="Marca cargada" className="max-h-full max-w-full object-contain" /></div><p className="mt-4 text-sm font-medium text-[#E7ECEA]">Imagen lista para investigar</p><p className="mt-1 text-xs text-[#6F7A87]">{loading ? "Analizando esta imagen" : "Haz clic para reemplazarla"}</p></div>
+                      <div><div className="mx-auto flex h-40 w-56 items-center justify-center border border-white/10 bg-[#101820] p-4"><img src={imagePreview} alt="Marca cargada" className="max-h-full max-w-full object-contain" /></div><p className="mt-4 text-sm font-medium text-[#E7ECEA]">Imagen lista para investigar</p><p className="mt-1 text-xs text-[#8994A1]">{loading ? "Analizando esta imagen" : "Haz clic para reemplazarla"}</p></div>
                     ) : (
                       <div className="max-w-md"><span className="mx-auto flex h-12 w-12 items-center justify-center border border-[#64D5C2]/20 bg-[#64D5C2]/[0.05] text-[#64D5C2]"><Upload className="h-5 w-5" /></span><p className="mt-5 text-base font-semibold text-white">Arrastra un logo o una fotografía</p><p className="mt-2 text-sm leading-6 text-[#8994A1]">La imagen puede aportar denominación visible, elementos figurativos y códigos Viena cuando la evidencia permite inferirlos.</p></div>
                     )}
                   </button>
 
-                  <div className="my-6 flex items-center gap-4"><div className="h-px flex-1 bg-white/10" /><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#66727F]">datos de búsqueda</span><div className="h-px flex-1 bg-white/10" /></div>
+                  <div className="my-6 flex items-center gap-4"><div className="h-px flex-1 bg-white/10" /><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8994A1]">datos de búsqueda</span><div className="h-px flex-1 bg-white/10" /></div>
                   <div className="flex flex-col gap-3 sm:flex-row">
-                    <Input disabled={loading} value={nombre} onChange={(event) => setNombre(event.target.value)} onKeyDown={(event) => event.key === "Enter" && canRun && void run()} placeholder="Nombre de la marca" aria-label="Nombre de la marca" className="h-12 flex-1 rounded-lg border-white/15 bg-[#080D12] text-base text-white shadow-none placeholder:text-[#66727F] focus-visible:border-[#64D5C2] focus-visible:ring-[#64D5C2]/20" />
+                    <Input disabled={loading} value={nombre} onChange={(event) => setNombre(event.target.value)} onKeyDown={(event) => event.key === "Enter" && canRun && void run()} placeholder="Nombre de la marca" aria-label="Nombre de la marca" className="h-12 flex-1 rounded-lg border-white/15 bg-[#080D12] text-base text-white shadow-none placeholder:text-[#8994A1] focus-visible:border-[#64D5C2] focus-visible:ring-[#64D5C2]/20" />
                     <Button onClick={() => void run()} disabled={!canRun} size="lg" className="h-12 gap-2 rounded-lg bg-[#1B8F80] px-6 text-white shadow-none hover:bg-[#16796C]">{loading ? <><Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />Investigando</> : <><Search className="h-4 w-4" />Investigar marca</>}</Button>
                   </div>
                   <div className="mt-3">
-                    <Input disabled={loading} value={actividad} onChange={(event) => setActividad(event.target.value)} onKeyDown={(event) => event.key === "Enter" && canRun && void run()} maxLength={MAX_ACTIVITY_LENGTH} placeholder="Productos o servicios (opcional)" aria-label="Productos o servicios de la marca" className="h-12 rounded-lg border-white/15 bg-[#080D12] text-sm text-white shadow-none placeholder:text-[#66727F] focus-visible:border-[#64D5C2] focus-visible:ring-[#64D5C2]/20" />
-                    <p className="mt-2 text-xs leading-5 text-[#6F7A87]">Añádelo para sugerir clases Niza con contexto. Si lo omites, no inferimos clases sólo a partir del nombre o de la imagen.</p>
+                    <Input disabled={loading} value={actividad} onChange={(event) => setActividad(event.target.value)} onKeyDown={(event) => event.key === "Enter" && canRun && void run()} maxLength={MAX_ACTIVITY_LENGTH} placeholder="Productos o servicios (opcional)" aria-label="Productos o servicios de la marca" className="h-12 rounded-lg border-white/15 bg-[#080D12] text-sm text-white shadow-none placeholder:text-[#8994A1] focus-visible:border-[#64D5C2] focus-visible:ring-[#64D5C2]/20" />
+                    <p className="mt-2 text-xs leading-5 text-[#8994A1]">Añádelo para sugerir clases Niza con contexto. Si lo omites, no inferimos clases sólo a partir del nombre o de la imagen.</p>
                   </div>
                   {loading ? <LoadingStatus stage={loadingStage} withNizaContext={loadingWithNizaContext} fromImageOnly={loadingFromImageOnly} /> : null}
                   {error && <div role="alert" className="mt-4 flex items-start gap-2 border border-red-400/20 bg-red-400/[0.06] p-4 text-sm text-red-200"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}
@@ -325,7 +325,7 @@ function Results({ preview, imagePreview, reset, refine }: { preview: Preview; i
           <aside className="border-b border-white/10 py-8 lg:border-b-0 lg:border-r lg:pr-8">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#64D5C2]">01 / Evidencia consultada</p>
             <div className="mt-5 flex min-h-44 items-center justify-center border border-white/10 bg-[#080D12] p-5">
-              {imagePreview ? <img src={imagePreview} alt={preview.marca} className="max-h-40 max-w-[88%] object-contain" /> : <div className="text-center text-[#66727F]"><ImageIcon className="mx-auto h-7 w-7" /><p className="mt-2 text-xs">Búsqueda denominativa</p></div>}
+              {imagePreview ? <img src={imagePreview} alt={preview.marca} className="max-h-40 max-w-[88%] object-contain" /> : <div className="text-center text-[#8994A1]"><ImageIcon className="mx-auto h-7 w-7" /><p className="mt-2 text-xs">Búsqueda denominativa</p></div>}
             </div>
             {preview.denomination_source === "image-detected" ? <p className="mt-3 text-xs leading-5 text-[#8FDCCD]">La denominación fue detectada desde la imagen y luego utilizada como entrada de búsqueda.</p> : null}
             {visualOnly ? <p className="mt-3 text-xs leading-5 text-[#8FDCCD]">No se detectó texto marcario con confianza suficiente. La imagen fue analizada como evidencia figurativa, sin inventar un nombre.</p> : null}
@@ -385,14 +385,14 @@ function Results({ preview, imagePreview, reset, refine }: { preview: Preview; i
             ) : preview.niza_context_provided ? (
               <p className="text-sm leading-6 text-[#788792]">No se devolvieron clases Niza sugeridas con el contexto entregado.</p>
             ) : visualOnly ? (
-              <div><p className="text-sm leading-6 text-[#A8B3B9]">No asignamos clases Niza sólo a partir de una imagen.</p><p className="mt-2 text-xs leading-5 text-[#6F7A87]">Agrega productos o servicios en una nueva investigación para obtener una sugerencia contextual.</p></div>
+              <div><p className="text-sm leading-6 text-[#A8B3B9]">No asignamos clases Niza sólo a partir de una imagen.</p><p className="mt-2 text-xs leading-5 text-[#8994A1]">Agrega productos o servicios en una nueva investigación para obtener una sugerencia contextual.</p></div>
             ) : (
-              <div><p className="text-sm leading-6 text-[#A8B3B9]">No asignamos clases Niza sólo a partir del nombre.</p><p className="mt-2 text-xs leading-5 text-[#6F7A87]">En una nueva investigación agrega los productos o servicios de la marca para obtener una sugerencia contextual.</p></div>
+              <div><p className="text-sm leading-6 text-[#A8B3B9]">No asignamos clases Niza sólo a partir del nombre.</p><p className="mt-2 text-xs leading-5 text-[#8994A1]">En una nueva investigación agrega los productos o servicios de la marca para obtener una sugerencia contextual.</p></div>
             )}
           </EvidenceColumn>
 
           <EvidenceColumn index="04" title="Señales visuales" icon={<Fingerprint className="h-4 w-4" />}>
-            {hasVisualEvidence ? <><div className="flex flex-wrap gap-2">{preview.visual.viena.slice(0, 8).map((item) => <Badge key={item.code} variant="outline" className="rounded-md border-[#64D5C2]/20 bg-[#64D5C2]/[0.04] text-[#A8DDD4]">{item.code} · {item.titulo}</Badge>)}</div>{preview.visual.elementos.length > 0 ? <p className="mt-4 text-xs leading-5 text-[#81909A]">{preview.visual.elementos.join(" · ")}</p> : null}{preview.visual.colores.length > 0 ? <div className="mt-4 border-t border-white/10 pt-4"><p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#66727F]">Colores observados</p><div className="mt-2 flex flex-wrap gap-2">{preview.visual.colores.map((color) => <span key={color} className="border border-white/10 px-2 py-1 text-[10px] text-[#9EABB1]">{color}</span>)}</div></div> : null}</> : <p className="text-sm leading-6 text-[#788792]">No hubo evidencia visual suficiente para mostrar códigos o elementos comparables.</p>}
+            {hasVisualEvidence ? <><div className="flex flex-wrap gap-2">{preview.visual.viena.slice(0, 8).map((item) => <Badge key={item.code} variant="outline" className="rounded-md border-[#64D5C2]/20 bg-[#64D5C2]/[0.04] text-[#A8DDD4]">{item.code} · {item.titulo}</Badge>)}</div>{preview.visual.elementos.length > 0 ? <p className="mt-4 text-xs leading-5 text-[#81909A]">{preview.visual.elementos.join(" · ")}</p> : null}{preview.visual.colores.length > 0 ? <div className="mt-4 border-t border-white/10 pt-4"><p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#8994A1]">Colores observados</p><div className="mt-2 flex flex-wrap gap-2">{preview.visual.colores.map((color) => <span key={color} className="border border-white/10 px-2 py-1 text-[10px] text-[#9EABB1]">{color}</span>)}</div></div> : null}</> : <p className="text-sm leading-6 text-[#788792]">No hubo evidencia visual suficiente para mostrar códigos o elementos comparables.</p>}
           </EvidenceColumn>
 
           <EvidenceColumn index="05" title="Lectura asistida" icon={<ShieldCheck className="h-4 w-4" />}>
@@ -405,7 +405,7 @@ function Results({ preview, imagePreview, reset, refine }: { preview: Preview; i
 
         {preview.evidencia.advertencias.length > 0 ? <section className="mt-6 border border-amber-300/20 bg-amber-300/[0.05] p-6"><div className="flex items-start gap-3"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-200" /><div><p className="text-sm font-semibold text-amber-100">Limitaciones de esta consulta</p><div className="mt-3 space-y-2">{preview.evidencia.advertencias.map((warning) => <p key={warning} className="text-xs leading-5 text-amber-100/75">{warning}</p>)}</div></div></div></section> : null}
 
-        <footer className="mt-8 flex flex-col gap-4 border-t border-white/10 pt-6 text-xs leading-5 text-[#66727F] sm:flex-row sm:items-center sm:justify-between"><p>VIDENTIA organiza evidencia y señales de investigación. INAPI permanece como fuente oficial.</p><span className="font-medium text-[#8997A0]">Fuente ≠ análisis ≠ decisión jurídica</span></footer>
+        <footer className="mt-8 flex flex-col gap-4 border-t border-white/10 pt-6 text-xs leading-5 text-[#8994A1] sm:flex-row sm:items-center sm:justify-between"><p>VIDENTIA organiza evidencia y señales de investigación. INAPI permanece como fuente oficial.</p><span className="font-medium text-[#8997A0]">Fuente ≠ análisis ≠ decisión jurídica</span></footer>
       </div>
     </section>
   )
@@ -442,11 +442,11 @@ function Antecedent({ item, index }: { item: Preview["antecedentes"][number]; in
 
 function Signal({ label, value }: { label: string; value: number | null }) {
   const text = value == null ? "Sin dato" : value >= 90 ? "Muy próxima" : value >= 75 ? "Próxima" : value >= 55 ? "Parcial" : "Baja"
-  return <div className="bg-[#080D12] p-3"><p className="text-[10px] uppercase tracking-[0.13em] text-[#66727F]">{label}</p><div className="mt-1 flex items-baseline justify-between gap-2"><p className="text-xs font-semibold text-[#E7ECEA]">{text}</p><span className="text-[11px] tabular-nums text-[#8F9AA8]">{value == null ? "—" : `${value}%`}</span></div></div>
+  return <div className="bg-[#080D12] p-3"><p className="text-[10px] uppercase tracking-[0.13em] text-[#8994A1]">{label}</p><div className="mt-1 flex items-baseline justify-between gap-2"><p className="text-xs font-semibold text-[#E7ECEA]">{text}</p><span className="text-[11px] tabular-nums text-[#8F9AA8]">{value == null ? "—" : `${value}%`}</span></div></div>
 }
 
 function Step({ icon: Icon, number, title, copy }: { icon: typeof Search; number: string; title: string; copy: string }) {
-  return <div className="grid grid-cols-[38px_1fr] gap-3 border-b border-white/10 py-5 last:border-b-0"><span className="flex h-8 w-8 items-center justify-center border border-white/10 bg-[#0D131A] text-[#64D5C2]"><Icon className="h-4 w-4" /></span><div><div className="flex items-center gap-2"><span className="font-mono text-[10px] text-[#66727F]">{number}</span><p className="text-sm font-semibold text-white">{title}</p></div><p className="mt-1 text-xs leading-5 text-[#8F9AA8]">{copy}</p></div></div>
+  return <div className="grid grid-cols-[38px_1fr] gap-3 border-b border-white/10 py-5 last:border-b-0"><span className="flex h-8 w-8 items-center justify-center border border-white/10 bg-[#0D131A] text-[#64D5C2]"><Icon className="h-4 w-4" /></span><div><div className="flex items-center gap-2"><span className="font-mono text-[10px] text-[#8994A1]">{number}</span><p className="text-sm font-semibold text-white">{title}</p></div><p className="mt-1 text-xs leading-5 text-[#8F9AA8]">{copy}</p></div></div>
 }
 
 function Stat({ label, value }: { label: string; value: number | string }) {
