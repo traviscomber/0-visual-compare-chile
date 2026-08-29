@@ -36,13 +36,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!user) redirect("/auth/login")
 
   return (
-    <div className="flex min-h-svh flex-col bg-background">
-      <AppNav
-        userEmail={user.email ?? ""}
-        fullName={profile?.full_name ?? null}
-        companyName={profile?.company_name ?? null}
-      />
-      <main className="flex-1">{children}</main>
-    </div>
+    <AppNav
+      userEmail={user.email ?? ""}
+      fullName={profile?.full_name ?? null}
+      companyName={profile?.company_name ?? null}
+    >
+      {children}
+    </AppNav>
   )
 }
