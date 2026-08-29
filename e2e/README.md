@@ -21,6 +21,7 @@ Browserin valida `https://videntia.app` con Playwright en Chromium, Firefox y We
 - Axe adjunta evidencia JSON por ruta o estado renderizado y no se silencian reglas para ocultar defectos de producto; una violación seria o crítica debe corregirse en la aplicación o clasificarse explícitamente como problema del harness antes de modificar la puerta.
 - Los hallazgos de Axe de las seis rutas base se acumulan antes de fallar, de modo que una corrida entregue el mapa completo y no sólo el primer defecto.
 - La auditoría de resultados usa respuestas sintéticas sólo en el browser. Ambos fixtures `visual-only` —cross-browser y Axe— mantienen `denomination_confidence: null` cuando no existe una denominación aceptada.
+- Los tests de upload y Axe usan una imagen PNG representativa de 128×128 generada en memoria; no se usan fixtures degenerados de 1×1 salvo cuando el objetivo explícito es probar input malformado o no soportado.
 - Los identificadores técnicos de antecedentes en el estado `trademark` deben conservar contraste suficiente; Axe cubre ese contenido después de renderizar resultados.
 - Los bloques de código horizontalmente desplazables de `/docs` deben permanecer accesibles por teclado.
 - WebKit de Playwright no se reporta como Safari real.
