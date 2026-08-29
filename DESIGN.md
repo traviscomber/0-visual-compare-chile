@@ -150,7 +150,7 @@ Any current hero-only proof chips such as `Chile primero`, `INAPI identificable`
 ## 5. Assets
 
 Production hero asset names:
-- `/images/videntia-hero-comparison-hd.png` — approved two-person comparison illustration in HD.
+- `/images/videntia-hero-comparison-hd.webp` — approved two-person comparison illustration, preserving the supplied reference geometry at production resolution.
 - future `/images/videntia-bauhaus-field-hd.png` — standalone Bauhaus background for later sections if required.
 - future `/images/videntia-geometric-icons-hd.png` — reference sheet; do not use the raster sheet itself as clickable UI icons.
 
