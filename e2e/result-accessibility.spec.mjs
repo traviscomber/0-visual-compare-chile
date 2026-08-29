@@ -1,12 +1,26 @@
 import { expect, test } from "@playwright/test"
 import AxeBuilder from "@axe-core/playwright"
+import { PNG } from "pngjs"
 
 const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]
 const BLOCKING_IMPACTS = new Set(["serious", "critical"])
-const FIXTURE_PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZgL8AAAAASUVORK5CYII=",
-  "base64",
-)
+
+function buildFixturePng() {
+  const png = new PNG({ width: 128, height: 128 })
+  for (let y = 0; y < png.height; y += 1) {
+    for (let x = 0; x < png.width; x += 1) {
+      const idx = (png.width * y + x) << 2
+      const insideCircle = (x - 64) ** 2 + (y - 64) ** 2 < 42 ** 2
+      png.data[idx] = insideCircle ? 30 : 236
+      png.data[idx + 1] = insideCircle ? 60 : 239
+      png.data[idx + 2] = insideCircle ? 80 : 242
+      png.data[idx + 3] = 255
+    }
+  }
+  return PNG.sync.write(png)
+}
+
+const FIXTURE_PNG = buildFixturePng()
 
 function buildMockTrademarkPreview(brand) {
   return {
