@@ -105,7 +105,7 @@ function matchesPath(pathname: string, href: string) {
 function BrandMark() {
   return (
     <span className="flex min-w-0 items-center gap-3">
-      <span className="grid size-9 shrink-0 place-items-center rounded-[10px] border border-sidebar-border bg-sidebar-accent text-xs font-semibold text-sidebar-primary">
+      <span className="grid size-9 shrink-0 place-items-center rounded-[10px] border border-sidebar-border bg-sidebar-accent text-xs font-semibold text-sidebar-primary group-data-[collapsible=icon]:size-8">
         V
       </span>
       <span className="min-w-0 leading-none group-data-[collapsible=icon]:hidden">
@@ -138,7 +138,7 @@ function NavigationMenu() {
                   asChild
                   isActive={active}
                   tooltip={item.label}
-                  className="h-10 rounded-[10px] px-3 text-[13px] font-medium data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
+                  className="h-10 rounded-[10px] px-3 text-[13px] font-medium data-[active=true]:bg-primary/20 data-[active=true]:text-sidebar-accent-foreground data-[active=true]:[&>svg]:text-sidebar-primary"
                 >
                   <Link
                     href={item.href}
@@ -244,7 +244,7 @@ export function AppNav({
     <SidebarProvider className="dark min-h-svh overflow-x-hidden bg-background text-foreground" style={shellTokens}>
       <Sidebar collapsible="icon" className="border-sidebar-border">
         <SidebarHeader className="px-3 pb-2 pt-4">
-          <Link href="/dashboard" aria-label="VIDENTIA, resumen" className="rounded-[10px] px-1 py-1 outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring">
+          <Link href="/dashboard" aria-label="VIDENTIA, resumen" className="rounded-[10px] px-1 py-1 outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:px-0">
             <BrandMark />
           </Link>
         </SidebarHeader>
