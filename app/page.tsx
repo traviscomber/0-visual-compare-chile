@@ -1,8 +1,10 @@
+import Image from "next/image"
 import Link from "next/link"
 import {
   ArrowRight,
   BellRing,
   Building2,
+  ChevronDown,
   CircleDot,
   Clock3,
   Database,
@@ -58,9 +60,9 @@ export default function LandingPage() {
             <Link href="#proceso">Vigilar</Link>
             <Link href="#producto">Gestionar</Link>
             <Link href="/contacto">Precios</Link>
-            <Link href="/docs">Recursos</Link>
-            <Link href="/auth/login" prefetch={false}>Iniciar sesión</Link>
-            <Link href="/demo" className="px-btn px-btn-primary">Buscar una marca</Link>
+            <Link href="/docs" className="px-nav-resources">Recursos <ChevronDown aria-hidden="true" size={12} strokeWidth={1.5} /></Link>
+            <Link href="/auth/login" className="px-nav-login" prefetch={false}>Iniciar sesión</Link>
+            <Link href="/demo" className="px-btn px-nav-cta">Buscar una marca</Link>
           </div>
         </div>
       </nav>
@@ -79,15 +81,18 @@ export default function LandingPage() {
               <button type="submit">Buscar <ArrowRight aria-hidden="true" size={16} /></button>
             </form>
 
-            <div className="px-proof px-proof-hero" aria-label="Atributos de confianza">
-              <span>Chile primero</span>
-              <span>INAPI identificable</span>
-              <span>Niza + Viena</span>
-              <span>Sin veredictos automáticos</span>
-            </div>
           </div>
 
-          <div className="px-hero-art" data-px-reveal role="img" aria-label="Dos personas comparan marcas con lupas sobre geometría Bauhaus de VIDENTIA" />
+          <div className="px-hero-art" data-px-reveal>
+            <Image
+              src="/images/videntia-hero-comparison-hd.webp"
+              alt="Dos personas comparan marcas con grandes lupas sobre geometría Bauhaus de VIDENTIA"
+              fill
+              priority
+              sizes="(max-width: 1120px) 100vw, 56vw"
+              className="px-hero-image"
+            />
+          </div>
         </div>
       </section>
 
