@@ -2,7 +2,7 @@ import { createHmac } from "crypto"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getSupabaseServiceRoleKey } from "@/lib/supabase/env"
 
-const DEMO_LIMIT = 3
+const DEMO_LIMIT = 1
 const DEMO_WINDOW_SECONDS = 60 * 60
 
 type DemoQuotaRow = {
