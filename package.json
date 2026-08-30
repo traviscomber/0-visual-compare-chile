@@ -27,7 +27,8 @@
     "audit:deploy": "node scripts/audit-deployment.mjs",
     "release:gate": "node scripts/release-gate.mjs",
     "test:niza": "node scripts/niza-regression.mts",
-    "test:analytics": "node scripts/analytics-privacy-regression.mts"
+    "test:analytics": "node scripts/analytics-privacy-regression.mts",
+    "test:api-key-listing": "node scripts/api-key-listing-regression.mts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -97,13 +98,13 @@
     "@types/node": "^26.2.0",
     "@types/pg": "^8.23.1",
     "@types/pixelmatch": "^5.2.6",
-    "@types/pngjs": "^6.0.5",
+    "@types/pngjs": "^0.5.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "pg": "^8.23.0",
     "postcss": "^8.5.26",
     "tailwindcss": "^4.3.3",
-    "tw-animate-css": "1.4.0",
+    "tw-animate-css": "^1.4.0",
     "typescript": "5.7.3"
   }
 }
