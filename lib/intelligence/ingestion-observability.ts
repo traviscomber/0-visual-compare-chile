@@ -16,6 +16,7 @@ type FinishArgs = {
   rejected?: number
   metadata?: Record<string, unknown>
   status?: "completed" | "partial"
+  errorMessage?: string | null
 }
 
 type FailArgs = {
@@ -76,21 +77,40 @@ export async function startIntelligenceIngestion(admin: SupabaseClient, args: St
 
 export async function finishIntelligenceIngestion(admin: SupabaseClient, args: FinishArgs) {
   const now = new Date().toISOString()
+  const status = args.status ?? "completed"
+  const partialMessage = status === "partial"
+    ? (args.errorMessage?.trim() || "Partial ingestion; review the latest run before treating this source as healthy.")
+    : null
+
   const { error: runError } = await admin
     .from("intelligence_ingestion_runs")
     .update({
-      status: args.status ?? "completed",
+      status,
       fetched_count: nonNegative(args.fetched),
       inserted_count: nonNegative(args.inserted),
       updated_count: nonNegative(args.updated),
       rejected_count: nonNegative(args.rejected),
       finished_at: now,
-      error_message: null,
+      error_message: partialMessage?.slice(0, 4000) ?? null,
       metadata: args.metadata ?? {},
     })
     .eq("id", args.runId)
 
   if (runError) throw new Error(`Could not finish intelligence ingestion run: ${runError.message}`)
+
+  if (status === "partial") {
+    const { error: partialStateError } = await admin
+      .from("intelligence_source_state")
+      .upsert({
+        source_id: args.sourceId,
+        last_attempt_at: now,
+        last_error: partialMessage?.slice(0, 4000) ?? "Partial ingestion",
+        updated_at: now,
+      }, { onConflict: "source_id" })
+
+    if (partialStateError) throw new Error(`Could not publish partial source health: ${partialStateError.message}`)
+    return { finishedAt: now, status }
+  }
 
   const { error: stateError } = await admin
     .from("intelligence_source_state")
@@ -106,7 +126,7 @@ export async function finishIntelligenceIngestion(admin: SupabaseClient, args: F
     }, { onConflict: "source_id" })
 
   if (stateError) throw new Error(`Could not publish source health: ${stateError.message}`)
-  return { finishedAt: now }
+  return { finishedAt: now, status }
 }
 
 export async function failIntelligenceIngestion(admin: SupabaseClient, args: FailArgs) {
