@@ -1,8 +1,15 @@
 import "server-only"
 import { createAdminClient } from "@/lib/supabase/admin"
+import {
+  isChangeBaselineInitialized,
+  markChangeBaselineCompleted,
+  recordSourceBatchChanges,
+  type SourceChangeRecord,
+} from "@/lib/intelligence/source-change-recorder"
 
 const CKAN_BASE = process.env.INAPI_OPEN_DATA_CKAN_BASE || "https://datos.gob.cl/api/3/action"
 const DATASETS = ["solicitudes-de-marcas", "registros-de-marcas"] as const
+const CHANGE_SOURCE_KEY = "inapi_open_data"
 const PAGE_SIZE = 1000
 const UPSERT_BATCH_SIZE = 500
 
@@ -18,10 +25,13 @@ export interface OpenDataSyncSummary {
     normalized: number
     upserted: number
     nizaLinks: number
+    changeEvents: number
+    changeBaseline: boolean
   }>
   totalFetched: number
   totalUpserted: number
   totalNizaLinks: number
+  totalChangeEvents: number
 }
 
 export async function syncCurrentYearInapiOpenData(year = new Date().getUTCFullYear()): Promise<OpenDataSyncSummary> {
@@ -36,6 +46,7 @@ export async function syncCurrentYearInapiOpenData(year = new Date().getUTCFullY
     totalFetched: datasets.reduce((sum, item) => sum + item.fetched, 0),
     totalUpserted: datasets.reduce((sum, item) => sum + item.upserted, 0),
     totalNizaLinks: datasets.reduce((sum, item) => sum + item.nizaLinks, 0),
+    totalChangeEvents: datasets.reduce((sum, item) => sum + item.changeEvents, 0),
   }
 }
 
@@ -50,16 +61,20 @@ async function syncDataset(dataset: (typeof DATASETS)[number], year: number) {
     status: "running",
     search_type: "open_data",
     query: `${dataset}:${year}`,
-    metadata: { dataset, year, resource_id: resource.id, resource_name: resource.name ?? null, trigger: "vercel-cron" },
+    metadata: { dataset, year, resource_id: resource.id, resource_name: resource.name ?? null, trigger: "vercel-cron", track_changes: true },
     started_at: new Date().toISOString(),
   }).select("id").single()
   if (runError || !run?.id) throw new Error(`Could not create sync run: ${runError?.message || "unknown"}`)
+
+  const baselineInitialized = await isChangeBaselineInitialized(admin, CHANGE_SOURCE_KEY, "trademark", dataset)
+  const baselineMode = !baselineInitialized
 
   let offset = 0
   let fetched = 0
   let normalized = 0
   let upserted = 0
   let nizaLinks = 0
+  let changeEvents = 0
   let total = 0
 
   try {
@@ -77,22 +92,60 @@ async function syncDataset(dataset: (typeof DATASETS)[number], year: number) {
         const result = await upsertBatch(admin, rows.slice(index, index + UPSERT_BATCH_SIZE))
         upserted += result.upserted
         nizaLinks += result.nizaLinks
+
+        const changes = await recordSourceBatchChanges(admin, {
+          sourceKey: CHANGE_SOURCE_KEY,
+          entityType: "trademark",
+          dataset,
+          syncRunId: String(run.id),
+          baselineMode,
+          records: result.rows.map(toTrademarkChangeRecord),
+        })
+        changeEvents += changes.changes
       }
 
       offset += records.length
       const { error: progressError } = await admin.from("inapi_sync_runs").update({
         total_fetched: total,
         inserted_count: upserted,
-        updated_count: 0,
-        metadata: { dataset, year, resource_id: resource.id, resource_name: resource.name ?? null, trigger: "vercel-cron", progress: { offset, fetched, normalized, upserted, nizaLinks, total, lastActivityAt: new Date().toISOString() } },
+        updated_count: changeEvents,
+        metadata: {
+          dataset,
+          year,
+          resource_id: resource.id,
+          resource_name: resource.name ?? null,
+          trigger: "vercel-cron",
+          track_changes: true,
+          progress: { offset, fetched, normalized, upserted, nizaLinks, changeEvents, changeBaseline: baselineMode, total, lastActivityAt: new Date().toISOString() },
+        },
       }).eq("id", run.id)
       if (progressError) console.error("[inapi-open-data] progress update failed", progressError.message)
       if (records.length < PAGE_SIZE || offset >= total) break
     }
 
-    const { error: completeError } = await admin.from("inapi_sync_runs").update({ status: "completed", finished_at: new Date().toISOString(), total_fetched: fetched, inserted_count: upserted, updated_count: 0, error_message: null }).eq("id", run.id)
+    await markChangeBaselineCompleted(admin, CHANGE_SOURCE_KEY, "trademark", dataset, String(run.id))
+
+    const { error: completeError } = await admin.from("inapi_sync_runs").update({
+      status: "completed",
+      finished_at: new Date().toISOString(),
+      total_fetched: fetched,
+      inserted_count: upserted,
+      updated_count: changeEvents,
+      error_message: null,
+    }).eq("id", run.id)
     if (completeError) console.error("[inapi-open-data] completion update failed", completeError.message)
-    return { dataset, resourceId: String(resource.id), resourceName: resource.name ? String(resource.name) : null, fetched, normalized, upserted, nizaLinks }
+
+    return {
+      dataset,
+      resourceId: String(resource.id),
+      resourceName: resource.name ? String(resource.name) : null,
+      fetched,
+      normalized,
+      upserted,
+      nizaLinks,
+      changeEvents,
+      changeBaseline: baselineMode,
+    }
   } catch (error) {
     await admin.from("inapi_sync_runs").update({ status: "failed", finished_at: new Date().toISOString(), error_message: error instanceof Error ? error.message : String(error) }).eq("id", run.id)
     throw error
@@ -124,7 +177,31 @@ async function upsertBatch(admin: ReturnType<typeof createAdminClient>, rows: No
     const { error: linkError } = await admin.from("trademark_record_niza").upsert(links, { onConflict: "trademark_record_id,code", ignoreDuplicates: true })
     if (linkError) throw new Error(`INAPI Niza upsert failed: ${linkError.message}`)
   }
-  return { upserted: data?.length ?? 0, nizaLinks: links.length }
+  return { upserted: data?.length ?? 0, nizaLinks: links.length, rows: dedupedRows }
+}
+
+function toTrademarkChangeRecord(row: NormalizedRow): SourceChangeRecord {
+  const vienna = metadataText(row.metadata, "viennaClasses")
+  return {
+    sourceRecordId: row.source_record_id,
+    title: row.nombre,
+    searchText: [row.nombre, row.solicitante, row.numero_solicitud, row.numero_registro, row.estado, ...row.niza, vienna].filter(Boolean).join(" "),
+    sourceUrl: row.source_url,
+    sourceDate: row.fecha_registro || row.fecha_presentacion,
+    sourceUpdatedAt: metadataText(row.metadata, "lastUpdatedDate"),
+    snapshot: {
+      title: row.nombre,
+      applicant: row.solicitante,
+      registration_number: row.numero_registro,
+      status: row.estado,
+      filing_date: row.fecha_presentacion,
+      registration_date: row.fecha_registro,
+      country: row.pais,
+      classification: [...row.niza].sort(),
+      vienna_classes: vienna,
+      sign_type: metadataText(row.metadata, "signType"),
+    },
+  }
 }
 
 async function ckan(action: string, params: Record<string, string | number>) {
@@ -171,6 +248,7 @@ function normalizeOpenDataRow(raw: Record<string, unknown>, dataset: string): No
 }
 
 function text(value: unknown) { if (value === null || value === undefined) return null; const result = String(value).trim(); return result || null }
+function metadataText(metadata: Record<string, unknown>, key: string) { const value = metadata[key]; return value === null || value === undefined ? null : String(value) }
 function parseCodes(value: unknown) { if (value === null || value === undefined) return []; return [...new Set(String(value).match(/\b(?:[1-9]|[1-3][0-9]|4[0-5])\b/g) || [])] }
 function normalizeDate(value: unknown) { const raw = text(value); if (!raw) return null; return /^\d{4}-\d{2}-\d{2}/.test(raw) ? raw.slice(0, 10) : null }
 function normalizeStatus(value: unknown) {

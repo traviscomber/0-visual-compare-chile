@@ -3,8 +3,9 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 export type IntelligenceCoverage = {
   latest_filing_date: string | null
   last_synced_at: string | null
-  lag_days: number | null
-  fresh_for_week: boolean
+  filing_lag_days: number | null
+  sync_age_days: number | null
+  synchronized_recently: boolean
   records_in_latest_30d: number
 }
 
@@ -17,6 +18,28 @@ export type RecentCorpusActivity = {
   source_url: string | null
 }
 
+export type ObservedSourceChange = {
+  id: string
+  kind: "patent" | "trademark"
+  change_type: string
+  title: string
+  summary: string | null
+  source_url: string | null
+  source_date: string | null
+  observed_at: string
+  materiality: "alta" | "media" | "baja"
+  changed_fields: string[]
+}
+
+export type ChangeDetectionStatus = {
+  ready: boolean
+  baselines_ready: number
+  baselines_expected: number
+  states_total: number
+  events_7d: number
+  last_observed_at: string | null
+}
+
 export type WeeklyBriefContext = {
   generated_at: string
   window_start: string
@@ -25,6 +48,8 @@ export type WeeklyBriefContext = {
     patents: IntelligenceCoverage
     trademarks: IntelligenceCoverage
   }
+  change_detection: ChangeDetectionStatus
+  observed_changes: ObservedSourceChange[]
   recent_activity: RecentCorpusActivity[]
 }
 
@@ -33,11 +58,26 @@ type LatestTrademarkRow = { fecha_presentacion: string | null }
 type LatestSyncRow = { last_synced_at: string | null }
 type PatentActivityRow = { id: string; title: string | null; applicants: string | null; filing_date: string | null; source_url: string | null }
 type TrademarkActivityRow = { id: string; nombre: string | null; solicitante: string | null; fecha_presentacion: string | null; source_url: string | null }
+type SourceChangeRow = {
+  id: string
+  entity_type: string
+  event_type: string
+  title: string | null
+  summary: string | null
+  source_url: string | null
+  source_date: string | null
+  observed_at: string
+  materiality: string
+  changed_fields: string[] | null
+}
+
+const EXPECTED_CHANGE_BASELINES = 4
 
 export async function buildWeeklyBriefContext(admin: SupabaseClient): Promise<WeeklyBriefContext> {
   const now = new Date()
   const windowEnd = isoDate(now)
   const windowStart = isoDate(addDays(now, -6))
+  const windowStartTimestamp = `${windowStart}T00:00:00.000Z`
 
   const [patentLatestResult, trademarkLatestResult, patentSyncResult, trademarkSyncResult] = await Promise.all([
     admin.from("patent_records").select("filing_date").not("filing_date", "is", null).order("filing_date", { ascending: false }).limit(1).maybeSingle(),
@@ -59,7 +99,7 @@ export async function buildWeeklyBriefContext(admin: SupabaseClient): Promise<We
   const patentPeriodStart = patentLatest ? isoDate(addDays(new Date(`${patentLatest}T00:00:00Z`), -29)) : null
   const trademarkPeriodStart = trademarkLatest ? isoDate(addDays(new Date(`${trademarkLatest}T00:00:00Z`), -29)) : null
 
-  const [patentCountResult, trademarkCountResult, patentsResult, trademarksResult] = await Promise.all([
+  const [patentCountResult, trademarkCountResult, patentsResult, trademarksResult, baselineCountResult, stateCountResult, observedChangesResult] = await Promise.all([
     patentLatest && patentPeriodStart
       ? admin.from("patent_records").select("id", { count: "exact", head: true }).gte("filing_date", patentPeriodStart).lte("filing_date", patentLatest)
       : Promise.resolve({ count: 0, error: null }),
@@ -68,15 +108,28 @@ export async function buildWeeklyBriefContext(admin: SupabaseClient): Promise<We
       : Promise.resolve({ count: 0, error: null }),
     admin.from("patent_records").select("id,title,applicants,filing_date,source_url").not("filing_date", "is", null).order("filing_date", { ascending: false }).limit(3),
     admin.from("trademark_records").select("id,nombre,solicitante,fecha_presentacion,source_url").not("fecha_presentacion", "is", null).order("fecha_presentacion", { ascending: false }).limit(3),
+    admin.from("intelligence_change_baselines").select("source_key", { count: "exact", head: true }).eq("source_key", "inapi_open_data"),
+    admin.from("intelligence_source_states").select("id", { count: "exact", head: true }).eq("source_key", "inapi_open_data"),
+    admin.from("intelligence_source_events")
+      .select("id,entity_type,event_type,title,summary,source_url,source_date,observed_at,materiality,changed_fields", { count: "exact" })
+      .eq("source_key", "inapi_open_data")
+      .gte("observed_at", windowStartTimestamp)
+      .order("observed_at", { ascending: false })
+      .limit(12),
   ])
 
   logQueryError("patent latest-period count", patentCountResult.error)
   logQueryError("trademark latest-period count", trademarkCountResult.error)
   logQueryError("patent recent activity", patentsResult.error)
   logQueryError("trademark recent activity", trademarksResult.error)
+  logQueryError("change baseline count", baselineCountResult.error)
+  logQueryError("change state count", stateCountResult.error)
+  logQueryError("observed source changes", observedChangesResult.error)
 
-  const patentLag = lagDays(patentLatest, now)
-  const trademarkLag = lagDays(trademarkLatest, now)
+  const patentFilingLag = dateLagDays(patentLatest, now)
+  const trademarkFilingLag = dateLagDays(trademarkLatest, now)
+  const patentSyncAge = timestampLagDays(patentSync, now)
+  const trademarkSyncAge = timestampLagDays(trademarkSync, now)
 
   const recentActivity: RecentCorpusActivity[] = [
     ...((patentsResult.data ?? []) as PatentActivityRow[])
@@ -103,6 +156,22 @@ export async function buildWeeklyBriefContext(admin: SupabaseClient): Promise<We
     .sort((a, b) => b.filing_date.localeCompare(a.filing_date))
     .slice(0, 6)
 
+  const observedChanges: ObservedSourceChange[] = ((observedChangesResult.data ?? []) as SourceChangeRow[]).map(row => ({
+    id: String(row.id),
+    kind: row.entity_type === "trademark" ? "trademark" : "patent",
+    change_type: String(row.event_type),
+    title: cleanText(row.title) || (row.entity_type === "trademark" ? "Cambio en expediente marcario" : "Cambio en expediente de patente"),
+    summary: cleanText(row.summary),
+    source_url: cleanText(row.source_url),
+    source_date: cleanText(row.source_date),
+    observed_at: String(row.observed_at),
+    materiality: row.materiality === "alta" || row.materiality === "media" ? row.materiality : "baja",
+    changed_fields: Array.isArray(row.changed_fields) ? row.changed_fields.map(String) : [],
+  }))
+
+  const baselinesReady = baselineCountResult.count ?? 0
+  const events7d = observedChangesResult.count ?? 0
+
   return {
     generated_at: now.toISOString(),
     window_start: windowStart,
@@ -111,29 +180,47 @@ export async function buildWeeklyBriefContext(admin: SupabaseClient): Promise<We
       patents: {
         latest_filing_date: patentLatest,
         last_synced_at: patentSync,
-        lag_days: patentLag,
-        fresh_for_week: patentLag !== null && patentLag <= 7,
+        filing_lag_days: patentFilingLag,
+        sync_age_days: patentSyncAge,
+        synchronized_recently: patentSyncAge !== null && patentSyncAge <= 2,
         records_in_latest_30d: patentCountResult.count ?? 0,
       },
       trademarks: {
         latest_filing_date: trademarkLatest,
         last_synced_at: trademarkSync,
-        lag_days: trademarkLag,
-        fresh_for_week: trademarkLag !== null && trademarkLag <= 7,
+        filing_lag_days: trademarkFilingLag,
+        sync_age_days: trademarkSyncAge,
+        synchronized_recently: trademarkSyncAge !== null && trademarkSyncAge <= 2,
         records_in_latest_30d: trademarkCountResult.count ?? 0,
       },
     },
+    change_detection: {
+      ready: baselinesReady >= EXPECTED_CHANGE_BASELINES,
+      baselines_ready: baselinesReady,
+      baselines_expected: EXPECTED_CHANGE_BASELINES,
+      states_total: stateCountResult.count ?? 0,
+      events_7d: events7d,
+      last_observed_at: observedChanges[0]?.observed_at ?? null,
+    },
+    observed_changes: observedChanges,
     recent_activity: recentActivity,
   }
 }
 
-function lagDays(value: string | null, now: Date) {
+function dateLagDays(value: string | null, now: Date) {
   if (!value) return null
   const date = new Date(`${value}T00:00:00Z`)
   if (Number.isNaN(date.getTime())) return null
   const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
   const observed = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
   return Math.max(0, Math.floor((today - observed) / 86_400_000))
+}
+
+function timestampLagDays(value: string | null, now: Date) {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return Math.max(0, Math.floor((now.getTime() - date.getTime()) / 86_400_000))
 }
 
 function addDays(value: Date, days: number) {
@@ -145,8 +232,8 @@ function isoDate(value: Date) {
 }
 
 function cleanText(value: unknown) {
-  if (typeof value !== "string") return null
-  const normalized = value.replace(/\s+/g, " ").trim()
+  if (value === null || value === undefined) return null
+  const normalized = String(value).replace(/\s+/g, " ").trim()
   return normalized || null
 }
 
