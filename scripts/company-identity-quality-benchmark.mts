@@ -66,6 +66,34 @@ if (recall < 0.9) {
   process.exit(1)
 }
 
+for (const policyCase of [
+  { method: "normalized_exact", confidence: 0.9, country: "CL", expected: true },
+  { method: "normalized_exact", confidence: 0.8, country: "CL", expected: false },
+  { method: "normalized_exact", confidence: 0.9, country: null, expected: false },
+  { method: "fuzzy", confidence: 0.99, country: "CL", expected: false },
+]) {
+  const actual = autoLinkAllowed(policyCase.method, policyCase.confidence, policyCase.country)
+  if (actual !== policyCase.expected) {
+    console.error(`Company identity benchmark FAIL: auto-link policy mismatch for ${JSON.stringify(policyCase)}`)
+    process.exit(1)
+  }
+}
+
+const policyMigration = await readFile("supabase/migrations/20260830233738_enforce_company_identity_autolink_policy.sql", "utf8")
+for (const needle of [
+  "company_identity_auto_link_allowed",
+  "p_confidence >= 0.900",
+  "review_required",
+  "missing_country_context",
+  "'*:' || a.identity_key",
+  "intelligence_company_identity_reviews",
+]) {
+  if (!policyMigration.includes(needle)) {
+    console.error(`Company identity benchmark FAIL: policy migration missing ${needle}`)
+    process.exit(1)
+  }
+}
+
 console.log("Company identity benchmark PASS")
 
 function normalizeCompanyIdentity(value: string) {
@@ -84,6 +112,12 @@ function normalizeCompanyIdentity(value: string) {
   ).trim()
 
   return normalized
+}
+
+function autoLinkAllowed(method: string, confidence: number, country: string | null) {
+  return method.trim().toLowerCase() === "normalized_exact"
+    && confidence >= 0.9
+    && Boolean(country?.trim())
 }
 
 function round(value: number) {
