@@ -31,12 +31,47 @@ export type ObservedSourceChange = {
   changed_fields: string[]
 }
 
+export type StrategicChangeEvidencePreview = {
+  id: string
+  kind: "patent" | "trademark"
+  change_type: string
+  title: string
+  summary: string | null
+  source_url: string | null
+  source_date: string | null
+  observed_at: string
+  role: string
+}
+
+export type StrategicChange = {
+  id: string
+  subject_name: string
+  change_type: string
+  title: string
+  observed_fact: string
+  interpretation: string
+  why_it_matters: string
+  materiality: "alta" | "media" | "baja"
+  confidence: number
+  event_count: number
+  distinct_records: number
+  patent_events: number
+  trademark_events: number
+  classification_codes: string[]
+  period_start: string
+  period_end: string
+  first_observed_at: string
+  last_observed_at: string
+  evidence: StrategicChangeEvidencePreview[]
+}
+
 export type ChangeDetectionStatus = {
   ready: boolean
   baselines_ready: number
   baselines_expected: number
   states_total: number
   events_7d: number
+  strategic_changes_7d: number
   last_observed_at: string | null
 }
 
@@ -49,6 +84,7 @@ export type WeeklyBriefContext = {
     trademarks: IntelligenceCoverage
   }
   change_detection: ChangeDetectionStatus
+  strategic_changes: StrategicChange[]
   observed_changes: ObservedSourceChange[]
   recent_activity: RecentCorpusActivity[]
 }
@@ -69,6 +105,37 @@ type SourceChangeRow = {
   observed_at: string
   materiality: string
   changed_fields: string[] | null
+}
+type StrategicChangeRow = {
+  id: string
+  subject_name: string
+  change_type: string
+  title: string
+  observed_fact: string
+  interpretation: string
+  why_it_matters: string
+  materiality: string
+  confidence: number
+  event_count: number
+  distinct_records: number
+  patent_events: number
+  trademark_events: number
+  classification_codes: string[] | null
+  period_start: string
+  period_end: string
+  first_observed_at: string
+  last_observed_at: string
+}
+type EvidenceLinkRow = { strategic_change_id: string; source_event_id: string; evidence_role: string }
+type EvidenceEventRow = {
+  id: string
+  entity_type: string
+  event_type: string
+  title: string | null
+  summary: string | null
+  source_url: string | null
+  source_date: string | null
+  observed_at: string
 }
 
 const EXPECTED_CHANGE_BASELINES = 4
@@ -99,7 +166,7 @@ export async function buildWeeklyBriefContext(admin: SupabaseClient): Promise<We
   const patentPeriodStart = patentLatest ? isoDate(addDays(new Date(`${patentLatest}T00:00:00Z`), -29)) : null
   const trademarkPeriodStart = trademarkLatest ? isoDate(addDays(new Date(`${trademarkLatest}T00:00:00Z`), -29)) : null
 
-  const [patentCountResult, trademarkCountResult, patentsResult, trademarksResult, baselineCountResult, stateCountResult, observedChangesResult] = await Promise.all([
+  const [patentCountResult, trademarkCountResult, patentsResult, trademarksResult, baselineCountResult, stateCountResult, observedChangesResult, strategicChangesResult] = await Promise.all([
     patentLatest && patentPeriodStart
       ? admin.from("patent_records").select("id", { count: "exact", head: true }).gte("filing_date", patentPeriodStart).lte("filing_date", patentLatest)
       : Promise.resolve({ count: 0, error: null }),
@@ -116,6 +183,12 @@ export async function buildWeeklyBriefContext(admin: SupabaseClient): Promise<We
       .gte("observed_at", windowStartTimestamp)
       .order("observed_at", { ascending: false })
       .limit(12),
+    admin.from("intelligence_strategic_changes")
+      .select("id,subject_name,change_type,title,observed_fact,interpretation,why_it_matters,materiality,confidence,event_count,distinct_records,patent_events,trademark_events,classification_codes,period_start,period_end,first_observed_at,last_observed_at", { count: "exact" })
+      .gte("last_observed_at", windowStartTimestamp)
+      .order("confidence", { ascending: false })
+      .order("last_observed_at", { ascending: false })
+      .limit(8),
   ])
 
   logQueryError("patent latest-period count", patentCountResult.error)
@@ -125,6 +198,7 @@ export async function buildWeeklyBriefContext(admin: SupabaseClient): Promise<We
   logQueryError("change baseline count", baselineCountResult.error)
   logQueryError("change state count", stateCountResult.error)
   logQueryError("observed source changes", observedChangesResult.error)
+  logQueryError("strategic changes", strategicChangesResult.error)
 
   const patentFilingLag = dateLagDays(patentLatest, now)
   const trademarkFilingLag = dateLagDays(trademarkLatest, now)
@@ -169,8 +243,33 @@ export async function buildWeeklyBriefContext(admin: SupabaseClient): Promise<We
     changed_fields: Array.isArray(row.changed_fields) ? row.changed_fields.map(String) : [],
   }))
 
+  const strategicRows = (strategicChangesResult.data ?? []) as StrategicChangeRow[]
+  const evidenceByChange = await loadStrategicEvidence(admin, strategicRows.map(row => String(row.id)))
+  const strategicChanges: StrategicChange[] = strategicRows.map(row => ({
+    id: String(row.id),
+    subject_name: String(row.subject_name),
+    change_type: String(row.change_type),
+    title: String(row.title),
+    observed_fact: String(row.observed_fact),
+    interpretation: String(row.interpretation),
+    why_it_matters: String(row.why_it_matters),
+    materiality: row.materiality === "alta" || row.materiality === "media" ? row.materiality : "baja",
+    confidence: Number(row.confidence) || 0,
+    event_count: Number(row.event_count) || 0,
+    distinct_records: Number(row.distinct_records) || 0,
+    patent_events: Number(row.patent_events) || 0,
+    trademark_events: Number(row.trademark_events) || 0,
+    classification_codes: Array.isArray(row.classification_codes) ? row.classification_codes.map(String) : [],
+    period_start: String(row.period_start),
+    period_end: String(row.period_end),
+    first_observed_at: String(row.first_observed_at),
+    last_observed_at: String(row.last_observed_at),
+    evidence: evidenceByChange.get(String(row.id)) ?? [],
+  }))
+
   const baselinesReady = baselineCountResult.count ?? 0
   const events7d = observedChangesResult.count ?? 0
+  const strategicChanges7d = strategicChangesResult.count ?? 0
 
   return {
     generated_at: now.toISOString(),
@@ -200,11 +299,65 @@ export async function buildWeeklyBriefContext(admin: SupabaseClient): Promise<We
       baselines_expected: EXPECTED_CHANGE_BASELINES,
       states_total: stateCountResult.count ?? 0,
       events_7d: events7d,
-      last_observed_at: observedChanges[0]?.observed_at ?? null,
+      strategic_changes_7d: strategicChanges7d,
+      last_observed_at: strategicChanges[0]?.last_observed_at ?? observedChanges[0]?.observed_at ?? null,
     },
+    strategic_changes: strategicChanges,
     observed_changes: observedChanges,
     recent_activity: recentActivity,
   }
+}
+
+async function loadStrategicEvidence(admin: SupabaseClient, strategicChangeIds: string[]) {
+  const result = new Map<string, StrategicChangeEvidencePreview[]>()
+  if (!strategicChangeIds.length) return result
+
+  const { data: links, error: linkError } = await admin
+    .from("intelligence_strategic_change_evidence")
+    .select("strategic_change_id,source_event_id,evidence_role")
+    .in("strategic_change_id", strategicChangeIds)
+  if (linkError) {
+    logQueryError("strategic evidence links", linkError)
+    return result
+  }
+
+  const linkRows = (links ?? []) as EvidenceLinkRow[]
+  const eventIds = [...new Set(linkRows.map(row => String(row.source_event_id)))]
+  if (!eventIds.length) return result
+
+  const { data: sourceEvents, error: eventError } = await admin
+    .from("intelligence_source_events")
+    .select("id,entity_type,event_type,title,summary,source_url,source_date,observed_at")
+    .in("id", eventIds)
+  if (eventError) {
+    logQueryError("strategic evidence events", eventError)
+    return result
+  }
+
+  const eventById = new Map(((sourceEvents ?? []) as EvidenceEventRow[]).map(row => [String(row.id), row]))
+  for (const link of linkRows) {
+    const event = eventById.get(String(link.source_event_id))
+    if (!event) continue
+    const changeId = String(link.strategic_change_id)
+    const current = result.get(changeId) ?? []
+    current.push({
+      id: String(event.id),
+      kind: event.entity_type === "trademark" ? "trademark" : "patent",
+      change_type: String(event.event_type),
+      title: cleanText(event.title) || (event.entity_type === "trademark" ? "Evidencia marcaria" : "Evidencia de patente"),
+      summary: cleanText(event.summary),
+      source_url: cleanText(event.source_url),
+      source_date: cleanText(event.source_date),
+      observed_at: String(event.observed_at),
+      role: String(link.evidence_role),
+    })
+    result.set(changeId, current)
+  }
+
+  for (const [changeId, evidence] of result) {
+    result.set(changeId, evidence.sort((a, b) => b.observed_at.localeCompare(a.observed_at)).slice(0, 4))
+  }
+  return result
 }
 
 function dateLagDays(value: string | null, now: Date) {
