@@ -84,9 +84,9 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
 
           <div className="my-auto w-full max-w-lg py-12 lg:py-16">
             <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Cuenta gratuita</p>
-            <h1 className="mt-4 text-4xl font-medium tracking-[-0.045em] sm:text-5xl">Continúa tu investigación.</h1>
+            <h1 className="mt-4 text-4xl font-medium tracking-[-0.045em] sm:text-5xl">Continúa con una vista preliminar.</h1>
             <p className="mt-4 max-w-md text-sm leading-6 text-muted-foreground">
-              Crea una cuenta y obtén 3 investigaciones al mes. Sin tarjeta. Si necesitas más, puedes pasar a acceso completo después.
+              Crea una cuenta y obtén 3 vistas preliminares al mes. Sin tarjeta. El análisis completo, los expedientes y la vigilancia requieren acceso empresarial.
             </p>
 
             <form onSubmit={handleSignUp} className="mt-8 space-y-5">
@@ -139,17 +139,17 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
 
         <aside className="hidden min-h-svh flex-col justify-between bg-card/20 px-12 py-10 lg:flex">
           <div className="flex justify-end">
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Demo → cuenta → investigación</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Demo → cuenta → empresa</span>
           </div>
           <div className="max-w-lg pb-12">
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Acceso simple</p>
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Vista preliminar</p>
             <p className="mt-5 text-3xl font-medium leading-tight tracking-[-0.035em]">
-              Tres investigaciones mensuales para seguir evaluando antes de contratar acceso completo.
+              Comprueba cobertura y coincidencias antes de solicitar acceso al workspace completo.
             </p>
             <div className="mt-8 divide-y divide-border border-y border-border text-sm">
-              <AuthLine number="01" text="3 investigaciones al mes." />
-              <AuthLine number="02" text="Tus consultas quedan asociadas a tu cuenta." />
-              <AuthLine number="03" text="El acceso completo aparece sólo cuando lo necesitas." />
+              <AuthLine number="01" text="3 vistas preliminares al mes." />
+              <AuthLine number="02" text="Muestra limitada de coincidencias, estados y clases." />
+              <AuthLine number="03" text="Sin recomendaciones, estrategia ni asesoría jurídica." />
             </div>
           </div>
           <p className="text-xs text-muted-foreground">VIDENTIA · by N3uralia</p>
