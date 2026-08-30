@@ -55,6 +55,9 @@ jobs:
       - name: Company direction regression
         run: node scripts/company-direction-regression.mts
 
+      - name: Grade A block 1-3 regression
+        run: node scripts/grade-a-block-1-3-regression.mts
+
       - name: TypeScript
         run: pnpm exec tsc --noEmit
 
