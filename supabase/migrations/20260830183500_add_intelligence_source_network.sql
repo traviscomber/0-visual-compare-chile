@@ -1,3 +1,17 @@
+alter table public.intelligence_sources
+  drop constraint if exists intelligence_sources_source_type_check;
+
+alter table public.intelligence_sources
+  add constraint intelligence_sources_source_type_check
+  check (source_type = any (array[
+    'official_api'::text,
+    'official_dataset'::text,
+    'official_web'::text,
+    'judicial_repository'::text,
+    'public_api'::text,
+    'reference_only'::text
+  ]));
+
 insert into public.intelligence_sources
   (source_key, name, authority, base_url, source_type, license, freshness_policy, is_active, metadata)
 values
