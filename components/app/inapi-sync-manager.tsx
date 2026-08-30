@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Database, Play, RefreshCcw, SearchCode, TimerReset } from "lucide-react"
+import { CheckCircle2, Database, Play, RefreshCcw, SearchCode, TimerReset } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -255,15 +255,21 @@ export function InapiSyncManager() {
                     : " · no quedan ventanas pendientes"}
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="secondary"
-                className="shrink-0 bg-[#173B37] text-white hover:bg-[#20393A]"
-                onClick={applySuggestedPhase1Window}
-                disabled={!stats.phase1Plan.nextWindow}
-              >
-                Aplicar ventana sugerida
-              </Button>
+              {stats.phase1Plan.nextWindow ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="shrink-0 bg-[#173B37] text-white hover:bg-[#20393A]"
+                  onClick={applySuggestedPhase1Window}
+                >
+                  Aplicar ventana sugerida
+                </Button>
+              ) : (
+                <div className="flex shrink-0 items-center gap-2 border border-[#36514F] bg-[#173B37] px-3 py-2 text-xs font-medium text-[#B7D3D1]">
+                  <CheckCircle2 className="h-4 w-4" strokeWidth={1.7} aria-hidden="true" />
+                  Cobertura completa
+                </div>
+              )}
             </div>
           </section>
         ) : null}
