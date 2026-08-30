@@ -67,14 +67,14 @@ export function CompareWorkbench() {
 
   if (result) {
     return (
-      <div className="flex flex-col gap-5">
-        <div className="flex flex-col gap-3 border-y border-border py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-7">
+        <div className="flex flex-col gap-4 border-y border-border bg-card/25 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-primary">Comparación persistida</p>
-            <p className="mt-1 text-sm text-muted-foreground">La evidencia quedó disponible en Actividad y en el detalle técnico.</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#96B5A6]">Comparación persistida</p>
+            <p className="mt-2 text-sm leading-6 text-white/80">La evidencia quedó disponible en Reportes y en el detalle técnico.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={handleReset}>
+            <Button variant="secondary" onClick={handleReset}>
               <RotateCcw className="mr-2 h-4 w-4" /> Nueva comparación
             </Button>
             <Button onClick={() => router.push(`/comparisons/${result.id}`)}>Abrir detalle</Button>
@@ -89,24 +89,36 @@ export function CompareWorkbench() {
     )
   }
 
+  const ready = Boolean(imageA && imageB)
+
   return (
-    <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+    <section aria-labelledby="compare-workbench-title">
+      <div className="mb-5">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#96B5A6]">Evidencia visual</p>
+        <h2 id="compare-workbench-title" className="mt-2 text-2xl font-light tracking-[-0.03em] text-[#E7DFCE]">
+          Prepara las dos imágenes a contrastar
+        </h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+          Mantén cada imagen como evidencia separada. La comparación se ejecuta sólo cuando ambas están listas.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <ImageDropzone label="01 / Imagen A" image={imageA} onChange={setImageA} />
         <ImageDropzone label="02 / Imagen B" image={imageB} onChange={setImageB} />
       </div>
 
-      <div className="flex flex-col gap-4 border-y border-border py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-5 flex flex-col gap-4 border-y border-border bg-card/20 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">03 / Comparar</p>
-          <p className="mt-1 text-sm font-medium text-foreground">
-            {imageA && imageB ? "Ambas evidencias están listas." : "Selecciona dos imágenes para habilitar la comparación."}
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">03 / Ejecutar comparación</p>
+          <p className="mt-2 text-sm font-medium text-foreground">
+            {ready ? "Ambas evidencias están listas." : "Selecciona dos imágenes para habilitar la comparación."}
           </p>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">El resultado se guarda automáticamente y conserva sus señales técnicas.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="ghost" onClick={handleReset} disabled={!imageA && !imageB}>Limpiar</Button>
-          <Button onClick={handleCompare} disabled={!imageA || !imageB || comparing}>
+          <Button onClick={handleCompare} disabled={!ready || comparing}>
             {comparing ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" />Comparando…</>
             ) : (
@@ -115,6 +127,6 @@ export function CompareWorkbench() {
           </Button>
         </div>
       </div>
-    </div>
+    </section>
   )
 }
