@@ -1,0 +1,117 @@
+export type IntelligenceLayer =
+  | "propiedad_industrial"
+  | "patentes"
+  | "ciencia_tecnologia"
+  | "empresas"
+  | "mercado"
+  | "noticias"
+  | "jurisprudencia"
+
+export type AutomationPolicy = "allowed" | "credentials_required" | "manual_only"
+
+export type SourceDefinition = {
+  key: string
+  layer: IntelligenceLayer
+  purpose: string
+  automationPolicy: AutomationPolicy
+  credentialEnv?: string[]
+  note?: string
+}
+
+export const SOURCE_NETWORK: SourceDefinition[] = [
+  {
+    key: "inapi_open_data",
+    layer: "propiedad_industrial",
+    purpose: "Marcas, solicitudes, titulares, estados, clases de Niza y evidencia oficial de Chile.",
+    automationPolicy: "allowed",
+  },
+  {
+    key: "tdpi",
+    layer: "jurisprudencia",
+    purpose: "Señales procesales y jurisprudencia del Tribunal de Propiedad Industrial.",
+    automationPolicy: "allowed",
+  },
+  {
+    key: "registro_empresas",
+    layer: "empresas",
+    purpose: "Resolución de identidad societaria y RUT de empresas chilenas.",
+    automationPolicy: "allowed",
+  },
+  {
+    key: "cmf",
+    layer: "empresas",
+    purpose: "Condición regulatoria y presencia de entidades fiscalizadas por la CMF.",
+    automationPolicy: "allowed",
+  },
+  {
+    key: "mercado_publico",
+    layer: "mercado",
+    purpose: "Compras públicas, licitaciones y actividad comercial verificable en Chile.",
+    automationPolicy: "credentials_required",
+    credentialEnv: ["CHILECOMPRA_TICKET"],
+  },
+  {
+    key: "openalex",
+    layer: "ciencia_tecnologia",
+    purpose: "Publicaciones, autores, instituciones y dinámica científica para medir evolución tecnológica.",
+    automationPolicy: "allowed",
+    credentialEnv: ["OPENALEX_API_KEY"],
+    note: "La clave es opcional para uso básico y recomendable para operación continua.",
+  },
+  {
+    key: "crossref",
+    layer: "ciencia_tecnologia",
+    purpose: "Metadatos DOI y publicaciones para corroborar actividad científica y tecnológica.",
+    automationPolicy: "allowed",
+    credentialEnv: ["CROSSREF_MAILTO"],
+    note: "CROSSREF_MAILTO no es obligatorio, pero habilita el polite pool recomendado por Crossref.",
+  },
+  {
+    key: "epo_ops",
+    layer: "patentes",
+    purpose: "Datos mundiales de patentes, familias, bibliografía y estado legal mediante EPO OPS.",
+    automationPolicy: "credentials_required",
+    credentialEnv: ["EPO_OPS_CLIENT_ID", "EPO_OPS_CLIENT_SECRET"],
+    note: "Requiere una aplicación registrada en EPO OPS y aceptación de sus términos.",
+  },
+  {
+    key: "gdelt",
+    layer: "noticias",
+    purpose: "Cambios recientes y señales públicas en medios para complementar evidencia de mercado y competidores.",
+    automationPolicy: "allowed",
+  },
+  {
+    key: "wipo_global_brand_db",
+    layer: "propiedad_industrial",
+    purpose: "Referencia internacional de marcas y similitud visual de WIPO.",
+    automationPolicy: "manual_only",
+    note: "WIPO prohíbe consultas automatizadas y scraping de la Global Brand Database; no se usa como conector automático.",
+  },
+]
+
+export function runtimeSourceStatus(definition: SourceDefinition) {
+  if (definition.automationPolicy === "manual_only") {
+    return { status: "manual_only" as const, configured: false, missing: [] as string[] }
+  }
+
+  const required = definition.credentialEnv ?? []
+  const missing = required.filter(name => !String(process.env[name] ?? "").trim())
+
+  if (definition.key === "openalex" || definition.key === "crossref") {
+    return {
+      status: missing.length ? "ready_basic" as const : "ready" as const,
+      configured: true,
+      missing,
+    }
+  }
+
+  if (definition.automationPolicy === "credentials_required" && missing.length) {
+    return { status: "credentials_required" as const, configured: false, missing }
+  }
+
+  return { status: "ready" as const, configured: true, missing }
+}
+
+export function sourceDefinition(key: string) {
+  return SOURCE_NETWORK.find(item => item.key === key) ?? null
+}
