@@ -21,6 +21,20 @@ function previewHeaders(extra: Record<string, string> = {}) {
 }
 
 export async function GET(request: NextRequest) {
+  const query = request.nextUrl.searchParams.get("q")?.trim() ?? ""
+  if (query.length < 2) {
+    return NextResponse.json(
+      { error: "Ingresa al menos 2 caracteres." },
+      { status: 400, headers: previewHeaders() },
+    )
+  }
+  if (query.length > MAX_QUERY_LENGTH) {
+    return NextResponse.json(
+      { error: `La consulta no puede superar ${MAX_QUERY_LENGTH} caracteres.` },
+      { status: 400, headers: previewHeaders() },
+    )
+  }
+
   const quota = await reservePublicDemoQuota(getPublicDemoIdentity(request.headers))
   if (!quota.ok) {
     return NextResponse.json(
@@ -37,29 +51,13 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  const query = request.nextUrl.searchParams.get("q")?.trim() ?? ""
-  if (query.length < 2) {
-    return NextResponse.json(
-      { error: "Ingresa al menos 2 caracteres." },
-      { status: 400, headers: previewHeaders(rateHeaders) },
-    )
-  }
-  if (query.length > MAX_QUERY_LENGTH) {
-    return NextResponse.json(
-      { error: `La consulta no puede superar ${MAX_QUERY_LENGTH} caracteres.` },
-      { status: 400, headers: previewHeaders(rateHeaders) },
-    )
-  }
-
   try {
     const result = await searchPatentsLocal(query, null, 25)
     const visible = result.hits.slice(0, PUBLIC_RESULT_LIMIT).map((hit) => ({
-      id: hit.id,
       title: hit.title,
       status: hit.status,
       country: hit.country,
       ipc: hit.ipc.slice(0, 4),
-      relevanceScore: hit.relevanceScore,
     }))
 
     return NextResponse.json(
