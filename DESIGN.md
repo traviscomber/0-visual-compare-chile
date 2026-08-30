@@ -1,12 +1,13 @@
 # VIDENTIA DESIGN MASTER LOCK
 
 Status: ACTIVE — MUST FOLLOW
+Version: 2.0 — full public landing
 
-This file is the implementation contract for VIDENTIA visual work. It exists to prevent reinterpretation between design passes. The approved user-supplied reference graphics and `VIDENTIA_FINAL_BRAND_BIBLE_CODEX.md` are the source of truth. If existing CSS, components, previous mockups, generated concepts, or legacy UI conflict with this file, this file wins.
+This file is the implementation contract for VIDENTIA visual work. It exists to prevent reinterpretation between design passes. The approved user-supplied VIDENTIA graphics, the current production hero illustration, and the user's latest instruction to make the full landing richer and more atmospheric are the source of truth. If existing CSS, components, previous mockups, generated concepts, or legacy UI conflict with this file, this file wins.
 
 ## 1. Working method
 
-Implementation is section-by-section. Do not redesign the whole page at once.
+Implementation remains section-by-section, but the active scope is now the complete public landing.
 
 Order:
 1. Hero + navigation
@@ -14,34 +15,38 @@ Order:
 3. How it works
 4. Main capabilities
 5. Audiences
-6. Trust / logos
+6. Ongoing protection / portfolio value
 7. Final CTA
 8. Footer
-9. Authenticated product surfaces
 
 For each section:
-- use the supplied reference image as the visual target;
-- keep copy and information architecture code-native;
-- reuse or recreate the approved visual asset at production resolution;
-- implement only that section;
-- verify desktop and mobile;
-- compare browser render against the reference before moving to the next section;
-- do not advance while a material fidelity mismatch remains.
+- preserve the information architecture and truthful product claims;
+- keep all real copy, navigation, forms and controls code-native;
+- reuse the approved two-person comparison illustration already versioned in `/public`;
+- use CSS/SVG for atmosphere, geometry, dividers and lighting; do not create new raster concept images;
+- verify desktop and mobile before moving on;
+- do not merge while a material visual or responsive mismatch remains.
 
-## 2. Canonical reference set
+## 2. Canonical visual direction
 
-The approved reference set is the four graphics supplied by the user:
+VIDENTIA must feel like:
 
-- Full VIDENTIA landing reference: dark premium Bauhaus homepage with header, hero, trust strip, process, feature/audience blocks, trust logos, CTA and footer.
-- Geometric icon sheet: thin black geometric/Bauhaus symbols used as the icon-language reference.
-- Bauhaus field: muted dark teal/sage/cream/mineral-blue modular geometry.
-- Comparison illustration: two faceless people holding large magnifying glasses over the Bauhaus field.
+`premium trademark intelligence × restrained Bauhaus geometry × dark evidence terminal`
 
-Generated HD versions are production assets only. They must preserve the reference composition, silhouette, palette and geometry; they are not permission to invent a new art direction.
+The page is dark, calm and precise, but no longer visually flat. It may use controlled atmospheric depth that stays inside the locked brand palette.
 
-## 3. Locked visual system
+Core characteristics:
+- deep obsidian/teal environment;
+- cream editorial typography;
+- restrained green as the primary signal;
+- mineral blue as secondary atmospheric light;
+- Bauhaus circles, squares, arcs, grids and diagonals used as structural background geometry;
+- thin one-color iconography;
+- strong negative space;
+- luminous accents only where they improve hierarchy or focus.
 
-Palette:
+## 3. Locked palette
+
 - Obsidian Teal Black: `#0F2A33`
 - Deep Background: `#091A20`
 - Brand Green: `#4A7F74`
@@ -53,121 +58,204 @@ Palette:
 - Soft Neutral: `#BDBEBD`
 - Graphite Teal: `#172F34`
 
-Typography:
+No purple, magenta, bright cyan, electric blue or unrelated accent colors.
+
+## 4. Typography
+
 - Montserrat only.
-- Hero/H1: weight 300, editorial cream, architectural line-height, selected short phrase in Brand Green only.
-- Body: weight 400, white.
-- Metadata/navigation: muted neutral or restrained green.
+- H1/H2 weight 300 or 400, never heavy bold.
+- Major headings use Warm Editorial Cream, not pure white.
+- One short phrase or keyword may use Brand Green.
+- Body copy uses white or soft neutral according to hierarchy.
+- Navigation and metadata remain small, thin and quiet.
 
-Prohibited:
-- gradients;
-- glow;
-- glassmorphism;
-- neon cyan/green;
-- glossy or 3D illustration;
-- generic AI visual language;
-- heavy shadows;
-- excessive cards;
-- outlined default buttons;
-- pure-white H1/H2;
-- decorative pills/badges not present in the reference;
-- visual re-interpretation of the two-person comparison illustration.
+## 5. Atmospheric effects — explicit user-approved exception
 
-## 4. HERO — CURRENT IMPLEMENTATION TARGET
+The previous blanket prohibition on gradients/glow is superseded by the user's latest instruction for a richer hero and full-page treatment.
 
-This is the active section. Do not change downstream landing sections until the hero is signed off.
+Allowed:
+- dark-to-darker linear gradients using only `#091A20` / `#0F2A33` / `#172F34`;
+- restrained radial green and mineral-blue light fields at low opacity;
+- very soft glow around primary signals, icons or the hero scene;
+- 1px luminous borders using transparent brand-green/pale-mineral values;
+- subtle geometric line grids and Bauhaus fields;
+- soft edge fades that blend the illustration into the dark page;
+- CSS masks/pseudo-elements for visual depth;
+- modest hover illumination and translate effects.
 
-### 4.1 Desktop composition
+Limits:
+- no rainbow gradients;
+- no neon cyan/green;
+- no glassmorphism/frosted panels;
+- no glossy 3D;
+- no heavy drop shadows;
+- no glow that reduces text or evidence legibility;
+- no moving gradients;
+- no cyberpunk visual language.
 
-The reference composition is approximately 46% content / 54% illustration.
+## 6. Hero + navigation
 
-Header:
-- deep dark background integrated with hero;
-- VIDENTIA wordmark left with tagline beneath;
-- navigation centered/right: `BUSCAR`, `REGISTRAR`, `VIGILAR`, `GESTIONAR`, `PRECIOS`, `RECURSOS`;
-- `INICIAR SESIÓN` near the right;
-- final CTA `BUSCAR UNA MARCA` as a restrained green-accent action;
-- thin typography, generous spacing, no floating glass container.
+Hero copy remains exactly:
+- `FUENTES OFICIALES · EVIDENCIA TRAZABLE`
+- `Protege tu marca`
+- `desde antes de`
+- `registrarla.`
+- `Investiga antecedentes, registra, vigila y administra tus marcas desde un solo lugar.`
+- search placeholder `Buscar una marca, nombre o logo`
+- action `BUSCAR`
 
-Hero left:
-- eyebrow exactly: `FUENTES OFICIALES · EVIDENCIA TRAZABLE`;
-- H1 exactly:
-  - `Protege tu marca`
-  - `desde antes de`
-  - `registrarla.`
-- first two lines cream `#E7DFCE`;
-- `registrarla.` Brand Green `#4A7F74`;
-- body exactly: `Investiga antecedentes, registra, vigila y administra tus marcas desde un solo lugar.`;
-- integrated search control below with placeholder `Buscar una marca, nombre o logo`;
-- search action is inside the same rectangular control;
-- no trust-point chips below the search in the hero.
-
-Hero right:
-- use the approved two-person magnifying-glass comparison asset;
-- preserve relative pose, faceless treatment, cream line work, green left pants, mineral-blue right pants and large paired magnifying glasses;
-- background must be the muted Bauhaus geometric field;
-- no tint overlay over the illustration;
-- image fills the right hero region naturally and blends into the hero dark background by crop/edge placement, not by a gradient wash.
-
-### 4.2 Hero dimensions and rhythm
-
-Desktop target:
-- content max width near 1480px;
-- nav height approximately 80–88px;
-- hero viewport below nav approximately 600–680px at 1440px wide;
-- headline target scale approximately 58–72px depending on viewport;
-- headline line-height about 1.06;
-- search width roughly 500–560px;
-- illustration should be visually dominant on the right without crossing into headline readability.
-
-Mobile target:
-- brand/header first;
-- eyebrow;
-- H1;
-- body;
-- search;
-- illustration;
-- no horizontal overflow;
-- illustration remains recognizable and is not reduced to a decorative thumbnail;
-- CTA and search remain at least 44px touch height.
-
-### 4.3 Allowed hero copy
-
-No additional visible copy above the fold beyond:
-- `VIDENTIA`
-- `INTELIGENCIA Y PROTECCIÓN DE MARCAS`
-- nav labels listed above
+Navigation remains:
+- `BUSCAR`
+- `REGISTRAR`
+- `VIGILAR`
+- `GESTIONAR`
+- `PRECIOS`
+- `RECURSOS`
 - `INICIAR SESIÓN`
 - `BUSCAR UNA MARCA`
-- `FUENTES OFICIALES · EVIDENCIA TRAZABLE`
-- H1 text listed above
-- body text listed above
-- search placeholder
-- `BUSCAR`
 
-Any current hero-only proof chips such as `Chile primero`, `INAPI identificable`, `Niza + Viena`, or `Sin veredictos automáticos` must be removed from the hero. Those concepts may reappear only in a later approved section.
+Hero composition:
+- approximately 43–47% copy / 53–57% visual on desktop;
+- two-person comparison illustration dominates the right side;
+- background behind the illustration combines the approved Bauhaus field with code-native subtle light/grids;
+- image remains readable, faceless and faithful to the supplied pose;
+- the hero may have restrained green/blue atmospheric light around the scene and search control;
+- no additional hero proof chips.
 
-## 5. Assets
+## 7. Trust strip
 
-Production hero asset names:
-- `/images/videntia-hero-comparison-hd.webp` — approved two-person comparison illustration, preserving the supplied reference geometry at production resolution.
-- future `/images/videntia-bauhaus-field-hd.png` — standalone Bauhaus background for later sections if required.
-- future `/images/videntia-geometric-icons-hd.png` — reference sheet; do not use the raster sheet itself as clickable UI icons.
+Four items:
+1. Revisión inicial gratuita
+2. Fuentes oficiales
+3. Evidencia trazable
+4. Alertas inteligentes
 
-For functional UI icons use thin production SVG/Lucide only when the metaphor and stroke match the reference. The raster icon sheet is an art-direction reference, not a substitute for semantic controls.
+Treatment:
+- continuous dark band rather than four floating cards;
+- thin vertical separators on desktop;
+- large thin-line icon left/top;
+- subtle green/blue light behind the icon only;
+- title cream/white; description muted;
+- stacks cleanly on mobile.
 
-## 6. Fidelity gate
+## 8. How it works
 
-Before this hero can be considered complete, verify at minimum:
-1. wordmark/nav placement against reference;
-2. exact above-the-fold copy;
-3. H1 line breaks, weight and cream/green split;
-4. search rectangle proportions and integrated action;
-5. two-person illustration placement/scale;
-6. palette/background fidelity;
-7. absence of gradients/glow/glass;
-8. desktop first viewport;
-9. mobile first viewport;
-10. no runtime/console errors and search still routes to `/demo?marca=...`.
+Section heading:
+- `02. CÓMO FUNCIONA`
+- `Un proceso simple, inteligente y trazable.`
 
-Do not proceed to section 2 until these checks pass.
+Use four steps:
+1. Busca — encuentra la marca o nombre a investigar.
+2. Analiza — recopila antecedentes desde fuentes identificables.
+3. Evalúa — organiza señales, similitud y evidencia para revisión.
+4. Protege — conecta registro, vigilancia y administración continua.
+
+Treatment:
+- horizontal process rail on desktop;
+- large geometric step symbols built from CSS/SVG/Lucide, not screenshot crops;
+- subtle connecting line;
+- no boxed card grid.
+
+## 9. Main capabilities
+
+Section heading:
+- `03. CAPACIDADES PRINCIPALES`
+- `Todo lo que necesitas para proteger tu marca.`
+
+Capabilities remain truthful and product-supported:
+- Búsqueda profunda
+- Vigilancia continua
+- Gestión centralizada
+- Reportes con evidencia
+
+Treatment:
+- open two-column editorial layout on desktop;
+- geometric icon motifs with low-opacity atmospheric halos;
+- one clear CTA to plans/contact;
+- no invented metrics or legal certainty claims.
+
+## 10. Audiences
+
+Section heading:
+- `04. PARA QUIÉN ES`
+- `Diseñado para equipos que construyen marcas.`
+
+Audiences:
+- Emprendedores
+- Estudios jurídicos
+- Empresas
+- Agencias
+- Corporaciones / equipos legales
+
+Treatment:
+- compact icon/label constellation, not repetitive cards;
+- Bauhaus arc/dot composition on the side as structural decoration;
+- keep descriptive copy limited.
+
+## 11. Ongoing protection value
+
+Use the existing truthful product axis:
+- Portfolio
+- Watch
+- Deadlines
+
+This section answers what changes after the initial search: what you own, what changed, what requires attention and what deadline comes next.
+
+Treatment:
+- dark band with three high-contrast signal blocks;
+- subtle luminous rails, not floating glass cards;
+- no fake live counts.
+
+## 12. Final CTA
+
+Copy:
+- `EMPIEZA HOY`
+- `Empieza a proteger tu marca hoy.`
+- `Revisión inicial gratuita. Sin tarjeta de crédito.`
+
+Actions:
+- `BUSCAR UNA MARCA`
+- `CONOCER PLANES`
+
+Treatment:
+- strong negative space;
+- code-native Bauhaus semicircle/arc composition;
+- primary action has restrained green light/border treatment;
+- no full-screen glow or oversized effects.
+
+## 13. Footer
+
+Footer keeps:
+- VIDENTIA wordmark/tagline;
+- product/legal disclaimer;
+- privacy and terms links;
+- N3uralia attribution.
+
+Use dark deep background, thin dividers and muted text. No visual noise.
+
+## 14. Accessibility and motion
+
+- WCAG 2.2 AA contrast for body text and controls.
+- Keyboard focus remains visible.
+- Touch targets >= 44px where practical.
+- `prefers-reduced-motion` disables reveal/translate effects.
+- Motion: 120–220ms for hover/focus, 400–600ms for section reveal; no elastic motion.
+- Decorative geometry is `aria-hidden` / CSS-only.
+
+## 15. Fidelity and quality gate
+
+Before merge verify:
+1. exact hero copy and three-line H1;
+2. navigation labels and primary CTA;
+3. search still routes to `/demo?marca=...`;
+4. illustration loads at desktop/mobile without clipping the key pose;
+5. page-wide palette stays inside locked colors;
+6. atmospheric effects are subtle and never neon/glass;
+7. trust strip, process, capabilities, audiences, ongoing protection, CTA and footer all share one visual system;
+8. no invented customer logos, metrics, official records or legal outcomes;
+9. desktop first viewport and full-page rhythm;
+10. mobile stacking and no horizontal overflow;
+11. no framework overlay or relevant console errors;
+12. CI, CodeQL and Vercel build are green.
+
+This file is the single source of truth for the public landing until the user explicitly changes direction again.
