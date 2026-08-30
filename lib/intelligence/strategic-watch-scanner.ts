@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
 import { searchGdeltNews } from "@/lib/intelligence/gdelt"
 import { searchOpenAlexWorks } from "@/lib/intelligence/openalex"
+import { normalizeIntelligenceSearchText } from "@/lib/intelligence/source-change-recorder"
 
 export type StrategicWatchType = "technology" | "company" | "competitor"
 
@@ -31,12 +32,14 @@ type AdminClient = ReturnType<typeof createAdminClient>
 
 const PATENT_WINDOW_DAYS = 365
 const TRADEMARK_WINDOW_DAYS = 365
+const SOURCE_CHANGE_WINDOW_DAYS = 30
 const SCIENCE_WINDOW_DAYS = 180
 const NEWS_WINDOW_DAYS = 14
 
 export async function scanStrategicWatch(admin: AdminClient, watch: StrategicWatch): Promise<StrategicCandidateSignal[]> {
   const now = new Date()
   const tasks: Array<Promise<StrategicCandidateSignal[]>> = [
+    scanObservedSourceChanges(admin, watch, daysAgo(now, SOURCE_CHANGE_WINDOW_DAYS)),
     scanPatents(admin, watch, daysAgo(now, PATENT_WINDOW_DAYS)),
     scanNews(watch, daysAgo(now, NEWS_WINDOW_DAYS), now),
   ]
@@ -57,6 +60,47 @@ export async function scanStrategicWatch(admin: AdminClient, watch: StrategicWat
   return [...unique.values()]
 }
 
+async function scanObservedSourceChanges(admin: AdminClient, watch: StrategicWatch, from: Date): Promise<StrategicCandidateSignal[]> {
+  const normalizedQuery = normalizeIntelligenceSearchText(watch.query)
+  if (!normalizedQuery) return []
+
+  let query = admin
+    .from("intelligence_source_events")
+    .select("id,entity_type,dataset,source_record_id,event_type,title,summary,source_url,source_date,observed_at,materiality,changed_fields,before_snapshot,after_snapshot")
+    .gte("observed_at", from.toISOString())
+    .ilike("search_text", `%${escapeLike(normalizedQuery)}%`)
+    .order("observed_at", { ascending: false })
+    .limit(24)
+
+  if (watch.watch_type === "technology") query = query.eq("entity_type", "patent")
+
+  const { data, error } = await query
+  if (error) throw error
+
+  return (data ?? []).map(row => ({
+    signal_key: `inapi_open_data:change:${row.id}`,
+    source_key: "inapi_open_data" as const,
+    event_type: row.entity_type === "trademark" ? "trademark" as const : "patent" as const,
+    title: row.title || (row.entity_type === "trademark" ? "Cambio en expediente marcario" : "Cambio en expediente de patente"),
+    summary: row.summary || "VIDENTIA detectó una modificación en la fuente oficial de INAPI.",
+    source_url: row.source_url,
+    occurred_at: row.observed_at,
+    relevance: row.materiality === "alta" || row.materiality === "media" ? row.materiality : "baja" as const,
+    payload: {
+      source_change: true,
+      source_change_id: row.id,
+      source_change_type: row.event_type,
+      dataset: row.dataset,
+      source_record_id: row.source_record_id,
+      source_date: row.source_date,
+      observed_at: row.observed_at,
+      changed_fields: row.changed_fields,
+      before_snapshot: row.before_snapshot,
+      after_snapshot: row.after_snapshot,
+    },
+  }))
+}
+
 async function scanPatents(admin: AdminClient, watch: StrategicWatch, from: Date): Promise<StrategicCandidateSignal[]> {
   const escaped = escapeLike(watch.query)
   const column = watch.watch_type === "technology" ? "title" : "applicants"
@@ -75,7 +119,7 @@ async function scanPatents(admin: AdminClient, watch: StrategicWatch, from: Date
     event_type: "patent" as const,
     title: row.title || "Patente sin título",
     summary: watch.watch_type === "technology"
-      ? `Nueva actividad de patente relacionada con ${watch.query}. ${row.applicants ? `Solicitante: ${row.applicants}.` : ""}`.trim()
+      ? `Actividad de patente relacionada con ${watch.query}. ${row.applicants ? `Solicitante: ${row.applicants}.` : ""}`.trim()
       : `Actividad de patente asociada a ${watch.query}.${row.status ? ` Estado: ${row.status}.` : ""}`,
     source_url: row.source_url,
     occurred_at: row.publication_date || row.filing_date,
