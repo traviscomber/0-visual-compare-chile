@@ -75,6 +75,7 @@ assertEqual(
 const schemaMigration = await readFile("supabase/migrations/20260830210402_add_company_direction_intelligence.sql", "utf8")
 const backfillMigration = await readFile("supabase/migrations/20260830210556_backfill_company_ip_activity_12m.sql", "utf8")
 const refreshMigration = await readFile("supabase/migrations/20260830211333_refresh_company_ip_activity_from_sync.sql", "utf8")
+const dedupeMigration = await readFile("supabase/migrations/20260830211627_dedupe_company_activity_refresh_inputs.sql", "utf8")
 
 for (const needle of [
   "normalize_company_identity",
@@ -89,5 +90,7 @@ if (!backfillMigration.includes("split_company_applicants")) fail("backfill does
 if (!refreshMigration.includes("pr.last_synced_at >= p_since")) fail("daily patent refresh is not bounded to current sync")
 if (!refreshMigration.includes("tr.last_synced_at >= p_since")) fail("daily trademark refresh is not bounded to current sync")
 if (!refreshMigration.includes("current_date - 370")) fail("daily activity refresh is not bounded to the direction horizon")
+if (!dedupeMigration.includes("distinct on (m.identity_id, tr.source_record_id)")) fail("trademark refresh can double-upsert the same identity/record")
+if (!dedupeMigration.includes("distinct on (m.identity_id, pr.source_record_id)")) fail("patent refresh can double-upsert the same identity/record")
 
-console.log("Company direction regression PASS: identity normalization, co-applicant parsing, six-month classification deltas, migration invariants.")
+console.log("Company direction regression PASS: identity normalization, co-applicant parsing, six-month classification deltas, sync bounds, duplicate-safe refresh.")
