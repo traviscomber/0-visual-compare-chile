@@ -6,59 +6,53 @@
 
 .px-home .px-platform-grid {
   display:grid;
-  grid-template-columns:minmax(330px,.4fr) minmax(0,.6fr);
-  gap:clamp(62px,7.5vw,122px);
+  grid-template-columns:minmax(320px,.38fr) minmax(0,.62fr);
+  gap:clamp(64px,8vw,132px);
   align-items:start;
 }
 
 .px-home .px-platform-copy {
-  max-width:520px;
+  max-width:500px;
+  padding-top:2px;
 }
 
 .px-home .px-platform-copy h2 {
-  margin-top:15px;
+  max-width:7.8ch;
+  margin-top:16px;
   color:var(--vid-heading);
-  font-size:clamp(2.75rem,4vw,4.5rem);
+  font-size:clamp(2.8rem,4.15vw,4.65rem);
   font-weight:300;
   line-height:1.01;
-  letter-spacing:-.035em;
+  letter-spacing:-.04em;
 }
 
 .px-home .px-platform-copy > p:last-child {
-  max-width:500px;
-  margin-top:22px;
-  color:rgba(255,255,255,.68);
-  font-size:13.5px;
-  line-height:1.74;
+  max-width:430px;
+  margin-top:24px;
+  color:rgba(255,255,255,.66);
+  font-size:13px;
+  line-height:1.78;
 }
 
 .px-home .px-platform-signals {
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  border-top:1px solid rgba(183,211,209,.15);
-  border-bottom:1px solid rgba(183,211,209,.10);
+  display:block;
+  border-top:1px solid rgba(183,211,209,.16);
 }
 
-.px-home .px-platform-signals article {
+.px-home .px-platform-signals article,
+.px-home .px-platform-signals article + article,
+.px-home .px-platform-signals article:last-child {
   position:relative;
-  min-height:220px;
-  padding:28px 26px 26px 0;
-  display:flex;
-  flex-direction:column;
-  align-items:flex-start;
-  border-right:1px solid rgba(183,211,209,.10);
-  border-bottom:0;
+  min-height:132px;
+  padding:26px 0 24px;
+  display:grid;
+  grid-template-columns:44px minmax(120px,150px) minmax(0,1fr);
+  gap:22px;
+  align-items:start;
+  border-right:0;
+  border-bottom:1px solid rgba(183,211,209,.10);
   background:transparent!important;
   box-shadow:none!important;
-}
-
-.px-home .px-platform-signals article + article {
-  padding-left:26px;
-}
-
-.px-home .px-platform-signals article:last-child {
-  padding-right:0;
-  border-right:0;
 }
 
 .px-home .px-platform-signals article:hover {
@@ -75,33 +69,55 @@
   position:absolute;
   left:0;
   top:-1px;
-  width:54px;
+  width:60px;
   height:1px;
-  background:rgba(111,169,147,.52);
+  background:rgba(111,169,147,.54);
 }
 
 .px-home .px-platform-signals article + article .px-signal-line {
-  left:26px;
+  left:0;
 }
 
 .px-home .px-platform-signals svg {
-  margin:0 0 34px;
+  margin:2px 0 0;
   color:#6fa08f;
 }
 
 .px-home .px-platform-signals strong {
   color:var(--vid-heading);
-  font-size:18px;
+  font-size:19px;
   font-weight:400;
-  letter-spacing:-.02em;
+  line-height:1.25;
+  letter-spacing:-.025em;
 }
 
 .px-home .px-platform-signals span {
-  max-width:220px;
-  margin-top:12px;
+  max-width:520px;
+  margin:0;
   color:rgba(189,190,189,.7);
-  font-size:12px;
-  line-height:1.7;
+  font-size:12.5px;
+  line-height:1.74;
+}
+
+@media (min-width:1180px) {
+  .px-home .px-platform-signals article::before {
+    content:"0" counter(protection-step);
+    counter-increment:protection-step;
+    position:absolute;
+    right:0;
+    top:26px;
+    color:rgba(150,181,166,.28);
+    font-size:9px;
+    letter-spacing:.14em;
+  }
+
+  .px-home .px-platform-signals {
+    counter-reset:protection-step;
+  }
+
+  .px-home .px-platform-signals span {
+    padding-right:42px;
+  }
 }
 
 @media (max-width:980px) {
@@ -115,34 +131,8 @@
     max-width:700px;
   }
 
-  .px-home .px-platform-signals {
-    display:block;
-    border-bottom:0;
-  }
-
-  .px-home .px-platform-signals article,
-  .px-home .px-platform-signals article + article,
-  .px-home .px-platform-signals article:last-child {
-    min-height:auto;
-    padding:23px 0;
-    display:grid;
-    grid-template-columns:40px 120px minmax(0,1fr);
-    gap:18px;
-    border-right:0;
-    border-bottom:1px solid rgba(183,211,209,.10);
-  }
-
-  .px-home .px-platform-signals article + article .px-signal-line {
-    left:0;
-  }
-
-  .px-home .px-platform-signals svg {
-    margin:3px 0 0;
-  }
-
-  .px-home .px-platform-signals span {
-    max-width:430px;
-    margin-top:0;
+  .px-home .px-platform-copy h2 {
+    max-width:12ch;
   }
 }
 
@@ -150,12 +140,13 @@
   .px-home .px-platform-signals article,
   .px-home .px-platform-signals article + article,
   .px-home .px-platform-signals article:last-child {
-    padding:21px 0;
+    min-height:auto;
+    padding:22px 0;
     grid-template-columns:34px minmax(0,1fr);
     grid-template-areas:
       "icon title"
       ". body";
-    gap:6px 14px;
+    gap:7px 14px;
   }
 
   .px-home .px-platform-signals svg {
