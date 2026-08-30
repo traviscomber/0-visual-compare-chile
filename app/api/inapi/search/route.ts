@@ -12,12 +12,14 @@ const ALLOWED_TYPES = new Set<InapiSearchType>(["nombre", "solicitante", "clase"
 const ALLOWED_MATCH_MODES = new Set<InapiMatchMode>(["1", "2", "3", "4"])
 const MAX_QUERY_LENGTH = 120
 const MAX_RESULTS = 250
+const FREE_PREVIEW_RESULT_LIMIT = 5
 
 export async function GET(request: Request) {
   const auth = await requireUser()
   if (!auth.ok) return auth.response
 
-  if (isFreeAccessUser(auth.user)) {
+  const freeAccess = isFreeAccessUser(auth.user)
+  if (freeAccess) {
     const quota = await getFreeResearchQuota(auth.user.id)
     if (!quota.ok) {
       return NextResponse.json(
@@ -28,7 +30,7 @@ export async function GET(request: Request) {
     if (!quota.allowed) {
       return NextResponse.json(
         {
-          error: `Ya usaste tus ${FREE_MONTHLY_RESEARCH_LIMIT} investigaciones gratuitas de este mes.`,
+          error: `Ya usaste tus ${FREE_MONTHLY_RESEARCH_LIMIT} vistas preliminares de este mes.`,
           code: "FREE_MONTHLY_LIMIT",
           limit: FREE_MONTHLY_RESEARCH_LIMIT,
           resetAt: quota.resetsAt,
@@ -46,6 +48,13 @@ export async function GET(request: Request) {
 
   const validationError = validateSearch(query, rawType, rawMatchMode)
   if (validationError) return validationError
+
+  if (freeAccess && rawType !== "nombre") {
+    return NextResponse.json(
+      { error: "La cuenta gratuita incluye únicamente vista preliminar por nombre de marca.", code: "FREE_PREVIEW_ONLY" },
+      { status: 403, headers: PRIVATE_NO_STORE_HEADERS },
+    )
+  }
 
   if (rawType === "nombre") {
     try {
@@ -82,8 +91,25 @@ export async function GET(request: Request) {
           live_verified: Boolean(liveResults),
           live_error: liveError,
           freshness: local.freshness,
+          access_tier: freeAccess ? "free-preview" : "full",
         },
       })
+
+      if (freeAccess) {
+        return NextResponse.json({
+          results: results.slice(0, FREE_PREVIEW_RESULT_LIMIT).map(toFreePreviewHit),
+          total: results.length,
+          returned: Math.min(results.length, FREE_PREVIEW_RESULT_LIMIT),
+          hiddenResults: Math.max(results.length - FREE_PREVIEW_RESULT_LIMIT, 0),
+          preview: true,
+          accessTier: "free",
+          source: "INAPI",
+          query,
+          type: rawType,
+          durationMs,
+          generatedAt: new Date().toISOString(),
+        }, { headers: PRIVATE_NO_STORE_HEADERS })
+      }
 
       return NextResponse.json({
         results: results.slice(0, MAX_RESULTS),
@@ -111,7 +137,23 @@ export async function GET(request: Request) {
     const durationMs = Date.now() - startedAt
 
     await recordSearch({ supabase: auth.supabase, userId: auth.user.id, query, type: rawType, matchMode: rawMatchMode,
-      resultsCount: allResults.length, durationMs, status: "success", metadata: { source: "inapi-live", truncated: allResults.length > MAX_RESULTS } })
+      resultsCount: allResults.length, durationMs, status: "success", metadata: { source: "inapi-live", truncated: allResults.length > MAX_RESULTS, access_tier: freeAccess ? "free-preview" : "full" } })
+
+    if (freeAccess) {
+      return NextResponse.json({
+        results: allResults.slice(0, FREE_PREVIEW_RESULT_LIMIT).map(toFreePreviewHit),
+        total: allResults.length,
+        returned: Math.min(allResults.length, FREE_PREVIEW_RESULT_LIMIT),
+        hiddenResults: Math.max(allResults.length - FREE_PREVIEW_RESULT_LIMIT, 0),
+        preview: true,
+        accessTier: "free",
+        source: "INAPI",
+        query,
+        type: rawType,
+        durationMs,
+        generatedAt: new Date().toISOString(),
+      }, { headers: PRIVATE_NO_STORE_HEADERS })
+    }
 
     return NextResponse.json({ results, total: allResults.length, returned: results.length, truncated: allResults.length > MAX_RESULTS,
       source: "inapi-live", query, type: rawType, matchMode: rawMatchMode, durationMs, generatedAt: new Date().toISOString() },
@@ -120,9 +162,18 @@ export async function GET(request: Request) {
     const durationMs = Date.now() - startedAt
     const errorCode = classifyError(error)
     await recordSearch({ supabase: auth.supabase, userId: auth.user.id, query, type: rawType, matchMode: rawMatchMode,
-      resultsCount: 0, durationMs, status: "failed", errorCode, metadata: {} })
+      resultsCount: 0, durationMs, status: "failed", errorCode, metadata: { access_tier: freeAccess ? "free-preview" : "full" } })
     return NextResponse.json({ error: "INAPI no respondió correctamente. Intenta nuevamente más tarde.", code: errorCode, source: "inapi-live" },
       { status: 502, headers: PRIVATE_NO_STORE_HEADERS })
+  }
+}
+
+function toFreePreviewHit(marca: Marca) {
+  return {
+    id: marca.id,
+    nombre: marca.nombre,
+    estado: marca.estado,
+    niza: marca.niza,
   }
 }
 
