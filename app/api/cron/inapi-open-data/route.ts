@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server"
 import { syncCurrentYearInapiOpenData } from "@/lib/inapi/open-data-sync"
 import { syncCurrentYearPatentOpenData, syncNextPatentHistoryBatch } from "@/lib/inapi/patent-open-data-sync"
+import { withSourceRetry } from "@/lib/intelligence/fetch-with-retry"
 import { detectStrategicChanges } from "@/lib/intelligence/strategic-change-engine"
 import {
   failIntelligenceIngestion,
   finishIntelligenceIngestion,
+  IntelligenceCircuitOpenError,
   startIntelligenceIngestion,
 } from "@/lib/intelligence/ingestion-observability"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -37,6 +39,7 @@ export async function GET(request: Request) {
   let coreSyncCompleted = false
   let stage = "starting"
   let counts: RunCounts = { fetched: 0, inserted: 0, updated: 0, rejected: 0 }
+  const retryCounts = { trademarks: 0, patents: 0 }
   let coreMetadata: Record<string, unknown> = { pipeline: "current-year-ip" }
 
   try {
@@ -47,11 +50,24 @@ export async function GET(request: Request) {
       scope: { trigger: "vercel-cron", pipeline: "current-year-ip", year: new Date().getUTCFullYear() },
     })
 
-    // Current-year freshness is always the first priority.
+    // Current-year freshness is always the first priority. Retries are bounded and
+    // limited to errors classified as transient by the shared source retry policy.
     stage = "current_year_sync"
     const [trademarks, patents] = await Promise.all([
-      syncCurrentYearInapiOpenData(),
-      syncCurrentYearPatentOpenData(),
+      withSourceRetry(() => syncCurrentYearInapiOpenData(), {
+        attempts: 3,
+        onRetry: ({ attempt, delayMs, error }) => {
+          retryCounts.trademarks += 1
+          console.warn("[cron/inapi-open-data] retry trademark sync", { attempt, delayMs, error })
+        },
+      }),
+      withSourceRetry(() => syncCurrentYearPatentOpenData(), {
+        attempts: 3,
+        onRetry: ({ attempt, delayMs, error }) => {
+          retryCounts.patents += 1
+          console.warn("[cron/inapi-open-data] retry patent sync", { attempt, delayMs, error })
+        },
+      }),
     ])
 
     counts = {
@@ -78,6 +94,7 @@ export async function GET(request: Request) {
 
     coreMetadata = {
       countSemantics: "inserted_count stores current-year upserts; updated_count stores detected change events",
+      retries: retryCounts,
       trademarks: {
         fetched: trademarks.totalFetched,
         upserted: trademarks.totalUpserted,
@@ -170,6 +187,7 @@ export async function GET(request: Request) {
       durationMs: Date.now() - startedAt,
       ingestionRunId: ingestion.runId,
       ingestionStatus: "completed",
+      retries: retryCounts,
       trademarks,
       patents,
       companyActivity,
@@ -179,9 +197,23 @@ export async function GET(request: Request) {
       quality,
     })
   } catch (error) {
+    if (error instanceof IntelligenceCircuitOpenError) {
+      console.warn("[cron/inapi-open-data] source circuit open", { openUntil: error.openUntil, runId: error.runId })
+      return NextResponse.json({
+        ok: false,
+        syncOk: false,
+        ingestionStatus: "blocked",
+        failedStage: "circuit_open",
+        durationMs: Date.now() - startedAt,
+        ingestionRunId: error.runId,
+        circuitOpenUntil: error.openUntil,
+        error: error.message,
+      }, { status: 503 })
+    }
+
     if (ingestion && !ingestionFinalized) {
       const message = error instanceof Error ? error.message : String(error)
-      const metadata = { ...coreMetadata, failedStage: stage }
+      const metadata = { ...coreMetadata, retries: retryCounts, failedStage: stage }
 
       if (coreSyncCompleted) {
         await finishIntelligenceIngestion(admin, {
@@ -209,6 +241,7 @@ export async function GET(request: Request) {
         syncOk: coreSyncCompleted,
         ingestionStatus: coreSyncCompleted ? "partial" : "failed",
         failedStage: stage,
+        retries: retryCounts,
         durationMs: Date.now() - startedAt,
         ingestionRunId: ingestion?.runId ?? null,
         error: error instanceof Error ? error.message : String(error),
