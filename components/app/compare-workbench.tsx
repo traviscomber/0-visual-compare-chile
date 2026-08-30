@@ -51,7 +51,7 @@ export function CompareWorkbench() {
       if (!res.ok) throw new Error(json.error ?? "No fue posible comparar las imágenes.")
 
       setResult(json as ComparisonResultPayload)
-      toast.success("Comparación guardada en tu actividad")
+      toast.success("Comparación guardada en Reportes")
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "No fue posible comparar las imágenes.")
     } finally {
