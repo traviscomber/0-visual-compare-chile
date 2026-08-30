@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { createApiKey } from "@/lib/api/key-management"
+import { createApiKey, listApiKeys } from "@/lib/api/key-management"
 import {
   API_QUOTA_PLANS,
   DEFAULT_API_KEY_DAILY_QUOTA,
@@ -26,7 +26,6 @@ async function logUsage(userId: string, action: string, metadata: Record<string,
 }
 
 export async function GET() {
-  let pgClient: any = null
   try {
     const supabase = await createClient()
     const {
@@ -39,28 +38,13 @@ export async function GET() {
 
     await ensureAccountBootstrap(user)
 
-    const dbUrl = process.env.POSTGRES_URL_4
-    if (!dbUrl) {
-      console.error("[api-keys] No database URL")
+    const keys = await listApiKeys(user.id)
+    if (!keys) {
       return NextResponse.json(
-        {
-          keys: [],
-          defaults: {
-            quotaDaily: DEFAULT_API_KEY_DAILY_QUOTA,
-            quotaMonthly: DEFAULT_API_KEY_MONTHLY_QUOTA,
-          },
-          plans: API_QUOTA_PLANS,
-        },
-        { status: 200, headers: PRIVATE_HEADERS },
+        { error: "No fue posible cargar las claves API." },
+        { status: 503, headers: PRIVATE_HEADERS },
       )
     }
-
-    const { Client } = require("pg")
-    pgClient = new Client({ connectionString: dbUrl, ssl: false })
-    await pgClient.connect()
-
-    const result = await pgClient.query("SELECT * FROM get_user_api_keys($1)", [user.id])
-    const keys = result.rows || []
 
     return NextResponse.json(
       {
@@ -76,20 +60,9 @@ export async function GET() {
   } catch (error) {
     console.error("[api-keys] list route failed:", error instanceof Error ? error.message : "unknown")
     return NextResponse.json(
-      {
-        keys: [],
-        defaults: {
-          quotaDaily: DEFAULT_API_KEY_DAILY_QUOTA,
-          quotaMonthly: DEFAULT_API_KEY_MONTHLY_QUOTA,
-        },
-        plans: API_QUOTA_PLANS,
-      },
-      { status: 200, headers: PRIVATE_HEADERS },
+      { error: "No fue posible cargar las claves API." },
+      { status: 503, headers: PRIVATE_HEADERS },
     )
-  } finally {
-    if (pgClient) {
-      await pgClient.end().catch(() => {})
-    }
   }
 }
 
