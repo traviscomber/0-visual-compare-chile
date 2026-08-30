@@ -43,6 +43,9 @@ jobs:
       - name: Phase1 window regression
         run: pnpm test:phase1-window
 
+      - name: Case role regression
+        run: pnpm test:case-roles
+
       - name: TypeScript
         run: pnpm exec tsc --noEmit
 
