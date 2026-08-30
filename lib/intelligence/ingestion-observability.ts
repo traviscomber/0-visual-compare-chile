@@ -26,6 +26,25 @@ type FailArgs = {
   metadata?: Record<string, unknown>
 }
 
+type SourceState = {
+  circuit_state: string | null
+  circuit_open_until: string | null
+}
+
+export class IntelligenceCircuitOpenError extends Error {
+  readonly runId: string
+  readonly sourceId: string
+  readonly openUntil: string | null
+
+  constructor(args: { runId: string; sourceId: string; openUntil: string | null; sourceKey: string }) {
+    super(`Intelligence source ${args.sourceKey} circuit is open${args.openUntil ? ` until ${args.openUntil}` : ""}.`)
+    this.name = "IntelligenceCircuitOpenError"
+    this.runId = args.runId
+    this.sourceId = args.sourceId
+    this.openUntil = args.openUntil
+  }
+}
+
 export async function startIntelligenceIngestion(admin: SupabaseClient, args: StartArgs) {
   const { data: source, error: sourceError } = await admin
     .from("intelligence_sources")
@@ -37,7 +56,49 @@ export async function startIntelligenceIngestion(admin: SupabaseClient, args: St
     throw new Error(`Intelligence source ${args.sourceKey} is not registered: ${sourceError?.message ?? "missing source"}`)
   }
 
-  const now = new Date().toISOString()
+  const { data: existingState, error: stateReadError } = await admin
+    .from("intelligence_source_state")
+    .select("circuit_state,circuit_open_until")
+    .eq("source_id", source.id)
+    .maybeSingle()
+  if (stateReadError) throw new Error(`Could not read source circuit state: ${stateReadError.message}`)
+
+  const state = existingState as SourceState | null
+  const nowDate = new Date()
+  const now = nowDate.toISOString()
+  const openUntil = state?.circuit_open_until ? new Date(state.circuit_open_until) : null
+  const circuitIsOpen = state?.circuit_state === "open"
+  const circuitStillBlocked = circuitIsOpen && (!openUntil || openUntil.getTime() > nowDate.getTime())
+
+  if (circuitStillBlocked) {
+    const message = `Circuit open${state?.circuit_open_until ? ` until ${state.circuit_open_until}` : ""}; source call skipped.`
+    const { data: blockedRun, error: blockedRunError } = await admin
+      .from("intelligence_ingestion_runs")
+      .insert({
+        source_id: source.id,
+        run_type: args.runType ?? "delta",
+        status: "failed",
+        scope: args.scope ?? {},
+        started_at: now,
+        finished_at: now,
+        error_message: message,
+        metadata: { observer: "videntia", contract: "grade-a-v1", blockedByCircuit: true },
+      })
+      .select("id")
+      .single()
+
+    if (blockedRunError || !blockedRun?.id) {
+      throw new Error(`Could not record circuit-blocked ingestion run: ${blockedRunError?.message ?? "unknown"}`)
+    }
+
+    throw new IntelligenceCircuitOpenError({
+      runId: String(blockedRun.id),
+      sourceId: String(source.id),
+      openUntil: state?.circuit_open_until ?? null,
+      sourceKey: args.sourceKey,
+    })
+  }
+
   const { data: run, error: runError } = await admin
     .from("intelligence_ingestion_runs")
     .insert({
@@ -46,7 +107,11 @@ export async function startIntelligenceIngestion(admin: SupabaseClient, args: St
       status: "running",
       scope: args.scope ?? {},
       started_at: now,
-      metadata: { observer: "videntia", contract: "grade-a-v1" },
+      metadata: {
+        observer: "videntia",
+        contract: "grade-a-v1",
+        circuitProbe: circuitIsOpen,
+      },
     })
     .select("id")
     .single()
@@ -60,6 +125,8 @@ export async function startIntelligenceIngestion(admin: SupabaseClient, args: St
     .upsert({
       source_id: source.id,
       last_attempt_at: now,
+      circuit_state: circuitIsOpen ? "half_open" : (state?.circuit_state ?? "closed"),
+      circuit_open_until: circuitIsOpen ? null : (state?.circuit_open_until ?? null),
       updated_at: now,
     }, { onConflict: "source_id" })
 
