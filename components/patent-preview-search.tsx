@@ -31,15 +31,21 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
   const [error, setError] = useState<string | null>(null)
   const [limitResetAt, setLimitResetAt] = useState<string | null>(null)
   const base = `/${locale}`
+  const publicReturn = locale === "es" ? "/es/patentes" : "/en/patents"
+  const signupHref = `${base}/auth/sign-up?redirectTo=${encodeURIComponent(publicReturn)}`
+  const enterpriseHref = `${base}/acceso-empresarial`
   const labels = locale === "es" ? {
     title: "Prueba una vista preliminar.",
     body: "Puedes hacer hasta 3 consultas por hora. Cada una muestra hasta 3 coincidencias resumidas; expedientes, solicitantes, inventores, perfiles competitivos y alertas quedan reservados al workspace empresarial.",
     placeholder: "Ej. litio, NOVARTIS, baterías",
     submit: "Buscar patentes",
     loading: "Buscando",
-    locked: "resultados adicionales disponibles con acceso empresarial",
-    access: "Solicitar acceso empresarial",
+    locked: "resultados adicionales fuera de esta vista preliminar",
+    access: "Acceso empresarial",
+    signup: "Crear acceso preliminar",
+    signupBody: "Crea tu acceso preliminar sin costo para seguir explorando VIDENTIA. La investigación completa permanece reservada al acceso empresarial.",
     noResults: "No encontramos coincidencias en esta vista preliminar.",
+    noResultsBody: "Puedes probar otro término o crear tu acceso preliminar para seguir explorando VIDENTIA.",
     limitTitle: "Ya usaste las 3 consultas preliminares de esta hora.",
     limitReset: "Podrás volver a probar",
   } : {
@@ -48,9 +54,12 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
     placeholder: "E.g. lithium, NOVARTIS, batteries",
     submit: "Search patents",
     loading: "Searching",
-    locked: "additional results available with enterprise access",
-    access: "Request enterprise access",
+    locked: "additional results outside this preliminary view",
+    access: "Enterprise access",
+    signup: "Create preliminary access",
+    signupBody: "Create your preliminary access at no cost to keep exploring VIDENTIA. Full research remains reserved for enterprise access.",
     noResults: "No matches were found in this preliminary view.",
+    noResultsBody: "Try another term or create preliminary access to keep exploring VIDENTIA.",
     limitTitle: "You have used the 3 preliminary queries available this hour.",
     limitReset: "You can try again",
   }
@@ -107,13 +116,27 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
             <div role="alert" className="mt-4 border-l-2 border-[#C46A61] bg-[#13272D] px-4 py-4 text-sm text-[#E8B0AA]">
               <p>{error}</p>
               {resetLabel ? <p className="mt-1 text-xs text-[#BDBEBD]">{labels.limitReset} {resetLabel}.</p> : null}
-              {limitResetAt ? <Link href={`${base}/acceso-empresarial`} className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-[#96B5A6] hover:text-white">{labels.access}<ArrowRight className="h-3.5 w-3.5" /></Link> : null}
+              {limitResetAt ? (
+                <div className="mt-4 flex flex-wrap items-center gap-4">
+                  <Link href={signupHref} className="inline-flex min-h-10 items-center gap-2 bg-[#4A7F74] px-4 text-xs font-medium text-white hover:bg-[#568D81]">
+                    {labels.signup}<ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                  <Link href={enterpriseHref} className="inline-flex items-center gap-2 text-xs font-medium text-[#96B5A6] hover:text-white">
+                    {labels.access}<ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
           {result ? (
             <div className="mt-5 border-t border-[#263D44]">
-              {(result.results ?? []).length === 0 ? <p className="py-5 text-sm text-[#9EAAA8]">{labels.noResults}</p> : (result.results ?? []).map((hit, index) => (
+              {(result.results ?? []).length === 0 ? (
+                <div className="py-5">
+                  <p className="text-sm text-[#E7DFCE]">{labels.noResults}</p>
+                  <p className="mt-2 text-xs leading-5 text-[#9EAAA8]">{labels.noResultsBody}</p>
+                </div>
+              ) : (result.results ?? []).map((hit, index) => (
                 <article key={`${hit.title}-${index}`} className="grid gap-3 border-b border-[#263D44] py-5 sm:grid-cols-[1fr_auto] sm:items-start">
                   <div>
                     <h3 className="text-base font-medium leading-6 text-[#E7DFCE]">{hit.title}</h3>
@@ -123,12 +146,21 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
                   <span className="text-[10px] uppercase tracking-[0.16em] text-[#6F807E]">Preview</span>
                 </article>
               ))}
-              {(result.locked_count ?? 0) > 0 ? (
-                <div className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-[#9EAAA8]"><strong className="font-medium text-[#E7DFCE]">+{result.locked_count}</strong> {labels.locked}</p>
-                  <Link href={`${base}/acceso-empresarial`} className="inline-flex items-center gap-2 text-sm font-medium text-[#96B5A6] hover:text-white">{labels.access}<ArrowRight className="h-4 w-4" /></Link>
+
+              <div className="grid gap-4 py-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                <div>
+                  {(result.locked_count ?? 0) > 0 ? <p className="text-sm text-[#9EAAA8]"><strong className="font-medium text-[#E7DFCE]">+{result.locked_count}</strong> {labels.locked}</p> : null}
+                  <p className={`${(result.locked_count ?? 0) > 0 ? "mt-2 " : ""}max-w-2xl text-xs leading-5 text-[#879492]`}>{labels.signupBody}</p>
                 </div>
-              ) : null}
+                <div className="flex flex-wrap items-center gap-4 sm:justify-end">
+                  <Link href={signupHref} className="inline-flex min-h-10 items-center gap-2 bg-[#4A7F74] px-4 text-sm font-medium text-white hover:bg-[#568D81]">
+                    {labels.signup}<ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link href={enterpriseHref} className="inline-flex items-center gap-2 text-sm font-medium text-[#96B5A6] hover:text-white">
+                    {labels.access}<ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
             </div>
           ) : null}
         </div>
