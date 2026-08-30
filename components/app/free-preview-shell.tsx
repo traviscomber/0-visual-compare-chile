@@ -39,7 +39,7 @@ export function FreePreviewShell({ userEmail, children }: { userEmail: string; c
               <Link href="/investigar"><Search className="mr-2 h-4 w-4" />Investigar</Link>
             </Button>
             <Button asChild size="sm" className="h-9 bg-[#4A7F74] text-white hover:bg-[#568D81]">
-              <Link href="/contacto?origen=cuenta-gratuita">Acceso empresarial <ArrowRight className="ml-2 h-4 w-4" /></Link>
+              <Link href="/acceso-empresarial">Acceso empresarial <ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
             <Button type="button" variant="ghost" size="icon" aria-label={`Cerrar sesión de ${userEmail}`} onClick={() => void handleLogout()} className="size-9 text-[#AAB3B1] hover:bg-[#13272D] hover:text-white">
               <LogOut className="h-4 w-4" />
@@ -59,7 +59,7 @@ export function FreePreviewShell({ userEmail, children }: { userEmail: string; c
               Las cuentas gratuitas sólo incluyen vistas preliminares de búsqueda. Evaluación, casos, expedientes, vigilancia, reportes y colaboración requieren acceso empresarial.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
-              <Button asChild><Link href="/contacto?origen=cuenta-gratuita">Solicitar acceso empresarial</Link></Button>
+              <Button asChild><Link href="/acceso-empresarial">Solicitar acceso empresarial</Link></Button>
               <Button asChild variant="secondary"><Link href="/investigar">Volver a investigar</Link></Button>
             </div>
           </div>
