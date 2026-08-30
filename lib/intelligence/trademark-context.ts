@@ -1,3 +1,5 @@
+import "server-only"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 
 export type TrademarkOwnerSummary = {
@@ -52,10 +54,11 @@ export async function getTrademarkIntelligenceContext(trademarkRecordId: string)
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) throw new Error("UNAUTHENTICATED")
 
+  const admin = createAdminClient()
   const [ownerResult, familyResult, intelligenceResult] = await Promise.all([
-    supabase.rpc("get_trademark_owner_summary", { p_trademark_record_id: trademarkRecordId }),
-    supabase.rpc("get_trademark_family_context", { p_trademark_record_id: trademarkRecordId }),
-    supabase.rpc("get_trademark_intelligence_context", { p_trademark_record_id: trademarkRecordId }),
+    admin.rpc("get_trademark_owner_summary", { p_trademark_record_id: trademarkRecordId }),
+    admin.rpc("get_trademark_family_context", { p_trademark_record_id: trademarkRecordId }),
+    admin.rpc("get_trademark_intelligence_context", { p_trademark_record_id: trademarkRecordId }),
   ])
 
   const error = ownerResult.error ?? familyResult.error ?? intelligenceResult.error
