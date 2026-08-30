@@ -24,9 +24,23 @@ export async function GET(request: Request) {
       syncCurrentYearPatentOpenData(),
     ])
 
+    const admin = createAdminClient()
+    const activitySince = [trademarks.startedAt, patents.startedAt]
+      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0]
+
+    // Maintain the company/titular identity layer from exactly the records touched
+    // in this sync. Historical patent backfill runs later and cannot pollute the
+    // 12-month direction comparison.
+    const { data: companyActivity, error: companyActivityError } = await admin.rpc(
+      "refresh_company_ip_activity_from_sync",
+      { p_since: activitySince },
+    )
+    if (companyActivityError) {
+      throw new Error(`Company activity refresh failed: ${companyActivityError.message}`)
+    }
+
     // Detect competitive alerts and strategic patterns BEFORE historical backfill
     // so old records can never become "new" signals.
-    const admin = createAdminClient()
     const { data: patentAlerts, error: alertError } = await admin.rpc("detect_patent_watch_events")
     if (alertError) throw new Error(`Patent alert detection failed: ${alertError.message}`)
 
@@ -41,6 +55,7 @@ export async function GET(request: Request) {
       durationMs: Date.now() - startedAt,
       trademarks,
       patents,
+      companyActivity,
       patentAlerts,
       strategicChanges,
       patentHistory,
