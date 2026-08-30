@@ -1,12 +1,21 @@
 import type { MetadataRoute } from "next"
 
+const origin = "https://videntia.app"
+const routes = ["", "/demo", "/docs", "/privacidad", "/terminos"] as const
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  return [
-    { url: "https://videntia.app", changeFrequency: "weekly", priority: 1 },
-    { url: "https://videntia.app/demo", changeFrequency: "weekly", priority: 0.8 },
-    { url: "https://videntia.app/contacto", changeFrequency: "monthly", priority: 0.7 },
-    { url: "https://videntia.app/docs", changeFrequency: "monthly", priority: 0.6 },
-    { url: "https://videntia.app/privacidad", changeFrequency: "monthly", priority: 0.4 },
-    { url: "https://videntia.app/terminos", changeFrequency: "monthly", priority: 0.4 },
-  ]
+  return routes.flatMap((path) => [
+    {
+      url: `${origin}/es${path}`,
+      changeFrequency: path === "" ? "weekly" as const : "monthly" as const,
+      priority: path === "" ? 1 : path === "/demo" ? 0.9 : 0.6,
+      alternates: { languages: { "es-CL": `${origin}/es${path}`, en: `${origin}/en${path}` } },
+    },
+    {
+      url: `${origin}/en${path}`,
+      changeFrequency: path === "" ? "weekly" as const : "monthly" as const,
+      priority: path === "" ? 0.9 : path === "/demo" ? 0.8 : 0.5,
+      alternates: { languages: { "es-CL": `${origin}/es${path}`, en: `${origin}/en${path}` } },
+    },
+  ])
 }
