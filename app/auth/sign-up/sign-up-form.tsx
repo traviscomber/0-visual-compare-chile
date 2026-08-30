@@ -17,7 +17,6 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
   const [password, setPassword] = useState("")
   const [repeatPassword, setRepeatPassword] = useState("")
   const [fullName, setFullName] = useState("")
-  const [companyName, setCompanyName] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -50,7 +49,7 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
           emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
           data: {
             full_name: fullName.trim(),
-            company_name: companyName.trim(),
+            access_tier: "free",
           },
         },
       })
@@ -83,28 +82,22 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
             </span>
           </Link>
 
-          <div className="my-auto w-full max-w-xl py-12 lg:py-16">
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Crear acceso</p>
-            <h1 className="mt-4 text-4xl font-medium tracking-[-0.045em] sm:text-5xl">Crea tu espacio de trabajo.</h1>
-            <p className="mt-4 max-w-lg text-sm leading-6 text-muted-foreground">
-              Tu cuenta conserva investigaciones, comparaciones y decisiones trazables dentro de VIDENTIA.
+          <div className="my-auto w-full max-w-lg py-12 lg:py-16">
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Cuenta gratuita</p>
+            <h1 className="mt-4 text-4xl font-medium tracking-[-0.045em] sm:text-5xl">Continúa tu investigación.</h1>
+            <p className="mt-4 max-w-md text-sm leading-6 text-muted-foreground">
+              Crea una cuenta y obtén 3 investigaciones al mes. Sin tarjeta. Si necesitas más, puedes pasar a acceso completo después.
             </p>
 
             <form onSubmit={handleSignUp} className="mt-8 space-y-5">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="fullName" className="mb-2 block">Nombre completo</Label>
-                  <Input id="fullName" type="text" required value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" className="h-11 bg-card/40" />
-                </div>
-                <div>
-                  <Label htmlFor="companyName" className="mb-2 block">Organización</Label>
-                  <Input id="companyName" type="text" value={companyName} onChange={(event) => setCompanyName(event.target.value)} autoComplete="organization" className="h-11 bg-card/40" />
-                </div>
+              <div>
+                <Label htmlFor="fullName" className="mb-2 block">Nombre completo</Label>
+                <Input id="fullName" type="text" required value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" className="h-11 bg-card/40" />
               </div>
 
               <div>
                 <Label htmlFor="email" className="mb-2 block">Correo electrónico</Label>
-                <Input id="email" type="email" placeholder="nombre@empresa.cl" required value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" className="h-11 bg-card/40" />
+                <Input id="email" type="email" placeholder="tu@correo.cl" required value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" className="h-11 bg-card/40" />
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -130,7 +123,7 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
                 {isLoading ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" />Creando cuenta…</>
                 ) : (
-                  "Crear cuenta"
+                  "Crear cuenta gratis"
                 )}
               </Button>
 
@@ -146,17 +139,17 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
 
         <aside className="hidden min-h-svh flex-col justify-between bg-card/20 px-12 py-10 lg:flex">
           <div className="flex justify-end">
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Cuenta → evidencia → decisiones</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Demo → cuenta → investigación</span>
           </div>
           <div className="max-w-lg pb-12">
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Un sistema, no herramientas aisladas</p>
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Acceso simple</p>
             <p className="mt-5 text-3xl font-medium leading-tight tracking-[-0.035em]">
-              Tu contexto permanece unido desde la primera búsqueda hasta la vigilancia posterior.
+              Tres investigaciones mensuales para seguir evaluando antes de contratar acceso completo.
             </p>
             <div className="mt-8 divide-y divide-border border-y border-border text-sm">
-              <AuthLine number="01" text="Investigaciones y fuentes consultadas." />
-              <AuthLine number="02" text="Evidencia y comparaciones persistidas." />
-              <AuthLine number="03" text="Casos, revisiones y señales nuevas." />
+              <AuthLine number="01" text="3 investigaciones al mes." />
+              <AuthLine number="02" text="Tus consultas quedan asociadas a tu cuenta." />
+              <AuthLine number="03" text="El acceso completo aparece sólo cuando lo necesitas." />
             </div>
           </div>
           <p className="text-xs text-muted-foreground">VIDENTIA · by N3uralia</p>
