@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input"
 const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"]
 const MAX_FILE_BYTES = 4_500_000
 const MAX_ACTIVITY_LENGTH = 400
+const REQUEST_TIMEOUT_MS = 55_000
 
 type Preview = {
   analysis_mode: "trademark" | "visual-only"
@@ -128,17 +129,20 @@ export default function DemoPage() {
     setLoadingWithNizaContext(requestHasNizaContext)
     setLoadingFromImageOnly(requestStartsFromImageOnly)
     setError(null)
-    setPreview(null)
     loadingTimers.current = [
       window.setTimeout(() => setLoadingStage(1), 1200),
       window.setTimeout(() => setLoadingStage(2), requestHasNizaContext ? 4500 : 3000),
       ...(requestHasNizaContext ? [window.setTimeout(() => setLoadingStage(3), 8000)] : []),
     ]
 
+    const controller = new AbortController()
+    const requestTimeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
     try {
       const response = await fetch("/api/v1/public/trademark-preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           nombre: nombre.trim(),
           ...(actividad.trim() ? { actividad: actividad.trim() } : {}),
@@ -149,9 +153,13 @@ export default function DemoPage() {
       if (!response.ok) return setError(data.error ?? "No pudimos completar la búsqueda.")
       setPreview(data as Preview)
       if (!nombre.trim() && data.analysis_mode !== "visual-only" && data.marca) setNombre(data.marca)
-    } catch {
-      setError("No pudimos conectar con el servicio.")
+    } catch (requestError) {
+      const timedOut = requestError instanceof DOMException && requestError.name === "AbortError"
+      setError(timedOut
+        ? "La consulta tardó más de lo esperado. Puedes reintentar sin volver a cargar los datos."
+        : "No pudimos conectar con el servicio. Puedes reintentar sin perder la consulta.")
     } finally {
+      window.clearTimeout(requestTimeout)
       clearLoadingTimers()
       setLoading(false)
       setLoadingStage(0)
@@ -265,7 +273,24 @@ export default function DemoPage() {
                     <p className="mt-2 text-xs leading-5 text-[#BDBEBD]">Añádelo para sugerir clases Niza con contexto. Si lo omites, no inferimos clases sólo a partir del nombre o de la imagen.</p>
                   </div>
                   {loading ? <LoadingStatus stage={loadingStage} withNizaContext={loadingWithNizaContext} fromImageOnly={loadingFromImageOnly} /> : null}
-                  {error ? <div role="alert" className="mt-4 flex items-start gap-2 rounded-lg bg-[#20393A] p-4 text-sm text-white"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#B7D3D1]" />{error}</div> : null}
+                  {error ? (
+                    <div role="alert" className="mt-4 rounded-lg bg-[#20393A] p-4 text-sm text-white">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#B7D3D1]" />
+                        <div className="min-w-0 flex-1">
+                          <p>{error}</p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Button type="button" onClick={() => void run()} disabled={!canRun} className="h-9 gap-2 rounded-md bg-[#4A7F74] px-3 text-xs text-white shadow-none hover:bg-[#416F66]">
+                              <RotateCcw className="h-3.5 w-3.5" />Reintentar
+                            </Button>
+                            <Button type="button" onClick={reset} className="h-9 rounded-md bg-[#172F34] px-3 text-xs text-[#E7DFCE] shadow-none hover:bg-[#091A20]">
+                              Limpiar consulta
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
 
                 <aside className="border-t border-[#BDBEBD]/10 bg-[#091A20] p-6 sm:p-8 lg:border-l lg:border-t-0 lg:p-10">
