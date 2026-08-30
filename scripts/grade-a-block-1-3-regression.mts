@@ -35,6 +35,8 @@ const trajectoryRoute = await readFile("app/api/intelligence/company-trajectory/
 const healthRoute = await readFile("app/api/intelligence/health/route.ts", "utf8")
 const healthModel = await readFile("lib/intelligence/health.ts", "utf8")
 const cronRoute = await readFile("app/api/cron/inapi-open-data/route.ts", "utf8")
+const healthSweepRoute = await readFile("app/api/cron/intelligence-health/route.ts", "utf8")
+const vercelConfig = await readFile("vercel.json", "utf8")
 const ingestionObservability = await readFile("lib/intelligence/ingestion-observability.ts", "utf8")
 const retryPolicy = await readFile("lib/intelligence/fetch-with-retry.ts", "utf8")
 const companiesPage = await readFile("app/(app)/empresas/page.tsx", "utf8")
@@ -45,6 +47,7 @@ const graphMigration = await readFile("supabase/migrations/20260830215014_add_co
 const graphFixMigration = await readFile("supabase/migrations/20260830215054_fix_company_graph_v2_counts.sql", "utf8")
 const bootstrapMigration = await readFile("supabase/migrations/20260830215519_bootstrap_observed_source_health.sql", "utf8")
 const catalogHealthMigration = await readFile("supabase/migrations/20260830231309_align_catalog_only_source_health.sql", "utf8")
+const healthHistoryMigration = await readFile("supabase/migrations/20260830233236_add_intelligence_health_history_alerts.sql", "utf8")
 
 for (const needle of [
   'q0 >= 2 && prior === 0',
@@ -72,6 +75,13 @@ const qualityIndex = cronRoute.indexOf('run_intelligence_quality_checks')
 const completedIndex = cronRoute.indexOf('status: "completed"')
 if (qualityIndex < 0 || completedIndex < 0 || completedIndex < qualityIndex) fail("ingestion is marked completed before quality checks finish")
 
+for (const needle of ["CRON_SECRET", "run_intelligence_health_sweep", 'p_context: "vercel_health_cron"']) {
+  if (!healthSweepRoute.includes(needle)) fail(`independent health sweep missing invariant: ${needle}`)
+}
+if (!vercelConfig.includes('"/api/cron/intelligence-health"') || !vercelConfig.includes('"25 * * * *"')) {
+  fail("independent hourly health sweep is not scheduled")
+}
+
 const partialBranchStart = ingestionObservability.indexOf('if (status === "partial")')
 const completedStateStart = ingestionObservability.indexOf('const { error: stateError }', partialBranchStart)
 if (partialBranchStart < 0 || completedStateStart < 0) fail("partial ingestion health branch is missing")
@@ -89,6 +99,7 @@ for (const needle of ["withSourceRetry", "isTransientSourceError", "attempts", "
 if (!healthModel.includes('diaria: 36')) fail("daily source SLA is not explicit")
 if (!healthModel.includes('semanal: 24 * 9')) fail("weekly source SLA is not explicit")
 if (!sourcesPage.includes("Saber qué fuente está fresca antes de decidir")) fail("source health workspace missing trust narrative")
+if (!sourcesPage.includes("Bitácora de corridas y reconciliación")) fail("source health workspace missing ingestion history")
 if (!companiesPage.includes("Hacia dónde se está moviendo la protección")) fail("company UI missing trajectory surface")
 if (!companiesPage.includes("Relaciones corporativas verificadas")) fail("company UI missing graph v2 surface")
 
@@ -123,5 +134,15 @@ for (const sourceKey of ["registro_empresas", "superir", "wipo_lex_cl"]) {
   if (!catalogHealthMigration.includes(sourceKey)) fail(`catalog-only health migration missing ${sourceKey}`)
 }
 if (!catalogHealthMigration.includes("is_active = false")) fail("catalog-only sources are still presented as operational")
+for (const needle of [
+  "intelligence_source_health_history",
+  "intelligence_source_alerts",
+  "source_health_alert",
+  "source_health_resolved",
+  "run_intelligence_health_sweep",
+  "grant execute on function public.run_intelligence_health_sweep(text) to service_role",
+]) if (!healthHistoryMigration.includes(needle)) fail(`health history migration missing ${needle}`)
+if (!healthHistoryMigration.includes("revoke all on public.intelligence_source_health_history from public, anon, authenticated")) fail("health history table is exposed to client roles")
+if (!healthHistoryMigration.includes("revoke all on public.intelligence_source_alerts from public, anon, authenticated")) fail("source alerts table is exposed to client roles")
 
-console.log("Grade A block 1-3 regression PASS: health/quality wiring, partial-success lifecycle, retry/circuit policy, curated identity quality gate, executive six-question entry, entity graph and trajectory guardrails.")
+console.log("Grade A block 1-3 regression PASS: health/quality wiring, partial-success lifecycle, independent SLA sweep, retry/circuit policy, curated identity quality gate, executive six-question entry, entity graph and trajectory guardrails.")
