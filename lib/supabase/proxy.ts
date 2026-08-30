@@ -9,6 +9,19 @@ import {
 
 const PROTECTED_PATHS = ["/dashboard", "/compare", "/comparisons", "/settings", "/history", "/reportes", "/admin"]
 const SUPPORTED_LOCALES = new Set(["es", "en"])
+const LOCALIZED_PUBLIC_PATHS = new Set([
+  "/",
+  "/demo",
+  "/acceso-empresarial",
+  "/contacto",
+  "/docs",
+  "/privacidad",
+  "/terminos",
+  "/auth/login",
+  "/auth/sign-up",
+  "/auth/signup",
+  "/auth/sign-up-success",
+])
 
 function stripLocalePrefix(pathname: string) {
   const segments = pathname.split("/")
@@ -22,16 +35,28 @@ function stripLocalePrefix(pathname: string) {
   return stripped === "/" || stripped === "" ? "/" : stripped
 }
 
+function isLocalizedPublicPath(pathname: string) {
+  const canonicalPath = stripLocalePrefix(pathname)
+  return canonicalPath ? LOCALIZED_PUBLIC_PATHS.has(canonicalPath) : false
+}
+
 function isProtectedPath(pathname: string) {
   return PROTECTED_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))
 }
 
-function configurationUnavailableResponse(request: NextRequest) {
-  if (!isProtectedPath(request.nextUrl.pathname)) {
-    return NextResponse.next({ request })
+function nextResponse(request: NextRequest, forwardedHeaders?: Headers) {
+  return forwardedHeaders
+    ? NextResponse.next({ request: { headers: forwardedHeaders } })
+    : NextResponse.next({ request })
+}
+
+function configurationUnavailableResponse(request: NextRequest, forwardedHeaders?: Headers) {
+  const canonicalPath = stripLocalePrefix(request.nextUrl.pathname) ?? request.nextUrl.pathname
+  if (!isProtectedPath(canonicalPath)) {
+    return nextResponse(request, forwardedHeaders)
   }
 
-  if (request.nextUrl.pathname.startsWith("/api/")) {
+  if (canonicalPath.startsWith("/api/")) {
     return NextResponse.json(
       { error: "Servicio de autenticacion no disponible." },
       { status: 503, headers: { "Cache-Control": "private, no-store" } },
@@ -45,25 +70,27 @@ function configurationUnavailableResponse(request: NextRequest) {
   return NextResponse.redirect(url)
 }
 
-export async function updateSession(request: NextRequest) {
+export async function updateSession(request: NextRequest, forwardedHeaders?: Headers) {
   const pathname = request.nextUrl.pathname
   const canonicalPath = stripLocalePrefix(pathname)
-  if (canonicalPath) {
+
+  if (canonicalPath && !isLocalizedPublicPath(pathname)) {
     const url = request.nextUrl.clone()
     url.pathname = canonicalPath
     return NextResponse.redirect(url)
   }
 
+  const effectivePath = canonicalPath ?? pathname
   const supabaseUrl = tryGetSupabaseUrl()
   const supabaseAnonKey = tryGetSupabaseAnonKey()
 
   if (!supabaseUrl || !supabaseAnonKey) {
     if (process.env.NODE_ENV === "production") {
       console.error("[auth] Supabase configuration is unavailable in production")
-      return configurationUnavailableResponse(request)
+      return configurationUnavailableResponse(request, forwardedHeaders)
     }
 
-    return NextResponse.next({ request })
+    return nextResponse(request, forwardedHeaders)
   }
 
   let resolvedSupabaseUrl: string
@@ -74,13 +101,13 @@ export async function updateSession(request: NextRequest) {
   } catch (error) {
     if (process.env.NODE_ENV === "production") {
       console.error("[auth] Supabase configuration could not be resolved", error)
-      return configurationUnavailableResponse(request)
+      return configurationUnavailableResponse(request, forwardedHeaders)
     }
 
-    return NextResponse.next({ request })
+    return nextResponse(request, forwardedHeaders)
   }
 
-  let supabaseResponse = NextResponse.next({ request })
+  let supabaseResponse = nextResponse(request, forwardedHeaders)
 
   const supabase = createServerClient(resolvedSupabaseUrl, resolvedSupabaseAnonKey, {
     cookies: {
@@ -89,7 +116,7 @@ export async function updateSession(request: NextRequest) {
       },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-        supabaseResponse = NextResponse.next({ request })
+        supabaseResponse = nextResponse(request, forwardedHeaders)
         cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
       },
     },
@@ -104,16 +131,16 @@ export async function updateSession(request: NextRequest) {
     user = null
   }
 
-  const protectedPath = isProtectedPath(pathname)
+  const protectedPath = isProtectedPath(effectivePath)
 
   if (protectedPath && !user) {
     const url = request.nextUrl.clone()
     url.pathname = "/auth/login"
-    url.searchParams.set("redirectTo", pathname)
+    url.searchParams.set("redirectTo", effectivePath)
     return NextResponse.redirect(url)
   }
 
-  if ((pathname === "/auth/login" || pathname === "/auth/sign-up" || pathname === "/auth/signup") && user) {
+  if ((effectivePath === "/auth/login" || effectivePath === "/auth/sign-up" || effectivePath === "/auth/signup") && user) {
     const url = request.nextUrl.clone()
     url.pathname = "/dashboard"
     return NextResponse.redirect(url)
