@@ -1,0 +1,115 @@
+/* VIDENTIA demo — focused premium pass for the public research surface. */
+main[class*="bg-[#0F2A33]"]{
+  background:
+    radial-gradient(900px 520px at 88% 8%,rgba(69,110,142,.12),transparent 62%),
+    radial-gradient(760px 460px at 10% 34%,rgba(74,127,116,.10),transparent 68%),
+    #0F2A33;
+}
+
+main[class*="bg-[#0F2A33]"] > nav{
+  background:rgba(6,17,22,.86)!important;
+  border-bottom-color:rgba(183,211,209,.10)!important;
+  backdrop-filter:blur(18px) saturate(118%);
+  -webkit-backdrop-filter:blur(18px) saturate(118%);
+}
+
+main[class*="bg-[#0F2A33]"] > nav > div{
+  height:72px!important;
+}
+
+main[class*="bg-[#0F2A33]"] > section:first-of-type{
+  padding-top:56px!important;
+}
+
+main[class*="bg-[#0F2A33]"] > section:first-of-type > div:last-child{
+  max-width:1320px!important;
+}
+
+main[class*="bg-[#0F2A33]"] > section:first-of-type h1{
+  max-width:9ch!important;
+  font-size:clamp(3.6rem,6.25vw,7rem)!important;
+  line-height:.92!important;
+  letter-spacing:-.06em!important;
+  text-wrap:balance;
+}
+
+main[class*="bg-[#0F2A33]"] > section:first-of-type > div:last-child > div:first-child{
+  align-items:center!important;
+  gap:64px!important;
+}
+
+main[class*="bg-[#0F2A33]"] > section:first-of-type > div:last-child > div:first-child > div:last-child p{
+  color:#D9E3DF!important;
+}
+
+main[class*="bg-[#0F2A33]"] div[class*="mt-12"][class*="overflow-hidden"][class*="bg-[#13272D]"]{
+  margin-top:44px!important;
+  border:1px solid rgba(183,211,209,.12);
+  border-radius:22px!important;
+  background:linear-gradient(145deg,rgba(19,39,45,.96),rgba(9,26,32,.98))!important;
+  box-shadow:0 36px 100px rgba(2,8,11,.34),inset 0 1px rgba(255,255,255,.025);
+}
+
+main[class*="bg-[#0F2A33]"] button[class*="border-dashed"]{
+  min-height:220px!important;
+  border-radius:16px!important;
+  border-color:rgba(150,181,166,.32)!important;
+  background:linear-gradient(180deg,rgba(9,26,32,.86),rgba(9,26,32,.64))!important;
+}
+
+main[class*="bg-[#0F2A33]"] button[class*="border-dashed"]:hover{
+  border-color:rgba(183,211,209,.58)!important;
+  background:#102A31!important;
+}
+
+main[class*="bg-[#0F2A33]"] input{
+  border-color:rgba(183,211,209,.18)!important;
+  background:rgba(6,17,22,.72)!important;
+}
+
+main[class*="bg-[#0F2A33]"] input:focus{
+  border-color:rgba(150,181,166,.7)!important;
+}
+
+main[class*="bg-[#0F2A33]"] aside[class*="bg-[#091A20]"]{
+  background:linear-gradient(180deg,rgba(9,26,32,.92),rgba(6,17,22,.98))!important;
+}
+
+@media(max-width:1024px){
+  main[class*="bg-[#0F2A33]"] > section:first-of-type{
+    padding-top:44px!important;
+  }
+  main[class*="bg-[#0F2A33]"] > section:first-of-type h1{
+    max-width:10ch!important;
+    font-size:clamp(3.15rem,10vw,5.6rem)!important;
+  }
+  main[class*="bg-[#0F2A33]"] > section:first-of-type > div:last-child > div:first-child{
+    gap:28px!important;
+  }
+}
+
+@media(max-width:640px){
+  main[class*="bg-[#0F2A33]"] > nav > div{
+    height:66px!important;
+    padding-inline:16px!important;
+  }
+  main[class*="bg-[#0F2A33]"] > section:first-of-type{
+    padding:34px 16px 54px!important;
+  }
+  main[class*="bg-[#0F2A33]"] > section:first-of-type h1{
+    font-size:clamp(2.75rem,13vw,4.3rem)!important;
+    line-height:.96!important;
+  }
+  main[class*="bg-[#0F2A33]"] div[class*="mt-12"][class*="overflow-hidden"][class*="bg-[#13272D]"]{
+    margin-top:32px!important;
+    border-radius:16px!important;
+  }
+  main[class*="bg-[#0F2A33]"] button[class*="border-dashed"]{
+    min-height:190px!important;
+    border-radius:14px!important;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  main[class*="bg-[#0F2A33]"] *{scroll-behavior:auto!important}
+}
