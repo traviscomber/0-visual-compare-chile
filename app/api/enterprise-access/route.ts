@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
+const DUPLICATE_WINDOW_MS = 24 * 60 * 60 * 1000
+
 function cleanText(value: unknown, max: number) {
   return typeof value === "string" ? value.trim().slice(0, max) : ""
 }
@@ -24,6 +26,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_request" }, { status: 400 })
   }
 
+  const duplicateSince = new Date(Date.now() - DUPLICATE_WINDOW_MS).toISOString()
+  const { data: recentRequest, error: recentError } = await supabase
+    .from("enterprise_access_requests")
+    .select("id, status, created_at")
+    .eq("user_id", user.id)
+    .gte("created_at", duplicateSince)
+    .in("status", ["new", "contacted", "qualified"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (recentError) {
+    console.error("[enterprise-access] duplicate check failed", recentError.message)
+    return NextResponse.json({ error: "request_failed" }, { status: 500 })
+  }
+
+  if (recentRequest) {
+    return NextResponse.json({ ok: true, duplicate: true, request: recentRequest })
+  }
+
   const { data, error } = await supabase
     .from("enterprise_access_requests")
     .insert({
@@ -42,5 +64,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "request_failed" }, { status: 500 })
   }
 
-  return NextResponse.json({ ok: true, request: data })
+  return NextResponse.json({ ok: true, duplicate: false, request: data })
 }
