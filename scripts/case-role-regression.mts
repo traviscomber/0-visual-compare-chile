@@ -7,6 +7,7 @@ import {
   canExecuteCaseSuggestedAction,
   caseSuggestedActionRestriction,
 } from "../lib/cases/access.ts"
+import { isCaseMemberTarget, validateCaseMemberTargets } from "../lib/cases/collaboration-targets.ts"
 
 const common = {
   caseId: "00000000-0000-0000-0000-000000000001",
@@ -41,16 +42,37 @@ assert.equal(canExecuteCaseSuggestedAction("owner", "none"), false)
 assert.equal(caseSuggestedActionRestriction("editor", "extend_deadline"), "Requiere al responsable del caso")
 assert.equal(caseSuggestedActionRestriction("viewer", "remind_reviewers"), "Requiere rol de editor o responsable")
 
+const memberA = "00000000-0000-0000-0000-000000000010"
+const memberB = "00000000-0000-0000-0000-000000000011"
+const outsider = "00000000-0000-0000-0000-000000000099"
+const memberIds = [memberA, memberB]
+assert.deepEqual(validateCaseMemberTargets([memberA, memberA, memberB], memberIds), { valid: true, targets: [memberA, memberB] })
+assert.deepEqual(validateCaseMemberTargets([memberA, outsider], memberIds), { valid: false, targets: [] })
+assert.deepEqual(validateCaseMemberTargets(new Array(21).fill(memberA), memberIds), { valid: false, targets: [] })
+assert.equal(isCaseMemberTarget(memberA, memberIds), true)
+assert.equal(isCaseMemberTarget(outsider, memberIds), false)
+assert.equal(isCaseMemberTarget(null, memberIds), true)
+
 const itemsRoutePath = fileURLToPath(new URL("../app/api/cases/items/route.ts", import.meta.url))
 const detailPagePath = fileURLToPath(new URL("../app/(app)/casos/[id]/page.tsx", import.meta.url))
-const [itemsRouteSource, detailPageSource] = await Promise.all([
+const collaborationRoutePath = fileURLToPath(new URL("../app/api/cases/collaboration/route.ts", import.meta.url))
+const collaborationMigrationPath = fileURLToPath(new URL("../supabase/migrations/20260830031000_harden_case_collaboration_targets.sql", import.meta.url))
+const [itemsRouteSource, detailPageSource, collaborationRouteSource, collaborationMigrationSource] = await Promise.all([
   readFile(itemsRoutePath, "utf8"),
   readFile(detailPagePath, "utf8"),
+  readFile(collaborationRoutePath, "utf8"),
+  readFile(collaborationMigrationPath, "utf8"),
 ])
 
 assert.match(itemsRouteSource, /rpc\("case_access_role"/, "case detail API must resolve the effective case role")
 assert.match(itemsRouteSource, /currentUserRole: role/, "case detail API must return the effective case role")
 assert.match(detailPageSource, /useState<CaseAccessRole>\("viewer"\)/, "case detail must fail closed to viewer mode")
 assert.match(detailPageSource, /const canEdit = canEditCase\(currentUserRole\)/, "case detail must gate editing through the shared role policy")
+assert.match(collaborationRouteSource, /validateCaseMemberTargets/, "collaboration API must validate comment mentions")
+assert.match(collaborationRouteSource, /isCaseMemberTarget/, "collaboration API must validate action assignees")
+assert.match(collaborationMigrationSource, /case_mention_target_not_member/, "database must reject external case mention targets")
+assert.match(collaborationMigrationSource, /case_action_assignee_not_member/, "database must reject external case action assignees")
+assert.match(collaborationMigrationSource, /before insert or update of case_id, mentions/, "comment target validation must run before notification triggers")
+assert.match(collaborationMigrationSource, /before insert or update of case_id, assigned_to/, "action target validation must run before notification triggers")
 
-console.log("Case role regression PASS: review policy ownership, viewer detail mode and suggested-action permissions verified.")
+console.log("Case role regression PASS: roles, viewer mode and collaboration notification targets verified.")
