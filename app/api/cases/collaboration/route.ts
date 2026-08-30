@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
+import { isCaseMemberTarget, validateCaseMemberTargets } from "@/lib/cases/collaboration-targets"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const auth = await requireUser()
   if (!auth.ok) return auth.response
-  const body = await request.json().catch(() => ({})) as { type?: string; caseId?: string; email?: string; role?: string; text?: string; mentions?: string[]; title?: string; assignedTo?: string | null; dueAt?: string | null }
+  const body = await request.json().catch(() => ({})) as { type?: string; caseId?: string; email?: string; role?: string; text?: string; mentions?: unknown; title?: string; assignedTo?: unknown; dueAt?: string | null }
   if (!body.caseId || !body.type) return NextResponse.json({ error: "Solicitud incompleta." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
 
   if (body.type === "member") {
@@ -42,8 +43,14 @@ export async function POST(request: Request) {
   if (body.type === "comment") {
     const text = body.text?.trim() ?? ""
     if (!text || text.length > 4000) return NextResponse.json({ error: "Comentario inválido." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
-    const mentions = Array.isArray(body.mentions) ? body.mentions.filter((id) => typeof id === "string").slice(0, 20) : []
-    const { data, error } = await auth.supabase.from("case_comments").insert({ case_id: body.caseId, author_id: auth.user.id, body: text, mentions }).select("id,case_id,author_id,body,mentions,created_at,updated_at").single()
+
+    const requestedMentions = body.mentions ?? []
+    const { data: members, error: membersError } = await auth.supabase.rpc("get_case_members", { p_case_id: body.caseId })
+    if (membersError) return NextResponse.json({ error: "No pudimos validar las menciones del caso." }, { status: 403, headers: PRIVATE_NO_STORE_HEADERS })
+    const mentionValidation = validateCaseMemberTargets(requestedMentions, (members ?? []).map((member) => member.user_id))
+    if (!mentionValidation.valid) return NextResponse.json({ error: "Sólo puedes mencionar participantes de este caso." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
+
+    const { data, error } = await auth.supabase.from("case_comments").insert({ case_id: body.caseId, author_id: auth.user.id, body: text, mentions: mentionValidation.targets }).select("id,case_id,author_id,body,mentions,created_at,updated_at").single()
     if (error) return NextResponse.json({ error: "No pudimos publicar el comentario." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
     return NextResponse.json({ comment: data }, { status: 201, headers: PRIVATE_NO_STORE_HEADERS })
   }
@@ -51,7 +58,18 @@ export async function POST(request: Request) {
   if (body.type === "action") {
     const title = body.title?.trim() ?? ""
     if (!title || title.length > 240) return NextResponse.json({ error: "Acción inválida." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
-    const { data, error } = await auth.supabase.from("case_actions").insert({ case_id: body.caseId, title, assigned_to: body.assignedTo || null, created_by: auth.user.id, due_at: body.dueAt || null }).select("id,case_id,title,assigned_to,created_by,status,due_at,created_at,completed_at,updated_at").single()
+    if (body.assignedTo !== undefined && body.assignedTo !== null && body.assignedTo !== "" && typeof body.assignedTo !== "string") {
+      return NextResponse.json({ error: "Responsable inválido." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
+    }
+    const assignedTo = typeof body.assignedTo === "string" && body.assignedTo.trim() ? body.assignedTo.trim() : null
+    if (assignedTo) {
+      const { data: members, error: membersError } = await auth.supabase.rpc("get_case_members", { p_case_id: body.caseId })
+      if (membersError) return NextResponse.json({ error: "No pudimos validar al responsable de la acción." }, { status: 403, headers: PRIVATE_NO_STORE_HEADERS })
+      if (!isCaseMemberTarget(assignedTo, (members ?? []).map((member) => member.user_id))) {
+        return NextResponse.json({ error: "Sólo puedes asignar acciones a participantes de este caso." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
+      }
+    }
+    const { data, error } = await auth.supabase.from("case_actions").insert({ case_id: body.caseId, title, assigned_to: assignedTo, created_by: auth.user.id, due_at: body.dueAt || null }).select("id,case_id,title,assigned_to,created_by,status,due_at,created_at,completed_at,updated_at").single()
     if (error) return NextResponse.json({ error: "No pudimos crear la acción." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
     return NextResponse.json({ action: data }, { status: 201, headers: PRIVATE_NO_STORE_HEADERS })
   }
