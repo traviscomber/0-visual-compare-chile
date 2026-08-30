@@ -1,10 +1,10 @@
 import type { MetadataRoute } from "next"
 
 const origin = "https://videntia.app"
-const routes = ["", "/demo", "/docs", "/privacidad", "/terminos"] as const
+const sharedRoutes = ["", "/demo", "/docs", "/privacidad", "/terminos"] as const
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  return routes.flatMap((path) => [
+  const shared = sharedRoutes.flatMap((path) => [
     {
       url: `${origin}/es${path}`,
       changeFrequency: path === "" ? "weekly" as const : "monthly" as const,
@@ -18,4 +18,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
       alternates: { languages: { "es-CL": `${origin}/es${path}`, en: `${origin}/en${path}` } },
     },
   ])
+
+  const patents = [
+    {
+      url: `${origin}/es/patentes`,
+      changeFrequency: "weekly" as const,
+      priority: 0.85,
+      alternates: { languages: { "es-CL": `${origin}/es/patentes`, en: `${origin}/en/patents` } },
+    },
+    {
+      url: `${origin}/en/patents`,
+      changeFrequency: "weekly" as const,
+      priority: 0.75,
+      alternates: { languages: { "es-CL": `${origin}/es/patentes`, en: `${origin}/en/patents` } },
+    },
+  ]
+
+  return [...shared, ...patents]
 }

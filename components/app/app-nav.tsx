@@ -8,6 +8,7 @@ import {
   BellRing,
   BriefcaseBusiness,
   CircleDot,
+  FlaskConical,
   History,
   LayoutDashboard,
   LogOut,
@@ -66,10 +67,11 @@ const navigationGroups: readonly NavigationGroup[] = [
       { href: "/dashboard", label: "Resumen", icon: LayoutDashboard, aliases: [] },
       {
         href: "/investigar",
-        label: "Investigar",
+        label: "Marcas",
         icon: Search,
-        aliases: ["/evaluar", "/agente", "/compare", "/comparisons", "/consulta-inapi", "/consulta", "/patentes"],
+        aliases: ["/evaluar", "/agente", "/compare", "/comparisons", "/consulta-inapi", "/consulta"],
       },
+      { href: "/patentes", label: "Patentes", icon: FlaskConical, aliases: ["/patentes/alertas"] },
       { href: "/portfolio", label: "Portafolio", icon: Waypoints, aliases: [] },
       { href: "/casos", label: "Casos", icon: BriefcaseBusiness, aliases: [] },
     ],
@@ -77,7 +79,7 @@ const navigationGroups: readonly NavigationGroup[] = [
   {
     label: "Seguimiento",
     items: [
-      { href: "/monitorear", label: "Vigilancia", icon: BellRing, aliases: ["/patentes/alertas"] },
+      { href: "/monitorear", label: "Vigilancia", icon: BellRing, aliases: [] },
       { href: "/notificaciones", label: "Notificaciones", icon: Bell, aliases: [] },
       { href: "/reportes", label: "Reportes", icon: History, aliases: ["/history"] },
     ],
@@ -143,7 +145,7 @@ function BrandMark() {
       <span className="min-w-0 leading-none group-data-[collapsible=icon]:hidden">
         <span className="block truncate text-[15px] font-normal tracking-[0.22em] text-[#E7DFCE]">ViDENTiA</span>
         <span className="mt-1.5 block truncate text-[7px] font-medium uppercase tracking-[0.16em] text-[#8F9998]">
-          Inteligencia y protección de marcas
+          Inteligencia de propiedad intelectual
         </span>
       </span>
     </span>

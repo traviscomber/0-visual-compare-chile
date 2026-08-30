@@ -30,6 +30,7 @@ export function LocalizedLandingPage({ locale }: { locale: PublicLocale }) {
   const copy = landingCopy[locale]
   const otherLocale = copy.language.switchLocale
   const localized = (path: string) => localePath(locale, path)
+  const patentsPath = locale === "es" ? localized("/patentes") : localized("/patents")
 
   return (
     <main className="px-home">
@@ -44,6 +45,7 @@ export function LocalizedLandingPage({ locale }: { locale: PublicLocale }) {
 
           <div className="px-nav-links">
             <Link href={localized("/demo")}>{copy.nav.search}</Link>
+            <Link href={patentsPath}>{locale === "es" ? "PATENTES" : "PATENTS"}</Link>
             <Link href="#proceso">{copy.nav.register}</Link>
             <Link href="#proteccion">{copy.nav.watch}</Link>
             <Link href="#capacidades">{copy.nav.manage}</Link>
@@ -240,7 +242,7 @@ export function LocalizedLandingPage({ locale }: { locale: PublicLocale }) {
             <p>{copy.footer.body}</p>
           </div>
           <div className="px-footer-nav">
-            <div><span>{copy.footer.platform}</span><Link href={localized("/demo")}>{copy.footer.search}</Link><Link href="#proceso">{copy.footer.process}</Link><Link href="#proteccion">{copy.footer.watch}</Link><Link href="#capacidades">{copy.footer.manage}</Link></div>
+            <div><span>{copy.footer.platform}</span><Link href={localized("/demo")}>{copy.footer.search}</Link><Link href={patentsPath}>{locale === "es" ? "Patentes" : "Patents"}</Link><Link href="#proceso">{copy.footer.process}</Link><Link href="#proteccion">{copy.footer.watch}</Link><Link href="#capacidades">{copy.footer.manage}</Link></div>
             <div><span>{copy.footer.resources}</span><Link href={localized("/docs")}>{copy.footer.docs}</Link><Link href={localized("/contacto")}>{copy.footer.contact}</Link><Link href={localized("/auth/login")} prefetch={false}>{copy.footer.login}</Link></div>
             <div><span>{copy.footer.legal}</span><Link href={localized("/privacidad")}>{copy.footer.privacy}</Link><Link href={localized("/terminos")}>{copy.footer.terms}</Link></div>
           </div>
