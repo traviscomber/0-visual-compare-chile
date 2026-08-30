@@ -2,6 +2,7 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { ArrowRight, KeyRound, LockKeyhole, Settings2, ShieldCheck, UserRound } from "lucide-react"
 import { ApiKeyManager } from "@/components/app/api-key-manager"
+import { EnterpriseAccessRequests } from "@/components/app/enterprise-access-requests"
 import { InapiOperationsCard } from "@/components/app/inapi-operations-card"
 import { InapiRecordsCard } from "@/components/app/inapi-records-card"
 import { InapiSyncManager } from "@/components/app/inapi-sync-manager"
@@ -150,9 +151,11 @@ export default async function SettingsPage() {
         </div>
       </section>
 
+      {isAdmin ? <EnterpriseAccessRequests /> : null}
+
       <section className="py-8 lg:py-10" aria-labelledby="admin-controls-title">
         <OperationalSectionHeader
-          eyebrow="04 / Administración"
+          eyebrow={isAdmin ? "05 / Administración" : "04 / Administración"}
           title={<span id="admin-controls-title">Operación INAPI</span>}
           meta={isAdmin ? "Acceso administrativo" : "Acceso restringido"}
         />
