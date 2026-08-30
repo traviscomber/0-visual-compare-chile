@@ -4,6 +4,7 @@ import type { CSSProperties, ReactNode } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
+  Activity,
   Bell,
   BellRing,
   BriefcaseBusiness,
@@ -72,6 +73,7 @@ const navigationGroups: readonly NavigationGroup[] = [
         aliases: ["/evaluar", "/agente", "/compare", "/comparisons", "/consulta-inapi", "/consulta"],
       },
       { href: "/patentes", label: "Patentes", icon: FlaskConical, aliases: ["/patentes/alertas"] },
+      { href: "/tecnologias", label: "Tecnologías", icon: Activity, aliases: [] },
       { href: "/portfolio", label: "Portafolio", icon: Waypoints, aliases: [] },
       { href: "/casos", label: "Casos", icon: BriefcaseBusiness, aliases: [] },
     ],

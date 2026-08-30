@@ -1,0 +1,189 @@
+import { createAdminClient } from "@/lib/supabase/admin"
+import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
+import { searchGdeltNews } from "@/lib/intelligence/gdelt"
+import { searchOpenAlexWorks } from "@/lib/intelligence/openalex"
+
+export type StrategicWatchType = "technology" | "company" | "competitor"
+
+export type StrategicWatch = {
+  id: string
+  watch_type: StrategicWatchType
+  query: string
+  is_active: boolean
+  created_at: string
+  last_checked_at: string | null
+  last_reviewed_at: string | null
+}
+
+export type StrategicCandidateSignal = {
+  signal_key: string
+  source_key: "inapi_open_data" | "openalex" | "crossref" | "gdelt"
+  event_type: "patent" | "trademark" | "publication" | "news"
+  title: string
+  summary: string | null
+  source_url: string | null
+  occurred_at: string | null
+  relevance: "alta" | "media" | "baja"
+  payload: Record<string, unknown>
+}
+
+type AdminClient = ReturnType<typeof createAdminClient>
+
+const PATENT_WINDOW_DAYS = 365
+const TRADEMARK_WINDOW_DAYS = 365
+const SCIENCE_WINDOW_DAYS = 180
+const NEWS_WINDOW_DAYS = 14
+
+export async function scanStrategicWatch(admin: AdminClient, watch: StrategicWatch): Promise<StrategicCandidateSignal[]> {
+  const now = new Date()
+  const tasks: Array<Promise<StrategicCandidateSignal[]>> = [
+    scanPatents(admin, watch, daysAgo(now, PATENT_WINDOW_DAYS)),
+    scanNews(watch, daysAgo(now, NEWS_WINDOW_DAYS), now),
+  ]
+
+  if (watch.watch_type === "technology") {
+    tasks.push(scanScience(watch, daysAgo(now, SCIENCE_WINDOW_DAYS), now))
+  } else {
+    tasks.push(scanTrademarks(admin, watch, daysAgo(now, TRADEMARK_WINDOW_DAYS)))
+  }
+
+  const groups = await Promise.all(tasks.map(task => safe(task, [])))
+  const unique = new Map<string, StrategicCandidateSignal>()
+  for (const signal of groups.flat()) {
+    const current = unique.get(signal.signal_key)
+    if (!current || relevanceRank(signal.relevance) > relevanceRank(current.relevance)) unique.set(signal.signal_key, signal)
+  }
+
+  return [...unique.values()]
+}
+
+async function scanPatents(admin: AdminClient, watch: StrategicWatch, from: Date): Promise<StrategicCandidateSignal[]> {
+  const escaped = escapeLike(watch.query)
+  const column = watch.watch_type === "technology" ? "title" : "applicants"
+  const { data, error } = await admin
+    .from("patent_records")
+    .select("id,source_record_id,application_number,title,applicants,status,country,filing_date,publication_date,source_url")
+    .ilike(column, `%${escaped}%`)
+    .gte("filing_date", dateOnly(from))
+    .order("filing_date", { ascending: false, nullsFirst: false })
+    .limit(12)
+
+  if (error) throw error
+  return (data ?? []).map(row => ({
+    signal_key: `inapi_open_data:patent:${row.source_record_id || row.id}`,
+    source_key: "inapi_open_data" as const,
+    event_type: "patent" as const,
+    title: row.title || "Patente sin título",
+    summary: watch.watch_type === "technology"
+      ? `Nueva actividad de patente relacionada con ${watch.query}. ${row.applicants ? `Solicitante: ${row.applicants}.` : ""}`.trim()
+      : `Actividad de patente asociada a ${watch.query}.${row.status ? ` Estado: ${row.status}.` : ""}`,
+    source_url: row.source_url,
+    occurred_at: row.publication_date || row.filing_date,
+    relevance: watch.watch_type === "technology" ? "media" as const : "alta" as const,
+    payload: {
+      application_number: row.application_number,
+      applicants: row.applicants,
+      status: row.status,
+      country: row.country,
+      filing_date: row.filing_date,
+      publication_date: row.publication_date,
+    },
+  }))
+}
+
+async function scanTrademarks(admin: AdminClient, watch: StrategicWatch, from: Date): Promise<StrategicCandidateSignal[]> {
+  const escaped = escapeLike(watch.query)
+  const { data, error } = await admin
+    .from("trademark_records")
+    .select("id,nombre,solicitante,numero_solicitud,estado,fecha_presentacion,source_url")
+    .ilike("solicitante", `%${escaped}%`)
+    .gte("fecha_presentacion", dateOnly(from))
+    .order("fecha_presentacion", { ascending: false, nullsFirst: false })
+    .limit(12)
+
+  if (error) throw error
+  return (data ?? []).map(row => ({
+    signal_key: `inapi_open_data:trademark:${row.id}`,
+    source_key: "inapi_open_data" as const,
+    event_type: "trademark" as const,
+    title: row.nombre || "Marca sin denominación",
+    summary: `Solicitud de marca asociada a ${watch.query}.${row.estado ? ` Estado: ${row.estado}.` : ""}`,
+    source_url: row.source_url,
+    occurred_at: row.fecha_presentacion,
+    relevance: "alta" as const,
+    payload: {
+      applicant: row.solicitante,
+      application_number: row.numero_solicitud,
+      status: row.estado,
+      filing_date: row.fecha_presentacion,
+    },
+  }))
+}
+
+async function scanScience(watch: StrategicWatch, from: Date, to: Date): Promise<StrategicCandidateSignal[]> {
+  const [openAlex, crossref] = await Promise.all([
+    safe(searchOpenAlexWorks(watch.query, from, to, 10), []),
+    safe(searchCrossrefWorks(watch.query, from, to, 10), []),
+  ])
+  const seenDoi = new Set<string>()
+  const rows: StrategicCandidateSignal[] = []
+
+  for (const item of openAlex) {
+    const doi = normalizeDoi(item.doi)
+    if (doi) seenDoi.add(doi)
+    rows.push({
+      signal_key: `openalex:publication:${item.sourceRecordId}`,
+      source_key: "openalex",
+      event_type: "publication",
+      title: item.title,
+      summary: [item.topic, item.institutions.slice(0, 2).join(", ")].filter(Boolean).join(" · ") || "Publicación científica relacionada.",
+      source_url: item.url,
+      occurred_at: item.date,
+      relevance: "media",
+      payload: { doi: item.doi, cited_by_count: item.citedByCount, authors: item.authors, institutions: item.institutions, topic: item.topic },
+    })
+  }
+
+  for (const item of crossref) {
+    const doi = normalizeDoi(item.doi)
+    if (doi && seenDoi.has(doi)) continue
+    rows.push({
+      signal_key: `crossref:publication:${item.sourceRecordId}`,
+      source_key: "crossref",
+      event_type: "publication",
+      title: item.title,
+      summary: [item.publisher, item.subjects.slice(0, 2).join(", ")].filter(Boolean).join(" · ") || "Publicación indexada relacionada.",
+      source_url: item.url,
+      occurred_at: item.date,
+      relevance: "media",
+      payload: { doi: item.doi, publisher: item.publisher, cited_by_count: item.citedByCount, authors: item.authors, subjects: item.subjects },
+    })
+  }
+
+  return rows
+}
+
+async function scanNews(watch: StrategicWatch, from: Date, to: Date): Promise<StrategicCandidateSignal[]> {
+  const items = await searchGdeltNews(watch.query, from, to, 10)
+  return items.map(item => ({
+    signal_key: `gdelt:news:${item.sourceRecordId}`,
+    source_key: "gdelt" as const,
+    event_type: "news" as const,
+    title: item.title,
+    summary: [item.domain, item.sourceCountry].filter(Boolean).join(" · ") || "Cobertura pública reciente.",
+    source_url: item.url,
+    occurred_at: item.date,
+    relevance: "baja" as const,
+    payload: { domain: item.domain, source_country: item.sourceCountry, language: item.language },
+  }))
+}
+
+async function safe<T>(promise: Promise<T>, fallback: T): Promise<T> {
+  try { return await promise } catch (error) { console.warn("[strategic-watch] source unavailable", error); return fallback }
+}
+
+function escapeLike(value: string) { return value.replace(/[%_]/g, "\\$&") }
+function dateOnly(value: Date) { return value.toISOString().slice(0, 10) }
+function daysAgo(reference: Date, days: number) { return new Date(reference.getTime() - days * 86400000) }
+function normalizeDoi(value: string | null) { return value ? value.toLowerCase().replace(/^https?:\/\/(dx\.)?doi\.org\//, "") : null }
+function relevanceRank(value: StrategicCandidateSignal["relevance"]) { return value === "alta" ? 3 : value === "media" ? 2 : 1 }
