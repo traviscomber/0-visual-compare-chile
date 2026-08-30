@@ -92,9 +92,10 @@ export default function CompaniesPage() {
     }
   }
 
-  const deltaLabel = result?.metrics.delta_pct === null
+  const deltaPct = result?.metrics.delta_pct
+  const deltaLabel = deltaPct == null
     ? "Sin base previa"
-    : `${result.metrics.delta_pct > 0 ? "+" : ""}${result.metrics.delta_pct}% vs semestre anterior`
+    : `${deltaPct > 0 ? "+" : ""}${deltaPct}% vs semestre anterior`
 
   return <OperationalPage>
     <OperationalHeader
@@ -177,10 +178,10 @@ function IdentitySection({ result, loading, onSelect }: { result: Result; loadin
 
 function DirectionSection({ result }: { result: Result }) {
   const direction = result.direction
-  if (!direction) return <section className="border-b border-border/80 py-9"><OperationalSectionHeader title="Dirección observada" /><p className="mt-4 text-sm leading-6 text-muted-foreground">No hay suficiente actividad en los últimos 12 meses para comparar dos ventanas semestrales.</p></section>
+  if (!direction) return <section className="border-b border-border/80 py-9"><OperationalSectionHeader eyebrow="Cambio estratégico" title="Dirección observada" /><p className="mt-4 text-sm leading-6 text-muted-foreground">No hay suficiente actividad en los últimos 12 meses para comparar dos ventanas semestrales.</p></section>
 
   return <section className="border-b border-border/80 py-9">
-    <OperationalSectionHeader title="Dirección observada" action={<span className="text-xs text-muted-foreground">Confianza {direction.confidence}/100 · evidencia {direction.evidence_level}</span>} />
+    <OperationalSectionHeader eyebrow="Cambio estratégico" title="Dirección observada" action={<span className="text-xs text-muted-foreground">Confianza {direction.confidence}/100 · evidencia {direction.evidence_level}</span>} />
     <h3 className="mt-5 max-w-4xl text-2xl font-medium leading-8 text-white">{direction.headline}</h3>
     <div className="mt-7 grid gap-7 lg:grid-cols-3">
       <Fact label="Hecho observado" text={direction.observed_fact} />
@@ -193,7 +194,7 @@ function DirectionSection({ result }: { result: Result }) {
 
 function ProtectionDeltaSection({ result }: { result: Result }) {
   return <section className="border-b border-border/80 py-9">
-    <OperationalSectionHeader title="Qué aparece ahora y no aparecía hace seis meses" />
+    <OperationalSectionHeader eyebrow="Cobertura nueva" title="Qué aparece ahora y no aparecía hace seis meses" />
     <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Sólo se muestran clasificaciones presentes en los últimos 180 días y ausentes en los 180 días anteriores. Una clase nueva indica expansión observable de cobertura, no necesariamente una tecnología o negocio completamente nuevo.</p>
     <div className="mt-7 grid gap-8 xl:grid-cols-2">
       <MovementList icon={FlaskConical} title="Nuevas áreas técnicas · IPC" items={result.new_ipc} empty="No aparecen nuevas subclases IPC en la ventana actual." />
@@ -211,7 +212,7 @@ function MovementList({ icon: Icon, title, items, empty }: { icon: typeof Activi
 
 function EvidenceSection({ evidence }: { evidence: Evidence[] }) {
   return <section className="border-b border-border/80 py-9">
-    <OperationalSectionHeader title="Expedientes que sostienen la lectura" />
+    <OperationalSectionHeader eyebrow="Evidencia INAPI" title="Expedientes que sostienen la lectura" />
     {evidence.length ? <div className="mt-5 divide-y divide-border/80 border-y border-border/80">{evidence.map(item => <article key={item.id} className="grid gap-3 py-5 sm:grid-cols-[34px_minmax(0,1fr)_auto] sm:items-start"><span className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#173B37] text-[#96B5A6]">{item.entity_type === "patent" ? <FlaskConical className="h-3.5 w-3.5" /> : <Tag className="h-3.5 w-3.5" />}</span><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="bg-[#13272D]">{item.entity_type === "patent" ? "Patente" : "Marca"}</Badge>{item.filing_date ? <span className="text-xs text-muted-foreground">{formatDate(item.filing_date)}</span> : null}{item.classification_codes.slice(0, 4).map(code => <span key={code} className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{code}</span>)}</div><p className="mt-2 font-medium leading-6 text-white">{item.title}</p><p className="mt-1 text-xs text-muted-foreground">{item.applicant_raw}{item.status ? ` · ${item.status}` : ""}</p></div>{item.source_url ? <Button asChild variant="ghost" size="sm"><a href={item.source_url} target="_blank" rel="noreferrer">Fuente <ExternalLink className="h-3.5 w-3.5" /></a></Button> : null}</article>)}</div> : <p className="mt-5 text-sm text-muted-foreground">No hay expedientes recientes en la ventana actual.</p>}
   </section>
 }
@@ -221,7 +222,7 @@ function ExternalSignalsSection({ result }: { result: Result }) {
   const hasExternal = external.publications.length || external.news.length || external.openalex_current !== null
   if (!hasExternal && !external.errors.length) return null
   return <section className="py-9">
-    <OperationalSectionHeader title="Señales externas para contrastar" />
+    <OperationalSectionHeader eyebrow="Contexto externo" title="Señales externas para contrastar" />
     <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Estas señales se buscan por el nombre resuelto de la empresa. Sirven para corroborar contexto científico o público, pero no se consideran evidencia de identidad ni de intención corporativa por sí solas.</p>
     {external.openalex_current !== null ? <div className="mt-5 border-y border-border/80 py-4 text-sm text-muted-foreground">OpenAlex: <span className="text-white">{external.openalex_current}</span> publicaciones coincidentes en la ventana actual{external.openalex_previous !== null ? <> vs <span className="text-white">{external.openalex_previous}</span> en la anterior</> : null}.</div> : null}
     <div className="mt-7 grid gap-8 xl:grid-cols-2">
