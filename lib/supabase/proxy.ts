@@ -72,6 +72,16 @@ function configurationUnavailableResponse(request: NextRequest, forwardedHeaders
   return NextResponse.redirect(url)
 }
 
+function isExpectedExpiredSession(error: unknown) {
+  if (!error || typeof error !== "object") return false
+  const candidate = error as { code?: unknown; message?: unknown }
+  const code = typeof candidate.code === "string" ? candidate.code : ""
+  const message = typeof candidate.message === "string" ? candidate.message.toLowerCase() : ""
+  return code === "refresh_token_not_found"
+    || code === "refresh_token_already_used"
+    || message.includes("invalid refresh token")
+}
+
 export async function updateSession(request: NextRequest, forwardedHeaders?: Headers) {
   const pathname = request.nextUrl.pathname
   const canonicalPath = stripLocalePrefix(pathname)
@@ -129,7 +139,9 @@ export async function updateSession(request: NextRequest, forwardedHeaders?: Hea
     const result = await supabase.auth.getUser()
     user = result.data.user
   } catch (error) {
-    console.error("[auth] Could not validate the user session", error)
+    if (!isExpectedExpiredSession(error)) {
+      console.error("[auth] Could not validate the user session", error)
+    }
     user = null
   }
 
