@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import type { ReactNode } from "react"
 import { useEffect, useState } from "react"
 import { ArrowLeft, ArrowRight, CheckCircle2, Inbox, Loader2, MessageSquareText } from "lucide-react"
 import { OperationalHeader, OperationalMetric, OperationalMetricRail, OperationalPage, OperationalPanel, OperationalSectionHeader } from "@/components/app/operational-ui"
@@ -49,11 +50,11 @@ export default function CaseInboxPage(){
       </OperationalPanel>
 
       <OperationalPanel className="min-w-0">
-        <OperationalSectionHeader eyebrow="Colaboración" title="Menciones" meta={`${mentions.length} conversación${mentions.length===1?"":"es"}`} />
+        <OperationalSectionHeader eyebrow="Colaboración" title="Menciones" meta={`${mentions.length} ${mentions.length===1?"conversación":"conversaciones"}`} />
         <div className="mt-5 divide-y divide-border/80 border-y border-border/80">{mentions.length===0?<Empty icon={<MessageSquareText className="h-5 w-5"/>} text="No tienes menciones pendientes."/>:mentions.map(item=><div key={item.id} className="py-5"><p className="line-clamp-3 break-words text-sm leading-6 text-white/85">{item.body}</p><p className="mt-2 break-words text-xs text-muted-foreground">{item.cases?.title||"Caso"} · {formatDate(item.created_at)}</p><Link href={`/casos/${item.case_id}/equipo`} className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-[#96B5A6] hover:text-white">Ver conversación<ArrowRight className="h-3.5 w-3.5"/></Link></div>)}</div>
       </OperationalPanel>
     </section>}
   </OperationalPage>
 }
 
-function Empty({icon,text}:{icon:React.ReactNode;text:string}){return <div className="py-9 text-sm text-muted-foreground"><span className="text-[#96B5A6]">{icon}</span><p className="mt-3">{text}</p></div>}
+function Empty({icon,text}:{icon:ReactNode;text:string}){return <div className="py-9 text-sm text-muted-foreground"><span className="text-[#96B5A6]">{icon}</span><p className="mt-3">{text}</p></div>}
