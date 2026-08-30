@@ -1,0 +1,123 @@
+/* Focused Ciclope pass: public landing final CTA only. */
+.px-home .px-final {
+  position: relative;
+  padding: clamp(110px, 11vw, 168px) 0;
+  overflow: hidden;
+  background:
+    radial-gradient(720px 360px at 72% 38%, rgba(74, 127, 116, .08), transparent 72%),
+    linear-gradient(180deg, #0b2028 0%, #08191f 100%);
+  border-bottom: 1px solid rgba(183, 211, 209, .10);
+}
+
+.px-home .px-final-atmosphere {
+  opacity: .055;
+}
+
+.px-home .px-final-ring-b,
+.px-home .px-final-disc,
+.px-home .px-final-dots {
+  display: none;
+}
+
+.px-home .px-final-ring-a {
+  width: 520px;
+  height: 520px;
+  right: -210px;
+  top: -160px;
+  border-width: 1px;
+  border-color: rgba(150, 181, 166, .4);
+}
+
+.px-home .px-final-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, .65fr);
+  gap: clamp(56px, 8vw, 120px);
+  align-items: end;
+}
+
+.px-home .px-final h2 {
+  max-width: 760px;
+  margin-top: 15px;
+  font-size: clamp(3.15rem, 5vw, 5.7rem);
+  line-height: .99;
+  letter-spacing: -.045em;
+}
+
+.px-home .px-final-grid > div:first-child > p:last-child {
+  max-width: 460px;
+  margin: 26px 0 0;
+  color: rgba(255, 255, 255, .68);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.px-home .px-final-actions {
+  display: grid;
+  gap: 12px;
+  align-self: end;
+}
+
+.px-home .px-final-actions .px-btn {
+  width: 100%;
+  min-height: 54px;
+  justify-content: space-between;
+  padding-inline: 20px;
+}
+
+.px-home .px-final-actions .px-btn-primary {
+  border-color: rgba(150, 181, 166, .55);
+  background: #3f7469;
+  box-shadow: 0 18px 52px rgba(0, 0, 0, .16);
+}
+
+.px-home .px-final-actions .px-btn-primary:hover {
+  background: #477e72;
+  box-shadow: 0 20px 58px rgba(0, 0, 0, .20);
+}
+
+.px-home .px-final-actions .px-btn-secondary {
+  min-height: 46px;
+  padding-inline: 4px;
+  justify-content: flex-start;
+  border: 0;
+  border-bottom: 1px solid rgba(183, 211, 209, .18);
+  border-radius: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, .66);
+}
+
+.px-home .px-final-actions .px-btn-secondary:hover {
+  border-color: rgba(183, 211, 209, .42);
+  background: transparent;
+  color: var(--vid-body);
+}
+
+@media (max-width: 860px) {
+  .px-home .px-final-grid {
+    grid-template-columns: 1fr;
+    gap: 48px;
+    align-items: start;
+  }
+
+  .px-home .px-final-actions {
+    width: min(100%, 440px);
+  }
+}
+
+@media (max-width: 640px) {
+  .px-home .px-final {
+    padding-block: 88px;
+  }
+
+  .px-home .px-final h2 {
+    font-size: clamp(2.8rem, 14vw, 4rem);
+  }
+
+  .px-home .px-final-actions {
+    width: 100%;
+  }
+
+  .px-home .px-final-actions .px-btn-primary {
+    min-height: 52px;
+  }
+}
