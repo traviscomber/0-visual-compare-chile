@@ -33,20 +33,32 @@
 }
 
 .px-home .px-platform-signals {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
   border-top:1px solid rgba(183,211,209,.15);
+  border-bottom:1px solid rgba(183,211,209,.10);
 }
 
 .px-home .px-platform-signals article {
   position:relative;
-  min-height:136px;
-  padding:24px 4px 22px 0;
-  display:grid;
-  grid-template-columns:40px 132px minmax(0,1fr);
-  gap:19px;
-  align-items:start;
-  border-bottom:1px solid rgba(183,211,209,.10);
+  min-height:220px;
+  padding:28px 26px 26px 0;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  border-right:1px solid rgba(183,211,209,.10);
+  border-bottom:0;
   background:transparent!important;
   box-shadow:none!important;
+}
+
+.px-home .px-platform-signals article + article {
+  padding-left:26px;
+}
+
+.px-home .px-platform-signals article:last-child {
+  padding-right:0;
+  border-right:0;
 }
 
 .px-home .px-platform-signals article:hover {
@@ -68,8 +80,12 @@
   background:rgba(111,169,147,.52);
 }
 
+.px-home .px-platform-signals article + article .px-signal-line {
+  left:26px;
+}
+
 .px-home .px-platform-signals svg {
-  margin-top:3px;
+  margin:0 0 34px;
   color:#6fa08f;
 }
 
@@ -81,7 +97,8 @@
 }
 
 .px-home .px-platform-signals span {
-  max-width:430px;
+  max-width:220px;
+  margin-top:12px;
   color:rgba(189,190,189,.7);
   font-size:12px;
   line-height:1.7;
@@ -100,12 +117,39 @@
 
   .px-home .px-platform-signals {
     display:block;
+    border-bottom:0;
+  }
+
+  .px-home .px-platform-signals article,
+  .px-home .px-platform-signals article + article,
+  .px-home .px-platform-signals article:last-child {
+    min-height:auto;
+    padding:23px 0;
+    display:grid;
+    grid-template-columns:40px 120px minmax(0,1fr);
+    gap:18px;
+    border-right:0;
+    border-bottom:1px solid rgba(183,211,209,.10);
+  }
+
+  .px-home .px-platform-signals article + article .px-signal-line {
+    left:0;
+  }
+
+  .px-home .px-platform-signals svg {
+    margin:3px 0 0;
+  }
+
+  .px-home .px-platform-signals span {
+    max-width:430px;
+    margin-top:0;
   }
 }
 
 @media (max-width:680px) {
-  .px-home .px-platform-signals article {
-    min-height:auto;
+  .px-home .px-platform-signals article,
+  .px-home .px-platform-signals article + article,
+  .px-home .px-platform-signals article:last-child {
     padding:21px 0;
     grid-template-columns:34px minmax(0,1fr);
     grid-template-areas:
