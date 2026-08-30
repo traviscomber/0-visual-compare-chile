@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowRight, BellRing, Building2, Database, Search, ShieldCheck } from "lucide-react"
 import type { PublicLocale } from "@/lib/marketing-locale"
+import { PatentPreviewSearch } from "@/components/patent-preview-search"
 
 const copy = {
   es: {
@@ -120,6 +121,8 @@ export function LocalizedPatentsPage({ locale }: { locale: PublicLocale }) {
           </div>
         </div>
       </section>
+
+      <PatentPreviewSearch locale={locale} />
 
       <section className="px-5 py-16 lg:px-10 lg:py-20">
         <div className="mx-auto max-w-[1480px]">
