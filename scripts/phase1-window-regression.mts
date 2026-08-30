@@ -68,12 +68,26 @@ expectPlan(
 )
 
 const routePath = fileURLToPath(new URL("../app/api/admin/inapi-sync/route.ts", import.meta.url))
-const routeSource = await readFile(routePath, "utf8")
-if (!routeSource.includes('.contains("metadata", { preset: "phase1-10k" })')) {
-  fail("admin sync GET must filter completed coverage to the Phase1 preset")
-}
-if (routeSource.includes('.select("metadata").eq("status", "completed").order("created_at", { ascending: false }).limit(200)')) {
-  fail("Phase1 coverage must not be truncated to the latest 200 generic completed runs")
+const statusPath = fileURLToPath(new URL("../lib/phase1-status.ts", import.meta.url))
+const [routeSource, statusSource] = await Promise.all([
+  readFile(routePath, "utf8"),
+  readFile(statusPath, "utf8"),
+])
+
+for (const [label, source] of [
+  ["admin sync GET", routeSource],
+  ["Phase1 status summary", statusSource],
+] as const) {
+  if (!source.includes('.contains("metadata", { preset: "phase1-10k" })')) {
+    fail(`${label} must filter completed coverage to the Phase1 preset`)
+  }
+  if (source.includes('.select("metadata").eq("status", "completed").order("created_at", { ascending: false }).limit(200)')) {
+    fail(`${label} must not truncate Phase1 coverage to the latest 200 generic completed runs`)
+  }
 }
 
-console.log("Phase1 window regression PASS: complete history, sparse gaps, overlap dedupe and safe next windows verified.")
+if (!statusSource.includes('if (!keys) throw new Error("No fue posible cargar las credenciales API para el estado Phase1.")')) {
+  fail("Phase1 status must not convert API-key read failures into a valid zero-key state")
+}
+
+console.log("Phase1 window regression PASS: complete history, sparse gaps, overlap dedupe and all status consumers verified.")
