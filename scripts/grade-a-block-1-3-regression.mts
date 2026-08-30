@@ -35,6 +35,7 @@ const trajectoryRoute = await readFile("app/api/intelligence/company-trajectory/
 const healthRoute = await readFile("app/api/intelligence/health/route.ts", "utf8")
 const healthModel = await readFile("lib/intelligence/health.ts", "utf8")
 const cronRoute = await readFile("app/api/cron/inapi-open-data/route.ts", "utf8")
+const ingestionObservability = await readFile("lib/intelligence/ingestion-observability.ts", "utf8")
 const companiesPage = await readFile("app/(app)/empresas/page.tsx", "utf8")
 const sourcesPage = await readFile("app/(app)/fuentes/page.tsx", "utf8")
 const healthMigration = await readFile("supabase/migrations/20260830214913_add_intelligence_health_quality.sql", "utf8")
@@ -60,6 +61,20 @@ for (const needle of ["startIntelligenceIngestion", "finishIntelligenceIngestion
   if (!cronRoute.includes(needle)) fail(`INAPI cron not wired to ${needle}`)
 }
 if (!cronRoute.includes("qualityFailures > 0")) fail("critical quality failures do not affect cron status")
+if (!cronRoute.includes('status: "partial"')) fail("cron does not persist partial pipeline outcomes")
+if (!cronRoute.includes('ingestionStatus: coreSyncCompleted ? "partial" : "failed"')) fail("cron response does not distinguish partial from failed ingestion")
+const qualityIndex = cronRoute.indexOf('run_intelligence_quality_checks')
+const completedIndex = cronRoute.indexOf('status: "completed"')
+if (qualityIndex < 0 || completedIndex < 0 || completedIndex < qualityIndex) fail("ingestion is marked completed before quality checks finish")
+
+const partialBranchStart = ingestionObservability.indexOf('if (status === "partial")')
+const completedStateStart = ingestionObservability.indexOf('const { error: stateError }', partialBranchStart)
+if (partialBranchStart < 0 || completedStateStart < 0) fail("partial ingestion health branch is missing")
+const partialBranch = ingestionObservability.slice(partialBranchStart, completedStateStart)
+if (partialBranch.includes("last_success_at")) fail("partial ingestion incorrectly advances last_success_at")
+if (!partialBranch.includes("last_attempt_at")) fail("partial ingestion does not preserve last attempt evidence")
+if (!partialBranch.includes("last_error")) fail("partial ingestion does not degrade source health")
+
 if (!healthModel.includes('diaria: 36')) fail("daily source SLA is not explicit")
 if (!healthModel.includes('semanal: 24 * 9')) fail("weekly source SLA is not explicit")
 if (!sourcesPage.includes("Saber qué fuente está fresca antes de decidir")) fail("source health workspace missing trust narrative")
@@ -81,4 +96,4 @@ if (!graphMigration.includes("parent_of") || !graphMigration.includes("subsidiar
 if (!graphFixMigration.includes("marks_all") || !graphFixMigration.includes("classifications as")) fail("graph count multiplication regression is unprotected")
 if (!bootstrapMigration.includes("max(last_synced_at)") || !bootstrapMigration.includes("source_key='tdpi'")) fail("source health bootstrap is not evidence-based")
 
-console.log("Grade A block 1-3 regression PASS: health/quality wiring, non-destructive entity graph, 360-day trajectory guardrails, authenticated APIs and migration history.")
+console.log("Grade A block 1-3 regression PASS: health/quality wiring, partial-success lifecycle, non-destructive entity graph, 360-day trajectory guardrails, authenticated APIs and migration history.")
