@@ -135,27 +135,30 @@ export default async function ComparisonDetailPage({ params }: { params: Promise
     <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-7 px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <Button variant="ghost" asChild className="-ml-3">
-          <Link href="/history">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Volver a Actividad
+          <Link href="/reportes">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Volver a Reportes
           </Link>
         </Button>
         <div className="flex items-center gap-3">
           <span className="text-xs text-muted-foreground">{formatDateLong(comparison.created_at)}</span>
-          <DeleteComparisonButton id={comparison.id} redirectTo="/history" />
+          <DeleteComparisonButton id={comparison.id} redirectTo="/reportes" />
         </div>
       </div>
 
-      <header className="grid gap-6 border-b border-border pb-7 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+      <header className="grid gap-7 border-b border-border pb-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
         <div>
-          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">VIDENTIA / Evidencia visual</p>
-          <h1 className="mt-3 text-4xl font-medium tracking-[-0.04em] text-foreground sm:text-5xl">Comparación guardada.</h1>
-          <p className="mt-3 max-w-2xl text-base leading-7 text-muted-foreground">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#96B5A6]">VIDENTIA / EVIDENCIA VISUAL</p>
+          <h1 className="mt-3 text-4xl font-light tracking-[-0.045em] text-[#E7DFCE] sm:text-5xl lg:text-6xl">Comparación guardada.</h1>
+          <p className="mt-4 max-w-3xl text-base leading-7 text-white/85">
             Registro técnico de una comparación persistida, con sus imágenes, señales, artefactos y contexto marcario disponible.
           </p>
         </div>
-        <p className="border-l border-border pl-5 text-sm leading-6 text-muted-foreground">
-          La comparación organiza evidencia visual. No determina confundibilidad jurídica, registrabilidad ni una decisión de INAPI.
-        </p>
+        <div className="border-l border-border pl-5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Límite de interpretación</p>
+          <p className="mt-2 text-sm leading-6 text-white/80">
+            La comparación organiza evidencia visual. No determina confundibilidad jurídica, registrabilidad ni una decisión de INAPI.
+          </p>
+        </div>
       </header>
 
       <section className="grid border-y border-border sm:grid-cols-4">
@@ -165,10 +168,10 @@ export default async function ComparisonDetailPage({ params }: { params: Promise
         <DetailStat label="Viena compartida" value={sharedViena.length ? String(sharedViena.length) : "—"} />
       </section>
 
-      {(sharedNiza.length > 0 || sharedViena.length > 0) && (
+      {(sharedNiza.length > 0 || sharedViena.length > 0) ? (
         <section className="border-y border-border px-5 py-5 sm:px-6">
-          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Continuar investigación</p>
-          <h2 className="mt-2 text-xl font-medium text-foreground">Clasificaciones compartidas detectadas</h2>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Continuar investigación</p>
+          <h2 className="mt-2 text-2xl font-light tracking-[-0.025em] text-[#E7DFCE]">Clasificaciones compartidas detectadas</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
             Usa estas señales para abrir una investigación más amplia; son contexto, no una conclusión por sí mismas.
           </p>
@@ -189,7 +192,7 @@ export default async function ComparisonDetailPage({ params }: { params: Promise
             ))}
           </div>
         </section>
-      )}
+      ) : null}
 
       <ComparisonResultView
         result={result}
@@ -203,8 +206,8 @@ export default async function ComparisonDetailPage({ params }: { params: Promise
 function DetailStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="border-b border-border py-4 sm:border-b-0 sm:border-r sm:px-5 sm:first:pl-0 sm:last:border-r-0">
-      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
-      <p className="mt-2 text-lg font-medium text-foreground">{value}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+      <p className="mt-2 text-lg font-light text-[#E7DFCE]">{value}</p>
     </div>
   )
 }
