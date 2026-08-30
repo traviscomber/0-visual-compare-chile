@@ -46,6 +46,9 @@ jobs:
       - name: Case role regression
         run: pnpm test:case-roles
 
+      - name: Case collaboration security regression
+        run: node scripts/case-collaboration-security-regression.mts
+
       - name: TypeScript
         run: pnpm exec tsc --noEmit
 
