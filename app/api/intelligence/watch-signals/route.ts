@@ -89,7 +89,7 @@ export async function GET() {
     const [inapiResult, tdpiResult] = await Promise.all([
       admin
         .from("trademark_records")
-        .select("id,nombre,solicitante,numero_solicitud,estado,fecha_presentacion,source_url,trademark_record_niza(nice_class)")
+        .select("id,nombre,solicitante,numero_solicitud,estado,fecha_presentacion,source_url,trademark_record_niza(code)")
         .ilike(column, `%${escaped}%`)
         .gte("fecha_presentacion", sinceDate)
         .order("fecha_presentacion", { ascending: false })
@@ -106,7 +106,7 @@ export async function GET() {
       console.error("[trademark-watch-signals:inapi]", { watchId: watch.id, error: inapiResult.error })
     } else {
       for (const row of inapiResult.data ?? []) {
-        const classes = Array.from(new Set(((row.trademark_record_niza ?? []) as Array<{ nice_class: number }>).map(item => Number(item.nice_class)).filter(Number.isFinite)))
+        const classes = Array.from(new Set(((row.trademark_record_niza ?? []) as Array<{ code: string }>).map(item => Number(item.code)).filter(Number.isFinite)))
         if (watch.nice_classes.length && classes.length && !classes.some(item => watch.nice_classes.includes(item))) continue
         const exact = normalize(row.nombre) === normalize(watch.query) || normalize(row.solicitante ?? "") === normalize(watch.query)
         candidates.push({
