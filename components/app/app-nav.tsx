@@ -79,7 +79,7 @@ const navigationGroups: readonly NavigationGroup[] = [
     items: [
       { href: "/monitorear", label: "Vigilancia", icon: BellRing, aliases: ["/patentes/alertas"] },
       { href: "/notificaciones", label: "Notificaciones", icon: Bell, aliases: [] },
-      { href: "/history", label: "Actividad", icon: History, aliases: [] },
+      { href: "/reportes", label: "Reportes", icon: History, aliases: ["/history"] },
     ],
   },
 ]
