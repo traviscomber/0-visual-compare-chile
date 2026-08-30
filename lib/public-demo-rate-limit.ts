@@ -21,7 +21,7 @@ export type DemoQuotaResult =
   | { ok: true; allowed: boolean; remaining: number; resetAt: string; limit: number }
   | { ok: false }
 
-export async function reservePublicDemoQuota(clientIdentity: string, scope: PublicDemoScope): Promise<DemoQuotaResult> {
+export async function reservePublicDemoQuota(clientIdentity: string, scope: PublicDemoScope = "trademark"): Promise<DemoQuotaResult> {
   try {
     const limit = DEMO_LIMITS[scope]
     const clientKey = createHmac("sha256", getSupabaseServiceRoleKey())
