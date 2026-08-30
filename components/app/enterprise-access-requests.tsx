@@ -1,5 +1,6 @@
 import { BriefcaseBusiness } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
+import { EnterpriseRequestStatus } from "@/components/app/enterprise-request-status"
 import { OperationalPanel, OperationalSectionHeader } from "@/components/app/operational-ui"
 
 function formatDate(value: string) {
@@ -52,10 +53,10 @@ export async function EnterpriseAccessRequests() {
               <div className="min-w-0">
                 <p className="text-sm font-medium text-white">{request.company_name}</p>
                 <p className="mt-1 break-all text-xs text-muted-foreground">{request.email}</p>
-                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] uppercase tracking-[0.12em] text-[#96B5A6]">
-                  <span>{request.user_count ? `${request.user_count} usuarios` : "Usuarios por definir"}</span>
-                  <span>{request.status}</span>
-                </div>
+                <p className="mt-3 text-[10px] uppercase tracking-[0.12em] text-[#96B5A6]">
+                  {request.user_count ? `${request.user_count} usuarios` : "Usuarios por definir"}
+                </p>
+                <EnterpriseRequestStatus id={request.id} initialStatus={request.status} />
               </div>
 
               <div className="min-w-0">
