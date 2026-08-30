@@ -1,0 +1,42 @@
+/* Results-only refinement for /demo. The query form lives in .relative; the rendered result state does not. */
+.demo-research-shell main > section:not(.relative){padding-top:44px;padding-bottom:56px;background:radial-gradient(circle at 82% 4%,rgba(69,110,142,.12),transparent 28%),#0f2a33}
+.demo-research-shell main > section:not(.relative) > div{max-width:1380px}
+.demo-research-shell main > section:not(.relative) > div > header{padding:26px 30px 30px;border:1px solid rgba(183,211,209,.11);border-radius:14px;background:linear-gradient(135deg,rgba(23,47,52,.76),rgba(9,26,32,.56));box-shadow:0 24px 70px rgba(0,0,0,.15)}
+.demo-research-shell main > section:not(.relative) > div > header h1{max-width:13ch;font-size:clamp(2.8rem,5vw,5rem);text-wrap:balance}
+.demo-research-shell main > section:not(.relative) > div > header p{max-width:760px;color:rgba(255,255,255,.88)}
+.demo-research-shell main > section:not(.relative) > div > header button{border:1px solid rgba(183,211,209,.12);background:rgba(23,47,52,.9)}
+
+.demo-research-shell main > section:not(.relative) > div > header + div{margin-top:24px;border:1px solid rgba(183,211,209,.1);border-radius:14px;background:rgba(9,26,32,.34);overflow:hidden}
+.demo-research-shell main > section:not(.relative) > div > header + div > aside{padding-left:28px;background:rgba(9,26,32,.46)}
+.demo-research-shell main > section:not(.relative) article{padding:26px 0;transition:background-color 180ms ease}
+.demo-research-shell main > section:not(.relative) article:hover{background:rgba(23,47,52,.24)}
+.demo-research-shell main > section:not(.relative) article h3{font-size:clamp(1.15rem,2vw,1.45rem)}
+.demo-research-shell main > section:not(.relative) article .font-mono{overflow-wrap:anywhere}
+
+.demo-research-shell main > section:not(.relative) > div > div:nth-of-type(2){margin-top:24px;border:1px solid rgba(183,211,209,.1);border-radius:14px;background:rgba(9,26,32,.3);overflow:hidden}
+.demo-research-shell main > section:not(.relative) > div > div:nth-of-type(2) > section{padding-top:30px;padding-bottom:30px}
+.demo-research-shell main > section:not(.relative) > div > div:nth-of-type(2) h3{font-size:1.12rem}
+.demo-research-shell main > section:not(.relative) .tabular-nums{font-variant-numeric:tabular-nums}
+.demo-research-shell main > section:not(.relative) a[href*="contacto"],
+.demo-research-shell main > section:not(.relative) button{min-height:42px}
+.demo-research-shell main > section:not(.relative) footer{margin-top:34px;padding-top:22px}
+
+@media(max-width:1024px){
+  .demo-research-shell main > section:not(.relative){padding-top:32px;padding-bottom:44px}
+  .demo-research-shell main > section:not(.relative) > div > header{padding:24px}
+  .demo-research-shell main > section:not(.relative) > div > header + div > aside{padding-left:0;background:transparent}
+  .demo-research-shell main > section:not(.relative) article:hover{background:transparent}
+}
+
+@media(max-width:640px){
+  .demo-research-shell main > section:not(.relative){padding-left:16px;padding-right:16px;padding-top:22px}
+  .demo-research-shell main > section:not(.relative) > div > header{padding:20px;border-radius:12px}
+  .demo-research-shell main > section:not(.relative) > div > header h1{font-size:clamp(2.35rem,13vw,3.5rem);line-height:1}
+  .demo-research-shell main > section:not(.relative) > div > header button{width:100%;justify-content:center}
+  .demo-research-shell main > section:not(.relative) > div > header + div,
+  .demo-research-shell main > section:not(.relative) > div > div:nth-of-type(2){border-radius:12px}
+  .demo-research-shell main > section:not(.relative) article{padding:22px 0}
+  .demo-research-shell main > section:not(.relative) article > div{gap:16px}
+  .demo-research-shell main > section:not(.relative) .grid-cols-2{min-width:0}
+  .demo-research-shell main > section:not(.relative) footer{align-items:flex-start}
+}
