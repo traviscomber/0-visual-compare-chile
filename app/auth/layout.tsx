@@ -1,10 +1,11 @@
 import type React from "react"
 import type { Metadata } from "next"
+import "./auth-pro.css"
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false, nocache: true },
 }
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
-  return children
+  return <div className="auth-videntia-shell">{children}</div>
 }
