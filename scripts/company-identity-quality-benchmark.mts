@@ -55,8 +55,8 @@ const result = {
 
 console.log(JSON.stringify(result, null, 2))
 
-// Grade A block-A non-regression floor. Precision is intentionally strict because
-// false corporate merges are more damaging than leaving an ambiguous alias for review.
+// Grade A non-regression floor. Precision is intentionally strict because false
+// corporate merges are more damaging than leaving an ambiguous alias for review.
 if (precision < 1) {
   console.error(`Company identity benchmark FAIL: precision ${precision.toFixed(3)} < 1.000`)
   process.exit(1)
@@ -87,12 +87,46 @@ for (const needle of [
   "missing_country_context",
   "'*:' || a.identity_key",
   "intelligence_company_identity_reviews",
-]) {
-  if (!policyMigration.includes(needle)) {
-    console.error(`Company identity benchmark FAIL: policy migration missing ${needle}`)
-    process.exit(1)
-  }
-}
+]) requireText(policyMigration, needle, "policy migration")
+
+const feedbackMigration = await readFile("supabase/migrations/20260830233954_add_intelligence_feedback_audit.sql", "utf8")
+for (const needle of [
+  "intelligence_feedback",
+  "intelligence_feedback_audit",
+  "relevant",
+  "irrelevant",
+  "false_match",
+  "identity_incorrect",
+  "target_not_found",
+]) requireText(feedbackMigration, needle, "feedback migration")
+
+const feedbackHardening = await readFile("supabase/migrations/20260830234359_harden_intelligence_feedback_rpc.sql", "utf8")
+for (const needle of [
+  "security invoker",
+  "p_user_id uuid",
+  "e.user_id = p_user_id",
+  "grant execute on function public.submit_intelligence_feedback(uuid,text,text,text,text,jsonb) to service_role",
+  "revoke all on function public.submit_intelligence_feedback(uuid,text,text,text,text,jsonb) from public, anon, authenticated",
+]) requireText(feedbackHardening, needle, "feedback hardening")
+
+const feedbackRoute = await readFile("app/api/intelligence/feedback/route.ts", "utf8")
+for (const needle of [
+  "requireUser()",
+  "PRIVATE_NO_STORE_HEADERS",
+  "createAdminClient",
+  "submit_intelligence_feedback",
+  "p_user_id: auth.user.id",
+]) requireText(feedbackRoute, needle, "feedback API")
+
+const calibrationPage = await readFile("app/(app)/monitorear/estrategico/calibrar/page.tsx", "utf8")
+for (const needle of [
+  "Relevante",
+  "Irrelevante",
+  "Falso match",
+  "Identidad incorrecta",
+  "/api/intelligence/feedback",
+  "El feedback no elimina la evidencia ni cambia su fuente",
+]) requireText(calibrationPage, needle, "calibration workspace")
 
 console.log("Company identity benchmark PASS")
 
@@ -118,6 +152,13 @@ function autoLinkAllowed(method: string, confidence: number, country: string | n
   return method.trim().toLowerCase() === "normalized_exact"
     && confidence >= 0.9
     && Boolean(country?.trim())
+}
+
+function requireText(haystack: string, needle: string, label: string) {
+  if (!haystack.includes(needle)) {
+    console.error(`Company identity benchmark FAIL: ${label} missing ${needle}`)
+    process.exit(1)
+  }
 }
 
 function round(value: number) {
