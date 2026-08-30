@@ -3,6 +3,8 @@ import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { tryGetSupabaseUrl, tryGetSupabaseAnonKey } from "@/lib/supabase/env"
 import { AppNav } from "@/components/app/app-nav"
+import { FreePreviewShell } from "@/components/app/free-preview-shell"
+import { isFreeAccessUser } from "@/lib/free-research-quota"
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false, nocache: true },
@@ -34,6 +36,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   if (!user) redirect("/auth/login")
+
+  if (isFreeAccessUser(user)) {
+    return <FreePreviewShell userEmail={user.email ?? ""}>{children}</FreePreviewShell>
+  }
 
   return (
     <AppNav
