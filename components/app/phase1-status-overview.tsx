@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import Link from "next/link"
 import { Database, KeyRound, ShieldAlert } from "lucide-react"
 import type { Phase1StatusSummary } from "@/lib/phase1-status"
@@ -9,7 +10,7 @@ type StatusMetricProps = {
   label: string
   value: string
   primaryDetail: string
-  secondaryDetail: React.ReactNode
+  secondaryDetail: ReactNode
   variant: Variant
 }
 
