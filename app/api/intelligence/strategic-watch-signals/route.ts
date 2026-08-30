@@ -3,6 +3,7 @@ import { z } from "zod"
 import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { scanStrategicWatch, type StrategicWatch } from "@/lib/intelligence/strategic-watch-scanner"
+import { buildWeeklyBriefContext } from "@/lib/intelligence/weekly-brief"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -25,14 +26,20 @@ export async function GET() {
     return NextResponse.json({ error: "No pudimos cargar las vigilancias estratégicas." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
+  const admin = createAdminClient()
+  const contextPromise = buildWeeklyBriefContext(admin)
   const active = (watches ?? []) as StrategicWatch[]
+
   if (!active.length) {
-    return NextResponse.json({ signals: [], watches: 0, summary: emptySummary() }, { headers: PRIVATE_NO_STORE_HEADERS })
+    const context = await contextPromise
+    return NextResponse.json({ signals: [], watches: 0, summary: emptySummary(), context }, { headers: PRIVATE_NO_STORE_HEADERS })
   }
 
-  const admin = createAdminClient()
   const scanStartedAt = new Date().toISOString()
-  const groups = await Promise.all(active.map(async watch => ({ watch, signals: await scanStrategicWatch(admin, watch) })))
+  const [groups, context] = await Promise.all([
+    Promise.all(active.map(async watch => ({ watch, signals: await scanStrategicWatch(admin, watch) }))),
+    contextPromise,
+  ])
   const rows = groups.flatMap(({ watch, signals }) => signals.map(signal => ({
     user_id: auth.user.id,
     watch_id: watch.id,
@@ -113,7 +120,7 @@ export async function GET() {
     news_new_count: newSignals.filter(item => item.event_type === "news").length,
   }
 
-  return NextResponse.json({ signals, watches: active.length, summary }, { headers: PRIVATE_NO_STORE_HEADERS })
+  return NextResponse.json({ signals, watches: active.length, summary, context }, { headers: PRIVATE_NO_STORE_HEADERS })
 }
 
 export async function POST(request: Request) {

@@ -1,7 +1,7 @@
 "use client"
 
 import { FormEvent, useEffect, useMemo, useState } from "react"
-import { Activity, BellRing, Building2, Check, ExternalLink, Factory, FlaskConical, History, Loader2, Newspaper, Pause, Play, Plus, RefreshCw, Search, Trash2 } from "lucide-react"
+import { Activity, AlertTriangle, BellRing, Building2, Check, ExternalLink, Factory, FlaskConical, History, Loader2, Newspaper, Pause, Play, Plus, RefreshCw, Search, Trash2 } from "lucide-react"
 import { OperationalHeader, OperationalMetric, OperationalMetricRail, OperationalPage, OperationalPanel, OperationalSectionHeader } from "@/components/app/operational-ui"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -42,6 +42,31 @@ type Summary = {
   publication_new_count: number
   news_new_count: number
 }
+type CoverageSlice = {
+  latest_filing_date: string | null
+  last_synced_at: string | null
+  lag_days: number | null
+  fresh_for_week: boolean
+  records_in_latest_30d: number
+}
+type RecentActivity = {
+  id: string
+  kind: "patent" | "trademark"
+  title: string
+  actor: string | null
+  filing_date: string
+  source_url: string | null
+}
+type WeeklyContext = {
+  generated_at: string
+  window_start: string
+  window_end: string
+  coverage: {
+    patents: CoverageSlice
+    trademarks: CoverageSlice
+  }
+  recent_activity: RecentActivity[]
+}
 
 const EMPTY_SUMMARY: Summary = { new_count: 0, high_new_count: 0, total_history: 0, patent_new_count: 0, trademark_new_count: 0, publication_new_count: 0, news_new_count: 0 }
 
@@ -49,6 +74,7 @@ export default function StrategicMonitoringPage() {
   const [watches, setWatches] = useState<Watch[]>([])
   const [signals, setSignals] = useState<Signal[]>([])
   const [summary, setSummary] = useState<Summary>(EMPTY_SUMMARY)
+  const [weeklyContext, setWeeklyContext] = useState<WeeklyContext | null>(null)
   const [type, setType] = useState<WatchType>("technology")
   const [query, setQuery] = useState("")
   const [loading, setLoading] = useState(true)
@@ -59,6 +85,14 @@ export default function StrategicMonitoringPage() {
 
   const active = useMemo(() => watches.filter(item => item.is_active), [watches])
   const visibleSignals = useMemo(() => showHistory ? signals : signals.filter(item => item.is_new), [showHistory, signals])
+  const weeklySignals = useMemo(() => signals
+    .filter(item => item.is_new && isWithinWeeklyWindow(item.first_seen_at, weeklyContext?.window_start))
+    .sort((a, b) => {
+      const relevance = relevanceRank(b.relevance) - relevanceRank(a.relevance)
+      if (relevance) return relevance
+      return new Date(b.first_seen_at).getTime() - new Date(a.first_seen_at).getTime()
+    }), [signals, weeklyContext?.window_start])
+  const weeklyHigh = useMemo(() => weeklySignals.filter(item => item.relevance === "alta").length, [weeklySignals])
 
   async function load() {
     setLoading(true)
@@ -75,6 +109,7 @@ export default function StrategicMonitoringPage() {
       setWatches(Array.isArray(watchPayload.watches) ? watchPayload.watches : [])
       setSignals(Array.isArray(signalPayload.signals) ? signalPayload.signals : [])
       setSummary(signalPayload.summary ?? EMPTY_SUMMARY)
+      setWeeklyContext(signalPayload.context ?? null)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No pudimos cargar la vigilancia estratégica.")
     } finally {
@@ -144,18 +179,20 @@ export default function StrategicMonitoringPage() {
   return <OperationalPage>
     <OperationalHeader
       eyebrow="VIDENTIA / Vigilancia estratégica"
-      title="Qué cambió en tu espacio tecnológico y competitivo."
-      description={<>Sigue tecnologías, empresas y competidores. VIDENTIA cruza patentes y marcas INAPI con publicaciones científicas y señales públicas recientes, conservando la fuente y separando línea base de cambios nuevos.</>}
+      title="Detecta cambios antes de que se vuelvan evidentes."
+      description={<>Sigue tecnologías, empresas y competidores. VIDENTIA cruza patentes y marcas INAPI con publicaciones científicas y señales públicas recientes, conserva la fuente y separa hechos observados de interpretación.</>}
       meta={<><span>INAPI</span><span>OpenAlex + Crossref</span><span>GDELT</span><span>Evidencia trazable</span></>}
       actions={<Button variant="outline" onClick={() => void load()} disabled={loading}><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`} />Actualizar fuentes</Button>}
     />
 
     <OperationalMetricRail>
-      <OperationalMetric value={summary.new_count} label="Cambios nuevos" detail="Desde tu última revisión" tone={summary.new_count ? "success" : "neutral"} />
-      <OperationalMetric value={summary.high_new_count} label="Alta relevancia" detail="Señales prioritarias" tone={summary.high_new_count ? "warning" : "neutral"} />
+      <OperationalMetric value={weeklySignals.length} label="Cambios esta semana" detail="Observados en 7 días" tone={weeklySignals.length ? "success" : "neutral"} />
+      <OperationalMetric value={weeklyHigh} label="Alta relevancia" detail="Dentro del brief semanal" tone={weeklyHigh ? "warning" : "neutral"} />
       <OperationalMetric value={active.length} label="Vigilancias activas" detail="Tecnologías y empresas" tone={active.length ? "success" : "neutral"} />
       <OperationalMetric value={summary.total_history} label="Evidencias" detail="Historial conservado" />
     </OperationalMetricRail>
+
+    <WeeklyBriefSection loading={loading} signals={weeklySignals} context={weeklyContext} />
 
     <section className="border-b border-border/80 py-8">
       <OperationalPanel>
@@ -176,7 +213,7 @@ export default function StrategicMonitoringPage() {
     </section>
 
     {summary.new_count > 0 ? <OperationalPanel className="my-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex gap-3"><BellRing className="mt-0.5 h-5 w-5 text-[#96B5A6]" /><div><p className="font-medium text-white">{summary.new_count} cambio{summary.new_count === 1 ? "" : "s"} nuevo{summary.new_count === 1 ? "" : "s"}</p><p className="mt-1 text-sm text-muted-foreground">{summary.patent_new_count} patentes · {summary.trademark_new_count} marcas · {summary.publication_new_count} publicaciones · {summary.news_new_count} noticias</p></div></div>
+      <div className="flex gap-3"><BellRing className="mt-0.5 h-5 w-5 text-[#96B5A6]" /><div><p className="font-medium text-white">{summary.new_count} cambio{summary.new_count === 1 ? "" : "s"} pendiente{summary.new_count === 1 ? "" : "s"} de revisión</p><p className="mt-1 text-sm text-muted-foreground">{summary.patent_new_count} patentes · {summary.trademark_new_count} marcas · {summary.publication_new_count} publicaciones · {summary.news_new_count} noticias</p></div></div>
       <Button onClick={() => void markReviewed()} disabled={reviewing}>{reviewing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}Marcar revisado</Button>
     </OperationalPanel> : null}
 
@@ -184,9 +221,9 @@ export default function StrategicMonitoringPage() {
 
     <section className="grid gap-8 py-9 xl:grid-cols-[minmax(0,1.45fr)_minmax(300px,0.55fr)] xl:gap-10">
       <div>
-        <OperationalSectionHeader eyebrow="Qué cambió" title={showHistory ? "Historial de señales" : "Nuevo desde tu última revisión"} action={<Button variant="ghost" size="sm" onClick={() => setShowHistory(value => !value)}>{showHistory ? <><BellRing className="h-4 w-4" />Sólo lo nuevo</> : <><History className="h-4 w-4" />Ver historial</>}</Button>} />
+        <OperationalSectionHeader eyebrow="Seguimiento continuo" title={showHistory ? "Historial de señales" : "Señales desde tu última revisión"} action={<Button variant="ghost" size="sm" onClick={() => setShowHistory(value => !value)}>{showHistory ? <><BellRing className="h-4 w-4" />Sólo lo nuevo</> : <><History className="h-4 w-4" />Ver historial</>}</Button>} />
         <div className="mt-5">
-          {loading ? <div className="flex items-center gap-2 border-y border-border/80 py-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Consultando fuentes…</div> : visibleSignals.length ? <div className="divide-y divide-border/80 border-y border-border/80">{visibleSignals.map(signal => <SignalRow key={signal.id} signal={signal} />)}</div> : <div className="border-y border-border/80 py-10"><Activity className="h-5 w-5 text-[#96B5A6]" /><p className="mt-3 font-medium text-white">{active.length ? "No hay cambios nuevos por revisar" : "Aún no hay vigilancias estratégicas"}</p><p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">{active.length ? "Puedes revisar el historial o actualizar las fuentes. La línea base evita convertir antecedentes antiguos en alertas." : "Crea una vigilancia de tecnología, empresa o competidor para construir la primera línea base."}</p></div>}
+          {loading ? <div className="flex items-center gap-2 border-y border-border/80 py-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Consultando fuentes…</div> : visibleSignals.length ? <div className="divide-y divide-border/80 border-y border-border/80">{visibleSignals.map(signal => <SignalRow key={signal.id} signal={signal} />)}</div> : <div className="border-y border-border/80 py-10"><Activity className="h-5 w-5 text-[#96B5A6]" /><p className="mt-3 font-medium text-white">{active.length ? "No hay señales pendientes por revisar" : "Aún no hay vigilancias estratégicas"}</p><p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">{active.length ? "Puedes revisar el historial o actualizar las fuentes. La línea base evita convertir antecedentes antiguos en alertas." : "Crea una vigilancia de tecnología, empresa o competidor para construir la primera línea base."}</p></div>}
         </div>
       </div>
 
@@ -203,6 +240,83 @@ export default function StrategicMonitoringPage() {
   </OperationalPage>
 }
 
+function WeeklyBriefSection({ loading, signals, context }: { loading: boolean; signals: Signal[]; context: WeeklyContext | null }) {
+  return <section className="border-b border-border/80 py-9">
+    <OperationalSectionHeader
+      eyebrow="Brief semanal"
+      title="Qué cambió esta semana"
+      action={context ? <span className="text-xs text-muted-foreground">{formatDate(context.window_start)} — {formatDate(context.window_end)}</span> : undefined}
+    />
+    <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Cambios materiales detectados en tecnologías, competidores y propiedad intelectual que podrían requerir atención. Cada señal separa el hecho observado de su interpretación.</p>
+
+    {loading ? <div className="mt-6 flex items-center gap-2 border-y border-border/80 py-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Construyendo el brief con la cobertura disponible…</div> : signals.length ? <div className="mt-6 divide-y divide-border/80 border-y border-border/80">{signals.slice(0, 6).map(signal => <WeeklySignalRow key={signal.id} signal={signal} />)}</div> : <WeeklyEmptyState context={context} />}
+
+    {context ? <>
+      <CoverageRail context={context} />
+      {context.recent_activity.length ? <div className="mt-8">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Actividad reciente disponible</p><h3 className="mt-1 text-base font-medium text-white">Últimos registros presentes en el corpus</h3></div><p className="max-w-lg text-xs leading-5 text-muted-foreground">Referencia de cobertura; no se presenta como cambio de esta semana cuando la fecha fuente queda fuera de la ventana.</p></div>
+        <div className="mt-4 divide-y divide-border/80 border-y border-border/80">{context.recent_activity.slice(0, 4).map(item => <RecentActivityRow key={item.id} item={item} />)}</div>
+      </div> : null}
+    </> : null}
+  </section>
+}
+
+function WeeklySignalRow({ signal }: { signal: Signal }) {
+  const Icon = signal.event_type === "patent" ? FlaskConical : signal.event_type === "trademark" ? Search : signal.event_type === "publication" ? Activity : Newspaper
+  return <article className="grid gap-4 py-6 lg:grid-cols-[42px_minmax(0,1fr)_auto] lg:items-start">
+    <span className="flex h-10 w-10 items-center justify-center rounded-[9px] bg-[#173B37] text-[#96B5A6]"><Icon className="h-4 w-4" /></span>
+    <div className="min-w-0">
+      <div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="bg-[#13272D]">{eventLabel(signal.event_type)}</Badge><span className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">{watchLabel(signal.watch_type)} · {signal.watch_query}</span><span className="text-[10px] font-medium uppercase tracking-[0.13em] text-[#96B5A6]">Materialidad {signal.relevance}</span></div>
+      <h3 className="mt-2 text-base font-medium leading-6 text-white">{signal.title}</h3>
+      <div className="mt-4 grid gap-4 md:grid-cols-3">
+        <BriefFact label="Hecho observado" text={signal.summary || `VIDENTIA registró una nueva evidencia de ${eventLabel(signal.event_type).toLowerCase()} vinculada a esta vigilancia.`} />
+        <BriefFact label="Interpretación" text={interpretationForSignal(signal)} />
+        <BriefFact label="Por qué importa" text={whyItMatters(signal)} />
+      </div>
+      <p className="mt-4 text-xs text-muted-foreground">{sourceLabel(signal.source_key)} · detectado {formatDate(signal.first_seen_at)}{signal.occurred_at ? ` · fecha fuente ${formatDate(signal.occurred_at)}` : ""}</p>
+    </div>
+    {signal.source_url ? <Button asChild variant="ghost" size="sm"><a href={signal.source_url} target="_blank" rel="noreferrer">Evidencia <ExternalLink className="h-3.5 w-3.5" /></a></Button> : null}
+  </article>
+}
+
+function BriefFact({ label, text }: { label: string; text: string }) {
+  return <div><p className="text-[10px] font-medium uppercase tracking-[0.13em] text-muted-foreground">{label}</p><p className="mt-1 text-sm leading-6 text-[#D5E0E3]">{text}</p></div>
+}
+
+function WeeklyEmptyState({ context }: { context: WeeklyContext | null }) {
+  const stale = context ? !context.coverage.patents.fresh_for_week || !context.coverage.trademarks.fresh_for_week : false
+  return <div className="mt-6 border-y border-border/80 py-9">
+    <Activity className="h-5 w-5 text-[#96B5A6]" />
+    <p className="mt-3 font-medium text-white">No se detectaron cambios materiales en los últimos 7 días con la cobertura actualmente disponible.</p>
+    <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">El brief sólo considera cambios posteriores a la línea base de cada vigilancia. La ausencia de señales no se interpreta como ausencia de actividad.</p>
+    {stale ? <div className="mt-4 flex max-w-3xl gap-3 border-l-2 border-[#C9A56A] pl-4"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A56A]" /><p className="text-sm leading-6 text-[#D8C49C]">La cobertura local no llega a la fecha actual en todas las fuentes. VIDENTIA muestra el desfase explícitamente para evitar conclusiones falsas.</p></div> : null}
+  </div>
+}
+
+function CoverageRail({ context }: { context: WeeklyContext }) {
+  return <div className="mt-6 grid border-y border-border/80 md:grid-cols-2 md:divide-x md:divide-border/80">
+    <CoverageItem label="Patentes" data={context.coverage.patents} />
+    <CoverageItem label="Marcas" data={context.coverage.trademarks} />
+  </div>
+}
+
+function CoverageItem({ label, data }: { label: string; data: CoverageSlice }) {
+  return <div className="py-4 md:px-5 first:md:pl-0 last:md:pr-0">
+    <div className="flex items-center justify-between gap-4"><p className="text-sm font-medium text-white">{label}</p><span className={`text-[10px] font-medium uppercase tracking-[0.12em] ${data.fresh_for_week ? "text-[#96B5A6]" : "text-[#C9A56A]"}`}>{data.fresh_for_week ? "Cobertura vigente" : data.lag_days === null ? "Cobertura no disponible" : `Desfase ${data.lag_days} d`}</span></div>
+    <p className="mt-2 text-sm text-muted-foreground">Solicitudes hasta <span className="text-[#D5E0E3]">{data.latest_filing_date ? formatDate(data.latest_filing_date) : "sin fecha disponible"}</span></p>
+    <p className="mt-1 text-xs text-muted-foreground">{formatNumber(data.records_in_latest_30d)} registros en los 30 días más recientes de esa cobertura{data.last_synced_at ? ` · última sincronización ${formatDate(data.last_synced_at)}` : ""}</p>
+  </div>
+}
+
+function RecentActivityRow({ item }: { item: RecentActivity }) {
+  const Icon = item.kind === "patent" ? FlaskConical : Search
+  return <div className="grid gap-3 py-4 sm:grid-cols-[32px_minmax(0,1fr)_auto] sm:items-start">
+    <span className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#13272D] text-[#96B5A6]"><Icon className="h-3.5 w-3.5" /></span>
+    <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{item.kind === "patent" ? "Patente" : "Marca"}</span><span className="text-[10px] text-muted-foreground">{formatDate(item.filing_date)}</span></div><p className="mt-1 truncate text-sm font-medium text-white" title={item.title}>{item.title}</p>{item.actor ? <p className="mt-1 truncate text-xs text-muted-foreground" title={item.actor}>{item.actor}</p> : null}</div>
+    {item.source_url ? <Button asChild variant="ghost" size="sm"><a href={item.source_url} target="_blank" rel="noreferrer">Fuente <ExternalLink className="h-3.5 w-3.5" /></a></Button> : null}
+  </div>
+}
+
 function TypeButton({ active, icon: Icon, label, onClick }: { active: boolean; icon: typeof Search; label: string; onClick: () => void }) {
   return <Button type="button" size="sm" variant={active ? "secondary" : "ghost"} className="min-w-0 px-2" onClick={onClick}><Icon className="h-4 w-4" /><span className="truncate">{label}</span></Button>
 }
@@ -216,7 +330,34 @@ function SignalRow({ signal }: { signal: Signal }) {
   </article>
 }
 
+function interpretationForSignal(signal: Signal) {
+  if (signal.event_type === "patent") return "Puede indicar nueva actividad de protección, expansión técnica o una prioridad tecnológica emergente dentro del ámbito vigilado."
+  if (signal.event_type === "trademark") return "Puede indicar movimiento comercial, preparación de mercado o refuerzo de posicionamiento relacionado con esta vigilancia."
+  if (signal.event_type === "publication") return "Puede señalar nueva actividad científica o una línea de investigación que conviene seguir antes de tratarla como tendencia consolidada."
+  return "Es una señal pública reciente. Conviene contrastarla con patentes, publicaciones u otras fuentes antes de inferir un cambio estratégico."
+}
+
+function whyItMatters(signal: Signal) {
+  if (signal.watch_type === "competitor") return "Puede anticipar un movimiento relevante de un competidor dentro del espacio que estás siguiendo."
+  if (signal.watch_type === "company") return "Aporta evidencia reciente sobre la dirección pública, técnica o comercial de la empresa vigilada."
+  return "Ayuda a identificar si la tecnología está ganando actividad, nuevos actores o señales de aplicación comercial."
+}
+
+function isWithinWeeklyWindow(value: string, windowStart?: string) {
+  const seen = new Date(value)
+  if (Number.isNaN(seen.getTime())) return false
+  const start = windowStart ? new Date(`${windowStart}T00:00:00Z`) : new Date(Date.now() - 6 * 86_400_000)
+  return seen.getTime() >= start.getTime()
+}
+
 function watchLabel(type: WatchType) { return type === "technology" ? "Tecnología" : type === "company" ? "Empresa" : "Competidor" }
 function eventLabel(type: Signal["event_type"]) { return type === "patent" ? "Patente" : type === "trademark" ? "Marca" : type === "publication" ? "Publicación" : "Noticia" }
 function sourceLabel(key: string) { return key === "inapi_open_data" ? "INAPI" : key === "openalex" ? "OpenAlex" : key === "crossref" ? "Crossref" : key === "gdelt" ? "GDELT" : key }
-function formatDate(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("es-CL", { dateStyle: "medium" }).format(date) }
+function relevanceRank(value: Signal["relevance"]) { return value === "alta" ? 3 : value === "media" ? 2 : 1 }
+function formatNumber(value: number) { return new Intl.NumberFormat("es-CL").format(value) }
+function formatDate(value: string) {
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value)
+  const date = new Date(dateOnly ? `${value}T12:00:00Z` : value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat("es-CL", { dateStyle: "medium", timeZone: dateOnly ? "UTC" : "America/Santiago" }).format(date)
+}
