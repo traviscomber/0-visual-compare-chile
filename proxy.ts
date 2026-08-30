@@ -1,7 +1,7 @@
 import { updateSession } from "@/lib/supabase/proxy"
 import { NextResponse, type NextRequest } from "next/server"
 
-const PUBLIC_INDEXABLE_PATHS = new Set(["/", "/demo", "/contacto", "/docs", "/privacidad", "/terminos"])
+const PUBLIC_INDEXABLE_PATHS = new Set(["/", "/es", "/en", "/demo", "/contacto", "/docs", "/privacidad", "/terminos"])
 const LEGACY_REDIRECTS: Record<string, string> = {
   "/consulta": "/demo",
   "/comparador": "/demo",
@@ -18,6 +18,12 @@ export async function proxy(request: NextRequest) {
     url.pathname = legacyTarget
     url.search = ""
     return NextResponse.redirect(url, 308)
+  }
+
+  if (pathname === "/es" || pathname === "/en") {
+    const requestHeaders = new Headers(request.headers)
+    requestHeaders.set("x-videntia-locale", pathname === "/en" ? "en" : "es")
+    return NextResponse.next({ request: { headers: requestHeaders } })
   }
 
   const response = await updateSession(request)
