@@ -28,12 +28,14 @@ export function CompareTrademarkBrief() {
   )
 
   return (
-    <section className="border-y border-border px-5 py-6 sm:px-6">
+    <section aria-labelledby="denominative-context-title">
       <div className="flex items-start gap-3">
-        <Search className="mt-1 h-4 w-4 shrink-0 text-primary" />
+        <Search className="mt-1 h-4 w-4 shrink-0 text-[#96B5A6]" strokeWidth={1.6} />
         <div>
-          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Contexto denominativo</p>
-          <h2 className="mt-2 text-xl font-medium tracking-tight text-foreground">Cruza la imagen con antecedentes por nombre.</h2>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#96B5A6]">Contexto denominativo</p>
+          <h2 id="denominative-context-title" className="mt-2 text-2xl font-light tracking-[-0.03em] text-[#E7DFCE]">
+            Cruza la imagen con antecedentes por nombre
+          </h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             La comparación visual es una señal. Contrástala con denominación, estado y clases antes de decidir qué antecedente revisar.
           </p>
@@ -41,7 +43,7 @@ export function CompareTrademarkBrief() {
       </div>
 
       <form
-        className="mt-5 flex flex-col gap-3 sm:flex-row"
+        className="mt-5 flex flex-col gap-3"
         onSubmit={(event) => {
           event.preventDefault()
           const nextBrand = brandName.trim()
@@ -54,30 +56,22 @@ export function CompareTrademarkBrief() {
           value={brandName}
           onChange={(event) => setBrandName(event.target.value)}
           placeholder="Ejemplo: FALABELLA"
-          className="h-11"
+          className="h-11 border-border bg-[#0D222A] text-white placeholder:text-muted-foreground focus-visible:border-[#4A7F74] focus-visible:ring-[#4A7F74]/30"
         />
-        <Button type="submit" disabled={cargando || !brandName.trim()} className="h-11 shrink-0">
+        <Button type="submit" disabled={cargando || !brandName.trim()} className="h-11 w-full">
           {cargando ? "Consultando…" : "Cruzar nombre"}
         </Button>
       </form>
 
       {activeBrand ? (
         <div className="mt-6">
-          <div className="grid gap-4 border-y border-border py-4 sm:grid-cols-[1fr_auto] sm:items-start">
-            <div>
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Prioridad de revisión</p>
-              <p className="mt-2 text-lg font-medium text-foreground">{summary.riskLabel}</p>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{summary.recommendation}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-5 text-right sm:grid-cols-1">
-              <div>
-                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Antecedentes priorizados</p>
-                <p className="mt-1 text-lg font-medium text-foreground">{summary.criticalCount}</p>
-              </div>
-              <div>
-                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Registrados en muestra</p>
-                <p className="mt-1 text-lg font-medium text-foreground">{summary.registeredCount}</p>
-              </div>
+          <div className="border-y border-border py-5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Prioridad de revisión</p>
+            <p className="mt-2 text-xl font-light text-[#E7DFCE]">{summary.riskLabel}</p>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">{summary.recommendation}</p>
+            <div className="mt-5 grid grid-cols-2 border-t border-border pt-4">
+              <ContextStat label="Priorizados" value={String(summary.criticalCount)} />
+              <ContextStat label="Registrados" value={String(summary.registeredCount)} />
             </div>
           </div>
 
@@ -110,8 +104,8 @@ export function CompareTrademarkBrief() {
             </p>
           ) : null}
 
-          <div className="mt-5 flex justify-end">
-            <Button asChild variant="outline">
+          <div className="mt-5">
+            <Button asChild variant="secondary" className="w-full">
               <Link href={`/consulta-inapi?q=${encodeURIComponent(activeBrand)}&type=nombre&match=3&autorun=1`}>
                 Abrir fuente INAPI
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -121,7 +115,7 @@ export function CompareTrademarkBrief() {
 
           {summary.primaryResult && summary.risk === "high" ? (
             <div className="mt-5 border-l-2 border-destructive/60 pl-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Primera revisión sugerida</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Primera revisión sugerida</p>
               <p className="mt-2 text-sm leading-6 text-foreground/85">
                 <strong>{summary.primaryResult.marca.nombre}</strong> concentra la señal denominativa más relevante de esta muestra. Revisa su ficha y clases antes de interpretar la similitud visual.
               </p>
@@ -129,7 +123,7 @@ export function CompareTrademarkBrief() {
           ) : null}
         </div>
       ) : (
-        <p className="mt-6 border-y border-dashed border-border py-5 text-sm leading-6 text-muted-foreground">
+        <p className="mt-6 border-y border-border py-5 text-sm leading-6 text-muted-foreground">
           Ingresa una denominación para cruzar la comparación visual con antecedentes marcarios disponibles.
         </p>
       )}
@@ -141,8 +135,17 @@ export function CompareTrademarkBrief() {
   )
 }
 
+function ContextStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-r border-border pr-4 last:border-r-0 last:pl-4 last:pr-0">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+      <p className="mt-2 text-lg font-light text-[#E7DFCE]">{value}</p>
+    </div>
+  )
+}
+
 function priorityClassName(priority: "high" | "medium" | "low") {
-  if (priority === "high") return "font-mono text-[10px] uppercase tracking-[0.14em] text-destructive"
-  if (priority === "medium") return "font-mono text-[10px] uppercase tracking-[0.14em] text-warning"
-  return "font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground"
+  if (priority === "high") return "text-[10px] font-semibold uppercase tracking-[0.14em] text-destructive"
+  if (priority === "medium") return "text-[10px] font-semibold uppercase tracking-[0.14em] text-warning"
+  return "text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground"
 }
