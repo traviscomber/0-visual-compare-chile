@@ -1,6 +1,9 @@
 import assert from "node:assert/strict"
+import { readFile } from "node:fs/promises"
+import { fileURLToPath } from "node:url"
 import {
   buildApprovalRoundRequest,
+  canEditCase,
   canExecuteCaseSuggestedAction,
   caseSuggestedActionRestriction,
 } from "../lib/cases/access.ts"
@@ -12,6 +15,10 @@ const common = {
   requiredApprovals: 1,
   deadlineDays: 3,
 }
+
+assert.equal(canEditCase("owner"), true)
+assert.equal(canEditCase("editor"), true)
+assert.equal(canEditCase("viewer"), false)
 
 const ownerRequest = buildApprovalRoundRequest({ ...common, role: "owner" })
 assert.equal(ownerRequest.requiredApprovals, 1)
@@ -34,4 +41,16 @@ assert.equal(canExecuteCaseSuggestedAction("owner", "none"), false)
 assert.equal(caseSuggestedActionRestriction("editor", "extend_deadline"), "Requiere al responsable del caso")
 assert.equal(caseSuggestedActionRestriction("viewer", "remind_reviewers"), "Requiere rol de editor o responsable")
 
-console.log("Case role regression PASS: review policy ownership and suggested-action permissions verified.")
+const itemsRoutePath = fileURLToPath(new URL("../app/api/cases/items/route.ts", import.meta.url))
+const detailPagePath = fileURLToPath(new URL("../app/(app)/casos/[id]/page.tsx", import.meta.url))
+const [itemsRouteSource, detailPageSource] = await Promise.all([
+  readFile(itemsRoutePath, "utf8"),
+  readFile(detailPagePath, "utf8"),
+])
+
+assert.match(itemsRouteSource, /rpc\("case_access_role"/, "case detail API must resolve the effective case role")
+assert.match(itemsRouteSource, /currentUserRole: role/, "case detail API must return the effective case role")
+assert.match(detailPageSource, /useState<CaseAccessRole>\("viewer"\)/, "case detail must fail closed to viewer mode")
+assert.match(detailPageSource, /const canEdit = canEditCase\(currentUserRole\)/, "case detail must gate editing through the shared role policy")
+
+console.log("Case role regression PASS: review policy ownership, viewer detail mode and suggested-action permissions verified.")
