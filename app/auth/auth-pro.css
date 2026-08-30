@@ -1,0 +1,259 @@
+.auth-videntia-shell {
+  --background: #0f2a33;
+  --foreground: #e7dfce;
+  --card: #13272d;
+  --card-foreground: #ffffff;
+  --popover: #13272d;
+  --popover-foreground: #ffffff;
+  --primary: #4a7f74;
+  --primary-foreground: #ffffff;
+  --secondary: #172f34;
+  --secondary-foreground: #ffffff;
+  --muted: #172f34;
+  --muted-foreground: #bdbebd;
+  --accent: #20393a;
+  --accent-foreground: #ffffff;
+  --destructive: #c46a61;
+  --destructive-foreground: #ffffff;
+  --border: #263d44;
+  --input: #263d44;
+  --ring: #96b5a6;
+  min-height: 100svh;
+  background: #091a20;
+  color: #ffffff;
+}
+
+.auth-videntia-shell main {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 82% 12%, rgba(69, 110, 142, 0.12), transparent 30rem),
+    radial-gradient(circle at 14% 20%, rgba(74, 127, 116, 0.08), transparent 26rem),
+    #0f2a33;
+  color: #ffffff;
+}
+
+.auth-videntia-shell main::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  opacity: 0.38;
+  background-image:
+    linear-gradient(rgba(183, 211, 209, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(183, 211, 209, 0.025) 1px, transparent 1px);
+  background-size: 76px 76px;
+  mask-image: linear-gradient(to bottom, #000 0, rgba(0, 0, 0, 0.6) 38rem, transparent 72rem);
+}
+
+.auth-videntia-shell main::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: -12rem;
+  top: 12rem;
+  width: 28rem;
+  height: 28rem;
+  border: 1px solid rgba(150, 181, 166, 0.08);
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 5rem rgba(69, 110, 142, 0.018),
+    0 0 0 10rem rgba(74, 127, 116, 0.012);
+}
+
+.auth-videntia-shell main > div {
+  position: relative;
+  z-index: 1;
+}
+
+.auth-videntia-shell main section {
+  border-color: rgba(183, 211, 209, 0.1) !important;
+  background: linear-gradient(180deg, rgba(15, 42, 51, 0.97), rgba(15, 42, 51, 0.9));
+}
+
+.auth-videntia-shell main aside {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(183, 211, 209, 0.08) !important;
+  background:
+    radial-gradient(circle at 72% 18%, rgba(69, 110, 142, 0.12), transparent 22rem),
+    radial-gradient(circle at 30% 80%, rgba(74, 127, 116, 0.08), transparent 24rem),
+    #091a20 !important;
+}
+
+.auth-videntia-shell main aside::after {
+  content: "";
+  position: absolute;
+  right: -8rem;
+  bottom: 8rem;
+  width: 22rem;
+  height: 22rem;
+  border: 1px solid rgba(150, 181, 166, 0.07);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.auth-videntia-shell main h1,
+.auth-videntia-shell main aside p[class*="text-3xl"] {
+  color: #e7dfce !important;
+  font-weight: 300 !important;
+  line-height: 1.02;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+.auth-videntia-shell main p[class*="text-muted-foreground"],
+.auth-videntia-shell main span[class*="text-muted-foreground"] {
+  color: #aeb6b4 !important;
+}
+
+.auth-videntia-shell main p[class*="text-primary"],
+.auth-videntia-shell main span[class*="text-primary"] {
+  color: #96b5a6 !important;
+}
+
+.auth-videntia-shell main a[aria-label="Volver a VIDENTIA"] > span:first-child {
+  position: relative;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0 !important;
+  border-radius: 10px;
+  background: #13272d !important;
+  color: #e7dfce !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.auth-videntia-shell main a[aria-label="Volver a VIDENTIA"] > span:first-child::after {
+  content: "";
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #4a7f74;
+  box-shadow: 0 0 12px rgba(74, 127, 116, 0.46);
+}
+
+.auth-videntia-shell main a[aria-label="Volver a VIDENTIA"] span[class*="tracking-[0.16em]"] {
+  color: #e7dfce;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+}
+
+.auth-videntia-shell main input {
+  min-height: 44px;
+  border-color: rgba(183, 211, 209, 0.14) !important;
+  border-radius: 9px !important;
+  background: #0b2027 !important;
+  color: #ffffff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.015) !important;
+}
+
+.auth-videntia-shell main input::placeholder {
+  color: #7f8b89;
+}
+
+.auth-videntia-shell main input:hover:not(:disabled) {
+  border-color: rgba(150, 181, 166, 0.4) !important;
+}
+
+.auth-videntia-shell main input:focus-visible {
+  border-color: rgba(150, 181, 166, 0.72) !important;
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(74, 127, 116, 0.13),
+    inset 0 0 0 1px rgba(150, 181, 166, 0.22) !important;
+}
+
+.auth-videntia-shell main button,
+.auth-videntia-shell main a[class*="inline-flex"] {
+  border-radius: 9px !important;
+}
+
+.auth-videntia-shell main button:not([data-variant="outline"]),
+.auth-videntia-shell main form button[type="submit"] {
+  background: #4a7f74;
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 0 24px rgba(74, 127, 116, 0.12);
+}
+
+.auth-videntia-shell main button:not([data-variant="outline"]):hover,
+.auth-videntia-shell main form button[type="submit"]:hover {
+  background: #568d81;
+}
+
+.auth-videntia-shell main a[class*="border"],
+.auth-videntia-shell main button[class*="border"] {
+  border-color: rgba(183, 211, 209, 0.14);
+}
+
+.auth-videntia-shell main [role="alert"] {
+  border-color: #c46a61 !important;
+  background: rgba(196, 106, 97, 0.08) !important;
+  color: #e8aaa3 !important;
+  border-radius: 0 9px 9px 0;
+}
+
+.auth-videntia-shell main [class*="border-y"],
+.auth-videntia-shell main [class*="border-t"],
+.auth-videntia-shell main [class*="divide-y"] {
+  border-color: rgba(183, 211, 209, 0.1) !important;
+}
+
+.auth-videntia-shell main svg[class*="text-primary"] {
+  color: #96b5a6 !important;
+}
+
+.auth-videntia-shell main svg[class*="text-warning"] {
+  color: #d6a46f !important;
+}
+
+.auth-videntia-shell main form + div,
+.auth-videntia-shell main form ~ div {
+  border-color: rgba(183, 211, 209, 0.1) !important;
+}
+
+.auth-videntia-shell main a {
+  text-underline-offset: 4px;
+}
+
+.auth-videntia-shell main a:hover {
+  color: #ffffff;
+}
+
+@media (max-width: 1023px) {
+  .auth-videntia-shell main::before {
+    background-size: 58px 58px;
+    opacity: 0.28;
+  }
+
+  .auth-videntia-shell main::after {
+    right: -19rem;
+    top: 10rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .auth-videntia-shell main::after {
+    display: none;
+  }
+
+  .auth-videntia-shell main h1 {
+    font-size: clamp(2.6rem, 12vw, 3.75rem) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-videntia-shell main a,
+  .auth-videntia-shell main button,
+  .auth-videntia-shell main input {
+    transition: none !important;
+  }
+}
