@@ -1,10 +1,9 @@
 /* Focused landing navigation polish. Keeps page structure and destinations intact. */
 .px-nav{
   position:fixed;
-  background:linear-gradient(180deg,rgba(6,17,22,.94),rgba(6,17,22,.86));
-  border-bottom-color:rgba(183,211,209,.09);
-  backdrop-filter:blur(18px) saturate(118%);
-  -webkit-backdrop-filter:blur(18px) saturate(118%);
+  background:var(--vid-deep);
+  border-bottom-color:var(--vid-divider);
+  box-shadow:0 1px 0 rgba(183,211,209,.04);
 }
 .px-nav-inner{min-height:76px}
 .px-brand{gap:3px;min-width:224px}
