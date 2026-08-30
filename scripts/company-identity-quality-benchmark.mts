@@ -128,6 +128,36 @@ for (const needle of [
   "El feedback no elimina la evidencia ni cambia su fuente",
 ]) requireText(calibrationPage, needle, "calibration workspace")
 
+const operationsMigration = await readFile("supabase/migrations/20260830234844_add_audited_company_identity_operations.sql", "utf8")
+for (const needle of [
+  "intelligence_company_identity_operations",
+  "merge_company_identities_manual",
+  "split_company_alias_manual",
+  "source_has_portfolio_binding",
+  "source_has_corporate_relationships",
+  "before_snapshot",
+  "after_snapshot",
+  "grant execute on function public.merge_company_identities_manual(uuid,uuid,uuid,text) to service_role",
+]) requireText(operationsMigration, needle, "identity operations")
+
+const calibrationMigration = await readFile("supabase/migrations/20260830235024_add_intelligence_calibration_snapshots.sql", "utf8")
+for (const needle of [
+  "intelligence_calibration_snapshots",
+  "insufficient_sample",
+  "minimum_sample",
+  "review_acceptance_not_model_precision",
+  "false_positive_rate",
+  "by_source",
+  "by_event_type",
+]) requireText(calibrationMigration, needle, "calibration snapshots")
+
+const healthCron = await readFile("app/api/cron/intelligence-health/route.ts", "utf8")
+for (const needle of [
+  "run_intelligence_health_sweep",
+  "run_intelligence_calibration_snapshot",
+  "Promise.all",
+]) requireText(healthCron, needle, "health/calibration cron")
+
 console.log("Company identity benchmark PASS")
 
 function normalizeCompanyIdentity(value: string) {
