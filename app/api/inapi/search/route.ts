@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { searchInapi, type InapiMatchMode, type InapiSearchType } from "@/lib/inapi/client"
 import { searchInapiLocal, shouldVerifyInapiLive } from "@/lib/inapi/local-search"
 import { PRIVATE_NO_STORE_HEADERS, requireUser } from "@/lib/auth/server"
+import { FREE_MONTHLY_RESEARCH_LIMIT, getFreeResearchQuota, isFreeAccessUser } from "@/lib/free-research-quota"
 import type { Marca } from "@/types/marca"
 
 export const runtime = "nodejs"
@@ -15,6 +16,27 @@ const MAX_RESULTS = 250
 export async function GET(request: Request) {
   const auth = await requireUser()
   if (!auth.ok) return auth.response
+
+  if (isFreeAccessUser(auth.user)) {
+    const quota = await getFreeResearchQuota(auth.user.id)
+    if (!quota.ok) {
+      return NextResponse.json(
+        { error: "No pudimos verificar tu cupo gratuito. Intenta nuevamente en unos minutos.", code: "FREE_QUOTA_UNAVAILABLE" },
+        { status: 503, headers: PRIVATE_NO_STORE_HEADERS },
+      )
+    }
+    if (!quota.allowed) {
+      return NextResponse.json(
+        {
+          error: `Ya usaste tus ${FREE_MONTHLY_RESEARCH_LIMIT} investigaciones gratuitas de este mes.`,
+          code: "FREE_MONTHLY_LIMIT",
+          limit: FREE_MONTHLY_RESEARCH_LIMIT,
+          resetAt: quota.resetsAt,
+        },
+        { status: 429, headers: PRIVATE_NO_STORE_HEADERS },
+      )
+    }
+  }
 
   const startedAt = Date.now()
   const { searchParams } = new URL(request.url)
