@@ -45,8 +45,9 @@ type Summary = {
 type CoverageSlice = {
   latest_filing_date: string | null
   last_synced_at: string | null
-  lag_days: number | null
-  fresh_for_week: boolean
+  filing_lag_days: number | null
+  sync_age_days: number | null
+  synchronized_recently: boolean
   records_in_latest_30d: number
 }
 type RecentActivity = {
@@ -57,6 +58,26 @@ type RecentActivity = {
   filing_date: string
   source_url: string | null
 }
+type ObservedChange = {
+  id: string
+  kind: "patent" | "trademark"
+  change_type: string
+  title: string
+  summary: string | null
+  source_url: string | null
+  source_date: string | null
+  observed_at: string
+  materiality: "alta" | "media" | "baja"
+  changed_fields: string[]
+}
+type ChangeDetection = {
+  ready: boolean
+  baselines_ready: number
+  baselines_expected: number
+  states_total: number
+  events_7d: number
+  last_observed_at: string | null
+}
 type WeeklyContext = {
   generated_at: string
   window_start: string
@@ -65,6 +86,8 @@ type WeeklyContext = {
     patents: CoverageSlice
     trademarks: CoverageSlice
   }
+  change_detection: ChangeDetection
+  observed_changes: ObservedChange[]
   recent_activity: RecentActivity[]
 }
 
@@ -92,7 +115,10 @@ export default function StrategicMonitoringPage() {
       if (relevance) return relevance
       return new Date(b.first_seen_at).getTime() - new Date(a.first_seen_at).getTime()
     }), [signals, weeklyContext?.window_start])
-  const weeklyHigh = useMemo(() => weeklySignals.filter(item => item.relevance === "alta").length, [weeklySignals])
+  const externalWeeklySignals = useMemo(() => weeklySignals.filter(item => item.source_key !== "inapi_open_data"), [weeklySignals])
+  const observedHigh = useMemo(() => (weeklyContext?.observed_changes ?? []).filter(item => item.materiality === "alta").length, [weeklyContext?.observed_changes])
+  const headlineWeeklyChanges = (weeklyContext?.change_detection.events_7d ?? 0) + externalWeeklySignals.length
+  const headlineHigh = observedHigh + externalWeeklySignals.filter(item => item.relevance === "alta").length
 
   async function load() {
     setLoading(true)
@@ -186,10 +212,10 @@ export default function StrategicMonitoringPage() {
     />
 
     <OperationalMetricRail>
-      <OperationalMetric value={weeklySignals.length} label="Cambios esta semana" detail="Observados en 7 días" tone={weeklySignals.length ? "success" : "neutral"} />
-      <OperationalMetric value={weeklyHigh} label="Alta relevancia" detail="Dentro del brief semanal" tone={weeklyHigh ? "warning" : "neutral"} />
+      <OperationalMetric value={headlineWeeklyChanges} label="Cambios observados" detail="INAPI + señales externas / 7 días" tone={headlineWeeklyChanges ? "success" : "neutral"} />
+      <OperationalMetric value={headlineHigh} label="Alta relevancia" detail="Cambios que requieren revisión" tone={headlineHigh ? "warning" : "neutral"} />
       <OperationalMetric value={active.length} label="Vigilancias activas" detail="Tecnologías y empresas" tone={active.length ? "success" : "neutral"} />
-      <OperationalMetric value={summary.total_history} label="Evidencias" detail="Historial conservado" />
+      <OperationalMetric value={summary.total_history} label="Evidencias" detail="Historial personalizado" />
     </OperationalMetricRail>
 
     <WeeklyBriefSection loading={loading} signals={weeklySignals} context={weeklyContext} />
@@ -241,24 +267,50 @@ export default function StrategicMonitoringPage() {
 }
 
 function WeeklyBriefSection({ loading, signals, context }: { loading: boolean; signals: Signal[]; context: WeeklyContext | null }) {
+  const externalSignals = signals.filter(signal => signal.source_key !== "inapi_open_data")
+  const observedChanges = context?.observed_changes ?? []
+  const hasChanges = observedChanges.length > 0 || externalSignals.length > 0
+
   return <section className="border-b border-border/80 py-9">
     <OperationalSectionHeader
       eyebrow="Brief semanal"
       title="Qué cambió esta semana"
       action={context ? <span className="text-xs text-muted-foreground">{formatDate(context.window_start)} — {formatDate(context.window_end)}</span> : undefined}
     />
-    <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Cambios materiales detectados en tecnologías, competidores y propiedad intelectual que podrían requerir atención. Cada señal separa el hecho observado de su interpretación.</p>
+    <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Cambios observados por VIDENTIA en la fuente oficial y señales externas relevantes. La fecha del expediente se mantiene separada de la fecha en que el cambio fue detectado.</p>
 
-    {loading ? <div className="mt-6 flex items-center gap-2 border-y border-border/80 py-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Construyendo el brief con la cobertura disponible…</div> : signals.length ? <div className="mt-6 divide-y divide-border/80 border-y border-border/80">{signals.slice(0, 6).map(signal => <WeeklySignalRow key={signal.id} signal={signal} />)}</div> : <WeeklyEmptyState context={context} />}
+    {loading ? <div className="mt-6 flex items-center gap-2 border-y border-border/80 py-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Construyendo el brief con la cobertura disponible…</div> : hasChanges ? <>
+      {observedChanges.length ? <div className="mt-6"><p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Cambios observados en INAPI</p><div className="mt-3 divide-y divide-border/80 border-y border-border/80">{observedChanges.slice(0, 6).map(change => <ObservedChangeRow key={change.id} change={change} />)}</div></div> : null}
+      {externalSignals.length ? <div className="mt-8"><p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Señales externas en tus vigilancias</p><div className="mt-3 divide-y divide-border/80 border-y border-border/80">{externalSignals.slice(0, 4).map(signal => <WeeklySignalRow key={signal.id} signal={signal} />)}</div></div> : null}
+    </> : <WeeklyEmptyState context={context} />}
 
     {context ? <>
+      <ChangeEngineStatus status={context.change_detection} />
       <CoverageRail context={context} />
       {context.recent_activity.length ? <div className="mt-8">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Actividad reciente disponible</p><h3 className="mt-1 text-base font-medium text-white">Últimos registros presentes en el corpus</h3></div><p className="max-w-lg text-xs leading-5 text-muted-foreground">Referencia de cobertura; no se presenta como cambio de esta semana cuando la fecha fuente queda fuera de la ventana.</p></div>
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Referencia documental</p><h3 className="mt-1 text-base font-medium text-white">Expedientes con fecha de presentación más reciente</h3></div><p className="max-w-lg text-xs leading-5 text-muted-foreground">Sirve para entender la antigüedad documental del corpus. No equivale a la fecha en que INAPI o VIDENTIA actualizaron el expediente.</p></div>
         <div className="mt-4 divide-y divide-border/80 border-y border-border/80">{context.recent_activity.slice(0, 4).map(item => <RecentActivityRow key={item.id} item={item} />)}</div>
       </div> : null}
     </> : null}
   </section>
+}
+
+function ObservedChangeRow({ change }: { change: ObservedChange }) {
+  const Icon = change.kind === "patent" ? FlaskConical : Search
+  return <article className="grid gap-4 py-6 lg:grid-cols-[42px_minmax(0,1fr)_auto] lg:items-start">
+    <span className="flex h-10 w-10 items-center justify-center rounded-[9px] bg-[#173B37] text-[#96B5A6]"><Icon className="h-4 w-4" /></span>
+    <div className="min-w-0">
+      <div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="bg-[#13272D]">{change.kind === "patent" ? "Patente" : "Marca"}</Badge><span className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">{sourceChangeLabel(change.change_type)}</span><span className={`text-[10px] font-medium uppercase tracking-[0.13em] ${change.materiality === "alta" ? "text-[#D8C49C]" : "text-[#96B5A6]"}`}>Materialidad {change.materiality}</span></div>
+      <h3 className="mt-2 text-base font-medium leading-6 text-white">{change.title}</h3>
+      <div className="mt-4 grid gap-4 md:grid-cols-3">
+        <BriefFact label="Hecho observado" text={change.summary || "VIDENTIA detectó una modificación en la fuente oficial de INAPI."} />
+        <BriefFact label="Interpretación" text={interpretationForSourceChange(change)} />
+        <BriefFact label="Por qué importa" text={whySourceChangeMatters(change)} />
+      </div>
+      <p className="mt-4 text-xs text-muted-foreground">INAPI · detectado por VIDENTIA {formatDate(change.observed_at)}{change.source_date ? ` · fecha del expediente ${formatDate(change.source_date)}` : ""}{change.changed_fields.length ? ` · campos: ${change.changed_fields.join(", ")}` : ""}</p>
+    </div>
+    {change.source_url ? <Button asChild variant="ghost" size="sm"><a href={change.source_url} target="_blank" rel="noreferrer">Evidencia <ExternalLink className="h-3.5 w-3.5" /></a></Button> : null}
+  </article>
 }
 
 function WeeklySignalRow({ signal }: { signal: Signal }) {
@@ -284,12 +336,20 @@ function BriefFact({ label, text }: { label: string; text: string }) {
 }
 
 function WeeklyEmptyState({ context }: { context: WeeklyContext | null }) {
-  const stale = context ? !context.coverage.patents.fresh_for_week || !context.coverage.trademarks.fresh_for_week : false
+  const changeEngineReady = context?.change_detection.ready ?? false
+  const staleSync = context ? !context.coverage.patents.synchronized_recently || !context.coverage.trademarks.synchronized_recently : false
   return <div className="mt-6 border-y border-border/80 py-9">
     <Activity className="h-5 w-5 text-[#96B5A6]" />
-    <p className="mt-3 font-medium text-white">No se detectaron cambios materiales en los últimos 7 días con la cobertura actualmente disponible.</p>
-    <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">El brief sólo considera cambios posteriores a la línea base de cada vigilancia. La ausencia de señales no se interpreta como ausencia de actividad.</p>
-    {stale ? <div className="mt-4 flex max-w-3xl gap-3 border-l-2 border-[#C9A56A] pl-4"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A56A]" /><p className="text-sm leading-6 text-[#D8C49C]">La cobertura local no llega a la fecha actual en todas las fuentes. VIDENTIA muestra el desfase explícitamente para evitar conclusiones falsas.</p></div> : null}
+    <p className="mt-3 font-medium text-white">{changeEngineReady ? "No se detectaron cambios materiales en los últimos 7 días." : "El motor de cambios está construyendo su línea base."}</p>
+    <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{changeEngineReady ? "VIDENTIA compara cada sincronización contra el estado observado anteriormente. La ausencia de cambios no se interpreta como ausencia de actividad fuera de las fuentes cubiertas." : "La primera sincronización memoriza el estado actual sin convertir antecedentes históricos en alertas. A partir de la siguiente pasada, VIDENTIA registra cada modificación observada."}</p>
+    {staleSync ? <div className="mt-4 flex max-w-3xl gap-3 border-l-2 border-[#C9A56A] pl-4"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A56A]" /><p className="text-sm leading-6 text-[#D8C49C]">La última sincronización de una fuente supera dos días. El brief mantiene esa limitación visible para evitar conclusiones falsas.</p></div> : null}
+  </div>
+}
+
+function ChangeEngineStatus({ status }: { status: ChangeDetection }) {
+  return <div className={`mt-6 flex gap-3 border-l-2 pl-4 ${status.ready ? "border-[#96B5A6]" : "border-[#C9A56A]"}`}>
+    {status.ready ? <Activity className="mt-0.5 h-4 w-4 shrink-0 text-[#96B5A6]" /> : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A56A]" />}
+    <div><p className="text-sm font-medium text-white">{status.ready ? "Motor de cambios activo" : "Inicializando motor de cambios"}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{status.baselines_ready}/{status.baselines_expected} fuentes con línea base · {formatNumber(status.states_total)} estados persistidos · {formatNumber(status.events_7d)} cambios observados en 7 días{status.last_observed_at ? ` · último ${formatDate(status.last_observed_at)}` : ""}</p></div>
   </div>
 }
 
@@ -301,10 +361,11 @@ function CoverageRail({ context }: { context: WeeklyContext }) {
 }
 
 function CoverageItem({ label, data }: { label: string; data: CoverageSlice }) {
+  const syncLabel = data.sync_age_days === null ? "Sin sincronización" : data.sync_age_days === 0 ? "Sincronizado hoy" : `Sync hace ${data.sync_age_days} d`
   return <div className="py-4 md:px-5 first:md:pl-0 last:md:pr-0">
-    <div className="flex items-center justify-between gap-4"><p className="text-sm font-medium text-white">{label}</p><span className={`text-[10px] font-medium uppercase tracking-[0.12em] ${data.fresh_for_week ? "text-[#96B5A6]" : "text-[#C9A56A]"}`}>{data.fresh_for_week ? "Cobertura vigente" : data.lag_days === null ? "Cobertura no disponible" : `Desfase ${data.lag_days} d`}</span></div>
-    <p className="mt-2 text-sm text-muted-foreground">Solicitudes hasta <span className="text-[#D5E0E3]">{data.latest_filing_date ? formatDate(data.latest_filing_date) : "sin fecha disponible"}</span></p>
-    <p className="mt-1 text-xs text-muted-foreground">{formatNumber(data.records_in_latest_30d)} registros en los 30 días más recientes de esa cobertura{data.last_synced_at ? ` · última sincronización ${formatDate(data.last_synced_at)}` : ""}</p>
+    <div className="flex items-center justify-between gap-4"><p className="text-sm font-medium text-white">{label}</p><span className={`text-[10px] font-medium uppercase tracking-[0.12em] ${data.synchronized_recently ? "text-[#96B5A6]" : "text-[#C9A56A]"}`}>{syncLabel}</span></div>
+    <p className="mt-2 text-sm text-muted-foreground">Fecha de presentación más reciente <span className="text-[#D5E0E3]">{data.latest_filing_date ? formatDate(data.latest_filing_date) : "sin fecha disponible"}</span>{data.filing_lag_days !== null && data.filing_lag_days > 0 ? ` · ${data.filing_lag_days} d respecto de hoy` : ""}</p>
+    <p className="mt-1 text-xs text-muted-foreground">{formatNumber(data.records_in_latest_30d)} expedientes en los 30 días documentales más recientes{data.last_synced_at ? ` · fuente sincronizada ${formatDate(data.last_synced_at)}` : ""}</p>
   </div>
 }
 
@@ -328,6 +389,32 @@ function SignalRow({ signal }: { signal: Signal }) {
     <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="bg-[#13272D]">{eventLabel(signal.event_type)}</Badge><span className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">{sourceLabel(signal.source_key)}</span>{signal.is_new ? <span className="text-[10px] font-medium uppercase tracking-[0.13em] text-[#96B5A6]">Nuevo</span> : null}</div><h3 className="mt-2 font-medium leading-6 text-white">{signal.title}</h3>{signal.summary ? <p className="mt-1 text-sm leading-6 text-muted-foreground">{signal.summary}</p> : null}<p className="mt-2 text-xs text-muted-foreground">{watchLabel(signal.watch_type)} · {signal.watch_query}{signal.occurred_at ? ` · ${formatDate(signal.occurred_at)}` : ""}</p></div>
     {signal.source_url ? <Button asChild variant="ghost" size="sm"><a href={signal.source_url} target="_blank" rel="noreferrer">Fuente <ExternalLink className="h-3.5 w-3.5" /></a></Button> : null}
   </article>
+}
+
+function interpretationForSourceChange(change: ObservedChange) {
+  if (change.change_type === "new_record") return "Es un ingreso nuevo al corpus oficial observado por VIDENTIA. Por sí solo no demuestra un cambio estratégico; sirve como señal temprana para seguimiento."
+  if (change.change_type === "status_changed") return "El expediente cambió de condición procesal o administrativa. El significado depende del estado anterior, el nuevo estado y el contexto del portafolio."
+  if (change.change_type === "registration_added") return "El expediente incorporó un hito de registro o concesión que no estaba presente en la observación anterior."
+  if (change.change_type === "applicant_changed") return "Cambió el actor asociado al expediente. Conviene distinguir entre corrección de datos, cesión, reorganización o cambio real de titularidad."
+  if (change.change_type === "classification_changed") return "La fuente oficial modificó la clasificación asociada al expediente, lo que puede alterar su agrupación tecnológica o comercial."
+  if (change.change_type === "title_changed") return "La fuente oficial modificó el título o denominación del expediente; la evidencia requiere comparación con la versión anterior."
+  return "La fuente oficial modificó uno o más campos del expediente respecto de la observación anterior conservada por VIDENTIA."
+}
+
+function whySourceChangeMatters(change: ObservedChange) {
+  if (change.materiality === "alta") return "Altera estado, registro/concesión o actor asociado; merece revisión prioritaria porque puede cambiar la lectura competitiva o jurídica del expediente."
+  if (change.materiality === "media") return "Puede modificar el mapa de actividad, clasificación o nuevos actores y conviene incorporarlo al seguimiento antes de inferir una tendencia."
+  return "Conserva trazabilidad de una modificación menor y permite reconstruir la evolución del expediente sin confundirla con un hecho estratégico confirmado."
+}
+
+function sourceChangeLabel(type: string) {
+  if (type === "new_record") return "Nuevo expediente"
+  if (type === "status_changed") return "Cambio de estado"
+  if (type === "registration_added") return "Registro / concesión"
+  if (type === "applicant_changed") return "Cambio de solicitante / titular"
+  if (type === "classification_changed") return "Cambio de clasificación"
+  if (type === "title_changed") return "Cambio de título"
+  return "Expediente actualizado"
 }
 
 function interpretationForSignal(signal: Signal) {
