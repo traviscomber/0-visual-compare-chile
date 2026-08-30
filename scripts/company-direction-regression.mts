@@ -76,6 +76,8 @@ const schemaMigration = await readFile("supabase/migrations/20260830210402_add_c
 const backfillMigration = await readFile("supabase/migrations/20260830210556_backfill_company_ip_activity_12m.sql", "utf8")
 const refreshMigration = await readFile("supabase/migrations/20260830211333_refresh_company_ip_activity_from_sync.sql", "utf8")
 const dedupeMigration = await readFile("supabase/migrations/20260830211627_dedupe_company_activity_refresh_inputs.sql", "utf8")
+const searchDedupeMigration = await readFile("supabase/migrations/20260830211928_dedupe_company_identity_search_results.sql", "utf8")
+const searchPerfMigration = await readFile("supabase/migrations/20260830212212_optimize_company_identity_search.sql", "utf8")
 
 for (const needle of [
   "normalize_company_identity",
@@ -92,5 +94,9 @@ if (!refreshMigration.includes("tr.last_synced_at >= p_since")) fail("daily trad
 if (!refreshMigration.includes("current_date - 370")) fail("daily activity refresh is not bounded to the direction horizon")
 if (!dedupeMigration.includes("distinct on (m.identity_id, tr.source_record_id)")) fail("trademark refresh can double-upsert the same identity/record")
 if (!dedupeMigration.includes("distinct on (m.identity_id, pr.source_record_id)")) fail("patent refresh can double-upsert the same identity/record")
+if (!searchDedupeMigration.includes("partition by coalesce(c.country, '*'), c.canonical_core")) fail("legacy company aliases are not collapsed by country + identity")
+if (!searchPerfMigration.includes("canonical_identity_key text")) fail("company search lacks persisted canonical identity key")
+if (!searchPerfMigration.includes("intelligence_company_identities_canonical_trgm_idx")) fail("company search lacks canonical trigram index")
+if (!searchPerfMigration.includes("limit 120")) fail("company search does not shortlist candidates before activity aggregation")
 
-console.log("Company direction regression PASS: identity normalization, co-applicant parsing, six-month classification deltas, sync bounds, duplicate-safe refresh.")
+console.log("Company direction regression PASS: identity normalization, co-applicant parsing, six-month classification deltas, sync bounds, duplicate-safe refresh, deduped indexed search.")
