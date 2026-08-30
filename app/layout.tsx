@@ -7,6 +7,7 @@ import { AuthProvider } from "@/lib/auth-context"
 import "./globals.css"
 import "./home-premium.css"
 import "./landing-progressive-reveal.css"
+import "./videntia-foundation.css"
 
 const montserrat = Montserrat({ subsets: ["latin"], display: "swap", variable: "--font-montserrat" })
 const CANONICAL_ORIGIN = "https://videntia.app"
