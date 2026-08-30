@@ -30,6 +30,9 @@ type BrandResponse = {
   error?: string
   code?: string
   resetAt?: string
+  preview?: boolean
+  accessTier?: "free" | "full"
+  hiddenResults?: number
 }
 
 export default function InvestigarPage() {
@@ -82,33 +85,28 @@ export default function InvestigarPage() {
     await runResearch(query)
   }
 
-  const rows = (result?.results ?? []).slice(0, 8)
+  const rows = result?.results ?? []
   const hasResult = result !== null
+  const isPreview = result?.preview === true || result?.accessTier === "free"
   const freeLimitReached = errorCode === "FREE_MONTHLY_LIMIT"
+  const enterpriseHref = `/contacto?origen=preview&marca=${encodeURIComponent(query.trim())}&resultados=${result?.total ?? 0}`
 
   return (
     <OperationalPage>
       <OperationalHeader
         eyebrow="VIDENTIA / Investigar"
-        title={<>Investiga una marca antes de decidir.</>}
+        title={<>Revisa una marca antes de avanzar.</>}
         description={
           <p>
-            Revisa antecedentes marcarios disponibles, titulares, estados y clases Niza. La evidencia se mantiene separada de cualquier conclusión jurídica.
+            Consulta antecedentes marcarios disponibles y clases Niza. La vista preliminar no incluye evaluación jurídica, estrategia ni recomendaciones operativas.
           </p>
         }
         meta={
           <>
             <span>Fuente visible</span>
-            <span>Evidencia trazable</span>
+            <span>Vista preliminar</span>
             <span>Chile primero</span>
           </>
-        }
-        actions={
-          <Button asChild variant="secondary">
-            <Link href="/consulta">
-              Búsqueda avanzada <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
         }
       />
 
@@ -117,7 +115,7 @@ export default function InvestigarPage() {
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-end">
             <form onSubmit={run} className="min-w-0">
               <label htmlFor="trademark-query" className="mb-2 block text-[10px] font-medium uppercase tracking-[0.16em] text-[#96B5A6]">
-                Marca a investigar
+                Marca a revisar
               </label>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Input
@@ -131,17 +129,17 @@ export default function InvestigarPage() {
                 />
                 <Button type="submit" disabled={query.trim().length < 2 || loading} className="h-12 min-w-44">
                   {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" /> : <Search className="mr-2 h-4 w-4" />}
-                  {loading ? "Consultando" : "Investigar marca"}
+                  {loading ? "Consultando" : "Revisar marca"}
                 </Button>
               </div>
             </form>
 
             <div className="border-t border-border/70 pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
-              <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Qué obtienes</p>
+              <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">La vista incluye</p>
               <div className="mt-3 space-y-2 text-sm text-white/85">
-                <p className="flex items-center gap-2"><Database className="h-4 w-4 text-[#96B5A6]" />Antecedentes disponibles</p>
-                <p className="flex items-center gap-2"><Tags className="h-4 w-4 text-[#96B5A6]" />Clases Niza y titulares</p>
-                <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#96B5A6]" />Fuente y estado visibles</p>
+                <p className="flex items-center gap-2"><Database className="h-4 w-4 text-[#96B5A6]" />Coincidencias principales</p>
+                <p className="flex items-center gap-2"><Tags className="h-4 w-4 text-[#96B5A6]" />Clases Niza observadas</p>
+                <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#96B5A6]" />Estado visible de la marca</p>
               </div>
             </div>
           </div>
@@ -149,19 +147,15 @@ export default function InvestigarPage() {
       </section>
 
       {error ? (
-        <div role="alert" className="flex items-start gap-3 rounded-[10px] border border-red-500/25 bg-red-500/[0.07] p-4 text-sm text-red-200">
+        <div role="alert" className="flex items-start gap-3 border border-red-500/25 bg-red-500/[0.07] p-4 text-sm text-red-200">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <div className="min-w-0">
             <p>{error}</p>
             {freeLimitReached ? (
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <a
-                  href="mailto:info@n3uralia.com?subject=Acceso%20completo%20VIDENTIA"
-                  className="inline-flex min-h-9 items-center gap-2 rounded-md bg-[#4A7F74] px-3 text-xs font-medium text-white transition-colors hover:bg-[#568D81]"
-                >
-                  Solicitar acceso completo <ArrowRight className="h-3.5 w-3.5" />
-                </a>
-                <span className="text-xs text-red-100/70">No necesitas elegir entre API o software ahora.</span>
+              <div className="mt-3">
+                <Link href="/contacto?origen=cuenta-gratuita" className="inline-flex min-h-9 items-center gap-2 bg-[#4A7F74] px-3 text-xs font-medium text-white transition-colors hover:bg-[#568D81]">
+                  Solicitar acceso empresarial <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
               </div>
             ) : null}
           </div>
@@ -171,20 +165,37 @@ export default function InvestigarPage() {
       {hasResult && result ? (
         <section className="pb-10">
           <OperationalSectionHeader
-            eyebrow="Resultado de investigación"
+            eyebrow={isPreview ? "Vista preliminar" : "Resultado de investigación"}
             title={<>“{query.trim()}”</>}
-            meta={`${result.total ?? result.results?.length ?? 0} antecedentes encontrados`}
+            meta={`${result.total ?? result.results?.length ?? 0} antecedentes detectados`}
           />
 
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-y border-border/80 py-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-md border border-[#4A7F74]/25 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#4A7F74]" />Marcas
-              </span>
-              {result.source ? <span className="text-xs text-muted-foreground">Fuente reportada: {result.source}</span> : null}
+          {isPreview ? (
+            <div className="mt-5 grid gap-5 border-y border-border/80 py-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+              <div>
+                <p className="text-sm font-medium text-[#E7DFCE]">Esta cuenta muestra sólo una muestra de antecedentes.</p>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+                  No incluye titulares completos, números de expediente, análisis de conflicto, recomendaciones, estrategia de registro, vigilancia ni informe descargable.
+                </p>
+                {typeof result.hiddenResults === "number" && result.hiddenResults > 0 ? (
+                  <p className="mt-2 text-xs text-[#96B5A6]">Hay {result.hiddenResults} antecedentes adicionales fuera de esta vista.</p>
+                ) : null}
+              </div>
+              <Button asChild className="justify-self-start lg:justify-self-end">
+                <Link href={enterpriseHref}>Solicitar acceso empresarial <ArrowRight className="ml-2 h-4 w-4" /></Link>
+              </Button>
             </div>
-            {typeof result.durationMs === "number" ? <span className="text-xs text-muted-foreground">Consulta {result.durationMs} ms</span> : null}
-          </div>
+          ) : (
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-y border-border/80 py-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 border border-[#4A7F74]/25 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#4A7F74]" />Marcas
+                </span>
+                {result.source ? <span className="text-xs text-muted-foreground">Fuente reportada: {result.source}</span> : null}
+              </div>
+              {typeof result.durationMs === "number" ? <span className="text-xs text-muted-foreground">Consulta {result.durationMs} ms</span> : null}
+            </div>
+          )}
 
           {rows.length > 0 ? (
             <div className="divide-y divide-border/80">
@@ -197,12 +208,16 @@ export default function InvestigarPage() {
                         {brand.estado || "Sin estado"}
                       </Badge>
                     </div>
-                    <p className="mt-1 text-sm text-white/80">{brand.solicitante || "Titular no informado"}</p>
-                    <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                      Niza {brand.niza?.join(", ") || "—"} · Registro {brand.numeroRegistro || "—"}
-                    </p>
+                    {isPreview ? (
+                      <p className="mt-2 text-xs leading-5 text-muted-foreground">Clases Niza {brand.niza?.join(", ") || "—"}</p>
+                    ) : (
+                      <>
+                        <p className="mt-1 text-sm text-white/80">{brand.solicitante || "Titular no informado"}</p>
+                        <p className="mt-2 text-xs leading-5 text-muted-foreground">Niza {brand.niza?.join(", ") || "—"} · Registro {brand.numeroRegistro || "—"}</p>
+                      </>
+                    )}
                   </div>
-                  {brand.nombre ? (
+                  {!isPreview && brand.nombre ? (
                     <Button asChild size="sm" variant="secondary" className="justify-self-start md:justify-self-end">
                       <Link href={`/evaluar?brand=${encodeURIComponent(brand.nombre)}`}>
                         Evaluar evidencia <ArrowRight className="ml-2 h-3.5 w-3.5" />
@@ -215,19 +230,23 @@ export default function InvestigarPage() {
           ) : (
             <OperationalPanel className="mt-5">
               <p className="text-sm font-medium text-[#E7DFCE]">No encontramos antecedentes marcarios para este término.</p>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Esto describe la cobertura de esta consulta; no equivale a una conclusión de registrabilidad.
-              </p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">Esto describe la cobertura de esta consulta; no equivale a una conclusión de registrabilidad.</p>
             </OperationalPanel>
           )}
 
           <div className="mt-6 flex flex-col gap-3 border-t border-border/80 pt-5 sm:flex-row sm:items-center sm:justify-between">
             <p className="max-w-2xl text-xs leading-5 text-muted-foreground">
-              VIDENTIA organiza antecedentes para revisión. La ausencia o presencia de resultados no sustituye una evaluación jurídica profesional.
+              La presencia o ausencia de coincidencias no constituye disponibilidad, registrabilidad ni asesoría jurídica.
             </p>
-            <Link href={`/consulta-inapi?q=${encodeURIComponent(query.trim())}&type=nombre&match=3&autorun=1`} className="inline-flex shrink-0 items-center gap-2 text-sm font-medium text-[#96B5A6] hover:text-white">
-              Abrir expediente de búsqueda <ArrowRight className="h-4 w-4" />
-            </Link>
+            {isPreview ? (
+              <Link href={enterpriseHref} className="inline-flex shrink-0 items-center gap-2 text-sm font-medium text-[#96B5A6] hover:text-white">
+                Acceso empresarial <ArrowRight className="h-4 w-4" />
+              </Link>
+            ) : (
+              <Link href={`/consulta-inapi?q=${encodeURIComponent(query.trim())}&type=nombre&match=3&autorun=1`} className="inline-flex shrink-0 items-center gap-2 text-sm font-medium text-[#96B5A6] hover:text-white">
+                Abrir expediente de búsqueda <ArrowRight className="h-4 w-4" />
+              </Link>
+            )}
           </div>
         </section>
       ) : null}
@@ -240,9 +259,9 @@ export default function InvestigarPage() {
 function EmptyResearch() {
   return (
     <section className="grid gap-px border-y border-border/80 bg-border/70 md:grid-cols-3">
-      <ResearchPrompt index="01" title="Busca el signo" copy="Ingresa la denominación que quieres investigar y revisa antecedentes relacionados." />
-      <ResearchPrompt index="02" title="Lee la evidencia" copy="Compara titular, estado, clases Niza y registro sin ocultar la fuente disponible." />
-      <ResearchPrompt index="03" title="Decide el siguiente paso" copy="Pasa a evaluación para profundizar los conflictos que realmente requieren revisión." />
+      <ResearchPrompt index="01" title="Busca el signo" copy="Ingresa la denominación y revisa una muestra de antecedentes relacionados." />
+      <ResearchPrompt index="02" title="Observa la cobertura" copy="Compara nombres, estados y clases Niza sin convertir la búsqueda en una conclusión jurídica." />
+      <ResearchPrompt index="03" title="Profundiza en empresa" copy="El análisis completo, los expedientes y la vigilancia forman parte del acceso empresarial." />
     </section>
   )
 }
