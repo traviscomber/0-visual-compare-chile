@@ -2,8 +2,13 @@ import { createHmac } from "crypto"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getSupabaseServiceRoleKey } from "@/lib/supabase/env"
 
-const DEMO_LIMIT = 1
 const DEMO_WINDOW_SECONDS = 60 * 60
+const DEMO_LIMITS = {
+  trademark: 1,
+  patent: 3,
+} as const
+
+export type PublicDemoScope = keyof typeof DEMO_LIMITS
 
 type DemoQuotaRow = {
   allowed: boolean
@@ -13,19 +18,20 @@ type DemoQuotaRow = {
 }
 
 export type DemoQuotaResult =
-  | { ok: true; allowed: boolean; remaining: number; resetAt: string }
+  | { ok: true; allowed: boolean; remaining: number; resetAt: string; limit: number }
   | { ok: false }
 
-export async function reservePublicDemoQuota(clientIdentity: string): Promise<DemoQuotaResult> {
+export async function reservePublicDemoQuota(clientIdentity: string, scope: PublicDemoScope): Promise<DemoQuotaResult> {
   try {
+    const limit = DEMO_LIMITS[scope]
     const clientKey = createHmac("sha256", getSupabaseServiceRoleKey())
-      .update(clientIdentity)
+      .update(`${scope}|${clientIdentity}`)
       .digest("hex")
 
     const admin = createAdminClient()
     const { data, error } = await admin.rpc("reserve_public_demo_quota", {
       p_client_key: clientKey,
-      p_limit: DEMO_LIMIT,
+      p_limit: limit,
       p_window_seconds: DEMO_WINDOW_SECONDS,
     })
 
@@ -37,6 +43,7 @@ export async function reservePublicDemoQuota(clientIdentity: string): Promise<De
       allowed: row.allowed,
       remaining: row.remaining,
       resetAt: row.reset_at,
+      limit,
     }
   } catch {
     return { ok: false }
@@ -50,9 +57,9 @@ export function getPublicDemoIdentity(headers: Headers) {
   return `${ip}|${userAgent}`
 }
 
-export function getPublicDemoRateHeaders(result: { remaining: number; resetAt: string }) {
+export function getPublicDemoRateHeaders(result: { remaining: number; resetAt: string; limit: number }) {
   return {
-    "X-RateLimit-Limit": String(DEMO_LIMIT),
+    "X-RateLimit-Limit": String(result.limit),
     "X-RateLimit-Remaining": String(Math.max(result.remaining, 0)),
     "X-RateLimit-Reset": String(Math.floor(new Date(result.resetAt).getTime() / 1000)),
   }
