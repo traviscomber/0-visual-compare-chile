@@ -1,15 +1,12 @@
 /* Focused Ciclope pass: public landing principles strip only. */
 .px-home .px-trust {
-  background:
-    linear-gradient(180deg, rgba(7, 23, 29, .98), rgba(8, 26, 32, .98));
+  background: #081a20;
   border-top: 1px solid rgba(183, 211, 209, .10);
   border-bottom: 1px solid rgba(183, 211, 209, .10);
 }
 
 .px-home .px-trust::before {
-  background:
-    radial-gradient(640px 180px at 12% 50%, rgba(74, 127, 116, .07), transparent 70%),
-    linear-gradient(90deg, transparent, rgba(183, 211, 209, .025) 50%, transparent);
+  display: none;
 }
 
 .px-home .px-trust-grid {
@@ -18,10 +15,10 @@
 }
 
 .px-home .px-trust article {
-  min-height: 172px;
-  padding: 34px 30px 32px;
+  min-height: 160px;
+  padding: 30px 28px;
   grid-template-columns: 1fr;
-  gap: 20px;
+  gap: 16px;
   align-content: start;
   border-right: 1px solid rgba(183, 211, 209, .10);
   background: transparent;
@@ -30,7 +27,7 @@
 
 .px-home .px-trust article:hover {
   transform: none !important;
-  background: rgba(255, 255, 255, .012);
+  background: transparent;
   box-shadow: none !important;
 }
 
@@ -40,18 +37,18 @@
 
 .px-home .px-trust article:first-child {
   padding-left: 0;
-  padding-right: 54px;
+  padding-right: 48px;
 }
 
 .px-home .px-trust article:first-child h2 {
   max-width: 250px;
-  font-size: 20px;
-  line-height: 1.16;
+  font-size: 19px;
+  line-height: 1.18;
 }
 
 .px-home .px-trust article:first-child p {
   max-width: 310px;
-  color: rgba(255, 255, 255, .68);
+  color: rgba(255, 255, 255, .66);
 }
 
 .px-home .px-trust article:last-child {
@@ -59,18 +56,15 @@
 }
 
 .px-home .px-icon-beacon {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   place-items: start;
   justify-content: start;
   color: #72ad98;
 }
 
 .px-home .px-icon-beacon::before {
-  inset: -4px auto auto -5px;
-  width: 44px;
-  height: 44px;
-  opacity: .55;
+  display: none;
 }
 
 .px-home .px-trust h2 {
@@ -84,10 +78,10 @@
 
 .px-home .px-trust p {
   max-width: 250px;
-  margin: 9px 0 0;
-  color: rgba(189, 190, 189, .72);
+  margin: 8px 0 0;
+  color: rgba(189, 190, 189, .7);
   font-size: 11.5px;
-  line-height: 1.7;
+  line-height: 1.66;
 }
 
 @media (max-width: 1080px) {
@@ -98,8 +92,8 @@
   .px-home .px-trust article,
   .px-home .px-trust article:first-child,
   .px-home .px-trust article:last-child {
-    min-height: 154px;
-    padding: 28px 26px;
+    min-height: 148px;
+    padding: 26px 24px;
   }
 
   .px-home .px-trust article:nth-child(2) {
@@ -120,7 +114,7 @@
   .px-home .px-trust article:first-child,
   .px-home .px-trust article:last-child {
     min-height: auto;
-    padding: 24px 0;
+    padding: 22px 0;
     border-right: 0;
     border-bottom: 1px solid rgba(183, 211, 209, .10);
   }
