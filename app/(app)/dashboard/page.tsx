@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { ArrowRight, BellRing, BriefcaseBusiness, CheckCircle2, Clock3, Eye, Search } from "lucide-react"
+import { OperationalHeader, OperationalMetric, OperationalMetricRail, OperationalPage, OperationalPanel, OperationalSectionHeader } from "@/components/app/operational-ui"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { buildCaseIntelligence, type CaseItemType, type CaseStatus } from "@/lib/cases/intelligence"
@@ -55,39 +56,46 @@ export default async function DashboardPage(){
   const latestResearch=research[0]??null
   const latestSignal=signals.find(signal=>activeWatches.some(watch=>watch.id===signal.watch_id))??null
 
-  return <div className="mx-auto w-full max-w-[1480px] px-4 py-9 sm:px-6 lg:px-8 lg:py-12">
-    <header className="grid gap-8 border-b border-border pb-9 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
+  return <OperationalPage>
+    <OperationalHeader
+      eyebrow="VIDENTIA / Resumen"
+      title={attention?"Hay decisiones que requieren revisión.":"No hay cambios que requieran atención."}
+      description={<>Hola, {displayName}. Este resumen sólo reúne evidencia nueva, señales marcarias, casos listos y trabajo que perdió movimiento.</>}
+      actions={<><Button asChild variant="outline"><Link href="/casos">Ver casos</Link></Button><Button asChild><Link href="/investigar">Nueva investigación <Search className="ml-1 h-4 w-4"/></Link></Button></>}
+    />
+
+    <OperationalMetricRail>
+      <OperationalMetric value={changed.length} label="Casos con cambios" detail="Evidencia desde la última revisión"/>
+      <OperationalMetric value={ready.length} label="Listos para decidir" detail="Con contexto suficiente para revisión"/>
+      <OperationalMetric value={newSignals.length} label="Señales nuevas" detail="INAPI o TDPI aún no revisadas" tone={newSignals.length?"warning":"neutral"}/>
+      <OperationalMetric value={activeWatches.length} label="Vigilancias activas" detail="Marcas y titulares en seguimiento" tone={activeWatches.length?"success":"neutral"}/>
+    </OperationalMetricRail>
+
+    <section className="border-b border-border/80 py-9">
+      <OperationalSectionHeader
+        eyebrow="Bandeja prioritaria"
+        title="Qué conviene resolver ahora"
+        action={attention===0?<Badge variant="outline" className="bg-[#173B37] text-[#96B5A6]">Sin novedades pendientes</Badge>:<span className="text-sm text-muted-foreground">{attention} elemento{attention===1?"":"s"} de atención</span>}
+      />
+      {queue.length?<div className="mt-5 divide-y divide-border/80 border-y border-border/80">{queue.map((item,index)=>{const Icon=item.icon;return <Link key={`${item.href}-${index}`} href={item.href} className="group grid gap-4 px-2 py-5 outline-none transition-colors hover:bg-secondary/55 focus-visible:bg-secondary/55 sm:grid-cols-[40px_1fr_auto] sm:items-center"><span className={`flex h-9 w-9 items-center justify-center rounded-[9px] ${item.tone==="primary"?"bg-[#173B37] text-[#96B5A6]":item.tone==="warm"?"bg-[#332C24] text-[#D6A46F]":"bg-[#13272D] text-muted-foreground"}`}><Icon className="h-4 w-4"/></span><div className="min-w-0"><p className="text-[10px] font-medium uppercase tracking-[0.13em] text-muted-foreground">{item.kicker}</p><h3 className="mt-1 font-medium text-white">{item.title}</h3><p className="mt-1 text-sm leading-6 text-muted-foreground">{item.detail}</p></div><span className="inline-flex items-center gap-2 text-sm font-medium text-white">{item.action}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1"/></span></Link>})}</div>:<div className="mt-5 border-y border-border/80 py-8"><div className="flex items-start gap-4"><span className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-[#173B37] text-[#96B5A6]"><CheckCircle2 className="h-4 w-4"/></span><div><h3 className="font-medium text-white">No hay nada urgente.</h3><p className="mt-1 text-sm leading-6 text-muted-foreground">Puedes iniciar una investigación o revisar las vigilancias activas.</p></div></div></div>}
+    </section>
+
+    <section className="grid gap-8 py-9 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)] lg:gap-10">
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">VIDENTIA / Resumen</p>
-        <h1 className="mt-4 max-w-[10ch] text-4xl font-normal leading-[0.96] tracking-[-0.05em] text-foreground sm:text-5xl lg:text-6xl">{attention?"Hay decisiones que requieren revisión.":"No hay cambios que requieran atención."}</h1>
+        <OperationalSectionHeader eyebrow="Casos activos" title="Decisiones en curso" action={<Link href="/casos" className="text-sm font-medium text-white hover:text-[#96B5A6]">Ver todos</Link>} />
+        {caseInsights.length?<div className="mt-5 divide-y divide-border/80 border-y border-border/80">{caseInsights.slice(0,5).map(({caseRow,intelligence})=><Link key={caseRow.id} href={`/casos/${caseRow.id}`} className="group grid gap-3 px-2 py-5 outline-none transition-colors hover:bg-secondary/55 focus-visible:bg-secondary/55 sm:grid-cols-[1fr_auto] sm:items-center"><div><div className="flex flex-wrap gap-2"><Badge variant="outline" className="bg-[#13272D]">{readinessLabel(intelligence.readiness)}</Badge>{intelligence.newEvidenceCount>0?<Badge className="bg-[#173B37] text-[#96B5A6] hover:bg-[#173B37]">+{intelligence.newEvidenceCount} nueva{intelligence.newEvidenceCount===1?"":"s"}</Badge>:null}</div><h3 className="mt-3 font-medium text-white">{caseRow.title}</h3><p className="mt-1 text-sm leading-6 text-muted-foreground">{intelligence.pendingDecision}</p></div><div className="flex items-center gap-3 text-xs text-muted-foreground"><span>{relative(caseRow.updated_at)}</span><ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1"/></div></Link>)}</div>:<Empty href="/casos" icon={BriefcaseBusiness} title="No hay casos activos" action="Crear caso"/>}
       </div>
-      <div className="max-w-2xl lg:justify-self-end">
-        <p className="text-base leading-7 text-muted-foreground sm:text-lg">Hola, {displayName}. Este resumen sólo reúne evidencia nueva, señales marcarias, casos listos y trabajo que perdió movimiento.</p>
-        <div className="mt-5 flex flex-wrap gap-2"><Button asChild variant="outline"><Link href="/casos">Ver casos</Link></Button><Button asChild><Link href="/investigar">Nueva investigación <Search className="ml-2 h-4 w-4"/></Link></Button></div>
-      </div>
-    </header>
 
-    <section className="grid border-b border-border sm:grid-cols-2 lg:grid-cols-4">
-      <Metric value={changed.length} label="Casos con cambios" detail="Evidencia desde la última revisión"/>
-      <Metric value={ready.length} label="Listos para decidir" detail="Con contexto suficiente para revisión"/>
-      <Metric value={newSignals.length} label="Señales nuevas" detail="INAPI o TDPI aún no revisadas"/>
-      <Metric value={activeWatches.length} label="Vigilancias activas" detail="Marcas y titulares en seguimiento"/>
+      <aside>
+        <OperationalPanel>
+          <OperationalSectionHeader eyebrow="Contexto reciente" title="Última actividad" />
+          <div className="mt-5 divide-y divide-border/80 border-t border-border/80">{latestResearch?<ContextRow icon={Search} title={`Búsqueda: ${latestResearch.query}`} detail={`${latestResearch.results_count} resultados`} href={`/investigar?q=${encodeURIComponent(latestResearch.query)}`}/>:null}{latestSignal?<ContextRow icon={BellRing} title={latestSignal.mark_name} detail={`${latestSignal.source} · ${watchMap.get(latestSignal.watch_id)?.query??"Vigilancia"}`} href="/monitorear"/>:null}{activeWatches.length?<ContextRow icon={Eye} title={`${activeWatches.length} vigilancia${activeWatches.length===1?"":"s"} activa${activeWatches.length===1?"":"s"}`} detail="Revisar línea de tiempo" href="/monitorear"/>:null}{!latestResearch&&!latestSignal&&!activeWatches.length?<Empty href="/investigar" icon={Search} title="Aún no hay actividad" action="Empezar" compact/>:null}</div>
+        </OperationalPanel>
+      </aside>
     </section>
-
-    <section className="py-10">
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Bandeja prioritaria</p><h2 className="mt-2 text-2xl font-normal tracking-[-0.03em] text-foreground">Qué conviene resolver ahora</h2></div>{attention===0?<Badge variant="outline" className="rounded-md border-primary/25 text-primary">Sin novedades pendientes</Badge>:<span className="text-sm text-muted-foreground">{attention} elemento{attention===1?"":"s"} de atención</span>}</div>
-      {queue.length?<div className="divide-y divide-border border-y border-border">{queue.map((item,index)=>{const Icon=item.icon;return <Link key={`${item.href}-${index}`} href={item.href} className="group grid gap-4 py-5 outline-none transition-colors hover:bg-secondary/15 focus-visible:bg-secondary/20 sm:grid-cols-[40px_1fr_auto] sm:items-center"><span className={`flex h-9 w-9 items-center justify-center border ${item.tone==="primary"?"border-primary/25 bg-primary/[0.06] text-primary":item.tone==="warm"?"border-amber-300/20 bg-amber-300/[0.06] text-amber-200":"border-border bg-card/40 text-muted-foreground"}`}><Icon className="h-4 w-4"/></span><div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-muted-foreground">{item.kicker}</p><h3 className="mt-1 font-semibold text-foreground">{item.title}</h3><p className="mt-1 text-sm leading-6 text-muted-foreground">{item.detail}</p></div><span className="inline-flex items-center gap-2 text-sm font-medium text-foreground">{item.action}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1"/></span></Link>})}</div>:<div className="border-y border-border py-8"><div className="flex items-start gap-4"><span className="flex h-9 w-9 items-center justify-center border border-primary/25 bg-primary/[0.06] text-primary"><CheckCircle2 className="h-4 w-4"/></span><div><h3 className="font-semibold text-foreground">No hay nada urgente.</h3><p className="mt-1 text-sm leading-6 text-muted-foreground">Puedes iniciar una investigación o revisar las vigilancias activas.</p></div></div></div>}
-    </section>
-
-    <section className="grid gap-10 border-t border-border py-10 lg:grid-cols-[1.35fr_0.65fr]">
-      <div><div className="mb-5 flex items-end justify-between gap-4"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Casos activos</p><h2 className="mt-2 text-xl font-normal tracking-[-0.02em] text-foreground">Decisiones en curso</h2></div><Link href="/casos" className="text-sm font-medium text-foreground hover:underline">Ver todos</Link></div>{caseInsights.length?<div className="divide-y divide-border border-y border-border">{caseInsights.slice(0,5).map(({caseRow,intelligence})=><Link key={caseRow.id} href={`/casos/${caseRow.id}`} className="group grid gap-3 py-5 outline-none hover:bg-secondary/15 focus-visible:bg-secondary/20 sm:grid-cols-[1fr_auto] sm:items-center"><div><div className="flex flex-wrap gap-2"><Badge variant="outline" className="rounded-md">{readinessLabel(intelligence.readiness)}</Badge>{intelligence.newEvidenceCount>0?<Badge className="rounded-md border-primary/20 bg-primary/[0.07] text-primary hover:bg-primary/[0.07]">+{intelligence.newEvidenceCount} nueva{intelligence.newEvidenceCount===1?"":"s"}</Badge>:null}</div><h3 className="mt-3 font-semibold text-foreground">{caseRow.title}</h3><p className="mt-1 text-sm leading-6 text-muted-foreground">{intelligence.pendingDecision}</p></div><div className="flex items-center gap-3 text-xs text-muted-foreground"><span>{relative(caseRow.updated_at)}</span><ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1"/></div></Link>)}</div>:<Empty href="/casos" icon={BriefcaseBusiness} title="No hay casos activos" action="Crear caso"/>}</div>
-
-      <aside><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Contexto reciente</p><h2 className="mt-2 text-xl font-normal tracking-[-0.02em] text-foreground">Última actividad</h2><div className="mt-5 divide-y divide-border border-y border-border">{latestResearch?<ContextRow icon={Search} title={`Búsqueda: ${latestResearch.query}`} detail={`${latestResearch.results_count} resultados`} href={`/investigar?q=${encodeURIComponent(latestResearch.query)}`}/>:null}{latestSignal?<ContextRow icon={BellRing} title={latestSignal.mark_name} detail={`${latestSignal.source} · ${watchMap.get(latestSignal.watch_id)?.query??"Vigilancia"}`} href="/monitorear"/>:null}{activeWatches.length?<ContextRow icon={Eye} title={`${activeWatches.length} vigilancia${activeWatches.length===1?"":"s"} activa${activeWatches.length===1?"":"s"}`} detail="Revisar línea de tiempo" href="/monitorear"/>:null}{!latestResearch&&!latestSignal&&!activeWatches.length?<Empty href="/investigar" icon={Search} title="Aún no hay actividad" action="Empezar"/>:null}</div></aside>
-    </section>
-  </div>
+  </OperationalPage>
 }
 
 function readinessLabel(value:"early"|"developing"|"decision-ready"|"decided"){return value==="early"?"Inicial":value==="developing"?"En análisis":value==="decision-ready"?"Listo para decidir":"Decisión registrada"}
-function Metric({value,label,detail}:{value:number;label:string;detail:string}){return <div className="border-b border-border py-6 sm:border-b-0 sm:border-r sm:px-5 first:pl-0 last:border-r-0"><p className="text-3xl font-semibold tracking-[-0.03em] text-foreground">{value}</p><p className="mt-1 text-sm font-semibold text-foreground">{label}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p></div>}
-function ContextRow({icon:Icon,title,detail,href}:{icon:typeof Search;title:string;detail:string;href:string}){return <Link href={href} className="group flex items-center gap-3 py-4 outline-none hover:bg-secondary/15 focus-visible:bg-secondary/20"><span className="flex h-8 w-8 items-center justify-center border border-border bg-card/40 text-muted-foreground"><Icon className="h-3.5 w-3.5"/></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-foreground">{title}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{detail}</p></div><ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1"/></Link>}
-function Empty({href,icon:Icon,title,action}:{href:string;icon:typeof Search;title:string;action:string}){return <div className="border-y border-dashed border-border py-8 text-center"><Icon className="mx-auto h-5 w-5 text-muted-foreground"/><p className="mt-3 text-sm font-semibold text-foreground">{title}</p><Link href={href} className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">{action}<ArrowRight className="h-3.5 w-3.5"/></Link></div>}
+function ContextRow({icon:Icon,title,detail,href}:{icon:typeof Search;title:string;detail:string;href:string}){return <Link href={href} className="group flex items-center gap-3 py-4 outline-none transition-colors hover:text-white focus-visible:text-white"><span className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#172F34] text-muted-foreground"><Icon className="h-3.5 w-3.5"/></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-white">{title}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{detail}</p></div><ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1"/></Link>}
+function Empty({href,icon:Icon,title,action,compact=false}:{href:string;icon:typeof Search;title:string;action:string;compact?:boolean}){return <div className={compact?"py-7":"mt-5 border-y border-border/80 py-9"}><Icon className="h-5 w-5 text-muted-foreground"/><p className="mt-3 text-sm font-medium text-white">{title}</p><Link href={href} className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-[#96B5A6] hover:text-white">{action}<ArrowRight className="h-3.5 w-3.5"/></Link></div>}
