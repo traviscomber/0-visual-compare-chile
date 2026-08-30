@@ -41,11 +41,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     return <FreePreviewShell userEmail={user.email ?? ""}>{children}</FreePreviewShell>
   }
 
+  const metadataName = typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : null
+  const metadataCompany = typeof user.user_metadata?.company_name === "string" ? user.user_metadata.company_name : null
+
   return (
     <AppNav
       userEmail={user.email ?? ""}
-      fullName={profile?.full_name ?? null}
-      companyName={profile?.company_name ?? null}
+      fullName={profile?.full_name ?? metadataName}
+      companyName={profile?.company_name ?? metadataCompany}
     >
       {children}
     </AppNav>
