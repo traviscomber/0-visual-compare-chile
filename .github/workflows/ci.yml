@@ -52,6 +52,9 @@ jobs:
       - name: Case brief evidence regression
         run: node scripts/case-brief-evidence-regression.mts
 
+      - name: Company direction regression
+        run: node scripts/company-direction-regression.mts
+
       - name: TypeScript
         run: pnpm exec tsc --noEmit
 
