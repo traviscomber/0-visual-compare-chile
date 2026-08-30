@@ -138,7 +138,7 @@ function BrandMark() {
     <span className="flex min-w-0 items-center gap-3 group-data-[collapsible=icon]:justify-center">
       <span className="relative grid size-9 shrink-0 place-items-center rounded-[10px] bg-[#13272D] text-[11px] font-medium tracking-[0.08em] text-[#E7DFCE] ring-1 ring-inset ring-white/[0.05] group-data-[collapsible=icon]:size-8">
         V
-        <span aria-hidden="true" className="absolute right-[6px] top-[6px] size-1.5 rounded-full bg-[#4A7F74] shadow-[0_0_14px_rgba(74,127,116,0.5)]" />
+        <span aria-hidden="true" className="absolute right-[6px] top-[6px] size-1.5 rounded-full bg-[#4A7F74]" />
       </span>
       <span className="min-w-0 leading-none group-data-[collapsible=icon]:hidden">
         <span className="block truncate text-[15px] font-normal tracking-[0.22em] text-[#E7DFCE]">ViDENTiA</span>
@@ -321,14 +321,6 @@ export function AppNav({
       </Sidebar>
 
       <SidebarInset className="relative min-w-0 overflow-hidden bg-[#0F2A33] text-foreground">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-[30rem] opacity-70"
-          style={{
-            background:
-              "radial-gradient(circle at 78% 0%, rgba(69,110,142,0.12), transparent 34%), radial-gradient(circle at 24% 0%, rgba(74,127,116,0.08), transparent 30%)",
-          }}
-        />
         <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-[#263D44] bg-[#0F2A33] px-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <SidebarTrigger className="size-9 rounded-[9px] bg-[#13272D] text-[#9CA6A4] ring-1 ring-inset ring-white/[0.05] hover:bg-[#172F34] hover:text-[#FFFFFF]" />
@@ -350,7 +342,7 @@ export function AppNav({
                 <Bell strokeWidth={1.6} />
               </Link>
             </Button>
-            <Button asChild size="sm" className="hidden h-9 rounded-[9px] bg-[#4A7F74] px-4 font-medium text-white shadow-[0_0_22px_rgba(74,127,116,0.14)] hover:bg-[#568D81] lg:inline-flex">
+            <Button asChild size="sm" className="hidden h-9 rounded-[9px] bg-[#4A7F74] px-4 font-medium text-white hover:bg-[#568D81] lg:inline-flex">
               <Link href="/investigar">Nueva investigación</Link>
             </Button>
           </div>
