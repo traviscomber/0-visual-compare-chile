@@ -355,4 +355,9 @@ function eventLabel(type: Signal["event_type"]) { return type === "patent" ? "Pa
 function sourceLabel(key: string) { return key === "inapi_open_data" ? "INAPI" : key === "openalex" ? "OpenAlex" : key === "crossref" ? "Crossref" : key === "gdelt" ? "GDELT" : key }
 function relevanceRank(value: Signal["relevance"]) { return value === "alta" ? 3 : value === "media" ? 2 : 1 }
 function formatNumber(value: number) { return new Intl.NumberFormat("es-CL").format(value) }
-function formatDate(value: string) { const date = new Date(value.length === 10 ? `${value}T00:00:00Z` : value); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("es-CL", { dateStyle: "medium", timeZone: "America/Santiago" }).format(date) }
+function formatDate(value: string) {
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value)
+  const date = new Date(dateOnly ? `${value}T12:00:00Z` : value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat("es-CL", { dateStyle: "medium", timeZone: dateOnly ? "UTC" : "America/Santiago" }).format(date)
+}
