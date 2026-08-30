@@ -14,6 +14,7 @@ import {
   Search,
   Settings,
   Waypoints,
+  type LucideIcon,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -46,7 +47,19 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-const navigationGroups = [
+type NavigationItem = {
+  href: string
+  label: string
+  icon: LucideIcon
+  aliases: readonly string[]
+}
+
+type NavigationGroup = {
+  label: string
+  items: readonly NavigationItem[]
+}
+
+const navigationGroups: readonly NavigationGroup[] = [
   {
     label: "Operar",
     items: [
@@ -69,9 +82,9 @@ const navigationGroups = [
       { href: "/history", label: "Actividad", icon: History, aliases: [] },
     ],
   },
-] as const
+]
 
-const navigationItems = navigationGroups.flatMap((group) => group.items)
+const navigationItems: readonly NavigationItem[] = navigationGroups.flatMap((group) => group.items)
 
 const shellTokens = {
   "--sidebar-width": "16rem",
