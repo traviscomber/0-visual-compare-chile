@@ -15,7 +15,6 @@ import {
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getOperationalClassificationLabel } from "@/lib/classification-knowledge"
 import { classificationLabel, classificationTone, formatDate } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -52,15 +51,15 @@ export function ComparisonResultView({
       : "Sin alertas fuertes"
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="border-y border-border bg-card/40 px-5 py-7 sm:px-7">
+    <div className="flex flex-col gap-8">
+      <section className="border-y border-border bg-card/25 px-5 py-7 sm:px-7">
         <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
           <div>
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#96B5A6]">
               Evidencia visual / lectura técnica
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <h2 className="text-3xl font-medium tracking-[-0.035em] text-foreground sm:text-4xl">
+              <h2 className="text-3xl font-light tracking-[-0.035em] text-[#E7DFCE] sm:text-4xl">
                 {classificationLabel(result.classification)}
               </h2>
               <span className={cn("h-2 w-2 rounded-full", toneDot(tone))} aria-hidden />
@@ -71,8 +70,8 @@ export function ComparisonResultView({
           </div>
 
           <div className="border-l border-border pl-5">
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Qué significa esto</p>
-            <p className="mt-2 text-sm leading-6 text-foreground/85">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Qué significa esto</p>
+            <p className="mt-2 text-sm leading-6 text-white/80">
               La clasificación sintetiza señales de imagen. No determina confundibilidad jurídica, registrabilidad ni una decisión de INAPI.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -102,10 +101,12 @@ export function ComparisonResultView({
         </div>
       </section>
 
-      <section className="border-y border-border px-1 py-2">
-        <div className="px-4 py-4 sm:px-6">
-          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Trazabilidad</p>
-          <h3 className="mt-2 text-xl font-medium tracking-tight text-foreground">Qué quedó guardado con esta comparación</h3>
+      <section className="border-y border-border" aria-labelledby="traceability-title">
+        <div className="px-5 py-5 sm:px-6">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Trazabilidad</p>
+          <h3 id="traceability-title" className="mt-2 text-2xl font-light tracking-[-0.025em] text-[#E7DFCE]">
+            Qué quedó guardado con esta comparación
+          </h3>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
             Cada bloque indica si existe evidencia suficiente para volver a revisar el resultado desde historial o detalle.
           </p>
@@ -117,17 +118,19 @@ export function ComparisonResultView({
         </div>
       </section>
 
-      {result.brand_context && <BrandTaxonomyCard context={result.brand_context} />}
+      {result.brand_context && <BrandTaxonomySection context={result.brand_context} />}
 
-      {(result.ocr_a || result.ocr_b) && <OcrEvidenceCard ocrA={result.ocr_a ?? null} ocrB={result.ocr_b ?? null} />}
+      {(result.ocr_a || result.ocr_b) && <OcrEvidenceSection ocrA={result.ocr_a ?? null} ocrB={result.ocr_b ?? null} />}
 
       <ImageReview imageA={imageA} imageB={imageB} diffUrl={result.diff_url} elaUrlA={result.ela_url_a} elaUrlB={result.ela_url_b} />
 
-      <ForensicsCard exifA={result.exif_a} exifB={result.exif_b} forensics={forensics} />
+      <ForensicsSection exifA={result.exif_a} exifB={result.exif_b} forensics={forensics} />
 
-      <section className="border-y border-border px-5 py-6 sm:px-7">
-        <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Señales técnicas separadas</p>
-        <h3 className="mt-2 text-xl font-medium tracking-tight text-foreground">La clasificación no depende de una sola cifra.</h3>
+      <section className="border-y border-border px-5 py-6 sm:px-7" aria-labelledby="technical-signals-title">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Señales técnicas separadas</p>
+        <h3 id="technical-signals-title" className="mt-2 text-2xl font-light tracking-[-0.025em] text-[#E7DFCE]">
+          La clasificación no depende de una sola cifra.
+        </h3>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
           Revisa cada señal por separado. Los porcentajes son mediciones técnicas de imagen y no equivalen a riesgo jurídico ni probabilidad de registro.
         </p>
@@ -170,31 +173,11 @@ export function ComparisonResultView({
   )
 }
 
-function OcrEvidenceCard({ ocrA, ocrB }: { ocrA: OcrSummary | null; ocrB: OcrSummary | null }) {
-  const hasAny = Boolean(ocrA?.text || ocrB?.text)
-  if (!hasAny) return null
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-xl font-medium">
-          <Fingerprint className="h-5 w-5 text-muted-foreground" /> Evidencia OCR
-        </CardTitle>
-        <CardDescription>Texto extraído de cada imagen para auditar el contexto utilizado por la comparación.</CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-3 md:grid-cols-2">
-        <OcrColumn title="Imagen A" ocr={ocrA} />
-        <OcrColumn title="Imagen B" ocr={ocrB} />
-      </CardContent>
-    </Card>
-  )
-}
-
 function OperationalStat({ label, value, helper }: { label: string; value: string; helper: string }) {
   return (
     <div className="border-b border-border py-4 sm:border-b-0 sm:border-r sm:px-5 sm:first:pl-0 sm:last:border-r-0">
-      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
-      <p className="mt-2 text-lg font-medium text-foreground">{value}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+      <p className="mt-2 text-lg font-light text-[#E7DFCE]">{value}</p>
       <p className="mt-1 text-xs leading-5 text-muted-foreground">{helper}</p>
     </div>
   )
@@ -202,7 +185,7 @@ function OperationalStat({ label, value, helper }: { label: string; value: strin
 
 function ArtifactRow({ label, description, available }: { label: string; description: string; available: boolean }) {
   return (
-    <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+    <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
       <div>
         <p className="text-sm font-medium text-foreground">{label}</p>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p>
@@ -214,70 +197,96 @@ function ArtifactRow({ label, description, available }: { label: string; descrip
   )
 }
 
+function OcrEvidenceSection({ ocrA, ocrB }: { ocrA: OcrSummary | null; ocrB: OcrSummary | null }) {
+  const hasAny = Boolean(ocrA?.text || ocrB?.text)
+  if (!hasAny) return null
+
+  return (
+    <section className="border-y border-border" aria-labelledby="ocr-evidence-title">
+      <div className="flex items-start gap-3 px-5 py-5 sm:px-6">
+        <Fingerprint className="mt-1 h-4 w-4 shrink-0 text-[#96B5A6]" strokeWidth={1.6} />
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">OCR</p>
+          <h3 id="ocr-evidence-title" className="mt-2 text-2xl font-light tracking-[-0.025em] text-[#E7DFCE]">Evidencia textual detectada</h3>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">Texto extraído de cada imagen para auditar el contexto utilizado por la comparación.</p>
+        </div>
+      </div>
+      <div className="grid border-t border-border md:grid-cols-2 md:divide-x md:divide-border">
+        <OcrColumn title="Imagen A" ocr={ocrA} />
+        <OcrColumn title="Imagen B" ocr={ocrB} />
+      </div>
+    </section>
+  )
+}
+
 function OcrColumn({ title, ocr }: { title: string; ocr: OcrSummary | null }) {
   return (
-    <div className="border-l border-border pl-4">
-      <div className="flex items-center justify-between gap-3">
+    <div className="px-5 py-5 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm font-medium">{title}</span>
         {ocr?.confidence != null && <Badge variant="outline">Confianza OCR {ocr.confidence}%</Badge>}
       </div>
-      <p className="mt-2 whitespace-pre-wrap break-words text-sm text-foreground">{ocr?.text ?? "Sin texto detectado"}</p>
-      <p className="mt-2 text-xs text-muted-foreground">Idioma: {ocr?.language ?? "n/d"}</p>
+      <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-foreground">{ocr?.text ?? "Sin texto detectado"}</p>
+      <p className="mt-3 text-xs text-muted-foreground">Idioma: {ocr?.language ?? "n/d"}</p>
     </div>
   )
 }
 
-function BrandTaxonomyCard({ context }: { context: BrandTaxonomyContext }) {
+function BrandTaxonomySection({ context }: { context: BrandTaxonomyContext }) {
   const sharedNiza = context.shared_niza ?? []
   const sharedViena = context.shared_viena ?? []
   const hasShared = sharedNiza.length > 0 || sharedViena.length > 0
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-xl font-medium">
-          <Tags className="h-5 w-5 text-muted-foreground" /> Contexto de marca inferido
-        </CardTitle>
-        <CardDescription>
-          Usa nombre de archivo y metadatos visibles para sugerir contexto Niza/Viena. Es una pista de investigación, no una identidad confirmada.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-5 md:grid-cols-2">
-        <BrandSnapshotCard title="Imagen A" snapshot={context.image_a} />
-        <BrandSnapshotCard title="Imagen B" snapshot={context.image_b} />
-        {hasShared && (
-          <div className="border-t border-border pt-4 md:col-span-2">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Search className="h-4 w-4 text-muted-foreground" /> Señales de clasificación compartidas
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {sharedNiza.map((code) => (
-                <Link key={`niza-${code}`} href={`/investigar?q=${encodeURIComponent(code)}`}>
-                  <Badge variant="outline" className="gap-1 hover:bg-secondary/40">
-                    <span>Niza {code}</span>
-                    <span className="text-muted-foreground">{getOperationalClassificationLabel("niza", code)}</span>
-                    <ArrowRight className="h-3 w-3" />
-                  </Badge>
-                </Link>
-              ))}
-              {sharedViena.map((code) => (
-                <Link key={`viena-${code}`} href={`/investigar?q=${encodeURIComponent(code)}`}>
-                  <Badge variant="outline" className="gap-1 hover:bg-secondary/40">
-                    <span>Viena {code}</span>
-                    <span className="text-muted-foreground">{getOperationalClassificationLabel("viena", code)}</span>
-                    <ArrowRight className="h-3 w-3" />
-                  </Badge>
-                </Link>
-              ))}
-            </div>
+    <section className="border-y border-border" aria-labelledby="brand-context-title">
+      <div className="flex items-start gap-3 px-5 py-5 sm:px-6">
+        <Tags className="mt-1 h-4 w-4 shrink-0 text-[#96B5A6]" strokeWidth={1.6} />
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Contexto marcario</p>
+          <h3 id="brand-context-title" className="mt-2 text-2xl font-light tracking-[-0.025em] text-[#E7DFCE]">Contexto de marca inferido</h3>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            Usa nombre de archivo y metadatos visibles para sugerir contexto Niza/Viena. Es una pista de investigación, no una identidad confirmada.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid border-t border-border md:grid-cols-2 md:divide-x md:divide-border">
+        <BrandSnapshot title="Imagen A" snapshot={context.image_a} />
+        <BrandSnapshot title="Imagen B" snapshot={context.image_b} />
+      </div>
+
+      {hasShared ? (
+        <div className="border-t border-border px-5 py-5 sm:px-6">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Search className="h-4 w-4 text-muted-foreground" /> Señales de clasificación compartidas
           </div>
-        )}
-      </CardContent>
-    </Card>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {sharedNiza.map((code) => (
+              <Link key={`niza-${code}`} href={`/investigar?q=${encodeURIComponent(code)}`}>
+                <Badge variant="outline" className="gap-1 hover:bg-secondary/40">
+                  <span>Niza {code}</span>
+                  <span className="text-muted-foreground">{getOperationalClassificationLabel("niza", code)}</span>
+                  <ArrowRight className="h-3 w-3" />
+                </Badge>
+              </Link>
+            ))}
+            {sharedViena.map((code) => (
+              <Link key={`viena-${code}`} href={`/investigar?q=${encodeURIComponent(code)}`}>
+                <Badge variant="outline" className="gap-1 hover:bg-secondary/40">
+                  <span>Viena {code}</span>
+                  <span className="text-muted-foreground">{getOperationalClassificationLabel("viena", code)}</span>
+                  <ArrowRight className="h-3 w-3" />
+                </Badge>
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </section>
   )
 }
 
-function BrandSnapshotCard({ title, snapshot }: { title: string; snapshot: BrandTaxonomySnapshotLike | null | undefined }) {
+function BrandSnapshot({ title, snapshot }: { title: string; snapshot: BrandTaxonomySnapshotLike | null | undefined }) {
   const hints = {
     niza: snapshot?.hints?.niza ?? [],
     viena: snapshot?.hints?.viena ?? [],
@@ -285,7 +294,7 @@ function BrandSnapshotCard({ title, snapshot }: { title: string; snapshot: Brand
   const matches = snapshot?.matches ?? []
 
   return (
-    <div className="border-l border-border pl-4">
+    <div className="px-5 py-5 sm:px-6">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium">{title}</p>
@@ -321,7 +330,7 @@ function BrandSnapshotCard({ title, snapshot }: { title: string; snapshot: Brand
 
           {snapshot.primary_match ? (
             <div className="border-t border-primary/25 pt-3">
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Identidad por confirmar</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Identidad por confirmar</p>
               <p className="mt-2 font-medium text-foreground">{snapshot.primary_match.nombre}</p>
               <p className="mt-1 text-xs text-muted-foreground">{snapshot.primary_match.solicitante || "Titular no informado"}</p>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -339,14 +348,14 @@ function BrandSnapshotCard({ title, snapshot }: { title: string; snapshot: Brand
               </div>
             </div>
           ) : (
-            <p className="border-t border-dashed border-border pt-3 text-xs leading-5 text-muted-foreground">
+            <p className="border-t border-border pt-3 text-xs leading-5 text-muted-foreground">
               No se detectó una identidad suficientemente clara. Continúa la investigación por nombre o clasificación.
             </p>
           )}
 
-          {matches.length > 1 && (
+          {matches.length > 1 ? (
             <div className="border-t border-border pt-3">
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Otras coincidencias contextuales</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Otras coincidencias contextuales</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {matches.slice(1).map((match, index) => (
                   <Badge key={match.id ?? `${title}-${match.nombre ?? "match"}-${index}`} variant="outline">
@@ -355,10 +364,10 @@ function BrandSnapshotCard({ title, snapshot }: { title: string; snapshot: Brand
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       ) : (
-        <p className="mt-3 border-t border-dashed border-border pt-3 text-xs text-muted-foreground">Sin señales útiles en nombre o metadatos.</p>
+        <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">Sin señales útiles en nombre o metadatos.</p>
       )}
     </div>
   )
@@ -388,34 +397,35 @@ function ImageReview({
   ]
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="flex flex-col gap-3 pb-3 sm:flex-row sm:items-start sm:justify-between">
+    <section className="border-y border-border" aria-labelledby="visual-inspection-title">
+      <div className="flex flex-col gap-4 px-5 py-5 sm:px-6 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <CardTitle className="text-xl font-medium">Inspección visual</CardTitle>
-          <CardDescription>Alterna entre originales, mapa de diferencias y Error Level Analysis sin perder el contexto del resultado.</CardDescription>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Inspección</p>
+          <h3 id="visual-inspection-title" className="mt-2 text-2xl font-light tracking-[-0.025em] text-[#E7DFCE]">Inspección visual</h3>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Alterna entre originales, mapa de diferencias y Error Level Analysis sin perder el contexto del resultado.</p>
         </div>
         <div className="flex flex-wrap gap-1.5">
           {tabs.filter((tabItem) => tabItem.available).map((tabItem) => (
-            <Button key={tabItem.id} type="button" size="sm" variant={tab === tabItem.id ? "default" : "outline"} onClick={() => setTab(tabItem.id)}>
+            <Button key={tabItem.id} type="button" size="sm" variant={tab === tabItem.id ? "default" : "secondary"} onClick={() => setTab(tabItem.id)}>
               {tabItem.label}
             </Button>
           ))}
         </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        {tab === "original" && (
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      </div>
+      <div className="border-t border-border bg-card/20 px-5 py-5 sm:px-6">
+        {tab === "original" ? (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <ImagePane label="Imagen A" image={imageA} />
             <ImagePane label="Imagen B" image={imageB} />
           </div>
-        )}
-        {tab === "diff" && diffUrl && (
+        ) : null}
+        {tab === "diff" && diffUrl ? (
           <ImagePane label="Las zonas resaltadas marcan píxeles que difieren entre A y B" image={{ url: diffUrl, filename: "Mapa de diferencias" }} full accent />
-        )}
-        {tab === "ela_a" && elaUrlA && <ImagePane label="ELA imagen A · zonas brillantes pueden requerir revisión" image={{ url: elaUrlA, filename: "ELA imagen A" }} full />}
-        {tab === "ela_b" && elaUrlB && <ImagePane label="ELA imagen B · zonas brillantes pueden requerir revisión" image={{ url: elaUrlB, filename: "ELA imagen B" }} full />}
-      </CardContent>
-    </Card>
+        ) : null}
+        {tab === "ela_a" && elaUrlA ? <ImagePane label="ELA imagen A · zonas brillantes pueden requerir revisión" image={{ url: elaUrlA, filename: "ELA imagen A" }} full /> : null}
+        {tab === "ela_b" && elaUrlB ? <ImagePane label="ELA imagen B · zonas brillantes pueden requerir revisión" image={{ url: elaUrlB, filename: "ELA imagen B" }} full /> : null}
+      </div>
+    </section>
   )
 }
 
@@ -432,8 +442,8 @@ function ImagePane({
 }) {
   return (
     <div className="flex flex-col">
-      <div className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</div>
-      <div className={cn("flex items-center justify-center overflow-hidden rounded-md border bg-muted", full ? "aspect-video" : "aspect-[4/3]", accent ? "border-primary/40" : "border-border")}>
+      <div className="mb-2 text-xs font-medium text-muted-foreground">{label}</div>
+      <div className={cn("flex items-center justify-center overflow-hidden rounded-[10px] border bg-[#0D222A]", full ? "aspect-video" : "aspect-[4/3]", accent ? "border-primary/50" : "border-border")}>
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image.url || "/placeholder.svg"} alt={image.filename} className="h-full w-full object-contain" />
@@ -441,12 +451,12 @@ function ImagePane({
           <span className="px-3 text-center text-xs text-muted-foreground">Imagen no disponible</span>
         )}
       </div>
-      {image && full && <div className="mt-1.5 text-[11px] text-muted-foreground">{image.filename}</div>}
+      {image && full ? <div className="mt-2 text-[11px] text-muted-foreground">{image.filename}</div> : null}
     </div>
   )
 }
 
-function ForensicsCard({
+function ForensicsSection({
   exifA,
   exifB,
   forensics,
@@ -458,8 +468,8 @@ function ForensicsCard({
   const hasAny =
     (exifA && (exifA.camera || exifA.taken_at || exifA.gps || exifA.software)) ||
     (exifB && (exifB.camera || exifB.taken_at || exifB.gps || exifB.software)) ||
-    (forensics?.ela_score_a != null && forensics.ela_score_a !== undefined) ||
-    (forensics?.ela_score_b != null && forensics.ela_score_b !== undefined)
+    forensics?.ela_score_a != null ||
+    forensics?.ela_score_b != null
 
   if (!hasAny) return null
 
@@ -467,16 +477,22 @@ function ForensicsCard({
   const elaB = forensics?.ela_score_b
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-xl font-medium">
-          <Fingerprint className="h-5 w-5 text-muted-foreground" /> Análisis forense
-        </CardTitle>
-        <CardDescription>Metadatos EXIF y ELA para detectar ediciones, recortes o discrepancias entre las dos imágenes.</CardDescription>
-      </CardHeader>
-      <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-2">
+    <section className="border-y border-border" aria-labelledby="forensics-title">
+      <div className="flex items-start gap-3 px-5 py-5 sm:px-6">
+        <Fingerprint className="mt-1 h-4 w-4 shrink-0 text-[#96B5A6]" strokeWidth={1.6} />
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Forense</p>
+          <h3 id="forensics-title" className="mt-2 text-2xl font-light tracking-[-0.025em] text-[#E7DFCE]">Análisis forense</h3>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">Metadatos EXIF y ELA para detectar ediciones, recortes o discrepancias entre las dos imágenes.</p>
+        </div>
+      </div>
+
+      <div className="grid border-t border-border md:grid-cols-2 md:divide-x md:divide-border">
         <ExifColumn title="Imagen A" exif={exifA} elaScore={elaA ?? null} />
         <ExifColumn title="Imagen B" exif={exifB} elaScore={elaB ?? null} />
+      </div>
+
+      <div className="grid border-t border-border md:grid-cols-2 md:divide-x md:divide-border">
         <ForensicMatchRow
           icon={Camera}
           label="Cámara"
@@ -509,22 +525,24 @@ function ForensicsCard({
           }
           ok={forensics?.any_edited ? false : forensics?.software_match ?? null}
         />
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   )
 }
 
 function ExifColumn({ title, exif, elaScore }: { title: string; exif: ExifSummary | null; elaScore: number | null }) {
   return (
-    <div className="flex flex-col gap-2 border-l border-border pl-4">
-      <div className="flex items-center justify-between">
+    <div className="px-5 py-5 sm:px-6">
+      <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium">{title}</span>
-        {elaScore != null && <Badge variant={elaScore > 40 ? "destructive" : elaScore > 20 ? "outline" : "secondary"}>ELA {Math.round(elaScore)}</Badge>}
+        {elaScore != null ? <Badge variant={elaScore > 40 ? "destructive" : elaScore > 20 ? "outline" : "secondary"}>ELA {Math.round(elaScore)}</Badge> : null}
       </div>
-      <ExifLine label="Cámara" value={exif?.camera ?? "—"} />
-      <ExifLine label="Capturada" value={exif?.taken_at ? formatDate(exif.taken_at) : "—"} />
-      <ExifLine label="GPS" value={exif?.gps ? `${exif.gps.lat.toFixed(5)}, ${exif.gps.lng.toFixed(5)}` : "—"} />
-      <ExifLine label="Software" value={exif?.software ?? "—"} />
+      <div className="mt-4 space-y-2">
+        <ExifLine label="Cámara" value={exif?.camera ?? "—"} />
+        <ExifLine label="Capturada" value={exif?.taken_at ? formatDate(exif.taken_at) : "—"} />
+        <ExifLine label="GPS" value={exif?.gps ? `${exif.gps.lat.toFixed(5)}, ${exif.gps.lng.toFixed(5)}` : "—"} />
+        <ExifLine label="Software" value={exif?.software ?? "—"} />
+      </div>
     </div>
   )
 }
@@ -551,7 +569,7 @@ function ForensicMatchRow({
 }) {
   const tone = ok === true ? "text-success" : ok === false ? "text-destructive" : "text-muted-foreground"
   return (
-    <div className="flex items-center gap-3 border-t border-border px-1 py-3">
+    <div className="flex items-center gap-3 border-b border-border px-5 py-4 last:border-b-0 md:border-b-0 sm:px-6">
       <Icon className={cn("h-4 w-4 shrink-0", tone)} />
       <div className="min-w-0 flex-1">
         <div className="text-xs text-muted-foreground">{label}</div>
@@ -593,7 +611,7 @@ function SignalRow({
         <p className="text-sm font-medium text-foreground">{label}</p>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p>
       </div>
-      <div className="font-mono text-xs text-foreground sm:pt-0.5">{binary ? (pct === 100 ? "Sí" : "No") : `${pct}%`}</div>
+      <div className="text-xs font-medium text-foreground sm:pt-0.5">{binary ? (pct === 100 ? "Sí" : "No") : `${pct}%`}</div>
     </div>
   )
 }
