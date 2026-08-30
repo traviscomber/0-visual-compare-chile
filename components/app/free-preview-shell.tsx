@@ -7,7 +7,7 @@ import { ArrowRight, LogOut, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
 
-const ALLOWED_FREE_PATHS = ["/investigar", "/settings"] as const
+const ALLOWED_FREE_PATHS = ["/investigar"] as const
 
 function isAllowedPath(pathname: string) {
   return ALLOWED_FREE_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))
@@ -56,7 +56,7 @@ export function FreePreviewShell({ userEmail, children }: { userEmail: string; c
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#96B5A6]">Acceso empresarial</p>
             <h1 className="mt-4 text-4xl font-light tracking-[-0.04em] text-[#E7DFCE]">Esta función forma parte del workspace profesional.</h1>
             <p className="mt-5 text-sm leading-7 text-[#BDBEBD]">
-              Las cuentas gratuitas sólo incluyen vistas preliminares de búsqueda. Evaluación, casos, expedientes, vigilancia, reportes y colaboración requieren acceso empresarial.
+              El acceso preliminar sólo incluye vistas de búsqueda. Evaluación, configuración, casos, expedientes, vigilancia, reportes y colaboración requieren acceso empresarial.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Button asChild><Link href="/acceso-empresarial">Solicitar acceso empresarial</Link></Button>
