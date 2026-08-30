@@ -1,6 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { PublicLegalFooter } from "@/components/public-legal-footer"
+import "./demo-pro.css"
 
 export const metadata: Metadata = {
   title: "Demo de inteligencia marcaria",
@@ -17,5 +18,10 @@ export const metadata: Metadata = {
 }
 
 export default function DemoLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}<PublicLegalFooter /></>
+  return (
+    <div className="demo-research-shell">
+      {children}
+      <PublicLegalFooter />
+    </div>
+  )
 }
