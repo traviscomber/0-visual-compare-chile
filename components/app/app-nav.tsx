@@ -14,6 +14,7 @@ import {
   Search,
   Settings,
   Waypoints,
+  type LucideIcon,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -46,24 +47,48 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-const navigationItems = [
-  { href: "/dashboard", label: "Resumen", icon: LayoutDashboard, aliases: [] },
+type NavigationItem = {
+  href: string
+  label: string
+  icon: LucideIcon
+  aliases: readonly string[]
+}
+
+type NavigationGroup = {
+  label: string
+  items: readonly NavigationItem[]
+}
+
+const navigationGroups: readonly NavigationGroup[] = [
   {
-    href: "/investigar",
-    label: "Investigar",
-    icon: Search,
-    aliases: ["/evaluar", "/agente", "/compare", "/comparisons", "/consulta-inapi", "/consulta", "/patentes"],
+    label: "Operar",
+    items: [
+      { href: "/dashboard", label: "Resumen", icon: LayoutDashboard, aliases: [] },
+      {
+        href: "/investigar",
+        label: "Investigar",
+        icon: Search,
+        aliases: ["/evaluar", "/agente", "/compare", "/comparisons", "/consulta-inapi", "/consulta", "/patentes"],
+      },
+      { href: "/portfolio", label: "Portafolio", icon: Waypoints, aliases: [] },
+      { href: "/casos", label: "Casos", icon: BriefcaseBusiness, aliases: [] },
+    ],
   },
-  { href: "/portfolio", label: "Portafolio", icon: Waypoints, aliases: [] },
-  { href: "/casos", label: "Casos", icon: BriefcaseBusiness, aliases: [] },
-  { href: "/monitorear", label: "Vigilancia", icon: BellRing, aliases: ["/patentes/alertas"] },
-  { href: "/notificaciones", label: "Notificaciones", icon: Bell, aliases: [] },
-  { href: "/history", label: "Actividad", icon: History, aliases: [] },
-] as const
+  {
+    label: "Seguimiento",
+    items: [
+      { href: "/monitorear", label: "Vigilancia", icon: BellRing, aliases: ["/patentes/alertas"] },
+      { href: "/notificaciones", label: "Notificaciones", icon: Bell, aliases: [] },
+      { href: "/history", label: "Actividad", icon: History, aliases: [] },
+    ],
+  },
+]
+
+const navigationItems: readonly NavigationItem[] = navigationGroups.flatMap((group) => group.items)
 
 const shellTokens = {
-  "--sidebar-width": "15.25rem",
-  "--sidebar-width-icon": "3.5rem",
+  "--sidebar-width": "16rem",
+  "--sidebar-width-icon": "3.75rem",
   "--background": "#0F2A33",
   "--foreground": "#E7DFCE",
   "--card": "#13272D",
@@ -80,8 +105,8 @@ const shellTokens = {
   "--accent-foreground": "#FFFFFF",
   "--destructive": "#C46A61",
   "--destructive-foreground": "#FFFFFF",
-  "--border": "#294047",
-  "--input": "#294047",
+  "--border": "#263D44",
+  "--input": "#263D44",
   "--ring": "#96B5A6",
   "--chart-1": "#4A7F74",
   "--chart-2": "#96B5A6",
@@ -92,9 +117,9 @@ const shellTokens = {
   "--sidebar-foreground": "#E7DFCE",
   "--sidebar-primary": "#4A7F74",
   "--sidebar-primary-foreground": "#FFFFFF",
-  "--sidebar-accent": "#172F34",
+  "--sidebar-accent": "#173B37",
   "--sidebar-accent-foreground": "#FFFFFF",
-  "--sidebar-border": "#233941",
+  "--sidebar-border": "#20363E",
   "--sidebar-ring": "#96B5A6",
 } as CSSProperties
 
@@ -102,15 +127,22 @@ function matchesPath(pathname: string, href: string) {
   return pathname === href || (href !== "/dashboard" && pathname.startsWith(`${href}/`))
 }
 
+function currentNavigationItem(pathname: string) {
+  return navigationItems.find(
+    (item) => matchesPath(pathname, item.href) || item.aliases.some((alias) => matchesPath(pathname, alias)),
+  )
+}
+
 function BrandMark() {
   return (
-    <span className="flex min-w-0 items-center gap-3">
-      <span className="grid size-9 shrink-0 place-items-center rounded-[10px] border border-sidebar-border bg-sidebar-accent text-xs font-semibold text-sidebar-primary group-data-[collapsible=icon]:size-8">
+    <span className="flex min-w-0 items-center gap-3 group-data-[collapsible=icon]:justify-center">
+      <span className="relative grid size-9 shrink-0 place-items-center rounded-[10px] bg-[#13272D] text-[11px] font-medium tracking-[0.08em] text-[#E7DFCE] ring-1 ring-inset ring-white/[0.05] group-data-[collapsible=icon]:size-8">
         V
+        <span aria-hidden="true" className="absolute right-[6px] top-[6px] size-1.5 rounded-full bg-[#4A7F74] shadow-[0_0_14px_rgba(74,127,116,0.5)]" />
       </span>
       <span className="min-w-0 leading-none group-data-[collapsible=icon]:hidden">
-        <span className="block truncate text-[15px] font-medium tracking-[0.18em] text-sidebar-foreground">ViDENTiA</span>
-        <span className="mt-1.5 block truncate text-[8px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+        <span className="block truncate text-[15px] font-normal tracking-[0.22em] text-[#E7DFCE]">ViDENTiA</span>
+        <span className="mt-1.5 block truncate text-[7px] font-medium uppercase tracking-[0.16em] text-[#8F9998]">
           Inteligencia y protección de marcas
         </span>
       </span>
@@ -123,40 +155,44 @@ function NavigationMenu() {
   const { isMobile, setOpenMobile } = useSidebar()
 
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel className="text-[9px] font-semibold uppercase tracking-[0.17em] text-muted-foreground">
-        Workspace
-      </SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          {navigationItems.map((item) => {
-            const Icon = item.icon
-            const active = matchesPath(pathname, item.href) || item.aliases.some((alias) => matchesPath(pathname, alias))
-            return (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={active}
-                  tooltip={item.label}
-                  className="h-10 rounded-[10px] px-3 text-[13px] font-medium data-[active=true]:bg-primary/20 data-[active=true]:text-sidebar-accent-foreground data-[active=true]:[&>svg]:text-sidebar-primary"
-                >
-                  <Link
-                    href={item.href}
-                    aria-current={active ? "page" : undefined}
-                    onClick={() => {
-                      if (isMobile) setOpenMobile(false)
-                    }}
-                  >
-                    <Icon strokeWidth={1.7} />
-                    <span>{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )
-          })}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
+    <>
+      {navigationGroups.map((group, groupIndex) => (
+        <SidebarGroup key={group.label} className={groupIndex === 0 ? "pt-2" : "pt-0"}>
+          <SidebarGroupLabel className="px-3 text-[8px] font-semibold uppercase tracking-[0.2em] text-[#738180] group-data-[collapsible=icon]:hidden">
+            {group.label}
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-1">
+              {group.items.map((item) => {
+                const Icon = item.icon
+                const active = matchesPath(pathname, item.href) || item.aliases.some((alias) => matchesPath(pathname, alias))
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={active}
+                      tooltip={item.label}
+                      className="relative h-10 rounded-[9px] px-3 text-[12.5px] font-medium text-[#AEB6B4] transition-colors duration-150 hover:bg-[#13272D] hover:text-[#FFFFFF] data-[active=true]:bg-[#173B37] data-[active=true]:text-[#FFFFFF] data-[active=true]:shadow-[inset_3px_0_0_0_#4A7F74] data-[active=true]:[&>svg]:text-[#96B5A6]"
+                    >
+                      <Link
+                        href={item.href}
+                        aria-current={active ? "page" : undefined}
+                        onClick={() => {
+                          if (isMobile) setOpenMobile(false)
+                        }}
+                      >
+                        <Icon strokeWidth={1.55} className="text-[#83908F]" />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      ))}
+    </>
   )
 }
 
@@ -193,19 +229,19 @@ function AccountMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <SidebarMenuButton size="lg" className="rounded-[10px] data-[state=open]:bg-sidebar-accent">
-          <Avatar className="size-8 rounded-full border border-sidebar-border">
-            <AvatarFallback className="bg-sidebar-accent text-[10px] font-semibold text-sidebar-foreground">
+        <SidebarMenuButton size="lg" className="rounded-[10px] bg-[#0D222A] ring-1 ring-inset ring-white/[0.04] data-[state=open]:bg-[#13272D]">
+          <Avatar className="size-8 rounded-full ring-1 ring-inset ring-[#29434A]">
+            <AvatarFallback className="bg-[#173B37] text-[10px] font-semibold text-[#E7DFCE]">
               {initials || "U"}
             </AvatarFallback>
           </Avatar>
           <span className="min-w-0 flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
-            <span className="block truncate text-xs font-medium text-sidebar-foreground">{fullName ?? userEmail}</span>
-            <span className="mt-1 block truncate text-[10px] text-muted-foreground">{companyName ?? userEmail}</span>
+            <span className="block truncate text-xs font-medium text-[#E7DFCE]">{fullName ?? userEmail}</span>
+            <span className="mt-1 block truncate text-[10px] text-[#83908F]">{companyName ?? userEmail}</span>
           </span>
         </SidebarMenuButton>
       </DropdownMenuTrigger>
-      <DropdownMenuContent side="right" align="end" className="w-72">
+      <DropdownMenuContent side="right" align="end" className="w-72 border-[#294047] bg-[#13272D]">
         <DropdownMenuLabel className="font-normal">
           <span className="block text-sm font-medium text-popover-foreground">{fullName ?? "Usuario"}</span>
           <span className="mt-1 block truncate text-xs text-muted-foreground">{userEmail}</span>
@@ -229,6 +265,18 @@ function AccountMenu({
   )
 }
 
+function CurrentSection() {
+  const pathname = usePathname()
+  const current = currentNavigationItem(pathname)
+
+  return (
+    <div className="hidden min-w-0 md:block">
+      <p className="text-[8px] font-semibold uppercase tracking-[0.18em] text-[#6F807E]">VIDENTIA / OPERACIÓN</p>
+      <p className="mt-1 truncate text-[13px] font-medium text-[#E7DFCE]">{current?.label ?? "Workspace"}</p>
+    </div>
+  )
+}
+
 export function AppNav({
   userEmail,
   fullName,
@@ -241,22 +289,26 @@ export function AppNav({
   children: ReactNode
 }) {
   return (
-    <SidebarProvider className="dark min-h-svh overflow-x-hidden bg-background text-foreground" style={shellTokens}>
-      <Sidebar collapsible="icon" className="border-sidebar-border">
-        <SidebarHeader className="px-3 pb-2 pt-4">
-          <Link href="/dashboard" aria-label="VIDENTIA, resumen" className="rounded-[10px] px-1 py-1 outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:px-0">
+    <SidebarProvider className="dark min-h-svh overflow-x-hidden bg-[#091A20] text-foreground" style={shellTokens}>
+      <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-[#091A20]">
+        <SidebarHeader className="px-3 pb-3 pt-4">
+          <Link
+            href="/dashboard"
+            aria-label="VIDENTIA, resumen"
+            className="rounded-[10px] px-1 py-1 outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:px-0"
+          >
             <BrandMark />
           </Link>
         </SidebarHeader>
 
-        <SidebarSeparator />
+        <SidebarSeparator className="mx-3 w-auto bg-[#20363E]" />
         <SidebarContent className="py-2">
           <NavigationMenu />
         </SidebarContent>
 
-        <SidebarFooter className="gap-2 px-3 pb-4">
-          <div className="flex items-start gap-2 border-y border-sidebar-border py-3 text-[10px] leading-4 text-muted-foreground group-data-[collapsible=icon]:hidden">
-            <CircleDot className="mt-0.5 size-3.5 shrink-0 text-sidebar-primary" strokeWidth={1.7} aria-hidden="true" />
+        <SidebarFooter className="gap-3 px-3 pb-4">
+          <div className="flex items-start gap-2.5 border-t border-[#20363E] pt-3 text-[9px] leading-4 text-[#738180] group-data-[collapsible=icon]:hidden">
+            <CircleDot className="mt-0.5 size-3.5 shrink-0 text-[#4A7F74]" strokeWidth={1.7} aria-hidden="true" />
             <span>Fuentes oficiales · evidencia trazable</span>
           </div>
           <SidebarMenu>
@@ -268,38 +320,43 @@ export function AppNav({
         <SidebarRail />
       </Sidebar>
 
-      <SidebarInset className="min-w-0 bg-background text-foreground">
-        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-border bg-background px-4 sm:px-6 lg:px-8">
+      <SidebarInset className="relative min-w-0 overflow-hidden bg-[#0F2A33] text-foreground">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-[30rem] opacity-70"
+          style={{
+            background:
+              "radial-gradient(circle at 78% 0%, rgba(69,110,142,0.12), transparent 34%), radial-gradient(circle at 24% 0%, rgba(74,127,116,0.08), transparent 30%)",
+          }}
+        />
+        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-[#263D44] bg-[#0F2A33] px-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
-            <SidebarTrigger className="size-9 rounded-[9px] border border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground" />
-            <Link href="/dashboard" className="truncate text-[13px] font-medium tracking-[0.12em] text-foreground md:hidden">
+            <SidebarTrigger className="size-9 rounded-[9px] bg-[#13272D] text-[#9CA6A4] ring-1 ring-inset ring-white/[0.05] hover:bg-[#172F34] hover:text-[#FFFFFF]" />
+            <Link href="/dashboard" className="truncate text-[13px] font-normal tracking-[0.18em] text-[#E7DFCE] md:hidden">
               ViDENTiA
             </Link>
-            <span className="hidden items-center gap-2 text-xs text-muted-foreground md:flex">
-              <CircleDot className="size-3.5 text-primary" strokeWidth={1.7} aria-hidden="true" />
-              Inteligencia marcaria operativa
-            </span>
+            <CurrentSection />
           </div>
 
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex">
+            <Button asChild variant="ghost" size="sm" className="hidden h-9 rounded-[9px] bg-[#13272D] px-3 text-[#D8DDDB] ring-1 ring-inset ring-white/[0.05] hover:bg-[#172F34] hover:text-white sm:inline-flex">
               <Link href="/investigar">
-                <Search data-icon="inline-start" />
+                <Search data-icon="inline-start" strokeWidth={1.6} />
                 Buscar una marca
               </Link>
             </Button>
-            <Button asChild variant="ghost" size="icon" aria-label="Notificaciones">
+            <Button asChild variant="ghost" size="icon" aria-label="Notificaciones" className="size-9 rounded-[9px] bg-[#13272D] text-[#AAB3B1] ring-1 ring-inset ring-white/[0.05] hover:bg-[#172F34] hover:text-white">
               <Link href="/notificaciones">
-                <Bell />
+                <Bell strokeWidth={1.6} />
               </Link>
             </Button>
-            <Button asChild size="sm" className="hidden lg:inline-flex">
+            <Button asChild size="sm" className="hidden h-9 rounded-[9px] bg-[#4A7F74] px-4 font-medium text-white shadow-[0_0_22px_rgba(74,127,116,0.14)] hover:bg-[#568D81] lg:inline-flex">
               <Link href="/investigar">Nueva investigación</Link>
             </Button>
           </div>
         </header>
 
-        <div className="min-h-[calc(100svh-4rem)] min-w-0">{children}</div>
+        <div className="relative z-10 min-h-[calc(100svh-4rem)] min-w-0">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   )
