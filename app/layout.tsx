@@ -10,6 +10,7 @@ import "./landing-progressive-reveal.css"
 import "./videntia-foundation.css"
 import "./landing-hero-polish.css"
 import "./landing-principles-polish.css"
+import "./landing-process-polish.css"
 
 const montserrat = Montserrat({ subsets: ["latin"], display: "swap", variable: "--font-montserrat" })
 const CANONICAL_ORIGIN = "https://videntia.app"
