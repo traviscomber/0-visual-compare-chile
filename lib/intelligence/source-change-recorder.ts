@@ -26,6 +26,7 @@ type ExistingState = {
   source_record_id: string
   fingerprint: string
   snapshot: Record<string, unknown> | null
+  first_seen_at: string
 }
 
 type RecordBatchOptions = {
@@ -81,10 +82,14 @@ export async function recordSourceBatchChanges(admin: SupabaseClient, options: R
   if (!options.records.length) return { states: 0, changes: 0 }
 
   const observedAt = options.observedAt ?? new Date().toISOString()
-  const sourceRecordIds = [...new Set(options.records.map(record => record.sourceRecordId))]
+  const recordsById = new Map<string, SourceChangeRecord>()
+  for (const record of options.records) recordsById.set(record.sourceRecordId, record)
+  const records = [...recordsById.values()]
+  const sourceRecordIds = records.map(record => record.sourceRecordId)
+
   const { data: previousRows, error: previousError } = await admin
     .from("intelligence_source_states")
-    .select("source_record_id,fingerprint,snapshot")
+    .select("source_record_id,fingerprint,snapshot,first_seen_at")
     .eq("source_key", options.sourceKey)
     .eq("entity_type", options.entityType)
     .eq("dataset", options.dataset)
@@ -99,7 +104,7 @@ export async function recordSourceBatchChanges(admin: SupabaseClient, options: R
   const events: Array<Record<string, unknown>> = []
   const states: Array<Record<string, unknown>> = []
 
-  for (const record of options.records) {
+  for (const record of records) {
     const snapshot = canonicalizeObject(record.snapshot)
     const fingerprint = fingerprintOf(snapshot)
     const previous = previousById.get(record.sourceRecordId)
@@ -138,7 +143,7 @@ export async function recordSourceBatchChanges(admin: SupabaseClient, options: R
       source_record_id: record.sourceRecordId,
       fingerprint,
       snapshot,
-      first_seen_at: previous ? undefined : observedAt,
+      first_seen_at: previous?.first_seen_at ?? observedAt,
       last_seen_at: observedAt,
       source_updated_at: normalizeTimestamp(record.sourceUpdatedAt),
       updated_at: observedAt,
@@ -152,20 +157,12 @@ export async function recordSourceBatchChanges(admin: SupabaseClient, options: R
     if (eventError) throw new Error(`Could not persist source change events: ${eventError.message}`)
   }
 
-  const stateRows = states.map(row => {
-    if (row.first_seen_at === undefined) {
-      const { first_seen_at: _ignored, ...rest } = row
-      return rest
-    }
-    return row
-  })
-
   const { error: stateError } = await admin
     .from("intelligence_source_states")
-    .upsert(stateRows, { onConflict: "source_key,entity_type,dataset,source_record_id" })
+    .upsert(states, { onConflict: "source_key,entity_type,dataset,source_record_id" })
 
   if (stateError) throw new Error(`Could not persist source change states: ${stateError.message}`)
-  return { states: stateRows.length, changes: events.length }
+  return { states: states.length, changes: events.length }
 }
 
 export function normalizeIntelligenceSearchText(value: unknown) {
@@ -278,6 +275,7 @@ function cleanText(value: unknown) {
 
 function normalizeTimestamp(value: string | null) {
   if (!value) return null
-  const parsed = new Date(value)
+  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(value) ? `${value.replace(" ", "T")}Z` : value
+  const parsed = new Date(normalized)
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString()
 }
