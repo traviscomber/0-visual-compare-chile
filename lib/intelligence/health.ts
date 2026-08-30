@@ -287,10 +287,12 @@ function summarizeRun(run: RunRow) {
   }
 }
 
-function retryCount(metadata: Record<string, unknown> | null) {
+function retryCount(metadata: Record<string, unknown> | null): number {
   const retries = objectValue(metadata, "retries")
   if (!retries) return 0
-  return Object.values(retries).reduce((sum, value) => sum + Math.max(0, Number(value ?? 0) || 0), 0)
+  let total = 0
+  for (const value of Object.values(retries)) total += Math.max(0, Number(value ?? 0) || 0)
+  return total
 }
 
 function reconcileRunCounts(run: RunRow): boolean | null {
