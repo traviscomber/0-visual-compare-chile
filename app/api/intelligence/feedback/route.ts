@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { PRIVATE_NO_STORE_HEADERS, requireUser } from "@/lib/auth/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -51,7 +52,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Feedback inválido." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
-  const { data, error } = await auth.supabase.rpc("submit_intelligence_feedback", {
+  const admin = createAdminClient()
+  const { data, error } = await admin.rpc("submit_intelligence_feedback", {
+    p_user_id: auth.user.id,
     p_target_type: targetType,
     p_target_key: targetKey,
     p_feedback_type: feedbackType,
@@ -76,7 +79,11 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Falta id." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
-  const { data, error } = await auth.supabase.rpc("delete_intelligence_feedback", { p_id: id })
+  const admin = createAdminClient()
+  const { data, error } = await admin.rpc("delete_intelligence_feedback", {
+    p_user_id: auth.user.id,
+    p_id: id,
+  })
   if (error) {
     return NextResponse.json({ error: "No pudimos eliminar el feedback." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
   }
