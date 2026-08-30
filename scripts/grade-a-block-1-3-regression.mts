@@ -39,6 +39,7 @@ const ingestionObservability = await readFile("lib/intelligence/ingestion-observ
 const retryPolicy = await readFile("lib/intelligence/fetch-with-retry.ts", "utf8")
 const companiesPage = await readFile("app/(app)/empresas/page.tsx", "utf8")
 const sourcesPage = await readFile("app/(app)/fuentes/page.tsx", "utf8")
+const dashboardPage = await readFile("app/(app)/dashboard/page.tsx", "utf8")
 const healthMigration = await readFile("supabase/migrations/20260830214913_add_intelligence_health_quality.sql", "utf8")
 const graphMigration = await readFile("supabase/migrations/20260830215014_add_company_entity_graph_v2.sql", "utf8")
 const graphFixMigration = await readFile("supabase/migrations/20260830215054_fix_company_graph_v2_counts.sql", "utf8")
@@ -91,6 +92,19 @@ if (!sourcesPage.includes("Saber qué fuente está fresca antes de decidir")) fa
 if (!companiesPage.includes("Hacia dónde se está moviendo la protección")) fail("company UI missing trajectory surface")
 if (!companiesPage.includes("Relaciones corporativas verificadas")) fail("company UI missing graph v2 surface")
 
+for (const question of [
+  "¿Qué cambió esta semana?",
+  "¿Qué está protegiendo ahora que hace seis meses no protegía?",
+  "¿Dónde está llevando su tecnología?",
+  "¿Quién está entrando en mi espacio?",
+  "¿Qué tecnologías están acelerándose?",
+  "¿Dónde aparecen oportunidades?",
+]) if (!dashboardPage.includes(question)) fail(`dashboard missing executive question: ${question}`)
+for (const href of ["/monitorear/estrategico", "/empresas", "/espacios", "/tecnologias", "/brechas"]) {
+  if (!dashboardPage.includes(`href:\"${href}\"`) && !dashboardPage.includes(`href=\"${href}\"`)) fail(`dashboard missing executive route ${href}`)
+}
+if (!dashboardPage.includes('from("intelligence_watches")') || !dashboardPage.includes('from("intelligence_watch_events")')) fail("dashboard executive layer is not grounded in the user strategic watch state")
+
 for (const needle of [
   "intelligence_quality_runs",
   "intelligence_quality_results",
@@ -110,4 +124,4 @@ for (const sourceKey of ["registro_empresas", "superir", "wipo_lex_cl"]) {
 }
 if (!catalogHealthMigration.includes("is_active = false")) fail("catalog-only sources are still presented as operational")
 
-console.log("Grade A block 1-3 regression PASS: health/quality wiring, partial-success lifecycle, retry/circuit policy, non-destructive entity graph, 360-day trajectory guardrails, authenticated APIs and migration history.")
+console.log("Grade A block 1-3 regression PASS: health/quality wiring, partial-success lifecycle, retry/circuit policy, curated identity quality gate, executive six-question entry, entity graph and trajectory guardrails.")
