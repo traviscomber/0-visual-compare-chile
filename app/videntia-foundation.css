@@ -1,0 +1,125 @@
+/* Canonical VIDENTIA product foundation.
+   Brand Bible v1.0 is the visual source of truth. Keep this layer flat,
+   quiet and evidence-first: no gradients, glow or glass effects. */
+
+:root,
+.dark {
+  --background: #0F2A33;
+  --foreground: #FFFFFF;
+  --card: #13272D;
+  --card-foreground: #FFFFFF;
+  --popover: #13272D;
+  --popover-foreground: #FFFFFF;
+  --primary: #4A7F74;
+  --primary-foreground: #FFFFFF;
+  --secondary: #173B37;
+  --secondary-foreground: #FFFFFF;
+  --muted: #172F34;
+  --muted-foreground: #BDBEBD;
+  --accent: #20393A;
+  --accent-foreground: #B7D3D1;
+  --destructive: #C56D64;
+  --destructive-foreground: #FFFFFF;
+  --border: #28434A;
+  --input: #13272D;
+  --ring: #96B5A6;
+
+  --chart-1: #4A7F74;
+  --chart-2: #456E8E;
+  --chart-3: #96B5A6;
+  --chart-4: #B7D3D1;
+  --chart-5: #BDBEBD;
+
+  --radius: 0.625rem;
+
+  --sidebar: #091A20;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #4A7F74;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #173B37;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #20383F;
+  --sidebar-ring: #96B5A6;
+
+  --brand-teal: #4A7F74;
+  --brand-teal-dark: #173B37;
+  --brand-ink: #FFFFFF;
+  --brand-bone: #E7DFCE;
+  --brand-mist: #172F34;
+  --brand-slate: #BDBEBD;
+
+  --vid-bg: #0F2A33;
+  --vid-deep: #091A20;
+  --vid-surface: #13272D;
+  --vid-surface-2: #172F34;
+  --vid-surface-3: #20393A;
+  --vid-green: #4A7F74;
+  --vid-sage: #96B5A6;
+  --vid-pale: #B7D3D1;
+  --vid-blue: #456E8E;
+  --vid-heading: #E7DFCE;
+  --vid-body: #FFFFFF;
+  --vid-muted: #BDBEBD;
+  --vid-divider: rgba(183, 211, 209, 0.12);
+}
+
+html {
+  background: var(--vid-deep);
+}
+
+body {
+  background: var(--vid-bg);
+  color: var(--vid-body);
+}
+
+::selection {
+  background: var(--vid-sage);
+  color: var(--vid-deep);
+}
+
+/* Legacy helpers remain available for compatibility, but their visual
+   behavior is normalized to the current flat system. */
+.glass,
+.glass-sm,
+.glass-dark,
+.glass-hover {
+  background: var(--vid-surface);
+  border: 1px solid var(--vid-divider);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.glass,
+.glass-dark,
+.glass-hover {
+  border-radius: 10px;
+}
+
+.glass-sm {
+  border-radius: 8px;
+}
+
+.glass-hover {
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.glass-hover:hover {
+  background: var(--vid-surface-2);
+  border-color: rgba(183, 211, 209, 0.2);
+}
+
+.gradient-text {
+  color: var(--vid-green);
+}
+
+.animate-glow,
+.animate-float {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
