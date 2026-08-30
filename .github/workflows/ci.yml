@@ -40,6 +40,9 @@ jobs:
       - name: API key listing regression
         run: pnpm test:api-key-listing
 
+      - name: Phase1 window regression
+        run: pnpm test:phase1-window
+
       - name: TypeScript
         run: pnpm exec tsc --noEmit
 

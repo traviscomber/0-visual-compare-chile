@@ -28,7 +28,8 @@
     "release:gate": "node scripts/release-gate.mjs",
     "test:niza": "node scripts/niza-regression.mts",
     "test:analytics": "node scripts/analytics-privacy-regression.mts",
-    "test:api-key-listing": "node scripts/api-key-listing-regression.mts"
+    "test:api-key-listing": "node scripts/api-key-listing-regression.mts",
+    "test:phase1-window": "node scripts/phase1-window-regression.mts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

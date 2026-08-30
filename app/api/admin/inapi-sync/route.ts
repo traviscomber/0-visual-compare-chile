@@ -26,10 +26,11 @@ export async function GET() {
       admin.from("inapi_sync_runs").select("id", { count: "exact", head: true }).eq("status", "completed"),
       admin.from("inapi_sync_runs").select("id", { count: "exact", head: true }).eq("status", "failed"),
       admin.from("inapi_sync_runs").select("id, created_at, finished_at, total_fetched, inserted_count, updated_count, metadata").eq("status", "completed").order("created_at", { ascending: false }).limit(1),
-      admin.from("inapi_sync_runs").select("metadata").eq("status", "completed").order("created_at", { ascending: false }).limit(200),
+      admin.from("inapi_sync_runs").select("metadata").eq("status", "completed").contains("metadata", { preset: "phase1-10k" }),
     ])
 
     if (runsResponse.error) throw runsResponse.error
+    if (phase1CompletedResponse.error) throw phase1CompletedResponse.error
     const phase1Plan = buildPhase1WindowPlan(phase1CompletedResponse.data ?? [], 25)
 
     return NextResponse.json({
