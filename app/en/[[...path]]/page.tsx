@@ -1,30 +1,19 @@
+import type { Metadata } from "next"
 import { redirect } from "next/navigation"
+import { LocalizedLandingPage } from "@/components/localized-landing-page"
 
-function buildTarget(path?: string[]) {
-  if (!path || path.length === 0) return "/"
-  return `/${path.join("/")}`
+export const metadata: Metadata = {
+  title: "VIDENTIA | Trademark intelligence and protection",
+  description: "Research prior rights, monitor changes and manage trademarks with traceable evidence.",
+  alternates: {
+    canonical: "/en",
+    languages: { "es-CL": "/es", "en": "/en" },
+  },
+  openGraph: { locale: "en_US", url: "/en" },
 }
 
-export default async function EnAliasPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ path?: string[] }>
-  searchParams?: Promise<Record<string, string | string[] | undefined>>
-}) {
+export default async function EnglishPublicPage({ params }: { params: Promise<{ path?: string[] }> }) {
   const { path } = await params
-  const resolvedSearchParams = searchParams ? await searchParams : {}
-  const target = buildTarget(path)
-  const query = new URLSearchParams()
-
-  for (const [key, value] of Object.entries(resolvedSearchParams)) {
-    if (Array.isArray(value)) {
-      value.forEach((entry) => query.append(key, entry))
-    } else if (typeof value === "string") {
-      query.set(key, value)
-    }
-  }
-
-  const suffix = query.toString() ? `?${query.toString()}` : ""
-  redirect(`${target}${suffix}`)
+  if (path?.length) redirect(`/${path.join("/")}`)
+  return <LocalizedLandingPage locale="en" />
 }
