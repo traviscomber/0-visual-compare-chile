@@ -2,6 +2,7 @@ import { updateSession } from "@/lib/supabase/proxy"
 import { NextResponse, type NextRequest } from "next/server"
 
 const PUBLIC_INDEXABLE_PATHS = new Set(["/", "/es", "/en", "/demo", "/contacto", "/docs", "/privacidad", "/terminos"])
+const LOCALIZED_INDEXABLE_PATHS = new Set(["/es", "/en", "/es/demo", "/en/demo"])
 const LEGACY_REDIRECTS: Record<string, string> = {
   "/consulta": "/demo",
   "/comparador": "/demo",
@@ -20,15 +21,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 308)
   }
 
-  if (pathname === "/es" || pathname === "/en") {
-    const requestHeaders = new Headers(request.headers)
-    requestHeaders.set("x-videntia-locale", pathname === "/en" ? "en" : "es")
-    return NextResponse.next({ request: { headers: requestHeaders } })
-  }
+  const locale = pathname.split("/")[1]
+  const requestHeaders = new Headers(request.headers)
+  const localized = locale === "es" || locale === "en"
+  if (localized) requestHeaders.set("x-videntia-locale", locale)
 
-  const response = await updateSession(request)
+  const response = await updateSession(request, localized ? requestHeaders : undefined)
 
-  if (!PUBLIC_INDEXABLE_PATHS.has(pathname)) {
+  if (!PUBLIC_INDEXABLE_PATHS.has(pathname) && !LOCALIZED_INDEXABLE_PATHS.has(pathname)) {
     response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive")
   }
 
