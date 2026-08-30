@@ -26,18 +26,25 @@ export default async function DecisionBriefPage({ params }: { params: Promise<{ 
   const { data: authData } = await supabase.auth.getUser()
   if (!authData.user) redirect(`/auth/login?redirectTo=${encodeURIComponent(`/casos/${id}/brief`)}`)
 
-  const [{ data: caseRow }, { data: items }, { data: events }] = await Promise.all([
-    supabase.from("cases").select("id,title,status,priority,context_type,context_query,decision_summary,notes,last_reviewed_at,created_at,updated_at").eq("id", id).single(),
+  const [caseResult, itemsResult, eventsResult] = await Promise.all([
+    supabase.from("cases").select("id,title,status,priority,context_type,context_query,decision_summary,notes,last_reviewed_at,created_at,updated_at").eq("id", id).maybeSingle(),
     supabase.from("case_items").select("id,item_type,title,metadata,created_at").eq("case_id", id).order("created_at", { ascending: false }),
     supabase.from("case_events").select("id,event_type,title,occurred_at").eq("case_id", id).order("occurred_at", { ascending: false }),
   ])
 
+  if (caseResult.error || itemsResult.error || eventsResult.error) {
+    throw new Error("No pudimos cargar la evidencia completa del caso para generar el brief.")
+  }
+
+  const caseRow = caseResult.data
+  const items = itemsResult.data
+  const events = eventsResult.data
   if (!caseRow) notFound()
 
   const brief = buildDecisionBrief({
     caseRow: caseRow as Parameters<typeof buildDecisionBrief>[0]["caseRow"],
-    items: (items ?? []) as Parameters<typeof buildDecisionBrief>[0]["items"],
-    events: (events ?? []) as Parameters<typeof buildDecisionBrief>[0]["events"],
+    items: items as Parameters<typeof buildDecisionBrief>[0]["items"],
+    events: events as Parameters<typeof buildDecisionBrief>[0]["events"],
   })
 
   const generatedAt = new Date().toISOString()
@@ -63,7 +70,7 @@ export default async function DecisionBriefPage({ params }: { params: Promise<{ 
           <div className="mt-7 grid border-t border-border print:border-black/20 sm:grid-cols-4">
             <Meta label="Estado" value={STATUS_LABELS[caseRow.status] ?? caseRow.status} />
             <Meta label="Prioridad" value={PRIORITY_LABELS[caseRow.priority] ?? caseRow.priority} />
-            <Meta label="Evidencias" value={String((items ?? []).length)} />
+            <Meta label="Evidencias" value={String(items.length)} />
             <Meta label="Última revisión" value={caseRow.last_reviewed_at ? formatDate(caseRow.last_reviewed_at) : "Pendiente"} />
           </div>
         </header>
