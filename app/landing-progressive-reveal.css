@@ -1,0 +1,10 @@
+/* Progressive enhancement: landing content must never depend on JS or viewport intersection to be visible. */
+[data-px-reveal]{
+  opacity:1;
+  transform:none;
+}
+
+[data-px-reveal].is-visible{
+  opacity:1;
+  transform:none;
+}
