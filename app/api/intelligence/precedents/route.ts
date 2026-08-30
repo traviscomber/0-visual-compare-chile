@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 
 const QuerySchema = z.object({
@@ -22,7 +23,8 @@ export async function GET(request: Request) {
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) return NextResponse.json({ error: "Debes iniciar sesión." }, { status: 401 })
 
-  const { data, error } = await supabase.rpc("search_trademark_precedents", {
+  const admin = createAdminClient()
+  const { data, error } = await admin.rpc("search_trademark_precedents", {
     p_mark: parsed.data.q,
     p_niza: parsed.data.niza,
     p_limit: 8,
