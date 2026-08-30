@@ -45,17 +45,17 @@ export default async function MarcaDetailPage({ params }: MarcaDetailPageProps) 
   const trademarkSubtype = metadataText(marca.metadata, ["subtipoMarca"]) || "—"
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-8 px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
-          <Button asChild variant="ghost" className="-ml-3">
+    <main className="min-h-screen bg-[#0F2A33] text-foreground">
+      <div className="mx-auto flex w-full max-w-[1480px] flex-col px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-5">
+          <Button asChild variant="ghost" className="-ml-3 text-muted-foreground">
             <Link href={`/consulta-inapi?q=${encodeURIComponent(marca.nombre)}&type=nombre&match=3&autorun=1`}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Volver a fuente INAPI
             </Link>
           </Button>
 
           <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
+            <Button asChild variant="secondary">
               <Link href={`/compare?brand=${encodeURIComponent(marca.nombre)}`}>Comparar evidencia visual</Link>
             </Button>
             {sourceUrl ? (
@@ -69,31 +69,32 @@ export default async function MarcaDetailPage({ params }: MarcaDetailPageProps) 
           </div>
         </div>
 
-        <header className="grid gap-7 border-b border-border pb-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+        <header className="grid gap-7 border-b border-border py-9 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
           <div>
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">VIDENTIA / Ficha de antecedente</p>
-            <h1 className="mt-3 max-w-4xl text-4xl font-medium tracking-[-0.045em] text-foreground sm:text-5xl lg:text-6xl">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#96B5A6]">VIDENTIA / FICHA DE ANTECEDENTE</p>
+            <h1 className="mt-3 max-w-5xl text-balance text-4xl font-light tracking-[-0.045em] text-[#E7DFCE] sm:text-5xl lg:text-6xl">
               {marca.nombre}
             </h1>
-            <p className="mt-4 max-w-3xl text-base leading-7 text-muted-foreground">
+            <p className="mt-4 max-w-3xl text-base leading-7 text-white/85">
               {marca.solicitante || "Titular o solicitante no informado en el registro disponible."}
             </p>
           </div>
 
           <div className="border-l border-border pl-5">
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Qué significa esta ficha</p>
-            <p className="mt-2 text-sm leading-6 text-foreground/85">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Cómo leer esta ficha</p>
+            <p className="mt-2 text-sm leading-6 text-white/80">
               Reúne datos del registro y antecedentes relacionados para facilitar revisión. No determina disponibilidad, confundibilidad jurídica ni registrabilidad.
             </p>
             <p className="mt-3 text-xs leading-5 text-muted-foreground">Fuente ≠ análisis ≠ decisión jurídica.</p>
           </div>
         </header>
 
-        <section aria-labelledby="record-facts-title">
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
+        <section className="border-b border-border py-8" aria-labelledby="record-facts-title">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">01 / Registro</p>
-              <h2 id="record-facts-title" className="mt-2 text-2xl font-medium tracking-tight">Datos observables</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#96B5A6]">01 / REGISTRO</p>
+              <h2 id="record-facts-title" className="mt-2 text-2xl font-light tracking-[-0.025em] text-[#E7DFCE]">Datos observables</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Datos disponibles en el registro sincronizado, sin inferir campos ausentes.</p>
             </div>
             <Badge variant="outline">{sourceName}</Badge>
           </div>
@@ -107,10 +108,10 @@ export default async function MarcaDetailPage({ params }: MarcaDetailPageProps) 
           </div>
         </section>
 
-        <section className="grid gap-7 lg:grid-cols-[1.05fr_0.95fr]" aria-labelledby="taxonomy-title">
+        <section className="grid gap-7 border-b border-border py-8 lg:grid-cols-[1.05fr_0.95fr]" aria-labelledby="taxonomy-title">
           <div>
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">02 / Clasificación</p>
-            <h2 id="taxonomy-title" className="mt-2 text-2xl font-medium tracking-tight">Ámbito visible del antecedente</h2>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#96B5A6]">02 / CLASIFICACIÓN</p>
+            <h2 id="taxonomy-title" className="mt-2 text-2xl font-light tracking-[-0.025em] text-[#E7DFCE]">Ámbito visible del antecedente</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
               Las clases y códigos ayudan a ubicar el registro. Abre una investigación para revisar contexto, coexistencia y otros antecedentes.
             </p>
@@ -122,11 +123,11 @@ export default async function MarcaDetailPage({ params }: MarcaDetailPageProps) 
           </div>
         </section>
 
-        <section aria-labelledby="review-title">
+        <section className="border-b border-border py-8" aria-labelledby="review-title">
           <div className="grid gap-6 border-y border-border py-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
             <div>
-              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">03 / Contexto relacionado</p>
-              <h2 id="review-title" className="mt-2 text-2xl font-medium tracking-tight">{summary.title}</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#96B5A6]">03 / CONTEXTO RELACIONADO</p>
+              <h2 id="review-title" className="mt-2 text-2xl font-light tracking-[-0.025em] text-[#E7DFCE]">{summary.title}</h2>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">{summary.recommendation}</p>
             </div>
             <div className="grid grid-cols-3 border-l border-border pl-5">
@@ -179,10 +180,10 @@ export default async function MarcaDetailPage({ params }: MarcaDetailPageProps) 
           </div>
         </section>
 
-        <section className="grid gap-7 lg:grid-cols-[1fr_1fr]" aria-labelledby="trace-title">
+        <section className="grid gap-7 border-b border-border py-8 lg:grid-cols-[1fr_1fr]" aria-labelledby="trace-title">
           <div>
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">04 / Trazabilidad</p>
-            <h2 id="trace-title" className="mt-2 text-2xl font-medium tracking-tight">Metadatos disponibles</h2>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#96B5A6]">04 / TRAZABILIDAD</p>
+            <h2 id="trace-title" className="mt-2 text-2xl font-light tracking-[-0.025em] text-[#E7DFCE]">Metadatos disponibles</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
               Se muestran únicamente campos que ayudan a rastrear el origen y estado del registro sincronizado.
             </p>
@@ -196,17 +197,17 @@ export default async function MarcaDetailPage({ params }: MarcaDetailPageProps) 
           </div>
         </section>
 
-        <section className="border-y border-border py-6">
-          <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
+        <section className="py-8">
+          <div className="grid gap-5 border-y border-border py-6 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
-              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Siguiente acción</p>
-              <p className="mt-2 text-lg font-medium text-foreground">Profundiza sólo donde la evidencia lo justifique.</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#96B5A6]">SIGUIENTE ACCIÓN</p>
+              <p className="mt-2 text-lg font-light text-[#E7DFCE]">Profundiza sólo donde la evidencia lo justifique.</p>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
                 Revisa la fuente oficial, abre antecedentes relacionados y usa comparación visual cuando exista un signo gráfico relevante.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button asChild variant="outline">
+              <Button asChild variant="secondary">
                 <Link href={`/investigar?q=${encodeURIComponent(marca.nombre)}`}>Investigar contexto</Link>
               </Button>
               <Button asChild>
@@ -235,7 +236,7 @@ function metadataText(metadata: Record<string, unknown> | undefined, keys: strin
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="border-b border-border py-4 sm:border-b-0 sm:border-r sm:px-5 sm:first:pl-0 sm:last:border-r-0">
-      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
       <p className="mt-2 text-sm font-medium text-foreground">{value}</p>
     </div>
   )
@@ -244,8 +245,8 @@ function Fact({ label, value }: { label: string; value: string }) {
 function CompactFact({ label, value }: { label: string; value: string }) {
   return (
     <div className="border-r border-border px-4 last:border-r-0">
-      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
-      <p className="mt-2 text-lg font-medium text-foreground">{value}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+      <p className="mt-2 text-lg font-light text-[#E7DFCE]">{value}</p>
     </div>
   )
 }
@@ -285,16 +286,16 @@ function TaxonomyRow({
 function MetadataRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid gap-2 py-3 sm:grid-cols-[160px_minmax(0,1fr)] sm:items-baseline">
-      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
       <p className="break-words text-sm text-foreground">{value || "—"}</p>
     </div>
   )
 }
 
 function priorityClassName(priority: "high" | "medium" | "low") {
-  if (priority === "high") return "font-mono text-[10px] uppercase tracking-[0.14em] text-destructive"
-  if (priority === "medium") return "font-mono text-[10px] uppercase tracking-[0.14em] text-warning"
-  return "font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground"
+  if (priority === "high") return "text-[10px] font-semibold uppercase tracking-[0.14em] text-destructive"
+  if (priority === "medium") return "text-[10px] font-semibold uppercase tracking-[0.14em] text-warning"
+  return "text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground"
 }
 
 function intersectCodes(left: string[], right: string[]) {
