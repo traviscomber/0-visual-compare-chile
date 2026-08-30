@@ -89,7 +89,7 @@ export default function InvestigarPage() {
   const hasResult = result !== null
   const isPreview = result?.preview === true || result?.accessTier === "free"
   const freeLimitReached = errorCode === "FREE_MONTHLY_LIMIT"
-  const enterpriseHref = `/contacto?origen=preview&marca=${encodeURIComponent(query.trim())}&resultados=${result?.total ?? 0}`
+  const enterpriseHref = `/acceso-empresarial?marca=${encodeURIComponent(query.trim())}`
 
   return (
     <OperationalPage>
@@ -153,7 +153,7 @@ export default function InvestigarPage() {
             <p>{error}</p>
             {freeLimitReached ? (
               <div className="mt-3">
-                <Link href="/contacto?origen=cuenta-gratuita" className="inline-flex min-h-9 items-center gap-2 bg-[#4A7F74] px-3 text-xs font-medium text-white transition-colors hover:bg-[#568D81]">
+                <Link href="/acceso-empresarial" className="inline-flex min-h-9 items-center gap-2 bg-[#4A7F74] px-3 text-xs font-medium text-white transition-colors hover:bg-[#568D81]">
                   Solicitar acceso empresarial <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
