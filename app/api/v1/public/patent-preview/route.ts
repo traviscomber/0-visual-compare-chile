@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  const quota = await reservePublicDemoQuota(getPublicDemoIdentity(request.headers))
+  const quota = await reservePublicDemoQuota(getPublicDemoIdentity(request.headers), "patent")
   if (!quota.ok) {
     return NextResponse.json(
       { error: "La vista preliminar de patentes no está disponible en este momento." },
@@ -46,7 +46,11 @@ export async function GET(request: NextRequest) {
   const rateHeaders = getPublicDemoRateHeaders(quota)
   if (!quota.allowed) {
     return NextResponse.json(
-      { error: "Ya utilizaste la vista preliminar disponible. Solicita acceso empresarial para continuar." },
+      {
+        error: "Ya utilizaste las consultas preliminares disponibles por esta hora.",
+        code: "PREVIEW_LIMIT_REACHED",
+        resetAt: quota.resetAt,
+      },
       { status: 429, headers: previewHeaders(rateHeaders) },
     )
   }
