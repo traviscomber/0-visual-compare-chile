@@ -1,0 +1,253 @@
+.demo-research-shell {
+  min-height: 100svh;
+  background: #091a20;
+  color: #ffffff;
+}
+
+.demo-research-shell main {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 78% 8%, rgba(69, 110, 142, 0.12), transparent 30rem),
+    radial-gradient(circle at 15% 22%, rgba(74, 127, 116, 0.08), transparent 26rem),
+    linear-gradient(180deg, #091a20 0, #0f2a33 18rem, #0f2a33 100%);
+}
+
+.demo-research-shell main::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.45;
+  background-image:
+    linear-gradient(rgba(183, 211, 209, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(183, 211, 209, 0.025) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(to bottom, #000 0, rgba(0, 0, 0, 0.7) 32rem, transparent 78rem);
+}
+
+.demo-research-shell main > * {
+  position: relative;
+  z-index: 1;
+}
+
+.demo-research-shell main > nav {
+  background: #091a20;
+  border-color: rgba(183, 211, 209, 0.1);
+  box-shadow: inset 0 -1px 0 rgba(74, 127, 116, 0.08);
+}
+
+.demo-research-shell main > nav > div {
+  min-height: 72px;
+}
+
+.demo-research-shell main > nav a,
+.demo-research-shell main button,
+.demo-research-shell main input {
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.demo-research-shell main > section {
+  position: relative;
+}
+
+.demo-research-shell main > section::after {
+  content: "";
+  position: absolute;
+  right: -10rem;
+  top: 8rem;
+  width: 24rem;
+  height: 24rem;
+  pointer-events: none;
+  border: 1px solid rgba(150, 181, 166, 0.08);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 4rem rgba(69, 110, 142, 0.018),
+    0 0 0 8rem rgba(74, 127, 116, 0.012);
+  z-index: -1;
+}
+
+.demo-research-shell main > section > div > div:first-child h1,
+.demo-research-shell main > section > div > header h1 {
+  text-wrap: balance;
+  text-shadow: 0 10px 40px rgba(9, 26, 32, 0.2);
+}
+
+.demo-research-shell main > section > div > div.mt-12 {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #13272d;
+  box-shadow:
+    inset 0 0 0 1px rgba(183, 211, 209, 0.06),
+    0 26px 72px rgba(9, 26, 32, 0.18);
+}
+
+.demo-research-shell main > section > div > div.mt-12::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 34%;
+  height: 1px;
+  background: rgba(150, 181, 166, 0.72);
+  box-shadow: 12rem 0 28rem rgba(69, 110, 142, 0.45);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.demo-research-shell main > section > div > div.mt-12 > div > div:first-child {
+  background:
+    radial-gradient(circle at 14% 12%, rgba(74, 127, 116, 0.07), transparent 18rem),
+    #13272d;
+}
+
+.demo-research-shell main > section > div > div.mt-12 aside {
+  background:
+    radial-gradient(circle at 92% 12%, rgba(69, 110, 142, 0.08), transparent 18rem),
+    #091a20;
+}
+
+.demo-research-shell main > section > div > div.mt-12 button[aria-label],
+.demo-research-shell main > section > div > div.mt-12 button[type="button"] {
+  position: relative;
+}
+
+.demo-research-shell main > section > div > div.mt-12 button[type="button"]::after {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  pointer-events: none;
+  border: 1px solid rgba(183, 211, 209, 0.025);
+  border-radius: 8px;
+}
+
+.demo-research-shell main > section > div > div.mt-12 button[type="button"]:hover {
+  transform: translateY(-1px);
+}
+
+.demo-research-shell main input {
+  background: #0b2027;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.015);
+}
+
+.demo-research-shell main input:hover:not(:disabled) {
+  border-color: rgba(150, 181, 166, 0.42);
+}
+
+.demo-research-shell main input:focus-visible {
+  box-shadow:
+    0 0 0 3px rgba(74, 127, 116, 0.13),
+    inset 0 0 0 1px rgba(150, 181, 166, 0.24);
+}
+
+.demo-research-shell main > section > div > header {
+  position: relative;
+}
+
+.demo-research-shell main > section > div > header::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: min(22rem, 45%);
+  height: 1px;
+  background: rgba(74, 127, 116, 0.58);
+}
+
+.demo-research-shell main > section > div > header + div {
+  background: linear-gradient(180deg, rgba(23, 47, 52, 0.18), transparent 16rem);
+}
+
+.demo-research-shell main article {
+  position: relative;
+}
+
+.demo-research-shell main article::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 1.75rem;
+  bottom: 1.75rem;
+  width: 1px;
+  background: rgba(74, 127, 116, 0);
+  transition: background-color 160ms ease;
+}
+
+.demo-research-shell main article:hover::before {
+  background: rgba(74, 127, 116, 0.55);
+}
+
+.demo-research-shell main article:hover {
+  background: linear-gradient(90deg, rgba(74, 127, 116, 0.025), transparent 48%);
+}
+
+.demo-research-shell main article img,
+.demo-research-shell main section img {
+  filter: saturate(0.94) contrast(1.02);
+}
+
+.demo-research-shell main [role="alert"] {
+  box-shadow: inset 3px 0 0 rgba(183, 211, 209, 0.34);
+}
+
+.demo-research-shell main footer {
+  border-color: rgba(183, 211, 209, 0.1);
+}
+
+.demo-research-shell + footer,
+.demo-research-shell ~ footer {
+  background: #091a20;
+}
+
+@media (max-width: 1023px) {
+  .demo-research-shell main::before {
+    background-size: 56px 56px;
+    opacity: 0.3;
+  }
+
+  .demo-research-shell main > section::after {
+    right: -16rem;
+    top: 15rem;
+  }
+
+  .demo-research-shell main > section > div > div.mt-12 {
+    box-shadow: inset 0 0 0 1px rgba(183, 211, 209, 0.055);
+  }
+}
+
+@media (max-width: 639px) {
+  .demo-research-shell main > nav > div {
+    min-height: 66px;
+  }
+
+  .demo-research-shell main > section::after {
+    display: none;
+  }
+
+  .demo-research-shell main > section > div > div.mt-12 {
+    border-radius: 10px;
+  }
+
+  .demo-research-shell main article:hover {
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-research-shell main a,
+  .demo-research-shell main button,
+  .demo-research-shell main input,
+  .demo-research-shell main article::before {
+    transition: none;
+  }
+
+  .demo-research-shell main > section > div > div.mt-12 button[type="button"]:hover {
+    transform: none;
+  }
+}
