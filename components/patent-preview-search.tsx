@@ -6,12 +6,10 @@ import { ArrowRight, Loader2, Search } from "lucide-react"
 import type { PublicLocale } from "@/lib/marketing-locale"
 
 type PreviewHit = {
-  id: string
   title: string
   status: string | null
   country: string | null
   ipc: string[]
-  relevanceScore: number
 }
 
 type PreviewResponse = {
@@ -73,7 +71,7 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
   }
 
   return (
-    <section className="border-y border-[#263D44] bg-[#0B2027] px-5 py-14 lg:px-10 lg:py-18">
+    <section className="border-y border-[#263D44] bg-[#0B2027] px-5 py-14 lg:px-10 lg:py-20">
       <div className="mx-auto grid max-w-[1480px] gap-8 lg:grid-cols-[0.85fr_1.15fr]">
         <div>
           <h2 className="text-[clamp(2.4rem,4vw,4.2rem)] font-light leading-[0.98] tracking-[-0.045em] text-[#E7DFCE]">{labels.title}</h2>
@@ -92,8 +90,8 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
 
           {result ? (
             <div className="mt-5 border-t border-[#263D44]">
-              {(result.results ?? []).length === 0 ? <p className="py-5 text-sm text-[#9EAAA8]">{labels.noResults}</p> : (result.results ?? []).map((hit) => (
-                <article key={hit.id} className="grid gap-3 border-b border-[#263D44] py-5 sm:grid-cols-[1fr_auto] sm:items-start">
+              {(result.results ?? []).length === 0 ? <p className="py-5 text-sm text-[#9EAAA8]">{labels.noResults}</p> : (result.results ?? []).map((hit, index) => (
+                <article key={`${hit.title}-${index}`} className="grid gap-3 border-b border-[#263D44] py-5 sm:grid-cols-[1fr_auto] sm:items-start">
                   <div>
                     <h3 className="text-base font-medium leading-6 text-[#E7DFCE]">{hit.title}</h3>
                     <p className="mt-2 text-xs text-[#879492]">{hit.country || "—"} · {hit.status || "—"}</p>
