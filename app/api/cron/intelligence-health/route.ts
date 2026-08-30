@@ -15,11 +15,18 @@ export async function GET(request: Request) {
   const startedAt = Date.now()
   try {
     const admin = createAdminClient()
-    const { data, error } = await admin.rpc("run_intelligence_health_sweep", {
-      p_context: "vercel_health_cron",
+    const [healthResult, calibrationResult] = await Promise.all([
+      admin.rpc("run_intelligence_health_sweep", { p_context: "vercel_health_cron" }),
+      admin.rpc("run_intelligence_calibration_snapshot", { p_context: "vercel_health_cron" }),
+    ])
+    if (healthResult.error) throw new Error(`Health sweep failed: ${healthResult.error.message}`)
+    if (calibrationResult.error) throw new Error(`Calibration snapshot failed: ${calibrationResult.error.message}`)
+    return NextResponse.json({
+      ok: true,
+      durationMs: Date.now() - startedAt,
+      health: healthResult.data,
+      calibration: calibrationResult.data,
     })
-    if (error) throw new Error(error.message)
-    return NextResponse.json({ ok: true, durationMs: Date.now() - startedAt, result: data })
   } catch (error) {
     console.error("[cron/intelligence-health] sweep failed", error)
     return NextResponse.json(
