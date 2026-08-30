@@ -8,6 +8,7 @@ import OpenAI from "openai"
 import { zodResponseFormat } from "openai/helpers/zod"
 import { z } from "zod"
 import { TrademarkAgent } from "@/lib/agent/trademark-agent"
+import { isFreeAccessUser } from "@/lib/free-research-quota"
 import { createClient } from "@/lib/supabase/server"
 
 export const runtime = "nodejs"
@@ -30,6 +31,16 @@ export async function POST(request: NextRequest) {
 
   if (authError || !user) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401, headers: noStoreHeaders() })
+  }
+
+  if (isFreeAccessUser(user)) {
+    return NextResponse.json(
+      {
+        error: "La evaluación asistida, recomendaciones y análisis de conflicto están disponibles sólo para acceso empresarial.",
+        code: "ENTERPRISE_ACCESS_REQUIRED",
+      },
+      { status: 403, headers: noStoreHeaders() },
+    )
   }
 
   try {
@@ -181,6 +192,12 @@ export async function GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: "No autorizado." }, { status: 401, headers: noStoreHeaders() })
+  if (isFreeAccessUser(user)) {
+    return NextResponse.json(
+      { error: "El análisis asistido requiere acceso empresarial.", code: "ENTERPRISE_ACCESS_REQUIRED" },
+      { status: 403, headers: noStoreHeaders() },
+    )
+  }
 
   return NextResponse.json({
     endpoint: "POST /api/v1/agent/analyze",
