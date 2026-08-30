@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { syncCurrentYearInapiOpenData } from "@/lib/inapi/open-data-sync"
 import { syncCurrentYearPatentOpenData, syncNextPatentHistoryBatch } from "@/lib/inapi/patent-open-data-sync"
+import { detectStrategicChanges } from "@/lib/intelligence/strategic-change-engine"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 export const runtime = "nodejs"
@@ -23,10 +24,13 @@ export async function GET(request: Request) {
       syncCurrentYearPatentOpenData(),
     ])
 
-    // Detect competitive alerts BEFORE historical backfill so old records never become "new" alerts.
+    // Detect competitive alerts and strategic patterns BEFORE historical backfill
+    // so old records can never become "new" signals.
     const admin = createAdminClient()
     const { data: patentAlerts, error: alertError } = await admin.rpc("detect_patent_watch_events")
     if (alertError) throw new Error(`Patent alert detection failed: ${alertError.message}`)
+
+    const strategicChanges = await detectStrategicChanges(admin)
 
     // Then consume a bounded slice of the missing 2009-2025 applications history.
     // Two years/run keeps the cron restart-safe and inside the Vercel duration budget.
@@ -38,6 +42,7 @@ export async function GET(request: Request) {
       trademarks,
       patents,
       patentAlerts,
+      strategicChanges,
       patentHistory,
     })
   } catch (error) {

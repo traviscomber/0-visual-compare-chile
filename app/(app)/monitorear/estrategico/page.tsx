@@ -70,12 +70,45 @@ type ObservedChange = {
   materiality: "alta" | "media" | "baja"
   changed_fields: string[]
 }
+type StrategicEvidence = {
+  id: string
+  kind: "patent" | "trademark"
+  change_type: string
+  title: string
+  summary: string | null
+  source_url: string | null
+  source_date: string | null
+  observed_at: string
+  role: string
+}
+type StrategicChange = {
+  id: string
+  subject_name: string
+  change_type: string
+  title: string
+  observed_fact: string
+  interpretation: string
+  why_it_matters: string
+  materiality: "alta" | "media" | "baja"
+  confidence: number
+  event_count: number
+  distinct_records: number
+  patent_events: number
+  trademark_events: number
+  classification_codes: string[]
+  period_start: string
+  period_end: string
+  first_observed_at: string
+  last_observed_at: string
+  evidence: StrategicEvidence[]
+}
 type ChangeDetection = {
   ready: boolean
   baselines_ready: number
   baselines_expected: number
   states_total: number
   events_7d: number
+  strategic_changes_7d: number
   last_observed_at: string | null
 }
 type WeeklyContext = {
@@ -87,6 +120,7 @@ type WeeklyContext = {
     trademarks: CoverageSlice
   }
   change_detection: ChangeDetection
+  strategic_changes: StrategicChange[]
   observed_changes: ObservedChange[]
   recent_activity: RecentActivity[]
 }
@@ -116,9 +150,9 @@ export default function StrategicMonitoringPage() {
       return new Date(b.first_seen_at).getTime() - new Date(a.first_seen_at).getTime()
     }), [signals, weeklyContext?.window_start])
   const externalWeeklySignals = useMemo(() => weeklySignals.filter(item => item.source_key !== "inapi_open_data"), [weeklySignals])
-  const observedHigh = useMemo(() => (weeklyContext?.observed_changes ?? []).filter(item => item.materiality === "alta").length, [weeklyContext?.observed_changes])
-  const headlineWeeklyChanges = (weeklyContext?.change_detection.events_7d ?? 0) + externalWeeklySignals.length
-  const headlineHigh = observedHigh + externalWeeklySignals.filter(item => item.relevance === "alta").length
+  const strategicHigh = useMemo(() => (weeklyContext?.strategic_changes ?? []).filter(item => item.materiality === "alta").length, [weeklyContext?.strategic_changes])
+  const strategicWeeklyChanges = weeklyContext?.change_detection.strategic_changes_7d ?? 0
+  const observedEvidence = (weeklyContext?.change_detection.events_7d ?? 0) + externalWeeklySignals.length
 
   async function load() {
     setLoading(true)
@@ -212,10 +246,10 @@ export default function StrategicMonitoringPage() {
     />
 
     <OperationalMetricRail>
-      <OperationalMetric value={headlineWeeklyChanges} label="Cambios observados" detail="INAPI + señales externas / 7 días" tone={headlineWeeklyChanges ? "success" : "neutral"} />
-      <OperationalMetric value={headlineHigh} label="Alta relevancia" detail="Cambios que requieren revisión" tone={headlineHigh ? "warning" : "neutral"} />
+      <OperationalMetric value={strategicWeeklyChanges} label="Cambios estratégicos" detail="Patrones detectados / 7 días" tone={strategicWeeklyChanges ? "success" : "neutral"} />
+      <OperationalMetric value={strategicHigh} label="Alta materialidad" detail="Patrones que requieren revisión" tone={strategicHigh ? "warning" : "neutral"} />
+      <OperationalMetric value={observedEvidence} label="Evidencias observadas" detail="INAPI + señales externas / 7 días" tone={observedEvidence ? "success" : "neutral"} />
       <OperationalMetric value={active.length} label="Vigilancias activas" detail="Tecnologías y empresas" tone={active.length ? "success" : "neutral"} />
-      <OperationalMetric value={summary.total_history} label="Evidencias" detail="Historial personalizado" />
     </OperationalMetricRail>
 
     <WeeklyBriefSection loading={loading} signals={weeklySignals} context={weeklyContext} />
@@ -268,8 +302,9 @@ export default function StrategicMonitoringPage() {
 
 function WeeklyBriefSection({ loading, signals, context }: { loading: boolean; signals: Signal[]; context: WeeklyContext | null }) {
   const externalSignals = signals.filter(signal => signal.source_key !== "inapi_open_data")
+  const strategicChanges = context?.strategic_changes ?? []
   const observedChanges = context?.observed_changes ?? []
-  const hasChanges = observedChanges.length > 0 || externalSignals.length > 0
+  const hasChanges = strategicChanges.length > 0 || observedChanges.length > 0 || externalSignals.length > 0
 
   return <section className="border-b border-border/80 py-9">
     <OperationalSectionHeader
@@ -277,10 +312,11 @@ function WeeklyBriefSection({ loading, signals, context }: { loading: boolean; s
       title="Qué cambió esta semana"
       action={context ? <span className="text-xs text-muted-foreground">{formatDate(context.window_start)} — {formatDate(context.window_end)}</span> : undefined}
     />
-    <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Cambios observados por VIDENTIA en la fuente oficial y señales externas relevantes. La fecha del expediente se mantiene separada de la fecha en que el cambio fue detectado.</p>
+    <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">VIDENTIA distingue entre evidencia observada y patrones estratégicos. Un patrón sólo se eleva cuando varias señales convergen bajo reglas explícitas y conserva sus expedientes de respaldo.</p>
 
     {loading ? <div className="mt-6 flex items-center gap-2 border-y border-border/80 py-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Construyendo el brief con la cobertura disponible…</div> : hasChanges ? <>
-      {observedChanges.length ? <div className="mt-6"><p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Cambios observados en INAPI</p><div className="mt-3 divide-y divide-border/80 border-y border-border/80">{observedChanges.slice(0, 6).map(change => <ObservedChangeRow key={change.id} change={change} />)}</div></div> : null}
+      {strategicChanges.length ? <div className="mt-6"><p className="text-xs font-medium uppercase tracking-[0.12em] text-[#96B5A6]">Cambios estratégicos detectados</p><div className="mt-3 divide-y divide-border/80 border-y border-border/80">{strategicChanges.slice(0, 6).map(change => <StrategicChangeRow key={change.id} change={change} />)}</div></div> : null}
+      {observedChanges.length ? <div className="mt-8"><p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Evidencia observada en INAPI</p><div className="mt-3 divide-y divide-border/80 border-y border-border/80">{observedChanges.slice(0, 4).map(change => <ObservedChangeRow key={change.id} change={change} />)}</div></div> : null}
       {externalSignals.length ? <div className="mt-8"><p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Señales externas en tus vigilancias</p><div className="mt-3 divide-y divide-border/80 border-y border-border/80">{externalSignals.slice(0, 4).map(signal => <WeeklySignalRow key={signal.id} signal={signal} />)}</div></div> : null}
     </> : <WeeklyEmptyState context={context} />}
 
@@ -293,6 +329,35 @@ function WeeklyBriefSection({ loading, signals, context }: { loading: boolean; s
       </div> : null}
     </> : null}
   </section>
+}
+
+function StrategicChangeRow({ change }: { change: StrategicChange }) {
+  return <article className="py-6">
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge className="bg-[#173B37] text-[#96B5A6] hover:bg-[#173B37]">{strategicChangeLabel(change.change_type)}</Badge>
+          <span className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">{change.subject_name}</span>
+          <span className={`text-[10px] font-medium uppercase tracking-[0.13em] ${change.materiality === "alta" ? "text-[#D8C49C]" : "text-[#96B5A6]"}`}>Materialidad {change.materiality}</span>
+          <span className="text-[10px] font-medium uppercase tracking-[0.13em] text-[#D5E0E3]">Confianza {change.confidence}/100</span>
+        </div>
+        <h3 className="mt-2 text-lg font-medium leading-7 text-white">{change.title}</h3>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <BriefFact label="Hecho observado" text={change.observed_fact} />
+          <BriefFact label="Interpretación" text={change.interpretation} />
+          <BriefFact label="Por qué importa" text={change.why_it_matters} />
+        </div>
+        <p className="mt-4 text-xs leading-5 text-muted-foreground">{change.event_count} evidencias · {change.distinct_records} expedientes · {change.patent_events} patentes · {change.trademark_events} marcas{change.classification_codes.length ? ` · IPC ${change.classification_codes.join(", ")}` : ""} · última evidencia {formatDate(change.last_observed_at)}</p>
+      </div>
+    </div>
+    {change.evidence.length ? <div className="mt-5 grid gap-2 border-l border-border/80 pl-4 sm:grid-cols-2">
+      {change.evidence.slice(0, 4).map(item => <div key={item.id} className="min-w-0">
+        <div className="flex items-center gap-2"><span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{item.kind === "patent" ? "Patente" : "Marca"}</span><span className="text-[10px] text-muted-foreground">{sourceChangeLabel(item.change_type)}</span></div>
+        <p className="mt-1 truncate text-xs text-[#D5E0E3]" title={item.title}>{item.title}</p>
+        {item.source_url ? <a className="mt-1 inline-flex items-center gap-1 text-xs text-[#96B5A6] hover:underline" href={item.source_url} target="_blank" rel="noreferrer">Ver evidencia <ExternalLink className="h-3 w-3" /></a> : null}
+      </div>)}
+    </div> : null}
+  </article>
 }
 
 function ObservedChangeRow({ change }: { change: ObservedChange }) {
@@ -340,8 +405,8 @@ function WeeklyEmptyState({ context }: { context: WeeklyContext | null }) {
   const staleSync = context ? !context.coverage.patents.synchronized_recently || !context.coverage.trademarks.synchronized_recently : false
   return <div className="mt-6 border-y border-border/80 py-9">
     <Activity className="h-5 w-5 text-[#96B5A6]" />
-    <p className="mt-3 font-medium text-white">{changeEngineReady ? "No se detectaron cambios materiales en los últimos 7 días." : "El motor de cambios está construyendo su línea base."}</p>
-    <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{changeEngineReady ? "VIDENTIA compara cada sincronización contra el estado observado anteriormente. La ausencia de cambios no se interpreta como ausencia de actividad fuera de las fuentes cubiertas." : "La primera sincronización memoriza el estado actual sin convertir antecedentes históricos en alertas. A partir de la siguiente pasada, VIDENTIA registra cada modificación observada."}</p>
+    <p className="mt-3 font-medium text-white">{changeEngineReady ? "No se detectaron patrones estratégicos ni cambios materiales en los últimos 7 días." : "El motor de cambios está construyendo su línea base."}</p>
+    <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{changeEngineReady ? "VIDENTIA compara cada sincronización contra el estado anterior y sólo eleva patrones cuando varias evidencias convergen. La ausencia de patrones no se interpreta como ausencia de actividad fuera de las fuentes cubiertas." : "La primera sincronización memoriza el estado actual sin convertir antecedentes históricos en alertas. A partir de la siguiente pasada, VIDENTIA registra cada modificación observada y evalúa patrones agregados."}</p>
     {staleSync ? <div className="mt-4 flex max-w-3xl gap-3 border-l-2 border-[#C9A56A] pl-4"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A56A]" /><p className="text-sm leading-6 text-[#D8C49C]">La última sincronización de una fuente supera dos días. El brief mantiene esa limitación visible para evitar conclusiones falsas.</p></div> : null}
   </div>
 }
@@ -349,7 +414,7 @@ function WeeklyEmptyState({ context }: { context: WeeklyContext | null }) {
 function ChangeEngineStatus({ status }: { status: ChangeDetection }) {
   return <div className={`mt-6 flex gap-3 border-l-2 pl-4 ${status.ready ? "border-[#96B5A6]" : "border-[#C9A56A]"}`}>
     {status.ready ? <Activity className="mt-0.5 h-4 w-4 shrink-0 text-[#96B5A6]" /> : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A56A]" />}
-    <div><p className="text-sm font-medium text-white">{status.ready ? "Motor de cambios activo" : "Inicializando motor de cambios"}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{status.baselines_ready}/{status.baselines_expected} fuentes con línea base · {formatNumber(status.states_total)} estados persistidos · {formatNumber(status.events_7d)} cambios observados en 7 días{status.last_observed_at ? ` · último ${formatDate(status.last_observed_at)}` : ""}</p></div>
+    <div><p className="text-sm font-medium text-white">{status.ready ? "Motor de cambios activo" : "Inicializando motor de cambios"}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{status.baselines_ready}/{status.baselines_expected} fuentes con línea base · {formatNumber(status.states_total)} estados persistidos · {formatNumber(status.events_7d)} eventos observados · {formatNumber(status.strategic_changes_7d)} patrones estratégicos en 7 días{status.last_observed_at ? ` · último ${formatDate(status.last_observed_at)}` : ""}</p></div>
   </div>
 }
 
@@ -415,6 +480,15 @@ function sourceChangeLabel(type: string) {
   if (type === "classification_changed") return "Cambio de clasificación"
   if (type === "title_changed") return "Cambio de título"
   return "Expediente actualizado"
+}
+
+function strategicChangeLabel(type: string) {
+  if (type === "protection_acceleration") return "Aceleración de protección"
+  if (type === "cross_ip_expansion") return "Patentes + marcas"
+  if (type === "technology_concentration") return "Concentración tecnológica"
+  if (type === "portfolio_maturation") return "Maduración de portafolio"
+  if (type === "ownership_concentration") return "Concentración de titularidad"
+  return "Cambio estratégico"
 }
 
 function interpretationForSignal(signal: Signal) {
