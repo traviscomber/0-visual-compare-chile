@@ -1,6 +1,7 @@
 "use client"
 
-import { FormEvent, useState } from "react"
+import Link from "next/link"
+import { FormEvent, useEffect, useState } from "react"
 import {
   ArrowDownRight,
   ArrowRight,
@@ -16,6 +17,7 @@ import { OperationalMetric, OperationalMetricRail, OperationalSectionHeader } fr
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { strategicWatchHref, technologyHref } from "@/lib/intelligence/navigation-context"
 
 const EXAMPLES = ["extracción directa de litio", "hidrógeno verde", "almacenamiento térmico", "desalación electroquímica"]
 
@@ -69,15 +71,17 @@ export function TechnologySignalsWorkbench() {
   const [result, setResult] = useState<TechnologySignalResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const run = async (event?: FormEvent) => {
+  const run = async (event?: FormEvent, override?: { query: string; windowDays: number }, syncUrl: boolean = true) => {
     event?.preventDefault()
-    const q = query.trim()
+    const q = (override?.query ?? query).trim()
+    const nextWindowDays = override?.windowDays ?? windowDays
     if (q.length < 2 || loading) return
 
     setLoading(true)
     setError(null)
     try {
-      const params = new URLSearchParams({ q, windowDays: String(windowDays) })
+      const params = new URLSearchParams({ q, windowDays: String(nextWindowDays) })
+      if (syncUrl && typeof window !== "undefined") window.history.replaceState(null, "", technologyHref(q, nextWindowDays))
       const response = await fetch(`/api/intelligence/technology-signals?${params}`, { cache: "no-store" })
       const payload = (await response.json().catch(() => ({}))) as TechnologySignalResponse
       if (!response.ok) {
@@ -93,6 +97,17 @@ export function TechnologySignalsWorkbench() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const requestedTechnology = params.get("technology")?.trim()
+    if (!requestedTechnology) return
+    const requestedWindow = Number(params.get("windowDays"))
+    const normalizedWindow = requestedWindow === 90 || requestedWindow === 365 ? requestedWindow : 180
+    setQuery(requestedTechnology)
+    setWindowDays(normalizedWindow)
+    void run(undefined, { query: requestedTechnology, windowDays: normalizedWindow }, false)
+  }, [])
 
   const chooseExample = (value: string) => {
     setQuery(value)
@@ -171,9 +186,12 @@ function TechnologyResult({ result }: { result: TechnologySignalResponse }) {
             <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#96B5A6]">Señal observada</p>
             <h2 className="mt-2 text-[1.85rem] font-light tracking-[-0.035em] text-[#E7DFCE]">{result.query}</h2>
           </div>
-          <Badge variant="outline" className={`${trend.className} gap-1.5 px-3 py-1.5 text-xs`}>
-            <TrendIcon className="size-3.5" /> {trend.label}
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild variant="outline" size="sm"><Link href={strategicWatchHref("technology", result.query)}>Vigilar tecnología</Link></Button>
+            <Badge variant="outline" className={`${trend.className} gap-1.5 px-3 py-1.5 text-xs`}>
+              <TrendIcon className="size-3.5" /> {trend.label}
+            </Badge>
+          </div>
         </div>
         <p className="mt-4 max-w-3xl text-sm leading-6 text-muted-foreground">{result.momentum.basis}</p>
       </section>
