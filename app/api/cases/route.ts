@@ -32,6 +32,14 @@ export async function PATCH(request: Request) {
   if (!body.id) return NextResponse.json({ error: "Falta id." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
 
   if (body.status === "decided") {
+    let decisionSummary = body.decisionSummary?.trim() ?? ""
+    if (!decisionSummary) {
+      const { data: currentCase, error: caseError } = await auth.supabase.from("cases").select("decision_summary").eq("id", body.id).maybeSingle()
+      if (caseError) return NextResponse.json({ error: "No pudimos verificar la decisión del caso." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
+      decisionSummary = currentCase?.decision_summary?.trim() ?? ""
+    }
+    if (!decisionSummary) return NextResponse.json({ error: "Registra la decisión del equipo antes de marcar el caso como decidido." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
+
     const { data: governance } = await auth.supabase.from("case_governance").select("case_id,current_round_id").eq("case_id", body.id).maybeSingle()
     if (governance) {
       const { data: stateRows, error: stateError } = await auth.supabase.rpc("get_case_governance_status", { p_case_id: body.id })
