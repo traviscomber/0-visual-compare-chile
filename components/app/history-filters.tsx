@@ -7,7 +7,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-export function HistoryFilters({ defaultClassification, defaultQuery }: { defaultClassification: string; defaultQuery: string }) {
+export function HistoryFilters({
+  defaultClassification,
+  defaultQuery,
+  basePath = "/history",
+}: {
+  defaultClassification: string
+  defaultQuery: string
+  basePath?: "/history" | "/reportes"
+}) {
   const router = useRouter()
   const params = useSearchParams()
   const [pending, startTransition] = useTransition()
@@ -21,7 +29,7 @@ export function HistoryFilters({ defaultClassification, defaultQuery }: { defaul
     next.delete("max")
     if (value && value !== "all") next.set(key, value)
     else next.delete(key)
-    startTransition(() => router.replace(`/history${next.toString() ? `?${next}` : ""}`))
+    startTransition(() => router.replace(`${basePath}${next.toString() ? `?${next}` : ""}`))
   }
 
   useEffect(() => {
@@ -31,7 +39,7 @@ export function HistoryFilters({ defaultClassification, defaultQuery }: { defaul
 
   const reset = () => {
     setQuery("")
-    startTransition(() => router.replace("/history"))
+    startTransition(() => router.replace(basePath))
   }
 
   const hasFilters = Boolean(defaultClassification !== "all" || defaultQuery)
@@ -42,7 +50,12 @@ export function HistoryFilters({ defaultClassification, defaultQuery }: { defaul
         <label className="text-xs font-medium text-muted-foreground">Buscar en recomendaciones</label>
         <div className="relative mt-1">
           <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} placeholder="Ej: revisar forma, coincidencia denominativa…" className="pl-8" onChange={(event) => setQuery(event.target.value)} />
+          <Input
+            value={query}
+            placeholder="Ej: revisar forma, coincidencia denominativa…"
+            className="pl-8"
+            onChange={(event) => setQuery(event.target.value)}
+          />
         </div>
       </div>
 
@@ -62,8 +75,8 @@ export function HistoryFilters({ defaultClassification, defaultQuery }: { defaul
       </div>
 
       <div className="flex items-center gap-2">
-        {hasFilters && <Button variant="ghost" size="sm" onClick={reset}><X className="mr-1 h-4 w-4" />Limpiar</Button>}
-        {pending && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground motion-reduce:animate-none" />}
+        {hasFilters ? <Button variant="ghost" size="sm" onClick={reset}><X className="mr-1 h-4 w-4" />Limpiar</Button> : null}
+        {pending ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground motion-reduce:animate-none" /> : null}
       </div>
     </div>
   )
