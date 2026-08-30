@@ -36,12 +36,14 @@ const healthRoute = await readFile("app/api/intelligence/health/route.ts", "utf8
 const healthModel = await readFile("lib/intelligence/health.ts", "utf8")
 const cronRoute = await readFile("app/api/cron/inapi-open-data/route.ts", "utf8")
 const ingestionObservability = await readFile("lib/intelligence/ingestion-observability.ts", "utf8")
+const retryPolicy = await readFile("lib/intelligence/fetch-with-retry.ts", "utf8")
 const companiesPage = await readFile("app/(app)/empresas/page.tsx", "utf8")
 const sourcesPage = await readFile("app/(app)/fuentes/page.tsx", "utf8")
 const healthMigration = await readFile("supabase/migrations/20260830214913_add_intelligence_health_quality.sql", "utf8")
 const graphMigration = await readFile("supabase/migrations/20260830215014_add_company_entity_graph_v2.sql", "utf8")
 const graphFixMigration = await readFile("supabase/migrations/20260830215054_fix_company_graph_v2_counts.sql", "utf8")
 const bootstrapMigration = await readFile("supabase/migrations/20260830215519_bootstrap_observed_source_health.sql", "utf8")
+const catalogHealthMigration = await readFile("supabase/migrations/20260830231309_align_catalog_only_source_health.sql", "utf8")
 
 for (const needle of [
   'q0 >= 2 && prior === 0',
@@ -63,6 +65,8 @@ for (const needle of ["startIntelligenceIngestion", "finishIntelligenceIngestion
 if (!cronRoute.includes("qualityFailures > 0")) fail("critical quality failures do not affect cron status")
 if (!cronRoute.includes('status: "partial"')) fail("cron does not persist partial pipeline outcomes")
 if (!cronRoute.includes('ingestionStatus: coreSyncCompleted ? "partial" : "failed"')) fail("cron response does not distinguish partial from failed ingestion")
+if (!cronRoute.includes("withSourceRetry")) fail("INAPI cron does not use bounded transient retries")
+if (!cronRoute.includes("IntelligenceCircuitOpenError")) fail("INAPI cron does not expose circuit-blocked execution")
 const qualityIndex = cronRoute.indexOf('run_intelligence_quality_checks')
 const completedIndex = cronRoute.indexOf('status: "completed"')
 if (qualityIndex < 0 || completedIndex < 0 || completedIndex < qualityIndex) fail("ingestion is marked completed before quality checks finish")
@@ -74,6 +78,12 @@ const partialBranch = ingestionObservability.slice(partialBranchStart, completed
 if (partialBranch.includes("last_success_at")) fail("partial ingestion incorrectly advances last_success_at")
 if (!partialBranch.includes("last_attempt_at")) fail("partial ingestion does not preserve last attempt evidence")
 if (!partialBranch.includes("last_error")) fail("partial ingestion does not degrade source health")
+for (const needle of ["blockedByCircuit", 'circuit_state: circuitIsOpen ? "half_open"', "circuit_open_until"]) {
+  if (!ingestionObservability.includes(needle)) fail(`circuit breaker missing invariant: ${needle}`)
+}
+for (const needle of ["withSourceRetry", "isTransientSourceError", "attempts", "baseDelayMs"]) {
+  if (!retryPolicy.includes(needle)) fail(`retry policy missing invariant: ${needle}`)
+}
 
 if (!healthModel.includes('diaria: 36')) fail("daily source SLA is not explicit")
 if (!healthModel.includes('semanal: 24 * 9')) fail("weekly source SLA is not explicit")
@@ -95,5 +105,9 @@ for (const needle of ["intelligence_company_entity_links", "intelligence_company
 if (!graphMigration.includes("parent_of") || !graphMigration.includes("subsidiary_of")) fail("corporate graph lacks explicit relation semantics")
 if (!graphFixMigration.includes("marks_all") || !graphFixMigration.includes("classifications as")) fail("graph count multiplication regression is unprotected")
 if (!bootstrapMigration.includes("max(last_synced_at)") || !bootstrapMigration.includes("source_key='tdpi'")) fail("source health bootstrap is not evidence-based")
+for (const sourceKey of ["registro_empresas", "superir", "wipo_lex_cl"]) {
+  if (!catalogHealthMigration.includes(sourceKey)) fail(`catalog-only health migration missing ${sourceKey}`)
+}
+if (!catalogHealthMigration.includes("is_active = false")) fail("catalog-only sources are still presented as operational")
 
-console.log("Grade A block 1-3 regression PASS: health/quality wiring, partial-success lifecycle, non-destructive entity graph, 360-day trajectory guardrails, authenticated APIs and migration history.")
+console.log("Grade A block 1-3 regression PASS: health/quality wiring, partial-success lifecycle, retry/circuit policy, non-destructive entity graph, 360-day trajectory guardrails, authenticated APIs and migration history.")
