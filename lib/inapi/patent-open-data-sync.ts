@@ -1,9 +1,16 @@
 import "server-only"
 import { createAdminClient } from "@/lib/supabase/admin"
+import {
+  isChangeBaselineInitialized,
+  markChangeBaselineCompleted,
+  recordSourceBatchChanges,
+  type SourceChangeRecord,
+} from "@/lib/intelligence/source-change-recorder"
 
 const CKAN_BASE = process.env.INAPI_OPEN_DATA_CKAN_BASE || "https://datos.gob.cl/api/3/action"
 const DATASETS = ["solicitudes-de-patentes", "registros-de-patentes"] as const
 const APPLICATIONS_DATASET = "solicitudes-de-patentes" as const
+const CHANGE_SOURCE_KEY = "inapi_open_data"
 const PAGE_SIZE = 1000
 const UPSERT_BATCH_SIZE = 500
 const HISTORY_START_YEAR = 2009
@@ -21,10 +28,13 @@ export interface PatentOpenDataSyncSummary {
     normalized: number
     upserted: number
     ipcLinks: number
+    changeEvents: number
+    changeBaseline: boolean
   }>
   totalFetched: number
   totalUpserted: number
   totalIpcLinks: number
+  totalChangeEvents: number
 }
 
 export interface PatentHistoryBackfillSummary {
@@ -39,17 +49,18 @@ export interface PatentHistoryBackfillSummary {
 }
 
 export async function syncCurrentYearPatentOpenData(year = new Date().getUTCFullYear()): Promise<PatentOpenDataSyncSummary> {
-  return syncPatentOpenDataYear(year, [...DATASETS])
+  return syncPatentOpenDataYear(year, [...DATASETS], true)
 }
 
 export async function syncPatentOpenDataYear(
   year: number,
   datasets: Array<(typeof DATASETS)[number]> = [...DATASETS],
+  trackChanges = year === new Date().getUTCFullYear(),
 ): Promise<PatentOpenDataSyncSummary> {
   const startedAt = new Date().toISOString()
   const summaries: PatentOpenDataSyncSummary["datasets"] = []
 
-  for (const dataset of datasets) summaries.push(await syncDataset(dataset, year))
+  for (const dataset of datasets) summaries.push(await syncDataset(dataset, year, trackChanges))
 
   return {
     startedAt,
@@ -59,12 +70,14 @@ export async function syncPatentOpenDataYear(
     totalFetched: summaries.reduce((sum, item) => sum + item.fetched, 0),
     totalUpserted: summaries.reduce((sum, item) => sum + item.upserted, 0),
     totalIpcLinks: summaries.reduce((sum, item) => sum + item.ipcLinks, 0),
+    totalChangeEvents: summaries.reduce((sum, item) => sum + item.changeEvents, 0),
   }
 }
 
 /**
  * Incrementally fills the official INAPI applications history without making the daily cron unbounded.
  * Completed years are discovered from inapi_sync_runs, so the process is restart-safe and idempotent.
+ * Historical backfill never emits change events: only current-year refreshes feed the change engine.
  */
 export async function syncNextPatentHistoryBatch(maxYears = 2): Promise<PatentHistoryBackfillSummary> {
   const startedAt = new Date().toISOString()
@@ -96,7 +109,7 @@ export async function syncNextPatentHistoryBatch(maxYears = 2): Promise<PatentHi
 
   for (const year of attemptedYears) {
     try {
-      summaries.push(await syncPatentOpenDataYear(year, [APPLICATIONS_DATASET]))
+      summaries.push(await syncPatentOpenDataYear(year, [APPLICATIONS_DATASET], false))
       completedBefore.add(year)
     } catch (error) {
       console.error(`[patent-history] ${year} failed`, error)
@@ -119,7 +132,7 @@ export async function syncNextPatentHistoryBatch(maxYears = 2): Promise<PatentHi
   }
 }
 
-async function syncDataset(dataset: (typeof DATASETS)[number], year: number) {
+async function syncDataset(dataset: (typeof DATASETS)[number], year: number, trackChanges: boolean) {
   const admin = createAdminClient()
   const packageInfo = await ckan("package_show", { id: dataset })
   const resource = chooseYearResource(packageInfo.resources || [], year)
@@ -132,7 +145,7 @@ async function syncDataset(dataset: (typeof DATASETS)[number], year: number) {
       status: "running",
       search_type: "patent_open_data",
       query: `${dataset}:${year}`,
-      metadata: { dataset, year, resource_id: resource.id, resource_name: resource.name ?? null, trigger: "vercel-cron" },
+      metadata: { dataset, year, resource_id: resource.id, resource_name: resource.name ?? null, trigger: "vercel-cron", track_changes: trackChanges },
       started_at: new Date().toISOString(),
     })
     .select("id")
@@ -140,11 +153,17 @@ async function syncDataset(dataset: (typeof DATASETS)[number], year: number) {
 
   if (runError || !run?.id) throw new Error(`Could not create patent sync run: ${runError?.message || "unknown"}`)
 
+  const baselineInitialized = trackChanges
+    ? await isChangeBaselineInitialized(admin, CHANGE_SOURCE_KEY, "patent", dataset)
+    : true
+  const baselineMode = trackChanges && !baselineInitialized
+
   let offset = 0
   let fetched = 0
   let normalized = 0
   let upserted = 0
   let ipcLinks = 0
+  let changeEvents = 0
   let total = 0
 
   try {
@@ -159,23 +178,40 @@ async function syncDataset(dataset: (typeof DATASETS)[number], year: number) {
       normalized += rows.length
 
       for (let index = 0; index < rows.length; index += UPSERT_BATCH_SIZE) {
-        const result = await upsertBatch(admin, rows.slice(index, index + UPSERT_BATCH_SIZE))
+        const batch = rows.slice(index, index + UPSERT_BATCH_SIZE)
+        const result = await upsertBatch(admin, batch)
         upserted += result.upserted
         ipcLinks += result.ipcLinks
+
+        if (trackChanges) {
+          const changes = await recordSourceBatchChanges(admin, {
+            sourceKey: CHANGE_SOURCE_KEY,
+            entityType: "patent",
+            dataset,
+            syncRunId: String(run.id),
+            baselineMode,
+            records: batch.map(toPatentChangeRecord),
+          })
+          changeEvents += changes.changes
+        }
       }
 
       offset += records.length
       await admin.from("inapi_sync_runs").update({
         total_fetched: total,
         inserted_count: upserted,
-        updated_count: 0,
+        updated_count: changeEvents,
         metadata: {
-          dataset, year, resource_id: resource.id, resource_name: resource.name ?? null, trigger: "vercel-cron",
-          progress: { offset, fetched, normalized, upserted, ipcLinks, total, lastActivityAt: new Date().toISOString() },
+          dataset, year, resource_id: resource.id, resource_name: resource.name ?? null, trigger: "vercel-cron", track_changes: trackChanges,
+          progress: { offset, fetched, normalized, upserted, ipcLinks, changeEvents, changeBaseline: baselineMode, total, lastActivityAt: new Date().toISOString() },
         },
       }).eq("id", run.id)
 
       if (records.length < PAGE_SIZE || offset >= total) break
+    }
+
+    if (trackChanges) {
+      await markChangeBaselineCompleted(admin, CHANGE_SOURCE_KEY, "patent", dataset, String(run.id))
     }
 
     await admin.from("inapi_sync_runs").update({
@@ -183,11 +219,21 @@ async function syncDataset(dataset: (typeof DATASETS)[number], year: number) {
       finished_at: new Date().toISOString(),
       total_fetched: fetched,
       inserted_count: upserted,
-      updated_count: 0,
+      updated_count: changeEvents,
       error_message: null,
     }).eq("id", run.id)
 
-    return { dataset, resourceId: String(resource.id), resourceName: resource.name ? String(resource.name) : null, fetched, normalized, upserted, ipcLinks }
+    return {
+      dataset,
+      resourceId: String(resource.id),
+      resourceName: resource.name ? String(resource.name) : null,
+      fetched,
+      normalized,
+      upserted,
+      ipcLinks,
+      changeEvents,
+      changeBaseline: baselineMode,
+    }
   } catch (error) {
     await admin.from("inapi_sync_runs").update({
       status: "failed",
@@ -223,6 +269,29 @@ async function upsertBatch(admin: ReturnType<typeof createAdminClient>, rows: No
   }
 
   return { upserted: data?.length ?? 0, ipcLinks: links.length }
+}
+
+function toPatentChangeRecord(row: NormalizedPatentRow): SourceChangeRecord {
+  return {
+    sourceRecordId: row.source_record_id,
+    title: row.title,
+    searchText: [row.title, row.applicants, row.inventors, row.application_number, row.registration_number, row.status, row.country, ...row.ipc].filter(Boolean).join(" "),
+    sourceUrl: row.source_url,
+    sourceDate: row.registration_date || row.publication_date || row.filing_date,
+    sourceUpdatedAt: metadataText(row.metadata, "lastUpdatedDate"),
+    snapshot: {
+      title: row.title,
+      applicant: row.applicants,
+      inventors: row.inventors,
+      registration_number: row.registration_number,
+      status: row.status,
+      filing_date: row.filing_date,
+      publication_date: row.publication_date,
+      registration_date: row.registration_date,
+      country: row.country,
+      classification: [...row.ipc].sort(),
+    },
+  }
 }
 
 async function ckan(action: string, params: Record<string, string | number>) {
@@ -327,6 +396,11 @@ function text(value: unknown) {
   if (value === null || value === undefined) return null
   const result = String(value).trim()
   return result || null
+}
+
+function metadataText(metadata: Record<string, unknown>, key: string) {
+  const value = metadata[key]
+  return value === null || value === undefined ? null : String(value)
 }
 
 function normalizeDate(value: unknown) {
