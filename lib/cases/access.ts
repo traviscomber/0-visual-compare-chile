@@ -17,6 +17,10 @@ type ApprovalRoundInput = {
   deadlineDays: number
 }
 
+export function canEditCase(role: CaseAccessRole) {
+  return role === "owner" || role === "editor"
+}
+
 export function buildApprovalRoundRequest(input: ApprovalRoundInput) {
   const request: {
     mode: "round"
@@ -46,7 +50,7 @@ export function canExecuteCaseSuggestedAction(role: CaseAccessRole, action: Case
   if (action === "none") return false
   if (action === "open_governance" || action === "investigate") return true
   if (action === "extend_deadline") return role === "owner"
-  return role === "owner" || role === "editor"
+  return canEditCase(role)
 }
 
 export function caseSuggestedActionRestriction(role: CaseAccessRole, action: CaseSuggestedAction) {
