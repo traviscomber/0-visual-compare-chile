@@ -28,12 +28,15 @@ type BrandResponse = {
   durationMs?: number
   source?: string
   error?: string
+  code?: string
+  resetAt?: string
 }
 
 export default function InvestigarPage() {
   const [query, setQuery] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errorCode, setErrorCode] = useState<string | null>(null)
   const [result, setResult] = useState<BrandResponse | null>(null)
 
   const runResearch = async (rawQuery: string) => {
@@ -42,6 +45,7 @@ export default function InvestigarPage() {
 
     setLoading(true)
     setError(null)
+    setErrorCode(null)
     setResult(null)
 
     try {
@@ -49,6 +53,7 @@ export default function InvestigarPage() {
       const response = await fetch(`/api/inapi/search?${params}`, { cache: "no-store" })
       const payload = (await response.json().catch(() => ({}))) as BrandResponse
       if (!response.ok) {
+        setErrorCode(payload.code ?? null)
         throw new Error(
           response.status === 401
             ? "Tu sesión expiró. Vuelve a iniciar sesión."
@@ -79,6 +84,7 @@ export default function InvestigarPage() {
 
   const rows = (result?.results ?? []).slice(0, 8)
   const hasResult = result !== null
+  const freeLimitReached = errorCode === "FREE_MONTHLY_LIMIT"
 
   return (
     <OperationalPage>
@@ -145,7 +151,20 @@ export default function InvestigarPage() {
       {error ? (
         <div role="alert" className="flex items-start gap-3 rounded-[10px] border border-red-500/25 bg-red-500/[0.07] p-4 text-sm text-red-200">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          {error}
+          <div className="min-w-0">
+            <p>{error}</p>
+            {freeLimitReached ? (
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <a
+                  href="mailto:info@n3uralia.com?subject=Acceso%20completo%20VIDENTIA"
+                  className="inline-flex min-h-9 items-center gap-2 rounded-md bg-[#4A7F74] px-3 text-xs font-medium text-white transition-colors hover:bg-[#568D81]"
+                >
+                  Solicitar acceso completo <ArrowRight className="h-3.5 w-3.5" />
+                </a>
+                <span className="text-xs text-red-100/70">No necesitas elegir entre API o software ahora.</span>
+              </div>
+            ) : null}
+          </div>
         </div>
       ) : null}
 
