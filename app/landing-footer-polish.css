@@ -1,0 +1,132 @@
+/* Focused Ciclope pass: public landing footer only. */
+.px-home .px-footer {
+  background: #06151a;
+  border-top: 1px solid rgba(183, 211, 209, .08);
+}
+
+.px-home .px-footer-grid {
+  padding-top: 72px;
+  padding-bottom: 64px;
+  display: grid;
+  grid-template-columns: minmax(280px, .9fr) minmax(0, 1.1fr);
+  gap: clamp(64px, 9vw, 150px);
+  align-items: start;
+}
+
+.px-home .px-footer-brand {
+  max-width: 440px;
+}
+
+.px-home .px-footer-brand strong {
+  display: block;
+  color: var(--vid-heading);
+  font-size: 28px;
+  font-weight: 300;
+  letter-spacing: .16em;
+}
+
+.px-home .px-footer-brand small {
+  display: block;
+  margin-top: 8px;
+  color: rgba(189, 190, 189, .58);
+  font-size: 8px;
+  letter-spacing: .12em;
+}
+
+.px-home .px-footer-brand p {
+  max-width: 390px;
+  margin-top: 26px;
+  color: rgba(255, 255, 255, .64);
+  font-size: 12.5px;
+  line-height: 1.75;
+}
+
+.px-home .px-footer-nav {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 42px;
+}
+
+.px-home .px-footer-nav > div {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.px-home .px-footer-nav span {
+  margin-bottom: 8px;
+  color: rgba(150, 181, 166, .68);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.px-home .px-footer-nav a {
+  width: fit-content;
+  color: rgba(255, 255, 255, .66);
+  font-size: 12px;
+  line-height: 1.45;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.px-home .px-footer-nav a:hover {
+  color: var(--vid-body);
+  transform: translateX(2px);
+}
+
+.px-home .px-footer-bottom {
+  min-height: 82px;
+  padding-block: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  border-top: 1px solid rgba(183, 211, 209, .08);
+}
+
+.px-home .px-footer-bottom p {
+  margin: 0;
+  color: rgba(189, 190, 189, .48);
+  font-size: 9.5px;
+  line-height: 1.6;
+}
+
+.px-home .px-footer-bottom p:first-child {
+  max-width: 720px;
+}
+
+.px-home .px-footer-bottom p:last-child {
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .px-home .px-footer-grid {
+    grid-template-columns: 1fr;
+    gap: 52px;
+  }
+}
+
+@media (max-width: 640px) {
+  .px-home .px-footer-grid {
+    padding-top: 56px;
+    padding-bottom: 44px;
+  }
+
+  .px-home .px-footer-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 36px 28px;
+  }
+
+  .px-home .px-footer-bottom {
+    min-height: auto;
+    padding-block: 24px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .px-home .px-footer-bottom p:last-child {
+    white-space: normal;
+  }
+}
