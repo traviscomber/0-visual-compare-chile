@@ -17,6 +17,7 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
   const [password, setPassword] = useState("")
   const [repeatPassword, setRepeatPassword] = useState("")
   const [fullName, setFullName] = useState("")
+  const [companyName, setCompanyName] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -25,6 +26,10 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
     event.preventDefault()
     setError(null)
 
+    if (companyName.trim().length < 2) {
+      setError("Indica la empresa u organización con la que quieres evaluar VIDENTIA.")
+      return
+    }
     if (password !== repeatPassword) {
       setError("Las contraseñas no coinciden.")
       return
@@ -49,6 +54,7 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
           emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
           data: {
             full_name: fullName.trim(),
+            company_name: companyName.trim(),
             access_tier: "free",
           },
         },
@@ -64,7 +70,7 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
 
       router.push(`/auth/sign-up-success?next=${encodeURIComponent(next)}`)
     } catch {
-      setError("No pudimos crear la cuenta. Revisa los datos e inténtalo nuevamente.")
+      setError("No pudimos crear el acceso preliminar. Revisa los datos e inténtalo nuevamente.")
     } finally {
       setIsLoading(false)
     }
@@ -83,21 +89,28 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
           </Link>
 
           <div className="my-auto w-full max-w-lg py-12 lg:py-16">
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Cuenta gratuita</p>
-            <h1 className="mt-4 text-4xl font-medium tracking-[-0.045em] sm:text-5xl">Continúa con una vista preliminar.</h1>
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Vista preliminar</p>
+            <h1 className="mt-4 text-4xl font-medium tracking-[-0.045em] sm:text-5xl">Evalúa VIDENTIA para tu organización.</h1>
             <p className="mt-4 max-w-md text-sm leading-6 text-muted-foreground">
-              Crea una cuenta y obtén 3 vistas preliminares al mes. Sin tarjeta. El análisis completo, los expedientes y la vigilancia requieren acceso empresarial.
+              Crea un acceso preliminar con 3 vistas al mes. Sirve para comprobar cobertura y coincidencias antes de solicitar el workspace empresarial.
             </p>
 
             <form onSubmit={handleSignUp} className="mt-8 space-y-5">
-              <div>
-                <Label htmlFor="fullName" className="mb-2 block">Nombre completo</Label>
-                <Input id="fullName" type="text" required value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" className="h-11 bg-card/40" />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="fullName" className="mb-2 block">Nombre completo</Label>
+                  <Input id="fullName" type="text" required value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" className="h-11 bg-card/40" />
+                </div>
+                <div>
+                  <Label htmlFor="companyName" className="mb-2 block">Empresa u organización</Label>
+                  <Input id="companyName" type="text" required value={companyName} onChange={(event) => setCompanyName(event.target.value)} autoComplete="organization" placeholder="Ejemplo: Estudio Legal Sur" className="h-11 bg-card/40" />
+                </div>
               </div>
 
               <div>
-                <Label htmlFor="email" className="mb-2 block">Correo electrónico</Label>
-                <Input id="email" type="email" placeholder="tu@correo.cl" required value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" className="h-11 bg-card/40" />
+                <Label htmlFor="email" className="mb-2 block">Correo de trabajo</Label>
+                <Input id="email" type="email" placeholder="nombre@empresa.cl" required value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" className="h-11 bg-card/40" />
+                <p className="mt-2 text-xs text-muted-foreground">Usa el correo con el que quieres asociar la evaluación de tu organización.</p>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -121,14 +134,14 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
 
               <Button type="submit" disabled={isLoading} className="h-11 w-full sm:w-auto">
                 {isLoading ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" />Creando cuenta…</>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" />Creando acceso…</>
                 ) : (
-                  "Crear cuenta gratis"
+                  "Crear acceso preliminar"
                 )}
               </Button>
 
               <p className="text-sm text-muted-foreground">
-                ¿Ya tienes cuenta?{" "}
+                ¿Ya tienes acceso?{" "}
                 <Link href={`/auth/login?redirectTo=${encodeURIComponent(next)}`} className="font-medium text-primary hover:text-primary/80">
                   Iniciar sesión
                 </Link>
@@ -139,12 +152,12 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
 
         <aside className="hidden min-h-svh flex-col justify-between bg-card/20 px-12 py-10 lg:flex">
           <div className="flex justify-end">
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Demo → cuenta → empresa</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Demo → preview → empresa</span>
           </div>
           <div className="max-w-lg pb-12">
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Vista preliminar</p>
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Antes del workspace</p>
             <p className="mt-5 text-3xl font-medium leading-tight tracking-[-0.035em]">
-              Comprueba cobertura y coincidencias antes de solicitar acceso al workspace completo.
+              Comprueba si VIDENTIA encaja con el trabajo de tu organización antes de solicitar acceso completo.
             </p>
             <div className="mt-8 divide-y divide-border border-y border-border text-sm">
               <AuthLine number="01" text="3 vistas preliminares al mes." />
