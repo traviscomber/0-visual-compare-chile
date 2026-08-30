@@ -37,6 +37,9 @@ jobs:
       - name: Analytics privacy regression
         run: pnpm test:analytics
 
+      - name: API key listing regression
+        run: pnpm test:api-key-listing
+
       - name: TypeScript
         run: pnpm exec tsc --noEmit
 
