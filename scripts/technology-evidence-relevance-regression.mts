@@ -16,21 +16,29 @@ const signals = await readFile("lib/intelligence/technology-signals.ts", "utf8")
 const workbench = await readFile("components/intelligence/technology-signals-workbench.tsx", "utf8")
 
 if (openalex.includes('sort: "publication_date:desc"')) {
-  fail("OpenAlex search must preserve provider relevance ordering instead of forcing publication date")
+  fail("OpenAlex search must not force publication date ahead of relevance")
 }
 
 if (crossref.includes('url.searchParams.set("sort", "published")')) {
   fail("Crossref search must preserve provider relevance ordering instead of forcing publication date")
 }
 
-if (!openalex.includes("Preserve OpenAlex's default relevance ordering")) {
-  fail("OpenAlex relevance-ordering invariant is undocumented")
+if (!openalex.includes("title_and_abstract.search")) {
+  fail("OpenAlex technology universe must be scoped to title and abstract")
+}
+if (openalex.includes("search: query")) {
+  fail("OpenAlex technology momentum must not scan full text")
+}
+if (!openalex.includes("technologyFilter(query, from, to)")) {
+  fail("OpenAlex counts and visible evidence must share the same technology filter")
+}
+if (!openalex.includes("executive evidence and inflate the momentum denominator")) {
+  fail("OpenAlex title/abstract scope invariant is undocumented")
 }
 
 if (!crossref.includes("Keep Crossref's relevance ranking")) {
   fail("Crossref relevance-ordering invariant is undocumented")
 }
-
 if (!crossref.includes('url.searchParams.set("query.title", query)')) {
   fail("Crossref technology search must be title-led")
 }
@@ -72,4 +80,4 @@ if (!signals.includes("openAlexAvailable")) fail("OpenAlex availability is not d
 if (!workbench.includes("no interpreta una fuente sin respuesta como ausencia de actividad")) fail("UI does not explain unavailable-source semantics")
 if (!workbench.includes('value={result.momentum.current_publications ?? "—"}')) fail("UI can still render source failure as zero publications")
 
-console.log("Technology evidence relevance regression PASS: evidence is relevance-ranked, weak Crossref matches are rejected, transient OpenAlex limits retry, and source outages never become false zero activity.")
+console.log("Technology evidence relevance regression PASS: OpenAlex momentum and evidence share a title/abstract universe, Crossref rejects weak matches, transient limits retry, and source outages never become false zero activity.")
