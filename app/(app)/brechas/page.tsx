@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { AlertTriangle, ArrowRight, Building2, CheckCircle2, GitCompareArrows, Loader2, Search, ShieldCheck, Sparkles } from "lucide-react"
+import { AlertTriangle, ArrowRight, Building2, CheckCircle2, ClipboardCheck, GitCompareArrows, Loader2, Search, ShieldCheck, Sparkles } from "lucide-react"
 import { OperationalHeader, OperationalMetric, OperationalMetricRail, OperationalPage, OperationalPanel, OperationalSectionHeader } from "@/components/app/operational-ui"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,12 +14,15 @@ type Binding = { id: string; identity_id: string; canonical_name: string; countr
 type Organization = { id: string; name: string; slug: string; role: string; binding: Binding | null }
 type Market = { current_filings: number; previous_filings: number; current_companies: number; previous_companies: number; entrant_companies: number; experimental_companies: number }
 type Gap = { code: string; asset_type: "patent" | "trademark"; classification: "IPC" | "Niza"; own_filings: number; competitor_filings: number; competitor_active_quarters: number; market: Market }
+type RecommendationStatus = "new" | "reviewed" | "accepted" | "discarded" | "converted_to_action"
+type RecommendationLifecycle = { id: string; status: RecommendationStatus; discard_reason: string | null; case_id: string | null; action_id: string | null; updated_at: string }
 type Recommendation = Gap & {
   score: { total: number; tier: "alta" | "media" | "observacion"; components: { materiality: number; novelty: number; convergence: number; persistence: number; proximity: number } }
   headline: string
   action: string
   evidence: string[]
   guardrail: string
+  lifecycle: RecommendationLifecycle | null
 }
 type GapResult = {
   own: { id: string; canonical_name: string; country: string | null; resolution_confidence: number }
@@ -196,7 +199,7 @@ export default function PortfolioGapPage() {
       </section>
     </> : null}
 
-    {result ? <Results result={result} /> : null}
+    {result && selectedOrg ? <Results result={result} organizationId={selectedOrg.id} /> : null}
   </OperationalPage>
 }
 
@@ -204,7 +207,7 @@ function CandidateList({ candidates, action, disabled, onSelect }: { candidates:
   return <div className="mt-4 divide-y divide-border/80 border-y border-border/80">{candidates.slice(0, 6).map(candidate => <div key={candidate.id} className="flex flex-col gap-3 px-2 py-4 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="truncate text-sm font-medium text-white">{candidate.canonical_name}</p><p className="mt-1 text-xs text-muted-foreground">{candidate.country || "País no informado"} · {candidate.activity_12m} expedientes / 12m · similitud {Math.round(candidate.similarity_score * 100)}%</p></div><Button type="button" size="sm" variant="outline" disabled={disabled} onClick={() => onSelect(candidate)}>{action}</Button></div>)}</div>
 }
 
-function Results({ result }: { result: GapResult }) {
+function Results({ result, organizationId }: { result: GapResult; organizationId: string }) {
   const totalGaps = result.metrics.patent_gaps + result.metrics.trademark_gaps
   return <>
     <OperationalMetricRail>
@@ -217,7 +220,7 @@ function Results({ result }: { result: GapResult }) {
     <section className="grid gap-8 border-b border-border/80 py-9 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)] xl:gap-10">
       <div>
         <OperationalSectionHeader eyebrow="03 / Recomendaciones" title={`${result.own.canonical_name} vs ${result.competitor.canonical_name}`} meta={`${result.recommendations.length} priorizadas`} />
-        <div className="mt-5 divide-y divide-border/80 border-y border-border/80">{result.recommendations.length ? result.recommendations.map(item => <RecommendationRow key={`${item.asset_type}-${item.code}`} item={item} />) : <div className="py-9"><ShieldCheck className="h-5 w-5 text-primary" /><p className="mt-3 text-sm font-medium text-white">No encontramos brechas repetidas suficientes.</p><p className="mt-1 text-sm leading-6 text-muted-foreground">Las señales de una sola presentación siguen visibles como experimentales, pero no disparan una recomendación.</p></div>}</div>
+        <div className="mt-5 divide-y divide-border/80 border-y border-border/80">{result.recommendations.length ? result.recommendations.map(item => <RecommendationRow key={`${item.asset_type}-${item.code}`} item={item} organizationId={organizationId} competitorIdentityId={result.competitor.id} />) : <div className="py-9"><ShieldCheck className="h-5 w-5 text-primary" /><p className="mt-3 text-sm font-medium text-white">No encontramos brechas repetidas suficientes.</p><p className="mt-1 text-sm leading-6 text-muted-foreground">Las señales de una sola presentación siguen visibles como experimentales, pero no disparan una recomendación.</p></div>}</div>
       </div>
       <aside>
         <OperationalPanel>
@@ -234,10 +237,116 @@ function Results({ result }: { result: GapResult }) {
   </>
 }
 
-function RecommendationRow({ item }: { item: Recommendation }) {
+function RecommendationRow({ item, organizationId, competitorIdentityId }: { item: Recommendation; organizationId: string; competitorIdentityId: string }) {
   const tone = item.score.tier === "alta" ? "border-red-400/20 bg-red-400/[0.06] text-red-300" : item.score.tier === "media" ? "border-amber-300/20 bg-amber-300/[0.06] text-amber-200" : "border-border bg-card/30 text-muted-foreground"
   const components = item.score.components
-  return <article className="px-2 py-5"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className={`rounded-md ${tone}`}>{item.score.total}/100 · {item.score.tier}</Badge><Badge variant="outline" className="rounded-md">{item.classification} {item.code}</Badge><Button asChild size="sm" variant="ghost"><Link href={spaceHref(item.asset_type, item.code)}>Abrir espacio <ArrowRight className="h-3.5 w-3.5" /></Link></Button></div><h3 className="mt-3 text-base font-medium text-white">{item.headline}</h3><p className="mt-2 text-sm leading-6 text-foreground">{item.action}</p><div className="mt-3 grid gap-1 text-xs leading-5 text-muted-foreground">{item.evidence.map(line => <span key={line}>• {line}</span>)}</div><p className="mt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Materialidad {components.materiality}/25 · Novedad {components.novelty}/20 · Convergencia {components.convergence}/20 · Persistencia {components.persistence}/20 · Proximidad {components.proximity}/15</p><p className="mt-2 text-xs leading-5 text-muted-foreground">{item.guardrail}</p></article>
+  const [lifecycle, setLifecycle] = useState<RecommendationLifecycle | null>(item.lifecycle)
+  const [busy, setBusy] = useState(false)
+  const [rowError, setRowError] = useState<string | null>(null)
+  const [discarding, setDiscarding] = useState(false)
+  const [discardReason, setDiscardReason] = useState("")
+
+  useEffect(() => {
+    setLifecycle(item.lifecycle)
+    setDiscarding(false)
+    setDiscardReason("")
+    setRowError(null)
+  }, [item.lifecycle?.id, item.lifecycle?.status, item.code, item.asset_type])
+
+  async function persistRecommendation() {
+    if (busy) return
+    setBusy(true)
+    setRowError(null)
+    try {
+      const response = await fetch("/api/intelligence/recommendations", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ organizationId, competitorIdentityId, assetType: item.asset_type, code: item.code }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok || !payload.recommendation) throw new Error(payload.error || "No pudimos guardar la recomendación.")
+      setLifecycle(payload.recommendation as RecommendationLifecycle)
+    } catch (cause) {
+      setRowError(cause instanceof Error ? cause.message : "No pudimos guardar la recomendación.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function transition(status: "reviewed" | "accepted" | "discarded") {
+    if (!lifecycle || busy) return
+    setBusy(true)
+    setRowError(null)
+    try {
+      const response = await fetch(`/api/intelligence/recommendations/${lifecycle.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status, reason: status === "discarded" ? discardReason : undefined }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok || !payload.recommendation) throw new Error(payload.error || "No pudimos actualizar la recomendación.")
+      setLifecycle(payload.recommendation as RecommendationLifecycle)
+      setDiscarding(false)
+      setDiscardReason("")
+    } catch (cause) {
+      setRowError(cause instanceof Error ? cause.message : "No pudimos actualizar la recomendación.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function convertToAction() {
+    if (!lifecycle || busy) return
+    setBusy(true)
+    setRowError(null)
+    try {
+      const response = await fetch(`/api/intelligence/recommendations/${lifecycle.id}/action`, { method: "POST" })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload.error || "No pudimos convertir la recomendación en acción.")
+      if (payload.recommendation) setLifecycle(payload.recommendation as RecommendationLifecycle)
+      else setLifecycle(current => current ? { ...current, status: "converted_to_action", case_id: payload.caseId ?? current.case_id, action_id: payload.actionId ?? current.action_id } : current)
+    } catch (cause) {
+      setRowError(cause instanceof Error ? cause.message : "No pudimos convertir la recomendación en acción.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return <article className="px-2 py-5">
+    <div className="flex flex-wrap items-center gap-2">
+      <Badge variant="outline" className={`rounded-md ${tone}`}>{item.score.total}/100 · {item.score.tier}</Badge>
+      <Badge variant="outline" className="rounded-md">{item.classification} {item.code}</Badge>
+      {lifecycle ? <Badge variant="outline" className="rounded-md">{recommendationStatusLabel(lifecycle.status)}</Badge> : null}
+      <Button asChild size="sm" variant="ghost"><Link href={spaceHref(item.asset_type, item.code)}>Abrir espacio <ArrowRight className="h-3.5 w-3.5" /></Link></Button>
+    </div>
+    <h3 className="mt-3 text-base font-medium text-white">{item.headline}</h3>
+    <p className="mt-2 text-sm leading-6 text-foreground">{item.action}</p>
+    <div className="mt-3 grid gap-1 text-xs leading-5 text-muted-foreground">{item.evidence.map(line => <span key={line}>• {line}</span>)}</div>
+    <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Materialidad {components.materiality}/25 · Novedad {components.novelty}/20 · Convergencia {components.convergence}/20 · Persistencia {components.persistence}/20 · Proximidad {components.proximity}/15</p>
+    <p className="mt-2 text-xs leading-5 text-muted-foreground">{item.guardrail}</p>
+
+    {rowError ? <div role="alert" className="mt-4 rounded-[10px] bg-[#3A2525] p-3 text-xs leading-5 text-[#E8AAA3]">{rowError}</div> : null}
+    {lifecycle?.status === "discarded" && lifecycle.discard_reason ? <p className="mt-4 text-xs leading-5 text-muted-foreground">Motivo de descarte: <span className="text-foreground">{lifecycle.discard_reason}</span></p> : null}
+
+    <div className="mt-4 flex flex-wrap items-center gap-2">
+      {!lifecycle ? <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void persistRecommendation()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardCheck className="h-4 w-4" />}Guardar recomendación</Button> : null}
+      {lifecycle?.status === "new" ? <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void transition("reviewed")}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}Marcar revisada</Button> : null}
+      {lifecycle?.status === "reviewed" ? <Button type="button" size="sm" disabled={busy} onClick={() => void transition("accepted")}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}Aceptar recomendación</Button> : null}
+      {lifecycle && (lifecycle.status === "new" || lifecycle.status === "reviewed") ? <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => setDiscarding(current => !current)}>Descartar</Button> : null}
+      {lifecycle?.status === "accepted" ? <Button type="button" size="sm" disabled={busy} onClick={() => void convertToAction()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardCheck className="h-4 w-4" />}Convertir en acción</Button> : null}
+      {lifecycle?.status === "converted_to_action" && lifecycle.case_id ? <Button asChild size="sm" variant="outline"><Link href={`/casos/${lifecycle.case_id}/equipo`}>Abrir tarea <ArrowRight className="h-3.5 w-3.5" /></Link></Button> : null}
+    </div>
+
+    {discarding && lifecycle && (lifecycle.status === "new" || lifecycle.status === "reviewed") ? <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]"><Input value={discardReason} onChange={event => setDiscardReason(event.target.value)} maxLength={500} placeholder="Motivo del descarte (mínimo 5 caracteres)" /><Button type="button" size="sm" variant="outline" disabled={busy || discardReason.trim().length < 5} onClick={() => void transition("discarded")}>Confirmar descarte</Button></div> : null}
+  </article>
+}
+
+function recommendationStatusLabel(status: RecommendationStatus) {
+  if (status === "new") return "Nueva"
+  if (status === "reviewed") return "Revisada"
+  if (status === "accepted") return "Aceptada"
+  if (status === "discarded") return "Descartada"
+  return "Convertida en acción"
 }
 
 function GapList({ title, eyebrow, gaps }: { title: string; eyebrow: string; gaps: Gap[] }) {
