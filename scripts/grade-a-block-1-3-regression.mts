@@ -42,6 +42,7 @@ const retryPolicy = await readFile("lib/intelligence/fetch-with-retry.ts", "utf8
 const companiesPage = await readFile("app/(app)/empresas/page.tsx", "utf8")
 const spacesPage = await readFile("app/(app)/espacios/page.tsx", "utf8")
 const gapsPage = await readFile("app/(app)/brechas/page.tsx", "utf8")
+const opportunitiesPage = await readFile("app/(app)/oportunidades/page.tsx", "utf8")
 const technologyWorkbench = await readFile("components/intelligence/technology-signals-workbench.tsx", "utf8")
 const newStrategicWatchPage = await readFile("app/(app)/monitorear/estrategico/nueva/page.tsx", "utf8")
 const navigationContext = await readFile("lib/intelligence/navigation-context.ts", "utf8")
@@ -116,9 +117,10 @@ for (const question of [
   "¿Qué tecnologías están acelerándose?",
   "¿Dónde aparecen oportunidades?",
 ]) if (!dashboardPage.includes(question)) fail(`dashboard missing executive question: ${question}`)
-for (const href of ["/monitorear/estrategico", "/empresas", "/espacios", "/tecnologias", "/brechas"]) {
+for (const href of ["/monitorear/estrategico", "/empresas", "/espacios", "/tecnologias", "/oportunidades"]) {
   if (!dashboardPage.includes(`href:\"${href}\"`) && !dashboardPage.includes(`href=\"${href}\"`)) fail(`dashboard missing executive route ${href}`)
 }
+if (!opportunitiesPage.includes('href="/brechas"') || !opportunitiesPage.includes("Buscar nuevas brechas")) fail("opportunities workspace must preserve explicit discovery access to /brechas")
 if (!dashboardPage.includes('from("intelligence_watches")') || !dashboardPage.includes('from("intelligence_watch_events")')) fail("dashboard executive layer is not grounded in the user strategic watch state")
 
 for (const needle of [

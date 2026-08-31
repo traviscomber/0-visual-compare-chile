@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { buildCaseIntelligence, type CaseItemType, type CaseStatus } from "@/lib/cases/intelligence"
 import { strategicAnalysisHref } from "@/lib/intelligence/navigation-context"
+import { listPortfolioOrganizations } from "@/lib/intelligence/portfolio-access"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 
 export const dynamic = "force-dynamic"
@@ -17,6 +19,7 @@ type StrategicWatch = { id:string; watch_type:"technology"|"company"|"competitor
 type StrategicSignal = { id:string; watch_id:string; source_key:string; event_type:string; title:string; relevance:"alta"|"media"|"baja"; first_seen_at:string }
 type CaseItem = { item_type:CaseItemType; title:string; created_at:string; metadata:Record<string,unknown>|null }
 type CaseRow = { id:string; title:string; status:CaseStatus; priority:"low"|"normal"|"high"; context_type:string; decision_summary:string|null; notes:string|null; last_reviewed_at:string|null; updated_at:string; case_items:CaseItem[]|null }
+type RecommendationSummary = { id:string; score:number; tier:"alta"|"media"|"observacion"; headline:string; recommended_action:string; status:"new"|"reviewed"|"accepted"|"discarded"|"converted_to_action"; case_id:string|null; action_id:string|null; updated_at:string }
 
 function relative(value?:string|null){if(!value)return "Sin fecha";const date=new Date(value);if(Number.isNaN(date.getTime()))return value;const diff=Date.now()-date.getTime();const mins=Math.max(0,Math.floor(diff/60000));if(mins<1)return "Ahora";if(mins<60)return `Hace ${mins} min`;const hours=Math.floor(mins/60);if(hours<24)return `Hace ${hours} h`;const days=Math.floor(hours/24);if(days<7)return `Hace ${days} d`;return new Intl.DateTimeFormat("es-CL",{dateStyle:"medium"}).format(date)}
 function stale(value:string){return Date.now()-Date.parse(value)>14*86400000}
@@ -27,14 +30,34 @@ export default async function DashboardPage(){
   const user=auth.user
   if(!user)redirect("/auth/login?redirectTo=%2Fdashboard")
 
-  const [researchResult,watchResult,signalResult,strategicWatchResult,strategicSignalResult,caseResult]=await Promise.all([
+  const admin=createAdminClient()
+  const [researchResult,watchResult,signalResult,strategicWatchResult,strategicSignalResult,caseResult,portfolioOrganizations]=await Promise.all([
     supabase.from("search_history").select("id,query,search_type,results_count,status,created_at").eq("user_id",user.id).order("created_at",{ascending:false}).limit(8),
     supabase.from("trademark_watches").select("id,watch_type,query,is_active,last_checked_at,last_reviewed_at").eq("user_id",user.id).order("updated_at",{ascending:false}).limit(40),
     supabase.from("trademark_watch_signal_events").select("id,source,watch_id,mark_name,applicant_name,relevance,reason,first_seen_at").eq("user_id",user.id).order("first_seen_at",{ascending:false}).limit(50),
     supabase.from("intelligence_watches").select("id,watch_type,query,is_active,last_checked_at,last_reviewed_at").eq("user_id",user.id).order("updated_at",{ascending:false}).limit(40),
     supabase.from("intelligence_watch_events").select("id,watch_id,source_key,event_type,title,relevance,first_seen_at").eq("user_id",user.id).order("first_seen_at",{ascending:false}).limit(100),
     supabase.from("cases").select("id,title,status,priority,context_type,decision_summary,notes,last_reviewed_at,updated_at,case_items(item_type,title,created_at,metadata)").eq("user_id",user.id).neq("status","archived").order("updated_at",{ascending:false}).limit(20),
+    listPortfolioOrganizations(admin,user.id),
   ])
+
+  const opportunityOrganization=portfolioOrganizations[0]??null
+  let recommendations:RecommendationSummary[]=[]
+  let opportunitiesAvailable=true
+  if(opportunityOrganization){
+    const recommendationResult=await admin
+      .from("intelligence_recommendations")
+      .select("id,score,tier,headline,recommended_action,status,case_id,action_id,updated_at")
+      .eq("organization_id",opportunityOrganization.id)
+      .order("updated_at",{ascending:false})
+      .limit(50)
+    if(recommendationResult.error){
+      opportunitiesAvailable=false
+      console.error("[dashboard:opportunities]",recommendationResult.error)
+    }else{
+      recommendations=(recommendationResult.data??[]) as RecommendationSummary[]
+    }
+  }
 
   const research=(researchResult.data??[]) as Research[]
   const watches=(watchResult.data??[]) as Watch[]
@@ -53,10 +76,16 @@ export default async function DashboardPage(){
   const changed=caseInsights.filter(item=>item.intelligence.newEvidenceCount>0)
   const ready=caseInsights.filter(item=>item.intelligence.readiness==="decision-ready")
   const stalled=caseInsights.filter(item=>["open","review"].includes(item.caseRow.status)&&stale(item.caseRow.updated_at))
-  const attention=changed.length+ready.length+stalled.length+newSignals.length+newStrategicSignals.length
+  const activeRecommendations=recommendations.filter(item=>!["discarded","converted_to_action"].includes(item.status))
+  const highRecommendations=activeRecommendations.filter(item=>item.tier==="alta")
+  const acceptedRecommendations=activeRecommendations.filter(item=>item.status==="accepted")
+  const recommendationRank:Record<RecommendationSummary["tier"],number>={alta:3,media:2,observacion:1}
+  const priorityRecommendations=[...activeRecommendations].sort((a,b)=>Number(b.status==="accepted")-Number(a.status==="accepted")||recommendationRank[b.tier]-recommendationRank[a.tier]||b.score-a.score||Date.parse(b.updated_at)-Date.parse(a.updated_at))
+  const attention=changed.length+ready.length+stalled.length+newSignals.length+newStrategicSignals.length+(opportunitiesAvailable?activeRecommendations.length:0)
   const displayName=(typeof user.user_metadata?.full_name==="string"&&user.user_metadata.full_name)||(typeof user.user_metadata?.name==="string"&&user.user_metadata.name)||user.email?.split("@")[0]||"equipo"
 
   const queue=[
+    ...priorityRecommendations.slice(0,2).map(item=>({href:"/oportunidades",icon:Compass,kicker:item.status==="accepted"?"Oportunidad aceptada":item.tier==="alta"?"Oportunidad · Prioridad alta":"Oportunidad persistida",title:item.headline,detail:item.recommended_action,action:item.status==="accepted"?"Llevar a ejecución":"Revisar oportunidad",tone:item.status==="accepted"||item.tier==="alta"?"warm" as const:"primary" as const})),
     ...changed.slice(0,2).map(item=>({href:`/casos/${item.caseRow.id}`,icon:BriefcaseBusiness,kicker:"Evidencia nueva",title:item.caseRow.title,detail:`${item.intelligence.newEvidenceCount} evidencia${item.intelligence.newEvidenceCount===1?"":"s"} nueva${item.intelligence.newEvidenceCount===1?"":"s"} desde la última revisión.`,action:"Revisar caso",tone:"primary" as const})),
     ...ready.slice(0,2).map(item=>({href:`/casos/${item.caseRow.id}`,icon:CheckCircle2,kicker:"Listo para decidir",title:item.caseRow.title,detail:item.intelligence.pendingDecision,action:"Preparar decisión",tone:"primary" as const})),
     ...newStrategicSignals.slice(0,2).map(item=>{const watch=strategicWatchMap.get(item.watch_id);return {href:watch?strategicAnalysisHref(watch.watch_type,watch.query):"/monitorear/estrategico",icon:Radar,kicker:`${item.source_key} · Cambio estratégico`,title:item.title,detail:watch?`${watch.query} · ${item.event_type} · relevancia ${item.relevance}`:`${item.event_type} · relevancia ${item.relevance}`,action:watch?"Abrir análisis":"Revisar cambio",tone:item.relevance==="alta"?"warm" as const:"primary" as const}}),
@@ -70,7 +99,7 @@ export default async function DashboardPage(){
     {number:"03",href:"/empresas",icon:TrendingUp,title:"¿Dónde está llevando su tecnología?",detail:"Lee cuatro ventanas trimestrales y distingue actividad emergente, aceleración, núcleo persistente, declive y señales experimentales.",meta:"Trayectoria · 4 trimestres"},
     {number:"04",href:"/espacios",icon:Radar,title:"¿Quién está entrando en mi espacio?",detail:"Analiza un código IPC o Niza. Entrante exige al menos dos expedientes actuales y ninguno en la ventana anterior.",meta:"IPC / Niza · actores nuevos"},
     {number:"05",href:"/tecnologias",icon:Sparkles,title:"¿Qué tecnologías están acelerándose?",detail:"Contrasta publicaciones, actividad científica y señales públicas sin convertir crecimiento documental en predicción.",meta:"OpenAlex · Crossref · GDELT"},
-    {number:"06",href:"/brechas",icon:Compass,title:"¿Dónde aparecen oportunidades?",detail:"Compara tu identidad IP vinculada explícitamente contra un competidor y prioriza brechas repetidas con score explicable.",meta:"Brechas IP · recomendación"},
+    {number:"06",href:"/oportunidades",icon:Compass,title:"¿Dónde aparecen oportunidades?",detail:opportunitiesAvailable&&activeRecommendations.length?`${activeRecommendations.length} recomendación${activeRecommendations.length===1?"":"es"} activa${activeRecommendations.length===1?"":"s"}; ${highRecommendations.length} de prioridad alta y ${acceptedRecommendations.length} aceptada${acceptedRecommendations.length===1?"":"s"}.`:`Revisa recomendaciones persistidas, priorizadas y auditables antes de convertirlas en trabajo.`,meta:"Oportunidades · lifecycle persistido"},
   ]
 
   const latestResearch=research[0]??null
@@ -80,15 +109,15 @@ export default async function DashboardPage(){
     <OperationalHeader
       eyebrow="VIDENTIA / Resumen"
       title={attention?"Hay decisiones que requieren revisión.":"No hay cambios que requieran atención."}
-      description={<>Hola, {displayName}. Este resumen reúne evidencia nueva, señales estratégicas, casos listos y accesos directos a las preguntas ejecutivas que VIDENTIA debe responder.</>}
-      actions={<><Button asChild variant="outline"><Link href="/monitorear/estrategico">Qué cambió</Link></Button><Button asChild><Link href="/investigar">Nueva investigación <Search className="ml-1 h-4 w-4"/></Link></Button></>}
+      description={<>Hola, {displayName}. Este resumen reúne oportunidades persistidas, evidencia nueva, señales estratégicas y casos listos para decidir.</>}
+      actions={<><Button asChild variant="outline"><Link href="/oportunidades">Oportunidades</Link></Button><Button asChild><Link href="/investigar">Nueva investigación <Search className="ml-1 h-4 w-4"/></Link></Button></>}
     />
 
     <OperationalMetricRail>
+      <OperationalMetric value={opportunitiesAvailable?activeRecommendations.length:"—"} label="Oportunidades activas" detail={opportunitiesAvailable?`${highRecommendations.length} prioridad alta · ${acceptedRecommendations.length} aceptadas`:"No pudimos cargar el lifecycle"} tone={opportunitiesAvailable&&activeRecommendations.length?"warning":"neutral"}/>
       <OperationalMetric value={changed.length} label="Casos con cambios" detail="Evidencia desde la última revisión"/>
       <OperationalMetric value={ready.length} label="Listos para decidir" detail="Con contexto suficiente para revisión"/>
       <OperationalMetric value={newSignals.length+newStrategicSignals.length} label="Señales nuevas" detail={`${newStrategicSignals.length} estratégicas · ${newSignals.length} marcarias`} tone={newSignals.length+newStrategicSignals.length?"warning":"neutral"}/>
-      <OperationalMetric value={activeWatches.length+activeStrategicWatches.length} label="Vigilancias activas" detail={`${activeStrategicWatches.length} estratégicas · ${activeWatches.length} marcarias`} tone={activeWatches.length+activeStrategicWatches.length?"success":"neutral"}/>
     </OperationalMetricRail>
 
     <section className="border-b border-border/80 py-9">
@@ -123,7 +152,7 @@ export default async function DashboardPage(){
       <aside>
         <OperationalPanel>
           <OperationalSectionHeader eyebrow="Contexto reciente" title="Última actividad" />
-          <div className="mt-5 divide-y divide-border/80 border-t border-border/80">{latestResearch?<ContextRow icon={Search} title={`Búsqueda: ${latestResearch.query}`} detail={`${latestResearch.results_count} resultados`} href={`/investigar?q=${encodeURIComponent(latestResearch.query)}`}/>:null}{latestSignal?<ContextRow icon={BellRing} title={latestSignal.mark_name} detail={`${latestSignal.source} · ${watchMap.get(latestSignal.watch_id)?.query??"Vigilancia"}`} href="/monitorear"/>:null}{activeStrategicWatches.length?<ContextRow icon={Radar} title={`${activeStrategicWatches.length} vigilancia${activeStrategicWatches.length===1?"":"s"} estratégica${activeStrategicWatches.length===1?"":"s"}`} detail="Empresas, competidores y tecnologías" href="/monitorear/estrategico"/>:null}{activeWatches.length?<ContextRow icon={Eye} title={`${activeWatches.length} vigilancia${activeWatches.length===1?"":"s"} activa${activeWatches.length===1?"":"s"}`} detail="Marcas y titulares" href="/monitorear"/>:null}{!latestResearch&&!latestSignal&&!activeWatches.length&&!activeStrategicWatches.length?<Empty href="/investigar" icon={Search} title="Aún no hay actividad" action="Empezar" compact/>:null}</div>
+          <div className="mt-5 divide-y divide-border/80 border-t border-border/80">{opportunitiesAvailable&&activeRecommendations.length?<ContextRow icon={Compass} title={`${activeRecommendations.length} oportunidad${activeRecommendations.length===1?"":"es"} activa${activeRecommendations.length===1?"":"s"}`} detail={`${highRecommendations.length} prioridad alta · ${acceptedRecommendations.length} aceptadas`} href="/oportunidades"/>:null}{latestResearch?<ContextRow icon={Search} title={`Búsqueda: ${latestResearch.query}`} detail={`${latestResearch.results_count} resultados`} href={`/investigar?q=${encodeURIComponent(latestResearch.query)}`}/>:null}{latestSignal?<ContextRow icon={BellRing} title={latestSignal.mark_name} detail={`${latestSignal.source} · ${watchMap.get(latestSignal.watch_id)?.query??"Vigilancia"}`} href="/monitorear"/>:null}{activeStrategicWatches.length?<ContextRow icon={Radar} title={`${activeStrategicWatches.length} vigilancia${activeStrategicWatches.length===1?"":"s"} estratégica${activeStrategicWatches.length===1?"":"s"}`} detail="Empresas, competidores y tecnologías" href="/monitorear/estrategico"/>:null}{activeWatches.length?<ContextRow icon={Eye} title={`${activeWatches.length} vigilancia${activeWatches.length===1?"":"s"} activa${activeWatches.length===1?"":"s"}`} detail="Marcas y titulares" href="/monitorear"/>:null}{!latestResearch&&!latestSignal&&!activeWatches.length&&!activeStrategicWatches.length&&!activeRecommendations.length?<Empty href="/investigar" icon={Search} title="Aún no hay actividad" action="Empezar" compact/>:null}</div>
         </OperationalPanel>
       </aside>
     </section>
