@@ -7,7 +7,7 @@ create table public.intelligence_recommendations (
   competitor_identity_id uuid not null references public.intelligence_company_identities(id) on delete restrict,
   asset_type text not null check (asset_type in ('patent', 'trademark')),
   classification text not null check (classification in ('IPC', 'Niza')),
-  code text not null,
+  code text not null check (length(btrim(code)) between 1 and 32),
   score integer not null check (score between 0 and 100),
   tier text not null check (tier in ('alta', 'media', 'observacion')),
   headline text not null,
@@ -31,7 +31,10 @@ create table public.intelligence_recommendations (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (organization_id, dedupe_key),
-  check ((status = 'discarded' and length(btrim(discard_reason)) >= 5) or (status <> 'discarded' and discard_reason is null)),
+  check (
+    (status = 'discarded' and discard_reason is not null and length(btrim(discard_reason)) >= 5)
+    or (status <> 'discarded' and discard_reason is null)
+  ),
   check ((status = 'converted_to_action' and case_id is not null and action_id is not null) or status <> 'converted_to_action')
 );
 
