@@ -54,7 +54,7 @@ export async function buildTechnologySignals(query: string, windowDays = 180) {
       change_percent: growth === null ? null : Math.round(growth * 10) / 10,
       trend,
       basis: openAlexAvailable
-        ? "Actividad de publicaciones indexadas por OpenAlex; es una señal de actividad, no una predicción."
+        ? "Señal conservadora: compara publicaciones cuyo título coincide con la consulta en OpenAlex. Abstracts, texto completo, Crossref y noticias se usan como contexto, no para inflar el momentum."
         : "OpenAlex no respondió de forma completa. VIDENTIA conserva la evidencia disponible, pero no calcula una variación hasta recuperar una base comparable.",
     },
     evidence: {
