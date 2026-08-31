@@ -11,6 +11,7 @@ function requireText(haystack: string, needle: string, label: string) {
 
 const page = await readFile("app/(app)/oportunidades/page.tsx", "utf8")
 const route = await readFile("app/api/intelligence/recommendations/route.ts", "utf8")
+const nav = await readFile("components/app/app-nav.tsx", "utf8")
 
 for (const needle of [
   'fetch("/api/intelligence/portfolio-binding"',
@@ -37,4 +38,10 @@ for (const needle of [
   "competitor: identityMap.get",
 ]) requireText(route, needle, "recommendations listing API")
 
-console.log("Opportunities workspace regression PASS: the executive workspace reads persisted recommendations, preserves lifecycle state, enriches competitor identity server-side, and never recomputes intelligence or auto-creates actions.")
+for (const needle of [
+  'href: "/oportunidades"',
+  'label: "Oportunidades"',
+  "icon: Target",
+]) requireText(nav, needle, "application navigation")
+
+console.log("Opportunities workspace regression PASS: the executive workspace reads persisted recommendations, preserves lifecycle state, enriches competitor identity server-side, is exposed in navigation, and never recomputes intelligence or auto-creates actions.")
