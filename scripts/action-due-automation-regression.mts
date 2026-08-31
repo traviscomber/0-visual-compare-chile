@@ -9,7 +9,7 @@ function requireText(source: string, needle: string, label: string) {
 }
 
 const [migration, cron, vercel] = await Promise.all([
-  readFile("supabase/migrations/20260831210500_add_action_due_automation.sql", "utf8"),
+  readFile("supabase/migrations/20260831210505_add_action_due_automation.sql", "utf8"),
   readFile("app/api/cron/case-automation/route.ts", "utf8"),
   readFile("vercel.json", "utf8"),
 ])
