@@ -40,6 +40,11 @@ const vercelConfig = await readFile("vercel.json", "utf8")
 const ingestionObservability = await readFile("lib/intelligence/ingestion-observability.ts", "utf8")
 const retryPolicy = await readFile("lib/intelligence/fetch-with-retry.ts", "utf8")
 const companiesPage = await readFile("app/(app)/empresas/page.tsx", "utf8")
+const spacesPage = await readFile("app/(app)/espacios/page.tsx", "utf8")
+const gapsPage = await readFile("app/(app)/brechas/page.tsx", "utf8")
+const technologyWorkbench = await readFile("components/intelligence/technology-signals-workbench.tsx", "utf8")
+const newStrategicWatchPage = await readFile("app/(app)/monitorear/estrategico/nueva/page.tsx", "utf8")
+const navigationContext = await readFile("lib/intelligence/navigation-context.ts", "utf8")
 const sourcesPage = await readFile("app/(app)/fuentes/page.tsx", "utf8")
 const dashboardPage = await readFile("app/(app)/dashboard/page.tsx", "utf8")
 const healthMigration = await readFile("supabase/migrations/20260830214913_add_intelligence_health_quality.sql", "utf8")
@@ -117,6 +122,33 @@ for (const href of ["/monitorear/estrategico", "/empresas", "/espacios", "/tecno
 if (!dashboardPage.includes('from("intelligence_watches")') || !dashboardPage.includes('from("intelligence_watch_events")')) fail("dashboard executive layer is not grounded in the user strategic watch state")
 
 for (const needle of [
+  'buildHref("/empresas"', '"company"', '"identityId"',
+  'buildHref("/espacios"', '"type"', '"code"',
+  'buildHref("/tecnologias"', '"technology"', '"windowDays"',
+  'buildHref("/monitorear/estrategico/nueva"',
+  'buildHref("/brechas"', '"competitor"', '"competitorIdentityId"',
+]) if (!navigationContext.includes(needle)) fail(`executive navigation context missing invariant: ${needle}`)
+
+for (const needle of [
+  'params.get("company")', 'params.get("identityId")', "companyHref(", "portfolioGapHref(", "strategicWatchHref(", "spaceHref(", "window.history.replaceState",
+]) if (!companiesPage.includes(needle)) fail(`company cross-link contract missing: ${needle}`)
+for (const needle of [
+  'params.get("code")', 'params.get("type")', "spaceHref(", "companyHref(", "portfolioGapHref(", "window.history.replaceState",
+]) if (!spacesPage.includes(needle)) fail(`space cross-link contract missing: ${needle}`)
+for (const needle of [
+  'params.get("competitor")', 'params.get("competitorIdentityId")', "portfolioGapHref(", "spaceHref(", "window.history.replaceState",
+]) if (!gapsPage.includes(needle)) fail(`gap cross-link contract missing: ${needle}`)
+for (const needle of [
+  'params.get("technology")', 'params.get("windowDays")', "technologyHref(", "strategicWatchHref(", "window.history.replaceState",
+]) if (!technologyWorkbench.includes(needle)) fail(`technology cross-link contract missing: ${needle}`)
+for (const needle of [
+  "Confirma qué quieres vigilar.", "Acción explícita", "async function createWatch", 'method: "POST"', "/api/intelligence/strategic-watchlist",
+]) if (!newStrategicWatchPage.includes(needle)) fail(`strategic watch confirmation flow missing: ${needle}`)
+const watchSubmitIndex = newStrategicWatchPage.indexOf("async function createWatch")
+const watchPostIndex = newStrategicWatchPage.indexOf('method: "POST"')
+if (watchSubmitIndex < 0 || watchPostIndex < watchSubmitIndex) fail("strategic watch mutation is not contained inside the explicit submit flow")
+
+for (const needle of [
   "intelligence_quality_runs",
   "intelligence_quality_results",
   "source_event_traceability",
@@ -145,4 +177,4 @@ for (const needle of [
 if (!healthHistoryMigration.includes("revoke all on public.intelligence_source_health_history from public, anon, authenticated")) fail("health history table is exposed to client roles")
 if (!healthHistoryMigration.includes("revoke all on public.intelligence_source_alerts from public, anon, authenticated")) fail("source alerts table is exposed to client roles")
 
-console.log("Grade A block 1-3 regression PASS: health/quality wiring, partial-success lifecycle, independent SLA sweep, retry/circuit policy, curated identity quality gate, executive six-question entry, entity graph and trajectory guardrails.")
+console.log("Grade A block 1-3 regression PASS: health/quality wiring, partial-success lifecycle, independent SLA sweep, retry/circuit policy, curated identity quality gate, persistent executive context/cross-links, entity graph and trajectory guardrails.")
