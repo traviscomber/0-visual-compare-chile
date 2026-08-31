@@ -1,3 +1,5 @@
+import { fetchWithRetry } from "@/lib/intelligence/fetch-with-retry"
+
 const OPENALEX_BASE = "https://api.openalex.org"
 const TIMEOUT_MS = 9000
 
@@ -80,13 +82,21 @@ async function requestOpenAlex(params: Record<string, string>): Promise<OpenAlex
   const apiKey = String(process.env.OPENALEX_API_KEY ?? "").trim()
   if (apiKey) url.searchParams.set("api_key", apiKey)
 
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     cache: "no-store",
     headers: { Accept: "application/json", "User-Agent": "VIDENTIA/1.0" },
-    signal: AbortSignal.timeout(TIMEOUT_MS),
+  }, {
+    attempts: 3,
+    baseDelayMs: 500,
+    timeoutMs: TIMEOUT_MS,
   })
 
-  if (!response.ok) throw new Error(`OpenAlex respondió ${response.status}`)
+  if (!response.ok) {
+    const remaining = response.headers.get("x-ratelimit-remaining")
+    const reset = response.headers.get("x-ratelimit-reset")
+    const diagnostic = [remaining !== null ? `remaining=${remaining}` : null, reset ? `reset=${reset}` : null].filter(Boolean).join(" ")
+    throw new Error(`OpenAlex respondió ${response.status}${diagnostic ? ` (${diagnostic})` : ""}`)
+  }
   return await response.json() as OpenAlexResponse
 }
 
