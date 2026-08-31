@@ -23,8 +23,7 @@ type OpenAlexResponse = {
 
 export async function countOpenAlexWorks(query: string, from: Date, to: Date) {
   const payload = await requestOpenAlex({
-    search: query,
-    filter: `from_publication_date:${dateOnly(from)},to_publication_date:${dateOnly(to)}`,
+    filter: technologyFilter(query, from, to),
     "per-page": "1",
   })
   return Number(payload.meta?.count ?? 0)
@@ -32,10 +31,10 @@ export async function countOpenAlexWorks(query: string, from: Date, to: Date) {
 
 export async function searchOpenAlexWorks(query: string, from: Date, to: Date, limit = 8): Promise<OpenAlexWorkSignal[]> {
   const payload = await requestOpenAlex({
-    search: query,
-    filter: `from_publication_date:${dateOnly(from)},to_publication_date:${dateOnly(to)}`,
-    // Preserve OpenAlex's default relevance ordering. Sorting by publication date can
-    // promote recent works that only match weakly in abstracts/full text.
+    // VIDENTIA intentionally scopes technology evidence to title + abstract.
+    // OpenAlex `search=` also scans full text, which can turn incidental mentions into
+    // executive evidence and inflate the momentum denominator.
+    filter: technologyFilter(query, from, to),
     "per-page": String(Math.min(Math.max(limit, 1), 20)),
   })
 
@@ -98,6 +97,11 @@ async function requestOpenAlex(params: Record<string, string>): Promise<OpenAlex
     throw new Error(`OpenAlex respondió ${response.status}${diagnostic ? ` (${diagnostic})` : ""}`)
   }
   return await response.json() as OpenAlexResponse
+}
+
+function technologyFilter(query: string, from: Date, to: Date) {
+  const safeQuery = query.replace(/[,|:]+/g, " ").replace(/\s+/g, " ").trim()
+  return `from_publication_date:${dateOnly(from)},to_publication_date:${dateOnly(to)},title_and_abstract.search:${safeQuery}`
 }
 
 function dateOnly(value: Date) { return value.toISOString().slice(0, 10) }
