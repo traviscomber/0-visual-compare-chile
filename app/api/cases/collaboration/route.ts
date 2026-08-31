@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   const [{ data: members, error: membersError }, { data: comments, error: commentsError }, { data: actions, error: actionsError }, { data: role }] = await Promise.all([
     auth.supabase.rpc("get_case_members", { p_case_id: caseId }),
     auth.supabase.from("case_comments").select("id,case_id,author_id,body,mentions,created_at,updated_at").eq("case_id", caseId).order("created_at", { ascending: false }).limit(100),
-    auth.supabase.from("case_actions").select("id,case_id,title,assigned_to,created_by,status,due_at,created_at,completed_at,updated_at").eq("case_id", caseId).order("created_at", { ascending: false }).limit(100),
+    auth.supabase.from("case_actions").select("id,case_id,title,assigned_to,created_by,status,due_at,created_at,completed_at,outcome,outcome_at,outcome_by,updated_at").eq("case_id", caseId).order("created_at", { ascending: false }).limit(100),
     auth.supabase.rpc("case_access_role", { p_case_id: caseId, p_user_id: auth.user.id }),
   ])
   if (membersError || commentsError || actionsError || !role) return NextResponse.json({ error: "No pudimos cargar la colaboración del caso." }, { status: 403, headers: PRIVATE_NO_STORE_HEADERS })
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   const auth = await requireUser()
   if (!auth.ok) return auth.response
-  const body = await request.json().catch(() => ({})) as { type?: string; id?: string; caseId?: string; role?: string; status?: string }
+  const body = await request.json().catch(() => ({})) as { type?: string; id?: string; caseId?: string; role?: string; status?: string; outcome?: string }
   if (!body.id || !body.type) return NextResponse.json({ error: "Solicitud incompleta." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
 
   if (body.type === "member") {
@@ -96,8 +96,15 @@ export async function PATCH(request: Request) {
 
   if (body.type === "action") {
     const status = body.status === "done" ? "done" : "open"
-    const now = new Date().toISOString()
-    const { error } = await auth.supabase.from("case_actions").update({ status, completed_at: status === "done" ? now : null, updated_at: now }).eq("id", body.id)
+    const outcome = body.outcome?.trim() ?? ""
+    if (status === "done" && (outcome.length < 2 || outcome.length > 2000)) {
+      return NextResponse.json({ error: "Describe brevemente el resultado antes de completar la acción." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
+    }
+    const { error } = await auth.supabase.from("case_actions").update({
+      status,
+      outcome: status === "done" ? outcome : null,
+      updated_at: new Date().toISOString(),
+    }).eq("id", body.id)
     if (error) return NextResponse.json({ error: "No pudimos actualizar la acción." }, { status: 403, headers: PRIVATE_NO_STORE_HEADERS })
     return NextResponse.json({ ok: true }, { headers: PRIVATE_NO_STORE_HEADERS })
   }
