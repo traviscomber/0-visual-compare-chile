@@ -31,9 +31,8 @@ export async function countOpenAlexWorks(query: string, from: Date, to: Date) {
 
 export async function searchOpenAlexWorks(query: string, from: Date, to: Date, limit = 8): Promise<OpenAlexWorkSignal[]> {
   const payload = await requestOpenAlex({
-    // VIDENTIA intentionally scopes technology evidence to title + abstract.
-    // OpenAlex `search=` also scans full text, which can turn incidental mentions into
-    // executive evidence and inflate the momentum denominator.
+    // VIDENTIA uses a title-led universe for executive momentum. Abstract and full-text
+    // mentions are useful context, but they are too permissive to move the KPI itself.
     filter: technologyFilter(query, from, to),
     "per-page": String(Math.min(Math.max(limit, 1), 20)),
   })
@@ -101,7 +100,7 @@ async function requestOpenAlex(params: Record<string, string>): Promise<OpenAlex
 
 function technologyFilter(query: string, from: Date, to: Date) {
   const safeQuery = query.replace(/[,|:]+/g, " ").replace(/\s+/g, " ").trim()
-  return `from_publication_date:${dateOnly(from)},to_publication_date:${dateOnly(to)},title_and_abstract.search:${safeQuery}`
+  return `from_publication_date:${dateOnly(from)},to_publication_date:${dateOnly(to)},title.search:${safeQuery}`
 }
 
 function dateOnly(value: Date) { return value.toISOString().slice(0, 10) }
