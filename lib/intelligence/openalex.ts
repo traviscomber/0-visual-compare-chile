@@ -32,7 +32,8 @@ export async function searchOpenAlexWorks(query: string, from: Date, to: Date, l
   const payload = await requestOpenAlex({
     search: query,
     filter: `from_publication_date:${dateOnly(from)},to_publication_date:${dateOnly(to)}`,
-    sort: "publication_date:desc",
+    // Preserve OpenAlex's default relevance ordering. Sorting by publication date can
+    // promote recent works that only match weakly in abstracts/full text.
     "per-page": String(Math.min(Math.max(limit, 1), 20)),
   })
 
