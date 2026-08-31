@@ -106,6 +106,9 @@ jobs:
       - name: Technology corroboration regression
         run: node scripts/technology-corroboration-regression.mts
 
+      - name: Technology strategy regression
+        run: node scripts/technology-strategy-regression.mts
+
       - name: TypeScript
         run: pnpm exec tsc --noEmit
 
