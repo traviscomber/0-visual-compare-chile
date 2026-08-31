@@ -67,6 +67,9 @@ jobs:
       - name: Action layer regression
         run: node scripts/action-layer-regression.mts
 
+      - name: Executive flow gates regression
+        run: node scripts/executive-flow-gates-regression.mts
+
       - name: Positioning regression
         run: node scripts/positioning-regression.mts
 
