@@ -64,7 +64,7 @@ for (const needle of [
   'itemType: "watch"',
   'origin: "strategic_watch_confirmation"',
   '"Crear tarea"',
-  '"Abrir tarea"',
+  '>Abrir tarea</Link>',
   '"Crear vigilancia"',
   "Ninguna se ejecuta automáticamente",
   "strategic-watch:",
