@@ -64,6 +64,9 @@ jobs:
       - name: Grade A block 4-6 regression
         run: node scripts/grade-a-block-4-6-regression.mts
 
+      - name: Positioning regression
+        run: node scripts/positioning-regression.mts
+
       - name: TypeScript
         run: pnpm exec tsc --noEmit
 
