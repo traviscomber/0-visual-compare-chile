@@ -52,7 +52,32 @@ export async function GET(request: Request) {
 
     const { data, error } = await query
     if (error) throw new Error(error.message)
-    return NextResponse.json({ recommendations: data ?? [] }, { headers: PRIVATE_NO_STORE_HEADERS })
+
+    const rows = data ?? []
+    const identityIds = [...new Set(rows.map(item => String(item.competitor_identity_id)).filter(Boolean))]
+    const identityMap = new Map<string, { id: string; canonical_name: string; country: string | null }>()
+
+    if (identityIds.length) {
+      const { data: identities, error: identityError } = await admin
+        .from("intelligence_company_identities")
+        .select("id,canonical_name,country")
+        .in("id", identityIds)
+      if (identityError) throw new Error(identityError.message)
+      for (const identity of identities ?? []) {
+        identityMap.set(String(identity.id), {
+          id: String(identity.id),
+          canonical_name: String(identity.canonical_name),
+          country: identity.country ? String(identity.country) : null,
+        })
+      }
+    }
+
+    const recommendations = rows.map(item => ({
+      ...item,
+      competitor: identityMap.get(String(item.competitor_identity_id)) ?? null,
+    }))
+
+    return NextResponse.json({ recommendations }, { headers: PRIVATE_NO_STORE_HEADERS })
   } catch (error) {
     console.error("[recommendations:get]", error)
     return NextResponse.json({ error: "No pudimos cargar las recomendaciones." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
