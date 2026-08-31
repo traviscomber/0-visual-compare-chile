@@ -28,6 +28,10 @@ export function strategicWatchHref(type: StrategicWatchContextType, query: strin
   return buildHref("/monitorear/estrategico/nueva", [["type", type], ["q", query]])
 }
 
+export function strategicAnalysisHref(type: StrategicWatchContextType, query: string) {
+  return type === "technology" ? technologyHref(query) : companyHref(query)
+}
+
 export function portfolioGapHref(competitor: string, competitorIdentityId?: string | null) {
   return buildHref("/brechas", [["competitor", competitor], ["competitorIdentityId", competitorIdentityId]])
 }
