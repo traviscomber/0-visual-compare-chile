@@ -9,7 +9,7 @@ function requireText(haystack: string, needle: string, label: string) {
   if (!haystack.includes(needle)) fail(`${label} missing ${needle}`)
 }
 
-const migration = await readFile("supabase/migrations/20260831111500_add_recommendation_lifecycle.sql", "utf8")
+const migration = await readFile("supabase/migrations/20260831153805_add_recommendation_lifecycle.sql", "utf8")
 const collectionRoute = await readFile("app/api/intelligence/recommendations/route.ts", "utf8")
 const transitionRoute = await readFile("app/api/intelligence/recommendations/[id]/route.ts", "utf8")
 const actionRoute = await readFile("app/api/intelligence/recommendations/[id]/action/route.ts", "utf8")
