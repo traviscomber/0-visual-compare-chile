@@ -19,6 +19,7 @@ import {
   Radar,
   Search,
   Settings,
+  Target,
   Waypoints,
   type LucideIcon,
 } from "lucide-react"
@@ -81,6 +82,7 @@ const navigationGroups: readonly NavigationGroup[] = [
       { href: "/empresas", label: "Empresas", icon: Building2, aliases: [] },
       { href: "/espacios", label: "Espacios", icon: Radar, aliases: [] },
       { href: "/brechas", label: "Brechas IP", icon: GitCompareArrows, aliases: [] },
+      { href: "/oportunidades", label: "Oportunidades", icon: Target, aliases: [] },
       { href: "/portfolio", label: "Portafolio", icon: Waypoints, aliases: [] },
       { href: "/casos", label: "Casos", icon: BriefcaseBusiness, aliases: [] },
     ],
