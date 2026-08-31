@@ -10,7 +10,7 @@ const PATENT_EVIDENCE_LIMIT = 8
 export type TechnologyPatentEvidence = {
   source: "inapi_patents"
   sourceRecordId: string
-  applicationNumber: string
+  applicationNumber: string | null
   registrationNumber: string | null
   title: string
   applicants: string | null
