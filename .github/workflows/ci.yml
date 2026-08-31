@@ -73,6 +73,9 @@ jobs:
       - name: Action SLA inbox regression
         run: node scripts/action-sla-regression.mts
 
+      - name: Action due automation regression
+        run: node scripts/action-due-automation-regression.mts
+
       - name: Recommendation lifecycle regression
         run: node scripts/recommendation-lifecycle-regression.mts
 
