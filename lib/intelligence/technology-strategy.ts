@@ -2,10 +2,7 @@ export type TechnologyMaturityLevel = "insufficient" | "exploratory" | "emerging
 export type TechnologyAdoptionLevel = "insufficient" | "early" | "moderate" | "strong"
 
 type Publication = {
-  title: string
-  date: string | null
-  institutions?: string[]
-  url: string
+  institutions?: unknown
 }
 
 type Patent = {
@@ -205,7 +202,10 @@ function aggregatePatentActors(patents: Patent[]) {
 function aggregateInstitutions(publications: Publication[]) {
   const map = new Map<string, { name: string; count: number }>()
   for (const publication of publications) {
-    for (const institution of publication.institutions ?? []) {
+    const institutions = Array.isArray(publication.institutions)
+      ? publication.institutions.filter((value): value is string => typeof value === "string")
+      : []
+    for (const institution of institutions) {
       const name = institution.trim()
       if (!name) continue
       const key = name.toLocaleLowerCase()
