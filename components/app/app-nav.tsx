@@ -15,6 +15,7 @@ import {
   History,
   LayoutDashboard,
   LogOut,
+  Menu,
   Radar,
   Search,
   Settings,
@@ -287,6 +288,53 @@ function CurrentSection() {
   )
 }
 
+const mobileNavigationItems = [
+  navigationItems.find((item) => item.href === "/dashboard"),
+  navigationItems.find((item) => item.href === "/investigar"),
+  navigationItems.find((item) => item.href === "/patentes"),
+  navigationItems.find((item) => item.href === "/casos"),
+].filter((item): item is NavigationItem => Boolean(item))
+
+function MobileNavigation() {
+  const pathname = usePathname()
+  const { setOpenMobile } = useSidebar()
+
+  return (
+    <nav
+      aria-label="Navegación principal móvil"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-[#294047] bg-[#091A20]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
+    >
+      <div className="grid h-16 grid-cols-5">
+        {mobileNavigationItems.map((item) => {
+          const Icon = item.icon
+          const active = matchesPath(pathname, item.href) || item.aliases.some((alias) => matchesPath(pathname, alias))
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={active ? "page" : undefined}
+              className={`relative flex min-w-0 flex-col items-center justify-center gap-1 px-1 text-[9px] font-medium transition-colors ${active ? "text-[#E7DFCE]" : "text-[#83908F]"}`}
+            >
+              {active ? <span aria-hidden="true" className="absolute inset-x-4 top-0 h-0.5 bg-[#4A7F74]" /> : null}
+              <Icon className={active ? "size-5 text-[#96B5A6]" : "size-5"} strokeWidth={1.65} />
+              <span className="truncate">{item.label}</span>
+            </Link>
+          )
+        })}
+        <button
+          type="button"
+          onClick={() => setOpenMobile(true)}
+          className="flex min-w-0 flex-col items-center justify-center gap-1 px-1 text-[9px] font-medium text-[#83908F] transition-colors hover:text-[#E7DFCE] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#96B5A6]"
+          aria-label="Abrir menú completo"
+        >
+          <Menu className="size-5" strokeWidth={1.65} />
+          <span>Más</span>
+        </button>
+      </div>
+    </nav>
+  )
+}
+
 export function AppNav({
   userEmail,
   fullName,
@@ -333,7 +381,7 @@ export function AppNav({
       <SidebarInset className="relative min-w-0 overflow-hidden bg-[#0F2A33] text-foreground">
         <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-[#263D44] bg-[#0F2A33] px-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
-            <SidebarTrigger className="size-9 rounded-[9px] bg-[#13272D] text-[#9CA6A4] ring-1 ring-inset ring-white/[0.05] hover:bg-[#172F34] hover:text-[#FFFFFF]" />
+            <SidebarTrigger label="Menú" className="h-9 w-auto gap-2 rounded-[9px] bg-[#13272D] px-3 text-[#9CA6A4] ring-1 ring-inset ring-white/[0.05] hover:bg-[#172F34] hover:text-[#FFFFFF] md:size-9 md:px-0 [&>span]:not-sr-only md:[&>span]:sr-only" />
             <Link href="/dashboard" className="truncate text-[13px] font-normal tracking-[0.18em] text-[#E7DFCE] md:hidden">
               ViDENTiA
             </Link>
@@ -358,7 +406,8 @@ export function AppNav({
           </div>
         </header>
 
-        <div className="relative z-10 min-h-[calc(100svh-4rem)] min-w-0">{children}</div>
+        <div className="relative z-10 min-h-[calc(100svh-4rem)] min-w-0 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">{children}</div>
+        <MobileNavigation />
       </SidebarInset>
     </SidebarProvider>
   )
