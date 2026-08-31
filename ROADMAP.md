@@ -8,11 +8,11 @@
 
 Convertir VIDENTIA en una plataforma Grade A de inteligencia de propiedad intelectual, tecnológica y competitiva para Chile, capaz de transformar datos oficiales y señales externas en decisiones trazables y acciones concretas.
 
-La promesa operativa del producto es:
+Promesa operativa:
 
 > **VIDENTIA identifica qué están haciendo los competidores, hacia dónde avanzan las tecnologías y dónde aparecen nuevas oportunidades, manteniendo marcas, patentes, Niza, Viena, logos y expedientes como base factual del sistema.**
 
-La secuencia de producto que guía todas las fases es:
+Secuencia de producto:
 
 `Fuente → Evidencia → Cambio observado → Inteligencia → Recomendación → Acción → Seguimiento → Outcome`
 
@@ -26,29 +26,35 @@ VIDENTIA nunca debe presentar una predicción, intención empresarial o conclusi
 
 ## 2. Estado de referencia
 
-Baseline actualizado después de los merges de **#158, #160, #161 y #163**:
+Baseline actualizado después de **#165, #167, #168, #169, #170 y #171**, sobre la foundation de **#158, #160, #161 y #163**.
 
 - Repositorio: `traviscomber/0-visual-compare-chile`
 - Rama productiva: `main`
-- Commit productivo: `b9a7a7886702e3123b53ece1064fca2dd84be2b3`
-- PRs relevantes: `#158` Grade A Block A, `#160` Action Layer foundation, `#161` contexto GDELT y `#163` executive flow gates
-- Producto productivo: `https://videntia.app`
-- Deployment productivo: `dpl_HyyXaKcHWjpPsdFcYT9gFQ79ZeWZ` — `READY`
-- CI de #163 `#841`: `success`
-- CodeQL de #163 `#842`: `success`
-- Runtime errors del deployment de #163 después del release: `0`
+- Commit productivo: `197fca7585aacbd7e9e83a5587a50f0b0892a7f6`
+- Producto: `https://videntia.app`
+- Vercel de `main`: `SUCCESS` sobre `197fca7585aacbd7e9e83a5587a50f0b0892a7f6`
+- CI de `main` #865: `success`
+- CodeQL de `main`: `success`
 - Stack: Next.js 16.2.4 + Supabase + Vercel + OpenAI + fuentes públicas externas
 
-### Baseline de confianza actual
+### PRs recientes que cambian el baseline funcional
+
+- **#165** — Action lifecycle: una acción no puede cerrarse sin outcome atribuible; autor/timestamps se derivan en PostgreSQL y la reapertura queda auditada.
+- **#167** — navegación móvil persistente y visible.
+- **#168** — `Crear tarea` desde contexto estratégico, separado explícitamente de `Crear vigilancia`, reutilizando Caso + Evidencia + Acción.
+- **#169** — Recommendation lifecycle persistente: nueva → revisada → aceptada | descartada → convertida en acción; dedupe, auditabilidad y conversión idempotente a trabajo.
+- **#170** — `/oportunidades`: bandeja ejecutiva sobre recomendaciones persistidas, sin recalcular inteligencia ni crear trabajo automáticamente.
+- **#171** — Dashboard consume el lifecycle persistido de Oportunidades, prioriza recomendaciones aceptadas/altas y mantiene el descubrimiento `Dashboard → Oportunidades → Brechas`.
+
+### Baseline de confianza
 
 - Quality checks: **9 checks / 0 fallas críticas / 1 warning**.
-- Único warning real: Change Engine **0/4 baselines**; se mantiene hasta que el ciclo cron normal produzca evidencia real.
-- Cobertura de health de fuentes programadas: check `scheduled_source_health_coverage` en PASS.
-- INAPI Open Data: operativo y dentro de SLA diario.
-- TDPI: operativo y dentro de SLA semanal.
-- Fuentes bajo demanda se distinguen de fuentes programadas; fuentes de catálogo no automatizadas quedan inactivas y no aparentan operación.
+- Warning real: Change Engine **0/4 baselines**; debe cerrarse por ciclo cron natural. No fabricar baseline sintético.
+- INAPI Open Data: operativo dentro de SLA diario.
+- TDPI: operativo dentro de SLA semanal.
+- Fuentes bajo demanda se distinguen de fuentes programadas; catálogo no automatizado no aparenta operación.
 
-### Baseline de calidad de identidad
+### Baseline de identidad
 
 `VIDENTIA company identity benchmark v1`:
 
@@ -56,18 +62,18 @@ Baseline actualizado después de los merges de **#158, #160, #161 y #163**:
 - Precision: **1.000**.
 - Recall: **0.909**.
 - Accuracy: **0.952**.
-- 0 falsos positivos en el benchmark actual.
-- 1 falso negativo conocido por boilerplate legal extenso de razón social.
+- 0 falsos positivos.
+- 1 falso negativo conocido por boilerplate jurídico extenso.
 
-### Baseline de inteligencia tecnológica
+### Baseline tecnológico
 
-- OpenAlex activo como señal conservadora de investigación, normalizado para variantes frecuentes y con caché de 6 h.
-- Patentes INAPI activas como eje independiente de protección tecnológica.
-- Crossref aporta evidencia contextual filtrada por relevancia.
-- GDELT se usa sólo como contexto; una caída de GDELT no se convierte en “cero actividad”.
-- La confianza tecnológica v1 no puede superar `Media` con sólo dos ejes duros disponibles.
+- OpenAlex: señal conservadora de investigación, normalización, retry y caché.
+- Patentes INAPI: eje independiente de protección.
+- Crossref: evidencia contextual filtrada por relevancia.
+- GDELT: sólo contexto; una caída no se convierte en “cero actividad”.
+- Confidence tecnológica v1 no supera `Media` con sólo dos ejes duros.
 
-### Leyenda de estado
+### Leyenda
 
 - `DONE`: criterio de salida cumplido y verificado en producción.
 - `IN PROGRESS`: capacidad operativa, pero faltan criterios Grade A.
@@ -81,22 +87,18 @@ Baseline actualizado después de los merges de **#158, #160, #161 y #163**:
 
 | Fase | Objetivo | Estado | Criterio de salida |
 | --- | --- | --- | --- |
-| **1. Trust Layer** | Que nunca dudemos de la plataforma | **IN PROGRESS — cerca de cierre** | Sabemos exactamente qué fuente está fresca, degradada o incompleta |
+| **1. Trust Layer** | Que nunca dudemos de la plataforma | **IN PROGRESS — cerca de cierre** | Freshness, degradación, reconciliación y fallos totalmente observables |
 | **2. Intelligence Quality** | Que las conclusiones sean defendibles | **IN PROGRESS — avanzado** | Inteligencia reproducible, calibrada y auditada |
-| **3. Executive Intelligence** | Responder las preguntas clave en 1–2 clics | **IN PROGRESS — avanzado** | Las seis preguntas estratégicas tienen respuesta trazable de punta a punta |
-| **4. Recommendation Engine** | Pasar de señal a decisión | IN PROGRESS | Cada cambio relevante produce recomendación o descarte explicado |
-| **5. Action Layer** | Que VIDENTIA haga trabajo | **IN PROGRESS — foundation merged** | Señal → acción sin salir de VIDENTIA |
-| **6. Coverage Moat** | Crear una ventaja de datos difícil de replicar | IN PROGRESS | Inteligencia multi-source real, enlazada a empresa/tecnología/mercado |
-| **7. Enterprise Grade** | Poder venderlo seriamente a corporativos | **IN PROGRESS — foundations** | Seguridad, RBAC, SSO, SLA, cuotas, observabilidad y recovery verificados |
-| **8. Product Polish** | Que el producto se sienta Grade A | **IN PROGRESS** | Coherencia visual, UX, responsive y dashboards ejecutivos completos |
+| **3. Executive Intelligence** | Responder las preguntas clave en 1–2 clics | **IN PROGRESS — muy avanzado** | Seis preguntas trazables de punta a punta, incluidas Oportunidades |
+| **4. Recommendation Engine** | Pasar de señal a decisión | **IN PROGRESS — lifecycle operativo** | Todo cambio relevante produce recomendación o descarte explicado y medible |
+| **5. Action Layer** | Que VIDENTIA haga trabajo | **IN PROGRESS — lifecycle + outcome operativos** | Señal → recomendación → acción → responsable → seguimiento → outcome |
+| **6. Coverage Moat** | Ventaja de datos difícil de replicar | **IN PROGRESS** | Inteligencia multi-source real enlazada a empresa/tecnología/mercado |
+| **7. Enterprise Grade** | Poder venderlo seriamente a corporativos | **IN PROGRESS — foundations** | RBAC, aislamiento, SSO, SLA, cuotas, observabilidad y recovery verificados |
+| **8. Product Polish** | Que el producto se sienta Grade A | **IN PROGRESS — avanzado** | UX coherente, responsive y dashboards ejecutivos completos |
 
 ---
 
 # FASE 1 — TRUST LAYER
-
-## Objetivo
-
-Que cada dato y conclusión tenga contexto operativo suficiente para saber si puede ser utilizado con confianza.
 
 ## Ya construido y verificado
 
@@ -104,432 +106,312 @@ Que cada dato y conclusión tenga contexto operativo suficiente para saber si pu
 - `intelligence_sources`, source state, ingestion runs y source events.
 - Freshness y health visibles en `/fuentes`.
 - Cron INAPI instrumentado de punta a punta.
-- Una corrida sólo queda `completed` después del pipeline y los quality checks.
-- `partial` conserva el último éxito anterior y degrada el health de la fuente.
-- Retry/backoff acotado para errores recuperables.
-- Circuit breaker por fuente con `open / half_open / closed`.
+- `completed / partial / failed` con semántica explícita.
+- Retry/backoff acotado y circuit breaker `open / half_open / closed`.
 - Health sweep independiente del cron de ingestión.
 - SLA explícito por cadencia.
-- Historial de health/freshness.
-- Alertas de degradación con apertura y resolución.
+- Historial de health/freshness y alertas de degradación/resolución.
 - Quality checks persistentes.
-- Reconciliación visible de conteos de corrida INAPI.
-- Vista operativa de corridas, duración, retries, etapa fallida, contadores y reconciliación.
-- Separación entre fecha jurídica, fecha de actualización de la fuente y fecha de observación por VIDENTIA.
-- Fuentes bajo demanda, manuales e inactivas no se presentan como fuentes programadas fallidas.
+- Reconciliación de conteos del pipeline INAPI.
+- Separación de fecha jurídica, actualización de fuente y observación por VIDENTIA.
 
-## Pendiente real para Grade A
+## Pendiente real
 
-1. **Confirmar los 4 baselines del Change Engine mediante el ciclo cron normal.** Estado actual: `0/4`. No fabricar baseline sintético.
-2. Observar al menos un ciclo productivo normal post-merge con los nuevos contratos de `completed / partial / failed`, health sweep y alertas.
-3. Mantener la regla: toda nueva fuente programada debe incorporar telemetría, SLA, health y quality contract **antes** de activarse.
-4. Ampliar la reconciliación más allá del pipeline INAPI cuando nuevas ingestiones programadas sean incorporadas.
+1. Confirmar **4/4 baselines** del Change Engine por ciclo cron natural. Estado: `0/4`.
+2. Observar ciclos productivos normales suficientes con los contratos actuales de health/alerts.
+3. Exigir telemetría, SLA, health y quality contract antes de activar toda nueva fuente programada.
+4. Extender reconciliación a nuevas ingestiones programadas.
 
 ## Criterio de salida
 
-- 100% de fuentes programadas publican health/freshness.
-- 0 fallas críticas abiertas en quality checks.
-- Change Engine con sus 4 baselines reales.
-- No existen fallos silenciosos.
-- Todo cron deja evidencia de inicio, fin, duración, filas procesadas y resultado.
-- Una fuente degradada se identifica antes de que el usuario interprete su ausencia de datos como ausencia de actividad.
+- 100% de fuentes programadas con health/freshness.
+- 0 fallas críticas abiertas.
+- Change Engine 4/4 baselines reales.
+- 0 fallos silenciosos.
+- Toda corrida deja evidencia de inicio, fin, duración, filas y resultado.
 
 ---
 
 # FASE 2 — INTELLIGENCE QUALITY
-
-## Objetivo
-
-Que las conclusiones de VIDENTIA sean defendibles, reproducibles y medibles.
 
 ## Ya construido y verificado
 
 - Identity resolution corporativa conservadora.
 - Alias y normalización de razones sociales.
 - Entity Graph V2 no destructivo.
-- Benchmark versionado `benchmarks/company-identity-v1.json` y gate obligatorio de CI.
-- Precision/recall/accuracy repetibles en CI.
-- Política de auto-link conservadora: sólo normalización exacta, confidence mínima y contexto de país.
-- Casos ambiguos quedan en `review_required`.
-- Merge/split manual de identidades con operación auditada, snapshots before/after y guardrails.
-- Feedback `relevant / irrelevant / false_match / identity_incorrect` con API autenticada y audit trail.
-- Calibration snapshots persistentes con sample size y false-positive rate.
+- Benchmark versionado y obligatorio en CI.
+- Precision/recall/accuracy repetibles.
+- Auto-link conservador; ambiguos quedan `review_required`.
+- Merge/split manual auditado con snapshots y guardrails.
+- Feedback `relevant / irrelevant / false_match / identity_incorrect`.
+- Calibration snapshots persistentes.
 - Dedupe de señales y expedientes.
-- Change Engine persistente.
-- Strategic Change Engine basado en convergencia de evidencia.
-- Quality check que impide presentar cambios estratégicos sostenidos por menos de dos evidencias.
+- Change Engine y Strategic Change Engine.
+- Quality gate que impide patrón estratégico con evidencia insuficiente.
 - Trayectoria empresarial 360 días.
-- Distinción entre señal experimental y patrón estratégico.
-- Scores explicables en Recommendation Engine V1.
-- Corroboración tecnológica v1: investigación OpenAlex + patentes INAPI como ejes independientes.
-- Filtros de relevancia para evitar falsos positivos de Crossref y patentes tecnológicamente parecidas pero incorrectas.
+- Experimental separado de patrón estratégico.
+- Scores explicables del Recommendation Engine.
+- Corroboración tecnológica OpenAlex + INAPI.
+- Filtros de relevancia Crossref/patentes.
 
-## Pendiente real para Grade A
+## Pendiente real
 
-1. **Expandir el benchmark de identidad.** 21 casos es un gate de no-regresión, no una muestra suficiente para declarar calidad poblacional.
-2. Incorporar más empresas chilenas, grupos, subsidiarias, cambios de razón social y boilerplate jurídico al set curado.
-3. Mejorar recall sin sacrificar el actual `1.000` de precision; el benchmark mantiene un falso negativo conocido.
-4. Obtener sample size real suficiente en calibration snapshots; `insufficient_sample` debe desaparecer por evidencia, no por bajar el mínimo.
-5. Crear benchmark etiquetado para medir falsos positivos/falsos negativos de **patrones estratégicos**, no sólo de identidad.
-6. Consolidar dedupe cross-source de publicaciones/versiones equivalentes; OpenAlex puede devolver versiones con títulos equivalentes y DOI distintos.
-7. Calibrar confidence por tipo de evidencia cuando se incorporen demanda comercial, regulación e inversión.
-8. Aumentar cobertura de relaciones `parent / subsidiary / group` sólo con evidencia verificable.
-9. Llevar la misma resolución de identidad a CMF, Mercado Público y EPO antes de usarlos para subir materialidad.
-
-## Criterio de salida
-
-- Benchmark versionado y suficientemente representativo.
-- Métricas de precision/recall visibles y repetibles.
-- Ninguna relación corporativa crítica se crea sólo por similitud textual.
-- Ningún patrón estratégico depende de una sola señal salvo que esté explícitamente clasificado como experimental.
-- Toda conclusión importante puede reconstruirse desde sus evidencias fuente.
+1. Expandir benchmark de identidad; 21 casos es gate de no-regresión, no calidad poblacional.
+2. Incorporar más empresas chilenas, grupos, subsidiarias, cambios de razón social y boilerplate.
+3. Mejorar recall sin sacrificar precision 1.000.
+4. Conseguir sample size real para calibration snapshots.
+5. Crear benchmark etiquetado de patrones estratégicos.
+6. Dedupe cross-source de publicaciones/versiones equivalentes.
+7. Calibrar confidence por tipo de evidencia al agregar demanda, regulación e inversión.
+8. Aumentar relaciones parent/subsidiary/group sólo con evidencia verificable.
+9. Extender identity resolution a CMF, Mercado Público y EPO antes de elevar materialidad.
 
 ---
 
 # FASE 3 — EXECUTIVE INTELLIGENCE
 
-## Objetivo
-
-Responder en 1–2 clics las preguntas que realmente importan al usuario ejecutivo.
-
 ## Las seis preguntas canónicas
 
-1. **¿Qué cambió esta semana?**
-2. **¿Qué está protegiendo ahora que hace seis meses no protegía?**
-3. **¿Dónde está llevando su tecnología?**
-4. **¿Quién está entrando en mi espacio?**
-5. **¿Qué tecnologías están acelerándose?**
-6. **¿Dónde aparecen oportunidades?**
+1. ¿Qué cambió esta semana?
+2. ¿Qué está protegiendo ahora que hace seis meses no protegía?
+3. ¿Dónde está llevando su tecnología?
+4. ¿Quién está entrando en mi espacio?
+5. ¿Qué tecnologías están acelerándose?
+6. ¿Dónde aparecen oportunidades?
 
 ## Ya construido y verificado
 
-- Dashboard con las seis preguntas canónicas y rutas ejecutivas.
+- Dashboard con seis preguntas canónicas.
 - Brief estratégico semanal.
-- Change Engine observado por VIDENTIA.
-- Strategic Change Engine.
-- `/empresas` con comparación temporal, trayectoria y relaciones verificadas.
-- `/tecnologias` con investigación, patentes INAPI, evidencia trazable, fuerza de señal y CTAs.
-- `/espacios` con entrantes, aceleración, consolidación y experimental.
-- `/brechas` para comparación competitiva.
-- Vigilancias estratégicas.
-- Contexto persistente en URL y deep-links entre Empresas, Tecnologías, Espacios, Brechas y Vigilancias.
-- Navegación `Empresa → Espacio` verificada con SQM / H02J3/32.
-- Navegación `Espacio → Brecha` verificada hasta el guardrail de empresa propia.
-- Pantalla de confirmación `Tecnología → Vigilar` verificada; navegar hacia ella no crea una vigilancia por accidente.
-- Interfaz de Tecnología simplificada a lenguaje ejecutivo: qué pasa, qué significa, evidencia y próximo paso.
-- Gate contractual permanente `Executive flow gates regression` con fixture aislado `qa-*` para binding, brecha repetida, confirmación/creación idempotente de vigilancia y deep-links contextuales.
-- Creación de vigilancia estratégica idempotente ante doble clic o reintento.
+- Change Engine / Strategic Change Engine.
+- `/empresas`: comparación temporal, trayectoria y relaciones verificadas.
+- `/tecnologias`: investigación + patentes + evidencia + fuerza de señal + CTAs.
+- `/espacios`: entrantes, aceleración, consolidación y experimental.
+- `/brechas`: comparación competitiva y Recommendation Engine.
+- `/oportunidades`: recomendaciones persistidas, priorizadas y auditables.
+- Dashboard muestra oportunidades activas y prioriza aceptadas/alta prioridad en la bandeja.
+- `Dashboard → Oportunidades → Brechas` preserva una sola fuente de verdad para lifecycle y un acceso explícito al descubrimiento.
+- Vigilancias estratégicas y deep-links contextuales.
+- `Empresa → Espacio` y `Espacio → Brecha` cubiertos por gates contractuales.
+- Confirmación de vigilancia separa navegación de mutación.
+- Creación de vigilancia estratégica idempotente.
+- `Executive flow gates regression` obligatorio.
+- `Opportunities workspace regression` obligatorio.
+- `Dashboard opportunities regression` obligatorio.
 
-## Pendiente real para Grade A
+## Pendiente real
 
-1. **Ejecutar QA autenticado real de `Empresa → Espacio → Brecha`** con un binding de empresa propia en fixture/organización aislada. El contrato automatizado está cubierto; falta la prueba física de navegador y persistencia.
-2. **Ejercitar la creación efectiva de una vigilancia estratégica en navegador autenticado** y verificar persistencia/resultado. La API ya es idempotente y está fijada por CI.
-3. **Cerrar `Dashboard → análisis contextual` en navegador autenticado** con una vigilancia y señal estratégica de prueba realmente existentes. Los deep-links y ownership están fijados por CI.
-4. Unificar actor vs mercado y actor vs portafolio propio en las superficies ejecutivas donde corresponda.
-5. Asegurar filtros temporales coherentes `90d / 180d / 365d / histórico` en los módulos que lo necesitan.
-6. Consolidar “oportunidades” como una superficie ejecutiva propia, evitando convertir whitespace o actividad débil en predicción.
-7. Validar que cada una de las seis preguntas abre evidencia relevante en un clic bajo estados con datos y sin datos.
-
-## Criterio de salida
-
-Las seis preguntas deben responderse de punta a punta sin conocer la estructura interna de VIDENTIA, sin navegar por tablas técnicas y sin depender de fixtures incompletos.
+1. QA autenticado físico `Empresa → Espacio → Brecha` con binding aislado.
+2. Crear efectivamente una vigilancia en navegador autenticado y verificar persistencia.
+3. QA físico `Dashboard → Oportunidades → Brechas` con recomendaciones reales/controladas.
+4. QA físico `Dashboard → análisis contextual` con una señal estratégica real/controlada.
+5. Unificar actor vs mercado y actor vs portafolio propio donde corresponda.
+6. Coherencia temporal `90d / 180d / 365d / histórico`.
+7. Validar las seis preguntas en estados con datos, sin datos y error.
 
 ---
 
 # FASE 4 — RECOMMENDATION ENGINE
 
-## Objetivo
-
-Pasar de observar un cambio a sugerir qué revisar o hacer a continuación.
-
-## Ya construido
+## Ya construido y verificado
 
 - Recommendation Engine V1.
-- Portfolio Gap.
-- Competitive Spaces.
+- Portfolio Gap y Competitive Spaces.
 - Score determinista 0–100.
-- Componentes explicables: materialidad, novedad, convergencia, persistencia y proximidad.
-- Guardrails jurídicos y estratégicos.
-- Factores del score trazables.
-- Feedback de relevancia disponible como infraestructura de calibración.
+- Materialidad, novedad, convergencia, persistencia y proximidad explicables.
+- Guardrails jurídicos/estratégicos.
+- Recommendation lifecycle persistente (#169):
+  - `new`
+  - `reviewed`
+  - `accepted`
+  - `discarded`
+  - `converted_to_action`
+- Descarte exige motivo.
+- Conversión exige aceptación previa.
+- Dedupe estable por organización + empresa propia + competidor + activo + clasificación.
+- La recomendación se revalida server-side antes de persistirse; el navegador no dicta score/evidencia.
+- Conversión idempotente a Caso + Evidencia + Acción.
+- `/oportunidades` opera sobre recomendaciones persistidas y nunca recalcula el score en cliente.
 
-## Pendiente para Grade A
+## Pendiente real
 
-1. Todo cambio estratégico relevante debe producir:
-   - recomendación, o
-   - descarte explícito con razón.
-2. Recommendation lifecycle: `nueva`, `revisada`, `aceptada`, `descartada`, `convertida en acción`.
-3. Deduplicación de recomendaciones equivalentes.
-4. Emerging whitespace basado en evidencia de mercado/tecnología.
-5. Priorización por cercanía al portafolio propio.
-6. Recomendaciones específicas por tipo de señal:
-   - nuevo actor,
-   - aceleración,
-   - clase nueva,
-   - cambio de titular,
-   - convergencia marca/patente,
-   - maduración de portafolio,
-   - brecha competitiva.
-7. Conectar feedback/calibración al ranking sin alterar los hechos fuente.
-8. Medir acceptance/rejection rate por tipo de recomendación.
+1. Extender lifecycle/recomendaciones más allá de Portfolio Gap a nuevos actores, aceleración, clase nueva, cambio de titular, convergencia y maduración.
+2. Emerging whitespace con evidencia suficiente; no usar actividad débil como predicción.
+3. Mejorar proximidad al portafolio propio donde exista fundamento semántico.
+4. Conectar feedback/calibración al ranking sin alterar hechos fuente.
+5. Medir acceptance/rejection/conversion rate por tipo de recomendación.
+6. Evaluar stale/refresh policy para recomendaciones cuyo contexto fuente cambie.
 
 ## Criterio de salida
 
-Ninguna señal material queda como texto muerto. Cada cambio relevante termina en una recomendación accionable o en un descarte justificado y auditado.
+Ninguna señal material queda como texto muerto: termina en recomendación accionable o descarte explicado, auditado y medible.
 
 ---
 
 # FASE 5 — ACTION LAYER
 
-## Objetivo
-
-Que VIDENTIA convierta inteligencia en trabajo ejecutable sin obligar al usuario a salir del sistema.
-
 ## Estado actual
 
-La foundation canónica está mergeada en #160 y el primer flujo de acción idempotente quedó reforzado en #163.
+La foundation de #160 ya evolucionó:
 
-`create_intelligence_action` ya convierte inteligencia atómicamente en el modelo existente de Caso + Evidencia + Acción, conserva RLS y deduplica trabajo abierto. Todavía falta completar:
+- `create_intelligence_action` convierte inteligencia en Caso + Evidencia + Acción de forma atómica e idempotente.
+- #168 expone `Crear tarea` desde contexto estratégico y mantiene `Crear vigilancia` como decisión independiente.
+- #169 convierte recomendaciones aceptadas a trabajo y conserva `case_id/action_id`.
+- #165 exige outcome atribuible antes de completar una acción y permite reapertura limpia.
 
-`Señal → Recomendación → Acción → Responsable → Seguimiento → Outcome`
+Secuencia actualmente demostrable por contratos:
 
-La creación de vigilancia estratégica tiene contrato automatizado e idempotencia; su submit autenticado real sigue pendiente de QA de navegador.
+`Señal / contexto → Recomendación → Acción → Outcome`
 
-## Plan de construcción
+Todavía falta completar el tramo operativo enterprise:
 
-### 5.1 Canonical Action Model
+`Responsable → due date → seguimiento → recordatorio/SLA`
 
-Antes de crear nuevas tablas, mapear `casos`, notificaciones, vigilancia, intervenciones y cualquier sistema de tareas existente.
+## Pendiente real
 
-Si no existe una fuente canónica suficiente, introducir `intelligence_actions` con:
-
-- organización/tenant;
-- usuario creador;
-- origen (`signal`, `strategic_change`, `recommendation`, `gap`, `space`);
-- tipo de acción;
-- responsable;
-- estado;
-- prioridad;
-- due date;
-- vínculo a evidencia;
-- outcome;
-- audit trail.
-
-Toda creación debe ser atómica e idempotente.
-
-### 5.2 One-click actions
-
-Desde cualquier señal/recomendación relevante:
-
-- Crear vigilancia.
-- Abrir caso.
-- Crear tarea/acción.
-- Asignar responsable.
-- Agregar competidor.
-- Seguir tecnología.
-- Comparar con portafolio.
-- Generar brief.
-- Generar reporte/PDF.
-- Marcar irrelevante.
-
-### 5.3 Seguimiento
-
-- Inbox de acciones pendientes.
-- Estados `pendiente / en revisión / resuelta / descartada`.
-- SLA/due dates.
-- Responsable y última actividad.
-- Recordatorios y notificaciones.
-- Outcome: qué decisión se tomó y por qué.
-
-### 5.4 Reporting
-
-- Brief PDF con evidencia.
-- Brief por email.
-- Exportación para directorio/comité.
-- Historial de briefs enviados.
-- Trazabilidad hasta la señal original.
+1. Responsable explícito y asignación.
+2. Due date y SLA por acción.
+3. Inbox de acciones pendientes/en revisión/resueltas/descartadas.
+4. Recordatorios/notificaciones.
+5. Métricas de ageing, tiempo a decisión y completion rate.
+6. Brief/reporting trazable a evidencia y outcome.
+7. QA autenticado de creación/conversión/cierre/reapertura en navegador.
 
 ## Criterio de salida
 
-Una señal relevante puede terminar en una acción asignada y cerrada sin abandonar VIDENTIA, conservando evidencia, responsable, decisión y outcome.
+Una señal relevante termina en una acción asignada, seguida y cerrada dentro de VIDENTIA, preservando evidencia, responsable, decisión y outcome.
 
 ---
 
 # FASE 6 — COVERAGE MOAT
-
-## Objetivo
-
-Crear una ventaja de datos que sea difícil de replicar con una búsqueda simple o un único proveedor.
 
 ## Cobertura actual
 
 - INAPI marcas.
 - INAPI patentes.
 - TDPI.
-- OpenAlex con API key, normalización, retry y caché.
-- Crossref con filtro de relevancia.
-- GDELT como contexto de bajo peso; disponibilidad intermitente.
-- Tecnología Corroboration v1: OpenAlex + INAPI.
+- OpenAlex.
+- Crossref.
+- GDELT contextual.
+- Corroboración tecnológica OpenAlex + INAPI.
 - CMF disponible bajo demanda en la arquitectura.
-- Mercado Público disponible parcialmente por proveedor/RUT.
-- EPO OPS catalogado, todavía no operativo como eje del producto.
-- WIPO Global Brand Database: referencia/manual, sin automatización no autorizada.
+- Mercado Público parcial por proveedor/RUT.
+- EPO OPS catalogado, no operativo como eje.
+- WIPO GBD como referencia/manual sin automatización no autorizada.
 
-## Siguiente construcción
+## Pendiente real
 
-1. **Demanda comercial:** construir una capa semántica `tecnología → conceptos → CPC/IPC → productos/servicios → licitaciones/OC` antes de ponderar Mercado Público.
-2. Incorporar Mercado Público como eje independiente de demanda, no como simple keyword count.
-3. Incorporar CMF al entity graph corporativo y movimientos empresariales verificables.
-4. Activar EPO OPS y usar familias/estado legal/CPC como expansión internacional del eje patentario.
-5. Añadir regulación como eje separado cuando exista fuente trazable suficiente.
-6. Enlazar ciencia → tecnología → empresa → IP.
-7. Enlazar empresa → IP → mercado → compras públicas → contexto público.
-8. Cross-source entity resolution antes de elevar confidence.
-9. Normalización de evidencia externa al mismo modelo de trazabilidad.
-10. Source health obligatorio para cada nuevo conector.
-11. Evitar scraping de fuentes cuyo contrato no lo permita.
-12. Contener la latencia de GDELT para que una fuente contextual lenta no retrase investigación/patentes.
-13. Instrumentar consumo OpenAlex por análisis si el control exacto de cuota/costo pasa a ser operativo.
-14. Dedupe de versiones/publicaciones equivalentes para limpiar evidencia sin colapsar trabajos legítimamente distintos.
-
-## Modelo objetivo de corroboración
-
-Cada tecnología debe poder separar al menos:
-
-- **Investigación:** OpenAlex / Crossref.
-- **Protección:** INAPI / EPO.
-- **Demanda comercial:** Mercado Público u otra evidencia transaccional trazable.
-- **Movimiento empresarial:** CMF + entity graph.
-- **Regulación/contexto:** fuentes regulatorias y noticias.
-
-La **dirección de la señal**, la **madurez comercial** y la **confianza** deben ser métricas distintas.
-
-## Criterio de salida
-
-VIDENTIA puede explicar un movimiento usando múltiples dominios independientes de evidencia: propiedad industrial, empresa/mercado, ciencia y actividad pública, sin que una sola fuente “infle” la conclusión.
+1. Capa semántica `tecnología → conceptos → CPC/IPC → productos/servicios → licitaciones/OC`.
+2. Mercado Público como eje independiente de demanda.
+3. CMF al entity graph y movimientos verificables.
+4. EPO OPS: familias/estado legal/CPC como expansión internacional.
+5. Regulación como eje independiente cuando exista fuente trazable.
+6. Ciencia → tecnología → empresa → IP.
+7. Empresa → IP → mercado → compras públicas → contexto.
+8. Cross-source identity resolution antes de elevar confidence.
+9. Source health obligatorio para cada conector.
+10. Contener latencia/fallo de GDELT.
+11. Dedupe de versiones/publicaciones equivalentes.
 
 ---
 
 # FASE 7 — ENTERPRISE GRADE
 
-## Objetivo
+## Foundations existentes
 
-Poder vender VIDENTIA a un cliente corporativo serio sin depender de excepciones operativas.
-
-## Foundations ya existentes
-
-- APIs de inteligencia con boundary autenticado y headers privados/no-store.
-- Superficies DB sensibles de inteligencia restringidas a `service_role` donde corresponde.
-- Regresiones de roles de casos y seguridad de colaboración.
-- API keys con ruta canónica y regresión de listado.
+- APIs autenticadas con private/no-store.
+- Tablas sensibles restringidas a service role cuando corresponde.
+- RLS/SECURITY INVOKER en flujos de acción.
+- Regresiones de roles y colaboración.
+- API keys con ruta canónica y gate.
 - Analytics privacy regression.
-- Auditoría de feedback y operaciones de identidad.
-- Separación por organización presente en varias capacidades, pero todavía no certificada como matriz enterprise completa.
+- Auditoría de identidad, feedback, lifecycle de recomendaciones y outcomes.
+- Separación por organización en capacidades críticas.
 
-## Pendiente para Grade A
+## Pendiente real
 
 ### Seguridad y acceso
 
-- RBAC formal por organización y capacidad.
-- Matriz de permisos documentada y testeada E2E.
-- Tenant isolation regression tests transversales a todos los módulos críticos.
+- RBAC formal por organización/capacidad.
+- Tenant-isolation suite transversal.
 - SSO SAML/OIDC.
 - MFA compatible con política enterprise.
-- Audit log consolidado de acciones críticas.
-- Rotación de secretos y API keys con proceso operativo.
-- Leaked Password Protection activada cuando el plan/configuración de Supabase lo permita.
+- Audit log consolidado/exportable.
+- Rotación de secretos/API keys.
 
 ### Operación
 
-- SLA/SLO definidos.
+- SLA/SLO.
 - Quotas por plan/organización.
 - Rate limiting verificable.
 - Synthetic monitoring.
-- Alertas de cron/source failure conectadas a operación real.
-- API latency monitoring y P95 por ruta crítica.
-- Runtime error monitoring.
-- Dashboards de observabilidad.
+- P95 por rutas críticas.
+- Runtime monitoring y alertas operativas.
 
 ### Recovery
 
-- Backup policy documentada.
+- Backup policy.
 - Restore drill real.
 - Migration replay desde cero.
-- Runbook de incidente.
-- Rollback de deploy probado.
-- RPO / RTO definidos.
+- Incident runbook.
+- Rollback probado.
+- RPO/RTO.
 
 ### Compliance readiness
 
 - Retención de auditoría.
 - Exportación de audit log.
-- Gestión de usuarios y revocación de acceso.
+- Revocación de acceso.
 - Política de datos por tenant.
-- Registro de fuentes y términos de uso.
-- Security/Performance Advisors sin warnings accionables antes del cierre.
-
-## Criterio de salida
-
-Existe evidencia, no sólo documentación, de que auth, permisos, aislamiento, restore, quotas, monitoring y recuperación funcionan en escenarios reales.
+- Registro de fuentes/términos.
+- Advisors sin warnings accionables antes del cierre.
 
 ---
 
 # FASE 8 — PRODUCT POLISH
 
-## Objetivo
-
-Que VIDENTIA se sienta como un producto Grade A, no como una colección de módulos técnicamente buenos.
-
 ## Ya avanzado
 
-- `/tecnologias` migró de lenguaje metodológico a lenguaje ejecutivo.
-- La pantalla tecnológica ahora separa resultado, significado, evidencia y próximo paso.
-- CTAs contextuales: vigilar, revisar patentes, evaluar otra tecnología y ver evidencia.
-- Fuentes y metodología se conservan sin dominar la lectura principal.
-- Empty state inicial explica el valor antes de ejecutar una consulta.
+- `/tecnologias` usa lenguaje ejecutivo y separa resultado, significado, evidencia y próximo paso.
+- `/oportunidades` agrega una bandeja ejecutiva de recomendaciones persistidas.
+- Dashboard prioriza decisiones y oportunidades sobre navegación técnica.
+- Navegación móvil persistente (#167): Resumen, Marcas, Patentes, Casos y Más.
+- Estados activos y safe area móvil.
+- CTAs contextuales hacia vigilancia, acciones, brechas y evidencia.
 
-## Pendiente
+## Pendiente real
 
 ### Arquitectura de información
 
-- Navegación final simplificada.
-- Jerarquía coherente entre Resumen, Marcas, Patentes, Tecnologías, Empresas, Espacios, Brechas, Vigilancia, Casos y Acciones.
-- Retirar o redirigir rutas legacy/duplicadas que compitan con superficies canónicas.
+- Simplificar la navegación final y retirar rutas legacy/duplicadas.
+- Jerarquía coherente entre Resumen, Marcas, Patentes, Tecnologías, Empresas, Espacios, Brechas, Oportunidades, Vigilancia y Casos.
 
 ### UX y copy
 
-- Aplicar el patrón `qué pasó → por qué importa → evidencia → acción` a Dashboard, Empresas, Espacios y Brechas.
-- Toda superficie ejecutiva debe terminar con 1–2 CTAs relevantes, no con tablas muertas.
-- **GDELT contextual no debe aparecer como una alerta global que parezca error de toda la consulta.** Si sólo falla GDELT, el aviso debe quedar dentro de Contexto/Noticias.
-- Empty states útiles.
-- Loading states consistentes.
-- Error states accionables.
-- Responsive completo desktop/tablet/mobile.
-- Teclado y accesibilidad.
-- Text overflow y datasets largos.
-- Formularios con validation/error recovery.
-- Mantener términos técnicos correctos cuando son necesarios: Niza, Viena, IPC/CPC, patente, marca, expediente, evidencia.
+- Aplicar `qué pasó → por qué importa → evidencia → acción` a Empresas, Espacios y Brechas.
+- 1–2 CTAs relevantes por superficie ejecutiva.
+- GDELT sólo dentro de Contexto/Noticias cuando falle.
+- Empty/loading/error states consistentes.
+- Responsive desktop/tablet/mobile.
+- Teclado/accesibilidad.
+- Overflow y datasets largos.
+- Validation/error recovery.
 
-### Dashboards
+### Dashboard
 
-- Primer viewport ejecutivo.
-- Cambios prioritarios.
-- Recomendaciones.
-- Acciones pendientes.
-- Health de fuentes discreto pero visible.
-- Evidencia disponible sin saturar la vista principal.
+- Primer viewport ejecutivo: avanzado con #171.
+- Oportunidades/recomendaciones: operativo.
+- Casos/cambios prioritarios: operativo.
+- Acciones pendientes con responsable/SLA: pendiente de Fase 5.
+- Health de fuentes discreto pero visible: revisar integración final.
 
 ### QA visual final
 
 - Auditoría ruta por ruta.
 - Desktop + mobile.
-- Visual regressions.
 - Estados con datos / sin datos / error.
-- Print/PDF donde corresponda.
-
-## Criterio de salida
-
-Un usuario puede entender qué está pasando, por qué importa y qué puede hacer a continuación sin explicación externa del equipo.
+- Visual regressions.
+- Print/PDF cuando corresponda.
 
 ---
 
@@ -537,59 +419,39 @@ Un usuario puede entender qué está pasando, por qué importa y qué puede hace
 
 ## Bloque A — Fases 1–3
 
-**Trust Layer + Intelligence Quality + Executive Intelligence**
+Estado: **muy avanzado; gates contractuales fuertes, pero todavía faltan baselines naturales y QA físico autenticado.**
 
-Estado: **MERGED a `main` en #158 y reforzado por #160, #161 y #163; criterios productivos naturales y QA visual autenticado aún abiertos.**
+Cierre pendiente:
 
-Lo que quedó cerrado:
-
-- lifecycle de ingestión y partial success;
-- retry/circuit/health sweep/history/alerts;
-- benchmark de identidad como gate CI;
-- política de auto-link y revisión;
-- feedback, merge/split y calibration auditables;
-- cross-links y contexto persistente;
-- corroboración tecnológica OpenAlex + INAPI;
-- lenguaje ejecutivo y CTAs en Tecnología.
-
-Cierre pendiente de Bloque A:
-
-1. Change Engine `4/4` por ciclo natural.
-2. QA autenticado real de Brecha con binding de portafolio controlado; el gate contractual ya está en CI.
-3. Submit autenticado real de vigilancia; creación/reutilización idempotente ya está en CI.
-4. Dashboard contextual en navegador con señal estratégica real/controlada; deep-link y ownership ya están en CI.
-5. Expandir benchmark y calibración antes de declarar Intelligence Quality `DONE`.
+1. Change Engine 4/4 por ciclo natural.
+2. QA autenticado real de Brecha con binding controlado.
+3. Submit real de vigilancia y persistencia.
+4. Dashboard contextual + Oportunidades en navegador con evidencia/recomendación controlada.
+5. Expandir benchmark/calibración.
 
 ## Bloque B — Fases 4–6
 
-**Recommendation Engine + Action Layer + Coverage Moat**
-
 Estado:
 
-- Fase 4: avanzada, lifecycle incompleto.
-- Fase 5: foundation canónica mergeada; lifecycle, responsable, due date y outcome aún incompletos.
-- Fase 6: v1 multi-source tecnológica operativa; mercado/empresa global aún parcial.
+- Fase 4: lifecycle canónico mergeado y Oportunidades operativa; faltan nuevas familias de recomendación y métricas de aceptación.
+- Fase 5: creación, conversión, outcome y reapertura operativos; faltan responsable, due date, SLA e inbox de seguimiento.
+- Fase 6: v1 multi-source tecnológica operativa; cobertura comercial/empresa global parcial.
 
 Orden operativo recomendado:
 
-1. Cerrar los tres gates E2E residuales del Bloque A sin fabricar datos.
-2. Extender la foundation Caso + Evidencia + Acción con responsable, due date, seguimiento y outcome.
-3. Cerrar el submit autenticado de `Vigilar tecnología` y su retorno contextual.
-4. Implementar recommendation lifecycle y conversión a la action foundation existente.
-5. Construir capa semántica de demanda comercial y luego conectar Mercado Público.
-6. Incorporar CMF al entity graph y EPO al eje patentario.
-7. Añadir regulación/demanda como nuevos ejes de confidence.
-8. Validar cross-source reasoning con dataset curado.
+1. Cerrar QA físico residual del Bloque A cuando el navegador automatizado esté disponible.
+2. Completar responsable + due date + inbox/SLA del Action Layer.
+3. Medir acceptance/rejection/conversion de recomendaciones.
+4. Extender recomendaciones a nuevas señales estratégicas.
+5. Construir demanda comercial semántica antes de ponderar Mercado Público.
+6. Incorporar CMF/EPO con entity resolution y health.
+7. Validar cross-source reasoning con dataset curado.
 
-## Bloque C — Fases 7–8 + cierre final
-
-**Enterprise Grade + Product Polish + Grade A Audit**
-
-Orden operativo:
+## Bloque C — Fases 7–8
 
 1. RBAC/tenant isolation/SSO/quotas.
 2. Observabilidad/SLA/recovery.
-3. Simplificación UX/copy/CTAs ruta por ruta.
+3. UX/copy/CTAs ruta por ruta.
 4. QA visual y responsive integral.
 5. Audit técnico final.
 6. Soak productivo.
@@ -601,24 +463,22 @@ Orden operativo:
 
 ## P0 — bloquean declarar Grade A
 
-1. **Change Engine 0/4 baselines.** Debe cerrarse por ciclo cron normal.
-2. **QA autenticado físico de Brecha pendiente.** El contrato con fixture aislado está fijado en CI; falta comprobar persistencia y UI real.
-3. **Creación efectiva de vigilancia no ejercitada en navegador autenticado.** La API es idempotente; falta comprobar submit y persistencia reales.
-4. **Dashboard contextual no ejercitado en navegador con una señal estratégica real/controlada.**
-5. **Action lifecycle incompleto.** La foundation Caso + Evidencia + Acción es atómica y RLS-safe, pero falta `responsable → due date → seguimiento → outcome`.
-6. **Cobertura comercial insuficiente.** Mercado Público aún no puede ponderarse semánticamente por tecnología con la precisión exigida.
-7. **Enterprise Grade incompleto.** Faltan RBAC transversal, tenant-isolation suite, SSO, quotas, recovery drill y observabilidad formal.
+1. **Change Engine 0/4 baselines** — sólo ciclo cron natural.
+2. **QA autenticado físico residual** — Brecha, vigilancia, Dashboard contextual y Oportunidades.
+3. **Action Layer sin responsable/due date/SLA/inbox operativo completo.** Outcome ya está implementado; no volver a listar outcome como faltante.
+4. **Cobertura comercial insuficiente** — Mercado Público aún no puede ponderarse semánticamente por tecnología.
+5. **Enterprise Grade incompleto** — RBAC transversal, tenant isolation, SSO, quotas, recovery y observabilidad formal.
 
 ## P1 — elevan calidad y valor diferencial
 
 1. Expandir benchmark de identidad y patrones estratégicos.
-2. Añadir demanda comercial, CMF, EPO y regulación como ejes independientes.
-3. Contener latencia/fallo de GDELT y bajar su aviso a la sección de contexto.
+2. Nuevas familias de recomendación y métricas acceptance/rejection/conversion.
+3. Demanda comercial, CMF, EPO y regulación como ejes independientes.
 4. Dedupe de versiones equivalentes en evidencia científica.
-5. Instrumentar costo/cuota de OpenAlex si pasa a ser un control operativo.
-6. Recommendation lifecycle + dedupe + acceptance metrics.
-7. Aplicar narrativa ejecutiva + CTAs a Dashboard, Empresas, Espacios y Brechas.
-8. QA visual responsive completo y eliminación de superficies legacy/duplicadas.
+5. Contener latencia/fallo de GDELT.
+6. Instrumentar cuota/costo OpenAlex si pasa a control operativo.
+7. Aplicar narrativa ejecutiva + CTAs a Empresas, Espacios y Brechas.
+8. QA responsive completo y eliminación de superficies legacy.
 
 ## P2 — cierre enterprise/productivo
 
@@ -626,30 +486,28 @@ Orden operativo:
 2. Synthetic monitoring.
 3. Backup/restore drill + RPO/RTO.
 4. Audit log exportable y compliance readiness.
-5. Soak productivo final y audit de migrations 1:1.
+5. Soak productivo y audit de migrations 1:1.
 
 ---
 
 # 6. Gates obligatorios de ingeniería
 
-Ningún bloque se considera terminado sólo porque “funciona en local” o porque Vercel compiló.
-
 Para cada PR relevante:
 
 1. Regression tests del dominio.
 2. `tsc --noEmit`.
-3. Build Next.js productivo.
+3. Next.js production build.
 4. CodeQL.
-5. Preview Vercel `READY`.
-6. Validación de migrations y Advisors cuando hay DB.
+5. Preview Vercel `READY/SUCCESS`.
+6. Migrations/Advisors cuando hay DB.
 7. Smoke auth/authorization.
-8. Smoke funcional de la ruta principal.
-9. Merge a `main` sólo con gates verdes.
-10. Production deployment `READY`.
+8. Smoke funcional de ruta principal.
+9. Merge a `main` sólo con gates verdes sobre el mismo SHA.
+10. Production deployment `READY/SUCCESS`.
 11. Production smoke.
-12. Runtime error scan.
+12. Runtime error scan cuando la herramienta esté disponible.
 
-Para cambios de alto riesgo —RLS, auth, SECURITY DEFINER, datos cross-tenant, migraciones destructivas— se exige además prueba transaccional/rollback-safe antes de persistir.
+Para RLS/auth/SECURITY DEFINER/datos cross-tenant/migraciones destructivas se exige además prueba transaccional/rollback-safe.
 
 ---
 
@@ -657,87 +515,79 @@ Para cambios de alto riesgo —RLS, auth, SECURITY DEFINER, datos cross-tenant, 
 
 ## Data
 
-- ≥99% de sync success en ventana operativa.
-- 100% de fuentes programadas con freshness visible.
+- ≥99% sync success en ventana operativa.
+- 100% fuentes programadas con freshness visible.
 - 0 eventos relevantes sin source/evidence traceability.
 - 0 partial failures reportados como éxito completo.
 - Change Engine 4/4 baselines reales.
 
 ## Intelligence
 
-- Benchmark versionado y representativo.
-- Entity resolution con precision/recall documentados.
+- Benchmark representativo y versionado.
+- Precision/recall documentados.
 - 0 patrones estratégicos presentados como hechos sin evidencia suficiente.
-- 100% de recomendaciones con explicación y evidencia.
+- 100% recomendaciones con explicación/evidencia.
 - Confidence separado de momentum y madurez comercial.
+- Acceptance/rejection/conversion medibles por tipo de recomendación.
 
-## Performance
+## Reliability / Performance
 
-- P95 búsquedas interactivas < 1 s donde no dependan de fuentes externas lentas.
-- P95 RPC críticos preferentemente < 300 ms.
-- P95 navegación interna útil < 2 s salvo operaciones externas justificadas.
-- Sin queries conocidas que dependan de seq scans evitables en tablas grandes.
-- Fuentes contextuales lentas no bloquean resultados de ejes duros.
-
-## Reliability
-
-- 0 errores críticos conocidos abiertos.
 - CI/TypeScript/build/CodeQL obligatorios.
-- Runtime monitoring activo.
-- Cron/source monitoring activo.
+- P95 interactivo <1 s donde no dependa de fuentes externas lentas.
+- P95 RPC críticos preferentemente <300 ms.
+- P95 navegación útil <2 s salvo dependencia externa justificada.
 - Retry/circuit breaker donde corresponda.
+- Fuentes lentas no bloquean ejes duros.
 
 ## Security
 
 - 0 WARN accionables de Security Advisor antes del cierre.
 - RLS/grants auditados.
-- Tenant isolation testeado transversalmente.
-- Secret/API-key lifecycle documentado y verificado.
-- SSO/RBAC enterprise disponibles antes de declarar fase 7 cerrada.
+- Tenant isolation transversal.
+- Secret/API-key lifecycle documentado.
+- SSO/RBAC enterprise antes de cerrar Fase 7.
 
 ## UX
 
-- Rutas críticas verificadas en desktop y mobile.
+- Rutas críticas verificadas desktop/mobile.
 - Sin dead ends.
 - Empty/loading/error states diseñados.
 - Toda señal material conduce a contexto, recomendación o acción.
-- Fallos de fuentes contextuales no parecen fallos del análisis completo.
+- Fallos contextuales no aparentan fallo del análisis completo.
 
 ---
 
-# 8. Definition of Done del proyecto
+# 8. Definition of Done
 
-VIDENTIA se declara **Grade A / proyecto cerrado** únicamente cuando se cumplan simultáneamente estas condiciones:
+VIDENTIA es **Grade A / proyecto cerrado** sólo cuando:
 
-1. Las 8 fases tienen estado `DONE`.
-2. Las seis preguntas estratégicas se responden de punta a punta.
-3. Todas las fuentes productivas tienen freshness y health observables.
-4. El benchmark de Intelligence Quality alcanza los umbrales acordados sobre una muestra representativa.
-5. Las recomendaciones relevantes pueden convertirse en acciones dentro del producto.
-6. La cobertura multi-source está operativa, no sólo catalogada.
-7. Enterprise security/recovery tiene pruebas verificables.
-8. Auditoría visual completa desktop/mobile terminada.
-9. Migration history y producción están 1:1.
-10. CI, CodeQL, typecheck y production build están verdes en el release final.
-11. No quedan P0/P1 conocidos.
-12. Se completa un soak productivo final sin incidentes críticos.
-13. Runtime y source monitoring no muestran degradaciones no explicadas.
-14. El equipo puede demostrar: `fuente → evidencia → conclusión → recomendación → acción → outcome` sobre un caso real/controlado.
-
-Una vez cumplido, este archivo puede marcarse `COMPLETED` y archivarse como registro del desarrollo. Hasta entonces, **`ROADMAP.md` sigue siendo la fuente canónica del proyecto**.
+1. Las 8 fases están `DONE`.
+2. Las seis preguntas funcionan de punta a punta.
+3. Todas las fuentes productivas tienen health/freshness observable.
+4. Intelligence Quality alcanza umbrales acordados sobre muestra representativa.
+5. Recomendaciones relevantes se convierten en acciones dentro del producto.
+6. Action Layer incluye responsable, seguimiento y outcome.
+7. Coverage multi-source está operativa, no sólo catalogada.
+8. Enterprise security/recovery tiene evidencia verificable.
+9. QA visual desktop/mobile completo.
+10. Migration history y producción están 1:1.
+11. Release final tiene CI/CodeQL/typecheck/build verdes.
+12. No quedan P0/P1 conocidos.
+13. Soak productivo final sin incidentes críticos.
+14. Puede demostrarse `fuente → evidencia → conclusión → recomendación → acción → outcome` sobre caso real/controlado.
 
 ---
 
-# 9. Regla de mantenimiento de este archivo
+# 9. Regla de mantenimiento
 
 Después de cada bloque mergeado:
 
-- actualizar estado de las fases afectadas;
-- agregar PR/commit relevante cuando aporte trazabilidad;
-- marcar claramente qué criterio de salida quedó cumplido;
-- registrar deuda o riesgo residual;
-- actualizar el baseline;
-- no eliminar pendientes simplemente porque una feature ya existe;
+- actualizar fases afectadas;
+- registrar PR/commit relevante;
+- marcar criterios cumplidos;
+- conservar deuda/riesgo residual;
+- actualizar baseline;
+- no eliminar pendientes sólo porque existe una feature;
 - no declarar `DONE` sin evidencia de producción.
 
-El roadmap describe **resultado y criterios**, no sólo features. Una capacidad puede estar implementada y seguir `IN PROGRESS` si todavía no cumple su estándar Grade A.
+El roadmap describe resultados y criterios, no sólo features. Hasta el cierre, **`ROADMAP.md` sigue siendo la fuente canónica del proyecto**.
