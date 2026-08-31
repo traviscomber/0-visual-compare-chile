@@ -13,6 +13,7 @@ import {
   Minus,
   Newspaper,
   Search,
+  ShieldCheck,
 } from "lucide-react"
 import { OperationalMetric, OperationalMetricRail, OperationalSectionHeader } from "@/components/app/operational-ui"
 import { Badge } from "@/components/ui/badge"
@@ -21,7 +22,7 @@ import { Input } from "@/components/ui/input"
 import { strategicWatchHref, technologyHref } from "@/lib/intelligence/navigation-context"
 
 const EXAMPLES = ["extracción directa de litio", "hidrógeno verde", "almacenamiento térmico", "desalación electroquímica"]
-const SOURCE_LABELS: Record<string, string> = { openalex: "OpenAlex", crossref: "Crossref", gdelt: "GDELT" }
+const SOURCE_LABELS: Record<string, string> = { openalex: "OpenAlex", crossref: "Crossref", inapi_patents: "INAPI · Patentes", gdelt: "GDELT" }
 
 type PublicationEvidence = {
   source: "openalex" | "crossref"
@@ -34,6 +35,20 @@ type PublicationEvidence = {
   authors?: string[]
   institutions?: string[]
   publisher?: string | null
+}
+
+type PatentEvidence = {
+  source: "inapi_patents"
+  sourceRecordId: string
+  applicationNumber: string
+  registrationNumber: string | null
+  title: string
+  applicants: string | null
+  filingDate: string | null
+  ipc: string[]
+  sourceUrl: string | null
+  relevanceScore: number
+  recent: boolean
 }
 
 type NewsEvidence = {
@@ -59,8 +74,29 @@ type TechnologySignalResponse = {
     trend: "acelerando" | "estable" | "desacelerando" | "sin_base" | "no_disponible"
     basis: string
   }
+  corroboration: {
+    status: "corroborada" | "parcial" | "sin_senal" | "insuficiente"
+    confidence: "media" | "baja" | "insuficiente"
+    confirming_axes: number
+    available_axes: number
+    axes: {
+      research: { available: boolean; status: "actividad" | "sin_actividad" | "no_disponible"; direction: string; current_count: number | null }
+      patents: { available: boolean; status: "actividad_reciente" | "actividad_historica" | "sin_senal" | "no_disponible"; recent_matches: number; historical_matches: number }
+    }
+    conclusion: string
+    scope: string
+  }
+  patent_signal: {
+    available: boolean
+    recent_matches: number
+    selected_matches: number
+    distinct_applicants: number
+    latest_filing_date: string | null
+    basis: string
+  }
   evidence: {
     publications: PublicationEvidence[]
+    patents: PatentEvidence[]
     news: NewsEvidence[]
   }
   sources: Record<string, { available: boolean; evidence_count: number }>
@@ -179,6 +215,7 @@ function TechnologyResult({ result }: { result: TechnologySignalResponse }) {
   const TrendIcon = trend.icon
   const change = result.momentum.change_percent
   const publicationCount = result.evidence.publications.length
+  const patentCount = result.evidence.patents.length
   const newsCount = result.evidence.news.length
   const unavailableSources = Object.entries(result.sources).filter(([, source]) => !source.available).map(([key]) => SOURCE_LABELS[key] ?? key)
   const publicationSourcesAvailable = Boolean(result.sources.openalex?.available || result.sources.crossref?.available)
@@ -209,12 +246,30 @@ function TechnologyResult({ result }: { result: TechnologySignalResponse }) {
 
       <OperationalMetricRail>
         <OperationalMetric value={result.momentum.current_publications ?? "—"} label="Publicaciones recientes" detail={result.momentum.available ? `Últimos ${result.period_days} días` : "OpenAlex no disponible"} tone={result.momentum.available ? "success" : "neutral"} />
-        <OperationalMetric value={result.momentum.previous_publications ?? "—"} label="Período anterior" detail={result.momentum.available ? `${result.period_days} días anteriores` : "Sin base comparable"} />
-        <OperationalMetric value={change === null ? "—" : `${change > 0 ? "+" : ""}${change}%`} label="Variación observada" detail={result.momentum.available ? "Actividad indexada por OpenAlex" : "No calculada"} tone={change !== null && change >= 20 ? "success" : change !== null && change <= -20 ? "warning" : "neutral"} />
-        <OperationalMetric value={publicationCount + newsCount} label="Evidencias revisables" detail={`${publicationCount} publicaciones · ${newsCount} noticias`} />
+        <OperationalMetric value={result.patent_signal.recent_matches} label="Patentes recientes" detail={`Coincidencias fuertes · ${result.period_days} días`} tone={result.patent_signal.recent_matches > 0 ? "success" : "neutral"} />
+        <OperationalMetric value={change === null ? "—" : `${change > 0 ? "+" : ""}${change}%`} label="Variación científica" detail={result.momentum.available ? "Actividad indexada por OpenAlex" : "No calculada"} tone={change !== null && change >= 20 ? "success" : change !== null && change <= -20 ? "warning" : "neutral"} />
+        <OperationalMetric value={confidenceLabel(result.corroboration.confidence)} label="Confianza" detail={`${result.corroboration.confirming_axes}/${result.corroboration.available_axes} ejes duros con actividad reciente`} tone={result.corroboration.status === "corroborada" ? "success" : result.corroboration.status === "parcial" ? "warning" : "neutral"} />
       </OperationalMetricRail>
 
-      <section className="grid gap-10 py-9 lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.75fr)]">
+      <section className="border-b border-border/80 py-9">
+        <OperationalSectionHeader eyebrow="Corroboración" title="Qué confirma la señal" meta={corroborationLabel(result.corroboration.status)} />
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          <AxisCard
+            label="Investigación"
+            value={researchAxisLabel(result)}
+            detail={result.corroboration.axes.research.available ? `${result.momentum.current_publications ?? 0} publicaciones · OpenAlex global` : "Fuente no disponible"}
+          />
+          <AxisCard
+            label="Protección tecnológica"
+            value={patentAxisLabel(result.corroboration.axes.patents.status)}
+            detail={result.patent_signal.available ? `${result.patent_signal.recent_matches} recientes · ${result.patent_signal.selected_matches} coincidencias fuertes seleccionadas · INAPI Chile` : "Fuente no disponible"}
+          />
+        </div>
+        <p className="mt-5 max-w-4xl text-sm leading-6 text-white">{result.corroboration.conclusion}</p>
+        <p className="mt-2 max-w-4xl text-xs leading-5 text-muted-foreground">{result.corroboration.scope}</p>
+      </section>
+
+      <section className="grid gap-10 py-9 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
         <div>
           <OperationalSectionHeader eyebrow="Evidencia científica" title="Publicaciones recientes" meta={`${publicationCount} seleccionadas`} />
           {publicationCount ? (
@@ -224,19 +279,39 @@ function TechnologyResult({ result }: { result: TechnologySignalResponse }) {
           ) : <EmptyEvidence text={publicationSourcesAvailable ? "No encontramos publicaciones recientes para esta consulta en las fuentes disponibles." : "Las fuentes científicas no respondieron de forma completa. VIDENTIA no presenta este vacío como ausencia de publicaciones."} />}
         </div>
 
-        <aside>
-          <OperationalSectionHeader eyebrow="Señales externas" title="Qué apareció recientemente" meta={`${newsCount} noticias`} />
-          {newsCount ? (
+        <div>
+          <OperationalSectionHeader eyebrow="Protección tecnológica" title="Patentes relacionadas" meta={`${patentCount} seleccionadas`} />
+          {patentCount ? (
             <div className="mt-5 divide-y divide-border/80 border-y border-border/80">
-              {result.evidence.news.map((item) => <NewsRow key={item.sourceRecordId} item={item} />)}
+              {result.evidence.patents.map((item) => <PatentRow key={item.sourceRecordId} item={item} />)}
             </div>
-          ) : <EmptyEvidence text={result.sources.gdelt?.available ? "No encontramos noticias recientes asociadas a la consulta." : "GDELT no está disponible temporalmente. VIDENTIA no presenta este vacío como ausencia de noticias."} />}
-          <div className="mt-6 border-t border-border/80 pt-5 text-xs leading-5 text-muted-foreground">
-            <p className="font-medium text-white">Cómo leer esta señal</p>
-            <p className="mt-2">Un aumento de publicaciones puede indicar mayor actividad investigativa, pero por sí solo no demuestra adopción comercial, inversión ni ventaja competitiva.</p>
-          </div>
-        </aside>
+          ) : <EmptyEvidence text={result.patent_signal.available ? "No encontramos coincidencias patentarias de alta precisión para esta tecnología en el corpus INAPI." : "El corpus de patentes INAPI no respondió. VIDENTIA no presenta este vacío como ausencia de protección."} />}
+          <p className="mt-4 text-xs leading-5 text-muted-foreground">{result.patent_signal.basis}</p>
+        </div>
       </section>
+
+      <section className="border-t border-border/80 py-9">
+        <OperationalSectionHeader eyebrow="Contexto" title="Noticias recientes" meta={`${newsCount} noticias`} />
+        {newsCount ? (
+          <div className="mt-5 divide-y divide-border/80 border-y border-border/80">
+            {result.evidence.news.map((item) => <NewsRow key={item.sourceRecordId} item={item} />)}
+          </div>
+        ) : <EmptyEvidence text={result.sources.gdelt?.available ? "No encontramos noticias recientes asociadas a la consulta." : "GDELT no está disponible temporalmente. VIDENTIA no presenta este vacío como ausencia de noticias."} />}
+        <div className="mt-6 max-w-3xl border-t border-border/80 pt-5 text-xs leading-5 text-muted-foreground">
+          <p className="font-medium text-white">Cómo leer esta señal</p>
+          <p className="mt-2">Investigación y patentes son ejes independientes. Las noticias sólo aportan contexto y no elevan por sí solas la confianza de corroboración.</p>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function AxisCard({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <div className="border-y border-border/80 bg-[#13272D]/45 px-4 py-4">
+      <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]">{label}</p>
+      <p className="mt-2 text-base font-medium text-white">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
     </div>
   )
 }
@@ -254,6 +329,25 @@ function PublicationRow({ item }: { item: PublicationEvidence }) {
       <ExternalLink className="mt-1 size-3.5 text-muted-foreground transition-colors group-hover:text-white" />
     </a>
   )
+}
+
+function PatentRow({ item }: { item: PatentEvidence }) {
+  const detail = [formatDate(item.filingDate), item.applicationNumber ? `Solicitud ${item.applicationNumber}` : null, item.recent ? "Dentro de la ventana" : "Antecedente histórico"].filter(Boolean).join(" · ")
+  const content = (
+    <>
+      <span className="flex size-8 items-center justify-center rounded-[8px] bg-[#173B37] text-[#96B5A6]"><ShieldCheck className="size-3.5" /></span>
+      <div className="min-w-0">
+        <h3 className="text-sm font-medium leading-6 text-white">{item.title}</h3>
+        <p className="mt-1 text-xs text-muted-foreground">{detail || "Patente INAPI"}</p>
+        {item.applicants ? <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{item.applicants}</p> : null}
+        {item.ipc.length ? <p className="mt-1 line-clamp-1 text-[11px] text-muted-foreground">IPC {item.ipc.slice(0, 5).join(" · ")}</p> : null}
+      </div>
+      {item.sourceUrl ? <ExternalLink className="mt-1 size-3.5 text-muted-foreground transition-colors group-hover:text-white" /> : null}
+    </>
+  )
+
+  if (!item.sourceUrl) return <div className="grid gap-3 px-2 py-5 sm:grid-cols-[34px_1fr_auto] sm:items-start">{content}</div>
+  return <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="group grid gap-3 px-2 py-5 outline-none transition-colors hover:bg-secondary/55 focus-visible:bg-secondary/55 sm:grid-cols-[34px_1fr_auto] sm:items-start">{content}</a>
 }
 
 function NewsRow({ item }: { item: NewsEvidence }) {
@@ -275,9 +369,9 @@ function InitialState() {
     <section className="py-12">
       <div className="max-w-2xl">
         <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#96B5A6]">Qué obtiene</p>
-        <h2 className="mt-2 text-2xl font-light tracking-[-0.03em] text-[#E7DFCE]">Una señal sustentada, no una conclusión automática.</h2>
+        <h2 className="mt-2 text-2xl font-light tracking-[-0.03em] text-[#E7DFCE]">Una señal corroborada por evidencia independiente.</h2>
         <div className="mt-6 divide-y divide-border/80 border-y border-border/80">
-          {["Actividad actual versus período anterior", "Publicaciones científicas recientes y sus fuentes", "Noticias recientes que pueden aportar contexto", "Base lista para sumar patentes internacionales vía EPO OPS"].map((item) => (
+          {["Momentum científico actual versus período anterior", "Patentes INAPI con coincidencia tecnológica de alta precisión", "Confianza separada de la dirección de la señal", "Noticias como contexto, sin inflar la conclusión"].map((item) => (
             <div key={item} className="flex items-center gap-3 py-4 text-sm text-muted-foreground"><ArrowRight className="size-3.5 text-[#96B5A6]" />{item}</div>
           ))}
         </div>
@@ -289,7 +383,7 @@ function InitialState() {
 function LoadingState() {
   return (
     <section className="py-12" aria-live="polite">
-      <div className="flex items-center gap-3 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin text-[#96B5A6]" />Consultando fuentes y comparando períodos…</div>
+      <div className="flex items-center gap-3 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin text-[#96B5A6]" />Consultando fuentes y corroborando evidencia…</div>
       <div className="mt-7 h-px w-full bg-border/80" />
     </section>
   )
@@ -297,6 +391,32 @@ function LoadingState() {
 
 function EmptyEvidence({ text }: { text: string }) {
   return <div className="mt-5 border-y border-border/80 py-7 text-sm leading-6 text-muted-foreground">{text}</div>
+}
+
+function corroborationLabel(status: TechnologySignalResponse["corroboration"]["status"]) {
+  if (status === "corroborada") return "Señal corroborada"
+  if (status === "parcial") return "Corroboración parcial"
+  if (status === "sin_senal") return "Sin corroboración reciente"
+  return "Cobertura insuficiente"
+}
+
+function confidenceLabel(confidence: TechnologySignalResponse["corroboration"]["confidence"]) {
+  if (confidence === "media") return "Media"
+  if (confidence === "baja") return "Baja"
+  return "Insuficiente"
+}
+
+function researchAxisLabel(result: TechnologySignalResponse) {
+  if (!result.corroboration.axes.research.available) return "No disponible"
+  if (result.corroboration.axes.research.status === "sin_actividad") return "Sin actividad reciente"
+  return trendPresentation(result.momentum.trend).label
+}
+
+function patentAxisLabel(status: TechnologySignalResponse["corroboration"]["axes"]["patents"]["status"]) {
+  if (status === "actividad_reciente") return "Actividad reciente"
+  if (status === "actividad_historica") return "Protección histórica"
+  if (status === "sin_senal") return "Sin coincidencias fuertes"
+  return "No disponible"
 }
 
 function trendPresentation(trend: TechnologySignalResponse["momentum"]["trend"]) {

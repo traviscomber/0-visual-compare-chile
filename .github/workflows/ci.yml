@@ -70,6 +70,9 @@ jobs:
       - name: Technology evidence relevance regression
         run: node scripts/technology-evidence-relevance-regression.mts
 
+      - name: Technology corroboration regression
+        run: node scripts/technology-corroboration-regression.mts
+
       - name: TypeScript
         run: pnpm exec tsc --noEmit
 

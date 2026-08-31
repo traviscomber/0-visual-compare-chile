@@ -1,6 +1,8 @@
 import { queryOpenAlexWindow, type OpenAlexWorkSignal } from "@/lib/intelligence/openalex"
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
 import { searchGdeltNews } from "@/lib/intelligence/gdelt"
+import { buildTechnologyCorroboration } from "@/lib/intelligence/technology-corroboration-rules"
+import { buildTechnologyPatentSignal, emptyTechnologyPatentSignal } from "@/lib/intelligence/technology-patent-corroboration"
 
 export type TechnologyTrend = "acelerando" | "estable" | "desacelerando" | "sin_base" | "no_disponible"
 
@@ -16,10 +18,11 @@ export async function buildTechnologySignals(query: string, windowDays = 180) {
   const previousFrom = daysAgo(previousTo, windowDays)
   const newsFrom = daysAgo(now, 7)
 
-  const [currentOpenAlexResult, previousOpenAlexResult, crossrefWorksResult, newsResult] = await Promise.all([
+  const [currentOpenAlexResult, previousOpenAlexResult, crossrefWorksResult, patentSignalResult, newsResult] = await Promise.all([
     captureSource("openalex-current", () => queryOpenAlexWindow(query, currentFrom, now, 10), { count: 0, works: [] as OpenAlexWorkSignal[] }),
     captureSource("openalex-previous", () => queryOpenAlexWindow(query, previousFrom, previousTo, 1), { count: 0, works: [] as OpenAlexWorkSignal[] }),
     captureSource("crossref", () => searchCrossrefWorks(query, currentFrom, now, 10), []),
+    captureSource("inapi-patents", () => buildTechnologyPatentSignal(query, currentFrom, now), emptyTechnologyPatentSignal()),
     captureSource("gdelt", () => searchGdeltNews(query, newsFrom, now, 10), []),
   ])
 
@@ -41,6 +44,14 @@ export async function buildTechnologySignals(query: string, windowDays = 180) {
           : "estable"
 
   const publicationEvidence = dedupePublications(currentOpenAlexResult.value.works, crossrefWorksResult.value)
+  const corroboration = buildTechnologyCorroboration({
+    researchAvailable: openAlexAvailable,
+    currentPublications: currentCount,
+    researchTrend: trend,
+    patentsAvailable: patentSignalResult.ok,
+    recentPatentMatches: patentSignalResult.value.recentMatches,
+    historicalPatentMatches: patentSignalResult.value.historicalMatches,
+  })
 
   return {
     query,
@@ -53,16 +64,27 @@ export async function buildTechnologySignals(query: string, windowDays = 180) {
       change_percent: growth === null ? null : Math.round(growth * 10) / 10,
       trend,
       basis: openAlexAvailable
-        ? "Señal conservadora: compara publicaciones cuyo título coincide con la consulta en OpenAlex. Abstracts, texto completo, Crossref y noticias se usan como contexto, no para inflar el momentum."
+        ? "Señal conservadora: compara publicaciones cuyo título coincide con la consulta en OpenAlex. Patentes INAPI se evalúan como un eje independiente de corroboración y no inflan el momentum científico."
         : "OpenAlex no respondió de forma completa. VIDENTIA conserva la evidencia disponible, pero no calcula una variación hasta recuperar una base comparable.",
     },
+    corroboration,
     evidence: {
       publications: publicationEvidence,
+      patents: patentSignalResult.value.evidence,
       news: newsResult.value,
+    },
+    patent_signal: {
+      available: patentSignalResult.ok,
+      recent_matches: patentSignalResult.value.recentMatches,
+      selected_matches: patentSignalResult.value.historicalMatches,
+      distinct_applicants: patentSignalResult.value.distinctApplicants,
+      latest_filing_date: patentSignalResult.value.latestFilingDate,
+      basis: "Coincidencias de alta precisión en títulos del corpus local de patentes INAPI. Se exige relevancia léxica fuerte y no se presenta esta muestra como el universo completo de patentes de la tecnología.",
     },
     sources: {
       openalex: { available: openAlexAvailable, evidence_count: currentOpenAlexResult.value.works.length },
       crossref: { available: crossrefWorksResult.ok, evidence_count: crossrefWorksResult.value.length },
+      inapi_patents: { available: patentSignalResult.ok, evidence_count: patentSignalResult.value.evidence.length },
       gdelt: { available: newsResult.ok, evidence_count: newsResult.value.length },
     },
   }
