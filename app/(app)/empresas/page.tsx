@@ -1,12 +1,13 @@
 "use client"
 
 import Link from "next/link"
-import { FormEvent, useState } from "react"
+import { FormEvent, useEffect, useState } from "react"
 import { Activity, AlertTriangle, Building2, ExternalLink, FlaskConical, GitBranch, Loader2, Newspaper, Search, Tag, Waypoints } from "lucide-react"
 import { OperationalHeader, OperationalMetric, OperationalMetricRail, OperationalPage, OperationalPanel, OperationalSectionHeader } from "@/components/app/operational-ui"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { companyHref, portfolioGapHref, spaceHref, strategicWatchHref } from "@/lib/intelligence/navigation-context"
 
 type Candidate = {
   id: string
@@ -127,20 +128,23 @@ export default function CompaniesPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function runSearch(event?: FormEvent, identityId?: string) {
+  async function runSearch(event?: FormEvent, identityId?: string, queryOverride?: string, syncUrl: boolean = true) {
     event?.preventDefault()
-    if (query.trim().length < 2 || loading) return
+    const nextQuery = (queryOverride ?? query).trim()
+    if (nextQuery.length < 2 || loading) return
     setLoading(true)
     setError(null)
     setTrajectory(null)
     try {
-      const params = new URLSearchParams({ q: query.trim() })
+      const params = new URLSearchParams({ q: nextQuery })
       if (identityId) params.set("identityId", identityId)
+      if (syncUrl && typeof window !== "undefined") window.history.replaceState(null, "", companyHref(nextQuery, identityId))
       const response = await fetch(`/api/intelligence/company-direction?${params.toString()}`, { cache: "no-store" })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.error || "No pudimos analizar la empresa.")
       const company = payload as Result
       setResult(company)
+      if (company.selected && syncUrl && typeof window !== "undefined") window.history.replaceState(null, "", companyHref(company.selected.canonical_name, company.selected.id))
 
       if (company.selected?.id) {
         const trajectoryResponse = await fetch(`/api/intelligence/company-trajectory?identityId=${encodeURIComponent(company.selected.id)}`, { cache: "no-store" })
@@ -154,6 +158,15 @@ export default function CompaniesPage() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const requestedCompany = params.get("company")?.trim()
+    if (!requestedCompany) return
+    const requestedIdentity = params.get("identityId")?.trim() || undefined
+    setQuery(requestedCompany)
+    void runSearch(undefined, requestedIdentity, requestedCompany, false)
+  }, [])
 
   const deltaPct = result?.metrics.delta_pct
   const deltaLabel = deltaPct == null
@@ -214,7 +227,7 @@ function IdentitySection({ result, loading, onSelect }: { result: Result; loadin
   const selected = result.selected
   if (!selected) return null
   const alternatives = result.candidates.filter(item => item.id !== selected.id).slice(0, 5)
-  return <section className="border-b border-border/80 py-8"><div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between"><div><p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Identidad resuelta</p><h2 className="mt-2 text-xl font-medium text-white">{selected.canonical_name}</h2><p className="mt-2 text-sm text-muted-foreground">{selected.country ? `País ${selected.country} · ` : ""}{result.aliases.length} alias observados · {selected.activity_12m} expedientes en 12 meses · confianza {Math.round(selected.resolution_confidence * 100)}%</p>{result.aliases.length > 1 ? <p className="mt-2 max-w-3xl text-xs leading-5 text-muted-foreground">Variantes: {result.aliases.slice(0, 5).join(" · ")}</p> : null}</div>{alternatives.length ? <div className="min-w-0 lg:max-w-xl"><p className="text-xs text-muted-foreground">¿Buscabas otra identidad?</p><div className="mt-2 flex flex-wrap gap-2">{alternatives.map(item => <Button key={item.id} variant="outline" size="sm" disabled={loading} onClick={() => onSelect(item.id)}>{item.canonical_name}</Button>)}</div></div> : null}</div></section>
+  return <section className="border-b border-border/80 py-8"><div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between"><div><p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Identidad resuelta</p><h2 className="mt-2 text-xl font-medium text-white">{selected.canonical_name}</h2><p className="mt-2 text-sm text-muted-foreground">{selected.country ? `País ${selected.country} · ` : ""}{result.aliases.length} alias observados · {selected.activity_12m} expedientes en 12 meses · confianza {Math.round(selected.resolution_confidence * 100)}%</p>{result.aliases.length > 1 ? <p className="mt-2 max-w-3xl text-xs leading-5 text-muted-foreground">Variantes: {result.aliases.slice(0, 5).join(" · ")}</p> : null}<div className="mt-4 flex flex-wrap gap-2"><Button asChild size="sm" variant="outline"><Link href={strategicWatchHref("company", selected.canonical_name)}>Vigilar empresa</Link></Button><Button asChild size="sm" variant="outline"><Link href={portfolioGapHref(selected.canonical_name, selected.id)}>Comparar brecha</Link></Button></div></div>{alternatives.length ? <div className="min-w-0 lg:max-w-xl"><p className="text-xs text-muted-foreground">¿Buscabas otra identidad?</p><div className="mt-2 flex flex-wrap gap-2">{alternatives.map(item => <Button key={item.id} variant="outline" size="sm" disabled={loading} onClick={() => onSelect(item.id)}>{item.canonical_name}</Button>)}</div></div> : null}</div></section>
 }
 
 function DirectionSection({ result }: { result: Result }) {
@@ -243,7 +256,7 @@ function TrajectoryDomain({ icon: Icon, title, bucket }: { icon: typeof Activity
 }
 function SignalGroup({ label, items, detail }: { label: string; items: TrajectorySignal[]; detail: string }) {
   if (!items.length) return null
-  return <div><div className="flex items-baseline justify-between gap-3"><p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">{label}</p><p className="text-[10px] text-muted-foreground">{detail}</p></div><div className="mt-2 divide-y divide-border/80 border-y border-border/80">{items.map(item => <div key={`${item.asset_type}:${item.code}:${item.state}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 py-3"><div><p className="font-medium text-white">{item.code}</p><p className="mt-1 text-[11px] text-muted-foreground">Q0/Q1/Q2/Q3 · {item.windows.join(" / ")} · confianza {item.confidence}</p></div><p className="text-sm text-[#96B5A6]">{item.total} exp.</p></div>)}</div></div>
+  return <div><div className="flex items-baseline justify-between gap-3"><p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">{label}</p><p className="text-[10px] text-muted-foreground">{detail}</p></div><div className="mt-2 divide-y divide-border/80 border-y border-border/80">{items.map(item => <div key={`${item.asset_type}:${item.code}:${item.state}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 py-3"><div><p className="font-medium text-white">{item.code}</p><p className="mt-1 text-[11px] text-muted-foreground">Q0/Q1/Q2/Q3 · {item.windows.join(" / ")} · confianza {item.confidence}</p></div><div className="flex items-center gap-2"><p className="text-sm text-[#96B5A6]">{item.total} exp.</p><Button asChild size="sm" variant="ghost"><Link href={spaceHref(item.asset_type, item.code)}>Abrir espacio</Link></Button></div></div>)}</div></div>
 }
 
 function GraphSection({ graph }: { graph: NonNullable<TrajectoryResult["graph"]> }) {
@@ -260,10 +273,10 @@ function GraphSection({ graph }: { graph: NonNullable<TrajectoryResult["graph"]>
 function GraphMetric({ value, label }: { value: number; label: string }) { return <div className="rounded-[10px] bg-[#13272D] p-4"><p className="text-2xl font-light text-[#E7DFCE]">{value.toLocaleString("es-CL")}</p><p className="mt-1 text-xs text-muted-foreground">{label}</p></div> }
 
 function ProtectionDeltaSection({ result }: { result: Result }) {
-  return <section className="border-b border-border/80 py-9"><OperationalSectionHeader eyebrow="Cobertura nueva" title="Qué aparece ahora y no aparecía hace seis meses" /><p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Sólo se muestran clasificaciones presentes en los últimos 180 días y ausentes en los 180 días anteriores. Una clase nueva indica expansión observable de cobertura, no necesariamente una tecnología o negocio completamente nuevo.</p><div className="mt-7 grid gap-8 xl:grid-cols-2"><MovementList icon={FlaskConical} title="Nuevas áreas técnicas · IPC" items={result.new_ipc} empty="No aparecen nuevas subclases IPC en la ventana actual." /><MovementList icon={Tag} title="Nuevas áreas comerciales · Niza" items={result.new_niza} empty="No aparecen nuevas clases Niza en la ventana actual." /></div></section>
+  return <section className="border-b border-border/80 py-9"><OperationalSectionHeader eyebrow="Cobertura nueva" title="Qué aparece ahora y no aparecía hace seis meses" /><p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Sólo se muestran clasificaciones presentes en los últimos 180 días y ausentes en los 180 días anteriores. Una clase nueva indica expansión observable de cobertura, no necesariamente una tecnología o negocio completamente nuevo.</p><div className="mt-7 grid gap-8 xl:grid-cols-2"><MovementList type="patent" icon={FlaskConical} title="Nuevas áreas técnicas · IPC" items={result.new_ipc} empty="No aparecen nuevas subclases IPC en la ventana actual." /><MovementList type="trademark" icon={Tag} title="Nuevas áreas comerciales · Niza" items={result.new_niza} empty="No aparecen nuevas clases Niza en la ventana actual." /></div></section>
 }
-function MovementList({ icon: Icon, title, items, empty }: { icon: typeof Activity; title: string; items: Movement[]; empty: string }) {
-  return <div><div className="flex items-center gap-2"><Icon className="h-4 w-4 text-[#96B5A6]" /><h3 className="font-medium text-white">{title}</h3></div>{items.length ? <div className="mt-4 divide-y divide-border/80 border-y border-border/80">{items.map(item => <div key={item.code} className="flex items-center justify-between gap-4 py-4"><div><p className="font-medium text-white">{item.code}</p><p className="mt-1 text-xs text-muted-foreground">Ausente en el semestre anterior</p></div><div className="text-right"><p className="text-lg text-[#96B5A6]">{item.current}</p><p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">expedientes</p></div></div>)}</div> : <p className="mt-4 border-y border-border/80 py-6 text-sm text-muted-foreground">{empty}</p>}</div>
+function MovementList({ type, icon: Icon, title, items, empty }: { type: "patent" | "trademark"; icon: typeof Activity; title: string; items: Movement[]; empty: string }) {
+  return <div><div className="flex items-center gap-2"><Icon className="h-4 w-4 text-[#96B5A6]" /><h3 className="font-medium text-white">{title}</h3></div>{items.length ? <div className="mt-4 divide-y divide-border/80 border-y border-border/80">{items.map(item => <div key={item.code} className="flex items-center justify-between gap-4 py-4"><div><p className="font-medium text-white">{item.code}</p><p className="mt-1 text-xs text-muted-foreground">Ausente en el semestre anterior</p></div><div className="flex items-center gap-3"><div className="text-right"><p className="text-lg text-[#96B5A6]">{item.current}</p><p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">expedientes</p></div><Button asChild size="sm" variant="ghost"><Link href={spaceHref(type, item.code)}>Abrir espacio</Link></Button></div></div>)}</div> : <p className="mt-4 border-y border-border/80 py-6 text-sm text-muted-foreground">{empty}</p>}</div>
 }
 
 function EvidenceSection({ evidence }: { evidence: Evidence[] }) {
