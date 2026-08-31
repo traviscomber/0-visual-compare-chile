@@ -5,6 +5,7 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 const ROLES = new Set(["editor", "viewer"])
+const EDIT_ROLES = new Set(["owner", "editor"])
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export async function GET(request: Request) {
@@ -63,14 +64,15 @@ export async function POST(request: Request) {
   if (body.type === "action") {
     const title = body.title?.trim() ?? ""
     const assignedTo = body.assignedTo?.trim() || null
-    if (!title || title.length > 240) return NextResponse.json({ error: "Acción inválida." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
+    const dueAt = normalizeDueAt(body.dueAt)
+    if (!title || title.length > 240 || dueAt === undefined) return NextResponse.json({ error: "Acción inválida." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
     if (assignedTo && !UUID_PATTERN.test(assignedTo)) return NextResponse.json({ error: "Responsable inválido." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
     if (assignedTo) {
       const { data: assignee, error: assigneeError } = await auth.supabase.from("case_members").select("user_id").eq("case_id", body.caseId).eq("user_id", assignedTo).maybeSingle()
       if (assigneeError) return NextResponse.json({ error: "No pudimos validar al responsable." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
       if (!assignee) return NextResponse.json({ error: "La acción sólo puede asignarse a un participante del caso." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
     }
-    const { data, error } = await auth.supabase.from("case_actions").insert({ case_id: body.caseId, title, assigned_to: assignedTo, created_by: auth.user.id, due_at: body.dueAt || null }).select("id,case_id,title,assigned_to,created_by,status,due_at,created_at,completed_at,updated_at").single()
+    const { data, error } = await auth.supabase.from("case_actions").insert({ case_id: body.caseId, title, assigned_to: assignedTo, created_by: auth.user.id, due_at: dueAt }).select("id,case_id,title,assigned_to,created_by,status,due_at,created_at,completed_at,updated_at").single()
     if (error) {
       if (error.message.includes("case_recipient_not_member")) return NextResponse.json({ error: "La acción sólo puede asignarse a un participante del caso." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
       return NextResponse.json({ error: "No pudimos crear la acción." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
@@ -84,7 +86,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   const auth = await requireUser()
   if (!auth.ok) return auth.response
-  const body = await request.json().catch(() => ({})) as { type?: string; id?: string; caseId?: string; role?: string; status?: string; outcome?: string }
+  const body = await request.json().catch(() => ({})) as { type?: string; id?: string; caseId?: string; role?: string; status?: string; outcome?: string; assignedTo?: string | null; dueAt?: string | null }
   if (!body.id || !body.type) return NextResponse.json({ error: "Solicitud incompleta." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
 
   if (body.type === "member") {
@@ -94,18 +96,51 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ ok: true }, { headers: PRIVATE_NO_STORE_HEADERS })
   }
 
+  if (body.type === "action_schedule") {
+    const assignedTo = body.assignedTo?.trim() || null
+    const dueAt = normalizeDueAt(body.dueAt)
+    if ((assignedTo !== null && !UUID_PATTERN.test(assignedTo)) || dueAt === undefined) {
+      return NextResponse.json({ error: "Responsable o fecha inválidos." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
+    }
+
+    const { data: action, error: actionError } = await auth.supabase.from("case_actions").select("id,case_id,status").eq("id", body.id).maybeSingle()
+    if (actionError) return NextResponse.json({ error: "No pudimos cargar la acción." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
+    if (!action) return NextResponse.json({ error: "Acción no encontrada." }, { status: 404, headers: PRIVATE_NO_STORE_HEADERS })
+    if (action.status !== "open") return NextResponse.json({ error: "Reabre la acción antes de cambiar responsable o fecha." }, { status: 409, headers: PRIVATE_NO_STORE_HEADERS })
+
+    const { data: currentRole, error: roleError } = await auth.supabase.rpc("case_access_role", { p_case_id: action.case_id, p_user_id: auth.user.id })
+    if (roleError || !EDIT_ROLES.has(String(currentRole))) {
+      return NextResponse.json({ error: "Sólo responsables y editores pueden reasignar o cambiar la fecha." }, { status: 403, headers: PRIVATE_NO_STORE_HEADERS })
+    }
+
+    if (assignedTo) {
+      const { data: assignee, error: assigneeError } = await auth.supabase.from("case_members").select("user_id").eq("case_id", action.case_id).eq("user_id", assignedTo).maybeSingle()
+      if (assigneeError) return NextResponse.json({ error: "No pudimos validar al responsable." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
+      if (!assignee) return NextResponse.json({ error: "La acción sólo puede asignarse a un participante del caso." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
+    }
+
+    const { data, error } = await auth.supabase.from("case_actions").update({ assigned_to: assignedTo, due_at: dueAt, updated_at: new Date().toISOString() }).eq("id", body.id).select("id,case_id,title,assigned_to,status,due_at,updated_at").maybeSingle()
+    if (error) {
+      if (error.message.includes("case_recipient_not_member")) return NextResponse.json({ error: "La acción sólo puede asignarse a un participante del caso." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
+      return NextResponse.json({ error: "No pudimos actualizar responsable y fecha." }, { status: 403, headers: PRIVATE_NO_STORE_HEADERS })
+    }
+    if (!data) return NextResponse.json({ error: "No tienes permisos para actualizar esta acción." }, { status: 403, headers: PRIVATE_NO_STORE_HEADERS })
+    return NextResponse.json({ action: data }, { headers: PRIVATE_NO_STORE_HEADERS })
+  }
+
   if (body.type === "action") {
     const status = body.status === "done" ? "done" : "open"
     const outcome = body.outcome?.trim() ?? ""
     if (status === "done" && (outcome.length < 2 || outcome.length > 2000)) {
       return NextResponse.json({ error: "Describe brevemente el resultado antes de completar la acción." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
     }
-    const { error } = await auth.supabase.from("case_actions").update({
+    const { data, error } = await auth.supabase.from("case_actions").update({
       status,
       outcome: status === "done" ? outcome : null,
       updated_at: new Date().toISOString(),
-    }).eq("id", body.id)
+    }).eq("id", body.id).select("id").maybeSingle()
     if (error) return NextResponse.json({ error: "No pudimos actualizar la acción." }, { status: 403, headers: PRIVATE_NO_STORE_HEADERS })
+    if (!data) return NextResponse.json({ error: "No tienes permisos para actualizar esta acción." }, { status: 403, headers: PRIVATE_NO_STORE_HEADERS })
     return NextResponse.json({ ok: true }, { headers: PRIVATE_NO_STORE_HEADERS })
   }
 
@@ -138,4 +173,11 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ ok: true }, { headers: PRIVATE_NO_STORE_HEADERS })
   }
   return NextResponse.json({ error: "Tipo inválido." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
+}
+
+function normalizeDueAt(value: string | null | undefined) {
+  if (value === null || value === undefined || value.trim() === "") return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return undefined
+  return date.toISOString()
 }
