@@ -60,9 +60,10 @@ for (const forbidden of ["bg-gradient", "linear-gradient", "radial-gradient", "g
 
 for (const needle of ["BRAND", "PATENT", "TECHNOLOGY", "The same system. Three ways to ask."]) requireText(demo, needle, "product demo")
 
-for (const [source, label] of [[esPage, "Spanish metadata"], [enPage, "English metadata"]] as const) {
-  requireText(source, "propiedad intelectual y tecnología", label === "Spanish metadata" ? label : "Spanish guard")
-}
+requireText(esPage, "Inteligencia de propiedad intelectual y tecnología", "Spanish metadata")
+requireText(esPage, "marcas, patentes y tecnologías", "Spanish metadata")
+requireText(enPage, "Intellectual property and technology intelligence", "English metadata")
+requireText(enPage, "brands, patents and technologies", "English metadata")
 
 if (esPage.includes("Inteligencia y protección de marcas") || enPage.includes("Trademark intelligence and protection")) {
   fail("root public metadata must not revert to trademark-only positioning")
