@@ -16,7 +16,7 @@ for(const needle of [
   "parsePriorityClaims",
   "pctApplicationDate",
   "familyCandidate",
-  'reviewLevel: "close_review"',
+  'if (score >= 65) return "close_review"',
   'source: "INAPI Chile"',
   "Citations no se muestran mientras no exista una fuente canónica verificable integrada.",
 ])requireText(builder,needle,"prior-art builder")
