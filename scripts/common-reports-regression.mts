@@ -61,6 +61,10 @@ for (const needle of [
   'href="/reportes/evaluaciones"',
 ]) requireText(page, needle, "reports UI")
 
-requireText(evaluations, "Evaluaciones anteriores", "legacy evaluations surface")
+for (const needle of [
+  "Historial técnico de comparaciones de marca.",
+  "Esta vista conserva las evaluaciones anteriores.",
+  "Evaluaciones persistidas",
+]) requireText(evaluations, needle, "legacy evaluations surface")
 
 console.log("Common reports regression PASS: Brand/Patent/Technology use one immutable versioned snapshot model, authenticated RLS, server-derived evidence and an honest five-section report contract.")
