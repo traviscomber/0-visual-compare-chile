@@ -22,8 +22,8 @@ export async function searchCrossrefWorks(query: string, from: Date, to: Date, l
   const url = new URL(CROSSREF_BASE)
   url.searchParams.set("query.bibliographic", query)
   url.searchParams.set("filter", `from-pub-date:${dateOnly(from)},until-pub-date:${dateOnly(to)}`)
-  url.searchParams.set("sort", "published")
-  url.searchParams.set("order", "desc")
+  // Keep Crossref's relevance ranking. Sorting by published date was surfacing
+  // recent but unrelated works ahead of semantically relevant results.
   url.searchParams.set("rows", String(Math.min(Math.max(limit, 1), 20)))
 
   const mailto = String(process.env.CROSSREF_MAILTO ?? "").trim()
