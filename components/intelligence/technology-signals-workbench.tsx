@@ -217,7 +217,9 @@ function TechnologyResult({ result }: { result: TechnologySignalResponse }) {
   const publicationCount = result.evidence.publications.length
   const patentCount = result.evidence.patents.length
   const newsCount = result.evidence.news.length
-  const unavailableSources = Object.entries(result.sources).filter(([, source]) => !source.available).map(([key]) => SOURCE_LABELS[key] ?? key)
+  const unavailableCoreSources = Object.entries(result.sources)
+    .filter(([key, source]) => key !== "gdelt" && !source.available)
+    .map(([key]) => SOURCE_LABELS[key] ?? key)
   const publicationSourcesAvailable = Boolean(result.sources.openalex?.available || result.sources.crossref?.available)
   const reading = executiveReading(result)
 
@@ -234,10 +236,10 @@ function TechnologyResult({ result }: { result: TechnologySignalResponse }) {
           </Badge>
         </div>
         <p className="mt-4 max-w-3xl text-base leading-7 text-white">{reading.summary}</p>
-        {unavailableSources.length ? (
+        {unavailableCoreSources.length ? (
           <div role="status" className="mt-5 flex max-w-3xl items-start gap-3 border-y border-[#7A5B41]/45 bg-[#332C24]/35 px-3 py-3 text-xs leading-5 text-[#D6C3A8]">
             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[#D6A46F]" />
-            <p>No pudimos consultar: {unavailableSources.join(" · ")}. El resultado no asume que eso signifique cero actividad.</p>
+            <p>No pudimos consultar: {unavailableCoreSources.join(" · ")}. El resultado no asume que eso signifique cero actividad.</p>
           </div>
         ) : null}
       </section>
@@ -311,7 +313,7 @@ function TechnologyResult({ result }: { result: TechnologySignalResponse }) {
           <div className="mt-5 divide-y divide-border/80 border-y border-border/80">
             {result.evidence.news.map((item) => <NewsRow key={item.sourceRecordId} item={item} />)}
           </div>
-        ) : <EmptyEvidence text={result.sources.gdelt?.available ? "No encontramos noticias recientes relacionadas con esta tecnología." : "Las noticias no están disponibles temporalmente. Esto no cambia la señal de investigación y patentes."} />}
+        ) : <EmptyEvidence text={result.sources.gdelt?.available ? "No encontramos noticias recientes relacionadas con esta tecnología." : "Noticias temporalmente no disponibles. La evaluación principal sigue basándose en investigación y patentes."} />}
         <div className="mt-6 max-w-3xl border-t border-border/80 pt-5 text-xs leading-5 text-muted-foreground">
           <p className="font-medium text-white">Cómo usar este contexto</p>
           <p className="mt-2">Las noticias ayudan a entender el entorno. No bastan, por sí solas, para decir que una tecnología está creciendo o entrando al mercado.</p>
