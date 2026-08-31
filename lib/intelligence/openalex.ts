@@ -1,7 +1,9 @@
 import { fetchWithRetry } from "@/lib/intelligence/fetch-with-retry"
+import { normalizeTechnologyQuery } from "@/lib/intelligence/technology-query"
 
 const OPENALEX_BASE = "https://api.openalex.org"
 const TIMEOUT_MS = 9000
+const OPENALEX_REVALIDATE_SECONDS = 6 * 60 * 60
 
 export type OpenAlexWorkSignal = {
   source: "openalex"
@@ -16,28 +18,88 @@ export type OpenAlexWorkSignal = {
   topic: string | null
 }
 
+export type OpenAlexWindowSignal = {
+  count: number
+  works: OpenAlexWorkSignal[]
+}
+
 type OpenAlexResponse = {
   meta?: { count?: number }
   results?: Array<Record<string, unknown>>
 }
 
-export async function countOpenAlexWorks(query: string, from: Date, to: Date) {
-  const payload = await requestOpenAlex({
-    filter: technologyFilter(query, from, to),
-    "per-page": "1",
-  })
-  return Number(payload.meta?.count ?? 0)
+type NextFetchInit = RequestInit & {
+  next?: { revalidate: number }
 }
 
-export async function searchOpenAlexWorks(query: string, from: Date, to: Date, limit = 8): Promise<OpenAlexWorkSignal[]> {
+const inFlightOpenAlex = new Map<string, Promise<OpenAlexResponse>>()
+
+export async function queryOpenAlexWindow(query: string, from: Date, to: Date, limit = 8): Promise<OpenAlexWindowSignal> {
   const payload = await requestOpenAlex({
     // VIDENTIA uses a title-led universe for executive momentum. Abstract and full-text
     // mentions are useful context, but they are too permissive to move the KPI itself.
     filter: technologyFilter(query, from, to),
-    "per-page": String(Math.min(Math.max(limit, 1), 20)),
+    per_page: String(Math.min(Math.max(limit, 1), 20)),
+    select: "id,title,publication_date,doi,cited_by_count,authorships,primary_topic",
   })
 
-  return (payload.results ?? []).flatMap(row => {
+  return {
+    count: Number(payload.meta?.count ?? 0),
+    works: parseOpenAlexWorks(payload.results ?? []),
+  }
+}
+
+export async function countOpenAlexWorks(query: string, from: Date, to: Date) {
+  return (await queryOpenAlexWindow(query, from, to, 1)).count
+}
+
+export async function searchOpenAlexWorks(query: string, from: Date, to: Date, limit = 8): Promise<OpenAlexWorkSignal[]> {
+  return (await queryOpenAlexWindow(query, from, to, limit)).works
+}
+
+async function requestOpenAlex(params: Record<string, string>): Promise<OpenAlexResponse> {
+  const url = new URL(`${OPENALEX_BASE}/works`)
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value)
+
+  const apiKey = String(process.env.OPENALEX_API_KEY ?? "").trim()
+  if (apiKey) url.searchParams.set("api_key", apiKey)
+
+  const requestKey = url.toString()
+  const pending = inFlightOpenAlex.get(requestKey)
+  if (pending) return await pending
+
+  const operation = performOpenAlexRequest(url)
+  inFlightOpenAlex.set(requestKey, operation)
+  try {
+    return await operation
+  } finally {
+    if (inFlightOpenAlex.get(requestKey) === operation) inFlightOpenAlex.delete(requestKey)
+  }
+}
+
+async function performOpenAlexRequest(url: URL): Promise<OpenAlexResponse> {
+  const init: NextFetchInit = {
+    cache: "force-cache",
+    next: { revalidate: OPENALEX_REVALIDATE_SECONDS },
+    headers: { Accept: "application/json", "User-Agent": "VIDENTIA/1.0" },
+  }
+  const response = await fetchWithRetry(url, init, {
+    attempts: 3,
+    baseDelayMs: 500,
+    timeoutMs: TIMEOUT_MS,
+  })
+
+  if (!response.ok) {
+    const remaining = response.headers.get("x-ratelimit-remaining")
+    const reset = response.headers.get("x-ratelimit-reset")
+    const diagnostic = [remaining !== null ? `remaining=${remaining}` : null, reset ? `reset=${reset}` : null].filter(Boolean).join(" ")
+    throw new Error(`OpenAlex respondió ${response.status}${diagnostic ? ` (${diagnostic})` : ""}`)
+  }
+  return await response.json() as OpenAlexResponse
+}
+
+function parseOpenAlexWorks(rows: Array<Record<string, unknown>>): OpenAlexWorkSignal[] {
+  return rows.flatMap(row => {
     const id = asString(row.id)
     const title = asString(row.title)
     if (!id || !title) return []
@@ -73,33 +135,8 @@ export async function searchOpenAlexWorks(query: string, from: Date, to: Date, l
   })
 }
 
-async function requestOpenAlex(params: Record<string, string>): Promise<OpenAlexResponse> {
-  const url = new URL(`${OPENALEX_BASE}/works`)
-  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value)
-
-  const apiKey = String(process.env.OPENALEX_API_KEY ?? "").trim()
-  if (apiKey) url.searchParams.set("api_key", apiKey)
-
-  const response = await fetchWithRetry(url, {
-    cache: "no-store",
-    headers: { Accept: "application/json", "User-Agent": "VIDENTIA/1.0" },
-  }, {
-    attempts: 3,
-    baseDelayMs: 500,
-    timeoutMs: TIMEOUT_MS,
-  })
-
-  if (!response.ok) {
-    const remaining = response.headers.get("x-ratelimit-remaining")
-    const reset = response.headers.get("x-ratelimit-reset")
-    const diagnostic = [remaining !== null ? `remaining=${remaining}` : null, reset ? `reset=${reset}` : null].filter(Boolean).join(" ")
-    throw new Error(`OpenAlex respondió ${response.status}${diagnostic ? ` (${diagnostic})` : ""}`)
-  }
-  return await response.json() as OpenAlexResponse
-}
-
 function technologyFilter(query: string, from: Date, to: Date) {
-  const safeQuery = query.replace(/[,|:]+/g, " ").replace(/\s+/g, " ").trim()
+  const safeQuery = normalizeTechnologyQuery(query)
   return `from_publication_date:${dateOnly(from)},to_publication_date:${dateOnly(to)},title.search:${safeQuery}`
 }
 

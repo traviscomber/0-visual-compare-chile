@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises"
 import { isCrossrefQueryRelevant } from "../lib/intelligence/crossref.ts"
+import { normalizeTechnologyQuery } from "../lib/intelligence/technology-query.ts"
 
 function fail(message: string): never {
   console.error(`Technology evidence relevance regression FAIL: ${message}`)
@@ -77,7 +78,31 @@ assert(
   isCrossrefQueryRelevant("hidrógeno verde", "Producción y almacenamiento de hidrógeno verde"),
 )
 
+assert(
+  "unaccented thermal storage must canonicalize to the accented technology",
+  normalizeTechnologyQuery("ALMACENAMIENTO TERMICO") === "almacenamiento térmico",
+)
+assert(
+  "unaccented green hydrogen must canonicalize to the accented technology",
+  normalizeTechnologyQuery("  Hidrogeno   Verde ") === "hidrógeno verde",
+)
+assert(
+  "query punctuation must not create a separate OpenAlex search",
+  normalizeTechnologyQuery("Extraccion: directa | de litio") === "extracción directa de litio",
+)
+
 if (!openalex.includes("fetchWithRetry")) fail("OpenAlex transient 429/5xx responses are not retried")
+if (!openalex.includes('cache: "force-cache"')) fail("OpenAlex successful reads are not using the Vercel/Next data cache")
+if (!openalex.includes("OPENALEX_REVALIDATE_SECONDS = 6 * 60 * 60")) fail("OpenAlex cache TTL is not locked to the six-hour budget")
+if (!openalex.includes("next: { revalidate: OPENALEX_REVALIDATE_SECONDS }")) fail("OpenAlex cache is missing time-based revalidation")
+if (!openalex.includes("inFlightOpenAlex")) fail("OpenAlex identical in-flight requests are not deduplicated")
+if (openalex.includes('cache: "no-store"')) fail("OpenAlex still bypasses caching")
+
+const openAlexWindowCalls = signals.match(/queryOpenAlexWindow\(/g)?.length ?? 0
+if (openAlexWindowCalls !== 2) fail(`technology analysis must use exactly two OpenAlex window calls, found ${openAlexWindowCalls}`)
+if (signals.includes("countOpenAlexWorks")) fail("technology analysis still performs a separate OpenAlex count request")
+if (signals.includes("searchOpenAlexWorks")) fail("technology analysis still performs a separate OpenAlex evidence request")
+
 if (!signals.includes('"no_disponible"')) fail("technology momentum lacks an unavailable state")
 if (!signals.includes("current_publications: currentCount")) fail("technology momentum does not preserve nullable source state")
 if (signals.includes("openalex: { available: true")) fail("OpenAlex availability is hard-coded true")
@@ -85,4 +110,4 @@ if (!signals.includes("openAlexAvailable")) fail("OpenAlex availability is not d
 if (!workbench.includes("no interpreta una fuente sin respuesta como ausencia de actividad")) fail("UI does not explain unavailable-source semantics")
 if (!workbench.includes('value={result.momentum.current_publications ?? "—"}')) fail("UI can still render source failure as zero publications")
 
-console.log("Technology evidence relevance regression PASS: OpenAlex executive momentum is title-led, Crossref rejects weak matches, transient limits retry, and source outages never become false zero activity.")
+console.log("Technology evidence relevance regression PASS: OpenAlex is title-led, accent-normalized, cached for six hours, deduplicated to two window calls, Crossref rejects weak matches, transient limits retry, and source outages never become false zero activity.")

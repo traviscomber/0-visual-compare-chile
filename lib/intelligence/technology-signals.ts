@@ -1,4 +1,4 @@
-import { countOpenAlexWorks, searchOpenAlexWorks } from "@/lib/intelligence/openalex"
+import { queryOpenAlexWindow, type OpenAlexWorkSignal } from "@/lib/intelligence/openalex"
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
 import { searchGdeltNews } from "@/lib/intelligence/gdelt"
 
@@ -16,17 +16,16 @@ export async function buildTechnologySignals(query: string, windowDays = 180) {
   const previousFrom = daysAgo(previousTo, windowDays)
   const newsFrom = daysAgo(now, 7)
 
-  const [currentCountResult, previousCountResult, openAlexWorksResult, crossrefWorksResult, newsResult] = await Promise.all([
-    captureSource("openalex-current", () => countOpenAlexWorks(query, currentFrom, now), 0),
-    captureSource("openalex-previous", () => countOpenAlexWorks(query, previousFrom, previousTo), 0),
-    captureSource("openalex-evidence", () => searchOpenAlexWorks(query, currentFrom, now, 10), []),
+  const [currentOpenAlexResult, previousOpenAlexResult, crossrefWorksResult, newsResult] = await Promise.all([
+    captureSource("openalex-current", () => queryOpenAlexWindow(query, currentFrom, now, 10), { count: 0, works: [] as OpenAlexWorkSignal[] }),
+    captureSource("openalex-previous", () => queryOpenAlexWindow(query, previousFrom, previousTo, 1), { count: 0, works: [] as OpenAlexWorkSignal[] }),
     captureSource("crossref", () => searchCrossrefWorks(query, currentFrom, now, 10), []),
     captureSource("gdelt", () => searchGdeltNews(query, newsFrom, now, 10), []),
   ])
 
-  const openAlexAvailable = currentCountResult.ok && previousCountResult.ok && openAlexWorksResult.ok
-  const currentCount = openAlexAvailable ? currentCountResult.value : null
-  const previousCount = openAlexAvailable ? previousCountResult.value : null
+  const openAlexAvailable = currentOpenAlexResult.ok && previousOpenAlexResult.ok
+  const currentCount = openAlexAvailable ? currentOpenAlexResult.value.count : null
+  const previousCount = openAlexAvailable ? previousOpenAlexResult.value.count : null
   const growth = currentCount !== null && previousCount !== null && previousCount > 0
     ? ((currentCount - previousCount) / previousCount) * 100
     : null
@@ -41,7 +40,7 @@ export async function buildTechnologySignals(query: string, windowDays = 180) {
           ? "desacelerando"
           : "estable"
 
-  const publicationEvidence = dedupePublications(openAlexWorksResult.value, crossrefWorksResult.value)
+  const publicationEvidence = dedupePublications(currentOpenAlexResult.value.works, crossrefWorksResult.value)
 
   return {
     query,
@@ -62,14 +61,14 @@ export async function buildTechnologySignals(query: string, windowDays = 180) {
       news: newsResult.value,
     },
     sources: {
-      openalex: { available: openAlexAvailable, evidence_count: openAlexWorksResult.value.length },
+      openalex: { available: openAlexAvailable, evidence_count: currentOpenAlexResult.value.works.length },
       crossref: { available: crossrefWorksResult.ok, evidence_count: crossrefWorksResult.value.length },
       gdelt: { available: newsResult.ok, evidence_count: newsResult.value.length },
     },
   }
 }
 
-function dedupePublications(openAlex: Awaited<ReturnType<typeof searchOpenAlexWorks>>, crossref: Awaited<ReturnType<typeof searchCrossrefWorks>>) {
+function dedupePublications(openAlex: OpenAlexWorkSignal[], crossref: Awaited<ReturnType<typeof searchCrossrefWorks>>) {
   const seen = new Set<string>()
   const rows: Array<Record<string, unknown>> = []
 
