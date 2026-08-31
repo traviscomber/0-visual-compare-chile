@@ -5,6 +5,7 @@ import { OperationalHeader, OperationalMetric, OperationalMetricRail, Operationa
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { buildCaseIntelligence, type CaseItemType, type CaseStatus } from "@/lib/cases/intelligence"
+import { strategicAnalysisHref } from "@/lib/intelligence/navigation-context"
 import { createClient } from "@/lib/supabase/server"
 
 export const dynamic = "force-dynamic"
@@ -58,7 +59,7 @@ export default async function DashboardPage(){
   const queue=[
     ...changed.slice(0,2).map(item=>({href:`/casos/${item.caseRow.id}`,icon:BriefcaseBusiness,kicker:"Evidencia nueva",title:item.caseRow.title,detail:`${item.intelligence.newEvidenceCount} evidencia${item.intelligence.newEvidenceCount===1?"":"s"} nueva${item.intelligence.newEvidenceCount===1?"":"s"} desde la última revisión.`,action:"Revisar caso",tone:"primary" as const})),
     ...ready.slice(0,2).map(item=>({href:`/casos/${item.caseRow.id}`,icon:CheckCircle2,kicker:"Listo para decidir",title:item.caseRow.title,detail:item.intelligence.pendingDecision,action:"Preparar decisión",tone:"primary" as const})),
-    ...newStrategicSignals.slice(0,2).map(item=>({href:"/monitorear/estrategico",icon:Radar,kicker:`${item.source_key} · Cambio estratégico`,title:item.title,detail:`${item.event_type} · relevancia ${item.relevance}`,action:"Revisar cambio",tone:item.relevance==="alta"?"warm" as const:"primary" as const})),
+    ...newStrategicSignals.slice(0,2).map(item=>{const watch=strategicWatchMap.get(item.watch_id);return {href:watch?strategicAnalysisHref(watch.watch_type,watch.query):"/monitorear/estrategico",icon:Radar,kicker:`${item.source_key} · Cambio estratégico`,title:item.title,detail:watch?`${watch.query} · ${item.event_type} · relevancia ${item.relevance}`:`${item.event_type} · relevancia ${item.relevance}`,action:watch?"Abrir análisis":"Revisar cambio",tone:item.relevance==="alta"?"warm" as const:"primary" as const}}),
     ...newSignals.slice(0,2).map(item=>({href:"/monitorear",icon:BellRing,kicker:`${item.source} · Nueva señal`,title:item.mark_name,detail:item.reason||item.applicant_name||"Antecedente nuevo en vigilancia.",action:"Revisar señal",tone:item.relevance==="alta"?"warm" as const:"neutral" as const})),
     ...stalled.slice(0,1).map(item=>({href:`/casos/${item.caseRow.id}`,icon:Clock3,kicker:"Sin movimiento",title:item.caseRow.title,detail:`Última actividad ${relative(item.caseRow.updated_at).toLowerCase()}.`,action:"Retomar caso",tone:"neutral" as const})),
   ].slice(0,6)
