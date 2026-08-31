@@ -73,6 +73,9 @@ jobs:
       - name: Recommendation lifecycle regression
         run: node scripts/recommendation-lifecycle-regression.mts
 
+      - name: Opportunities workspace regression
+        run: node scripts/opportunities-workspace-regression.mts
+
       - name: Executive flow gates regression
         run: node scripts/executive-flow-gates-regression.mts
 
