@@ -67,6 +67,9 @@ jobs:
       - name: Positioning regression
         run: node scripts/positioning-regression.mts
 
+      - name: Technology evidence relevance regression
+        run: node scripts/technology-evidence-relevance-regression.mts
+
       - name: TypeScript
         run: pnpm exec tsc --noEmit
 
