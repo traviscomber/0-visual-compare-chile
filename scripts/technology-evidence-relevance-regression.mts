@@ -12,6 +12,8 @@ function assert(label: string, condition: boolean) {
 
 const openalex = await readFile("lib/intelligence/openalex.ts", "utf8")
 const crossref = await readFile("lib/intelligence/crossref.ts", "utf8")
+const signals = await readFile("lib/intelligence/technology-signals.ts", "utf8")
+const workbench = await readFile("components/intelligence/technology-signals-workbench.tsx", "utf8")
 
 if (openalex.includes('sort: "publication_date:desc"')) {
   fail("OpenAlex search must preserve provider relevance ordering instead of forcing publication date")
@@ -62,4 +64,12 @@ assert(
   isCrossrefQueryRelevant("hidrógeno verde", "Producción y almacenamiento de hidrógeno verde"),
 )
 
-console.log("Technology evidence relevance regression PASS: provider relevance is preserved and weak Crossref topical matches are rejected.")
+if (!openalex.includes("fetchWithRetry")) fail("OpenAlex transient 429/5xx responses are not retried")
+if (!signals.includes('"no_disponible"')) fail("technology momentum lacks an unavailable state")
+if (!signals.includes("current_publications: currentCount")) fail("technology momentum does not preserve nullable source state")
+if (signals.includes("openalex: { available: true")) fail("OpenAlex availability is hard-coded true")
+if (!signals.includes("openAlexAvailable")) fail("OpenAlex availability is not derived from source outcomes")
+if (!workbench.includes("no interpreta una fuente sin respuesta como ausencia de actividad")) fail("UI does not explain unavailable-source semantics")
+if (!workbench.includes('value={result.momentum.current_publications ?? "—"}')) fail("UI can still render source failure as zero publications")
+
+console.log("Technology evidence relevance regression PASS: evidence is relevance-ranked, weak Crossref matches are rejected, transient OpenAlex limits retry, and source outages never become false zero activity.")
