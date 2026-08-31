@@ -9,8 +9,8 @@ export default function TechnologyIntelligencePage() {
       <OperationalHeader
         eyebrow="VIDENTIA / Tecnologías"
         title="Vea qué tecnologías están tomando velocidad."
-        description="Compare actividad reciente con el período anterior y revise la evidencia que sustenta cada señal. VIDENTIA combina publicaciones científicas y noticias recientes sin presentar señales como predicciones."
-        meta={<><span>OpenAlex</span><span>Crossref</span><span>GDELT</span><span>Patentes: EPO OPS preparado</span></>}
+        description="Compare momentum científico con protección patentaria reciente y revise la evidencia que sostiene cada eje. VIDENTIA separa señal, corroboración y contexto para no presentar actividad como predicción."
+        meta={<><span>OpenAlex</span><span>Crossref</span><span>Patentes INAPI activas</span><span>EPO OPS preparado</span><span>GDELT contexto</span></>}
       />
       <TechnologySignalsWorkbench />
     </OperationalPage>
