@@ -85,6 +85,9 @@ jobs:
       - name: Executive flow gates regression
         run: node scripts/executive-flow-gates-regression.mts
 
+      - name: Public product architecture regression
+        run: node scripts/public-product-architecture-regression.mts
+
       - name: Positioning regression
         run: node scripts/positioning-regression.mts
 
