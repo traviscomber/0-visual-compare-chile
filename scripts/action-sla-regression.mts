@@ -36,7 +36,7 @@ for (const needle of [
   "Fecha límite de",
   'label:"Vencida"',
   'label:"Próxima · 48 h"',
-  "Reabre la acción",
+  "Reabrir acción",
 ]) requireText(teamPage, needle, "team action UI")
 
 for (const needle of [
