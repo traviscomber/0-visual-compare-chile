@@ -18,13 +18,15 @@ const workbench = await readFile("components/intelligence/technology-signals-wor
 if (openalex.includes('sort: "publication_date:desc"')) {
   fail("OpenAlex search must not force publication date ahead of relevance")
 }
-
 if (crossref.includes('url.searchParams.set("sort", "published")')) {
   fail("Crossref search must preserve provider relevance ordering instead of forcing publication date")
 }
 
-if (!openalex.includes("title_and_abstract.search")) {
-  fail("OpenAlex technology universe must be scoped to title and abstract")
+if (!openalex.includes("title.search")) {
+  fail("OpenAlex executive momentum must be title-led")
+}
+if (openalex.includes("title_and_abstract.search")) {
+  fail("OpenAlex executive momentum must not let abstract-only matches move the KPI")
 }
 if (openalex.includes("search: query")) {
   fail("OpenAlex technology momentum must not scan full text")
@@ -32,8 +34,11 @@ if (openalex.includes("search: query")) {
 if (!openalex.includes("technologyFilter(query, from, to)")) {
   fail("OpenAlex counts and visible evidence must share the same technology filter")
 }
-if (!openalex.includes("executive evidence and inflate the momentum denominator")) {
-  fail("OpenAlex title/abstract scope invariant is undocumented")
+if (!openalex.includes("title-led universe for executive momentum")) {
+  fail("OpenAlex conservative scope invariant is undocumented")
+}
+if (!signals.includes("Señal conservadora")) {
+  fail("technology response does not disclose the conservative momentum basis")
 }
 
 if (!crossref.includes("Keep Crossref's relevance ranking")) {
@@ -80,4 +85,4 @@ if (!signals.includes("openAlexAvailable")) fail("OpenAlex availability is not d
 if (!workbench.includes("no interpreta una fuente sin respuesta como ausencia de actividad")) fail("UI does not explain unavailable-source semantics")
 if (!workbench.includes('value={result.momentum.current_publications ?? "—"}')) fail("UI can still render source failure as zero publications")
 
-console.log("Technology evidence relevance regression PASS: OpenAlex momentum and evidence share a title/abstract universe, Crossref rejects weak matches, transient limits retry, and source outages never become false zero activity.")
+console.log("Technology evidence relevance regression PASS: OpenAlex executive momentum is title-led, Crossref rejects weak matches, transient limits retry, and source outages never become false zero activity.")
