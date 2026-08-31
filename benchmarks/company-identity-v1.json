@@ -1,0 +1,29 @@
+{
+  "name": "VIDENTIA company identity benchmark v1",
+  "source": "Curated from observed INAPI/company-identity variants plus conservative legal-form controls.",
+  "policy": "A true match means safe enough for deterministic canonical normalization. Corporate group, subsidiary, person-name and brand-substring similarity are not auto-link evidence.",
+  "cases": [
+    { "left": "(CL) Falabella S.A.", "right": "S.A.C.I. FALABELLA", "expectedMatch": true, "reason": "Observed aliases on the same resolved Falabella identity." },
+    { "left": "S A C I FALABELLA", "right": "SACI FALABELLA", "expectedMatch": true, "reason": "Observed punctuation/legal-form variants." },
+    { "left": "FALABELLA S.A.", "right": "FALABELLA S.A.C.I.", "expectedMatch": true, "reason": "Equivalent legal-form suffix variants." },
+    { "left": "(US) Apple Inc.", "right": "APPLE INC", "expectedMatch": true, "reason": "Country prefix and punctuation must not split identity." },
+    { "left": "(US) Microsoft Corporation", "right": "MICROSOFT CORP.", "expectedMatch": true, "reason": "Equivalent corporation suffix." },
+    { "left": "ACME LIMITADA", "right": "ACME LTDA", "expectedMatch": true, "reason": "Equivalent Chilean limited-company suffix." },
+    { "left": "GLOBEX S.P.A.", "right": "GLOBEX SPA", "expectedMatch": true, "reason": "Punctuation-only legal-form variant." },
+    { "left": "INITECH LIMITED", "right": "INITECH LTD", "expectedMatch": true, "reason": "Equivalent English legal-form suffix." },
+    { "left": "UMBRELLA N.V.", "right": "UMBRELLA NV", "expectedMatch": true, "reason": "Punctuation-only legal-form variant." },
+    { "left": "WAYNE CORPORATION", "right": "WAYNE CORP", "expectedMatch": true, "reason": "Equivalent corporation suffix." },
+    { "left": "MICROSOFT CORPORATION", "right": "MICROSOFT CORPORATION SOCIEDAD ORGANIZADA BAJO LAS LEYES DEL ESTADO DE WASHINGTON", "expectedMatch": true, "reason": "Same named corporation with source-specific legal boilerplate; retained as a known recall challenge." },
+
+    { "left": "FALABELLA S.A.", "right": "FALABELLA RETAIL S.A.", "expectedMatch": false, "reason": "Related naming does not prove the same legal entity." },
+    { "left": "FALABELLA S.A.", "right": "FALABELLA INMOBILIARIO SPA", "expectedMatch": false, "reason": "Subsidiary-like name must remain distinct without evidence." },
+    { "left": "FALABELLA S.A.", "right": "CRISTIAN ANDRES FALABELLA MUNOZ", "expectedMatch": false, "reason": "Person sharing surname is not the company." },
+    { "left": "APPLE INC", "right": "APPLE VIDEO PROGRAMMING LLC", "expectedMatch": false, "reason": "Separate legal entity despite shared token." },
+    { "left": "APPLE INC", "right": "APPLE AND PEAR AUSTRALIA LIMITED", "expectedMatch": false, "reason": "Lexical overlap is not identity." },
+    { "left": "APPLE INC", "right": "APPLEBEE'S INTERNATIONAL INC", "expectedMatch": false, "reason": "Substring overlap is not identity." },
+    { "left": "EMPRESAS CMPC S.A.", "right": "CMPC TISSUE S.A.", "expectedMatch": false, "reason": "Group/operating-company relationship is not identity equivalence." },
+    { "left": "EMPRESAS CMPC S.A.", "right": "CMPC CELULOSA S.A.", "expectedMatch": false, "reason": "Subsidiary/business-unit distinction must be preserved." },
+    { "left": "EMPRESAS COPEC S.A.", "right": "COMPAÑIA DE PETROLEOS DE CHILE COPEC", "expectedMatch": false, "reason": "Related corporate ecosystem does not justify auto-merge." },
+    { "left": "SQM S.A.", "right": "SQM SALAR SPA", "expectedMatch": false, "reason": "Subsidiary-like identity must stay separate absent verified relation evidence." }
+  ]
+}

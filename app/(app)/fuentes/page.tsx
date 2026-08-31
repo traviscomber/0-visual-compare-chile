@@ -40,6 +40,23 @@ type Health = {
       duration_ms: number | null
     }
   }>
+  recent_runs: Array<{
+    id: string
+    source_key: string
+    source_name: string
+    status: string
+    started_at: string
+    finished_at: string | null
+    fetched: number
+    upserted: number
+    changes: number
+    rejected: number
+    duration_ms: number | null
+    retries: number
+    failed_stage: string | null
+    error_message: string | null
+    reconciled: boolean | null
+  }>
   quality: {
     run_id: string | null
     status: string | null
@@ -156,7 +173,25 @@ export default function SourcesHealthPage() {
       </section>
 
       <section className="border-b border-border/80 py-9">
-        <OperationalSectionHeader eyebrow="02 / Calidad" title="Checks que bloquean confianza" meta={health.quality.run_id ? `Run ${health.quality.run_id.slice(0, 8)}` : "Sin corrida"} />
+        <OperationalSectionHeader eyebrow="02 / Ingestión" title="Bitácora de corridas y reconciliación" meta={`${health.recent_runs.length} recientes`} />
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Una corrida completa sólo queda verde después de terminar el pipeline y los controles de calidad. `partial` conserva el último éxito anterior; retries y etapa de fallo quedan visibles para diagnóstico.</p>
+        <div className="mt-6 divide-y divide-border/80 border-y border-border/80">
+          {health.recent_runs.map(run => <article key={run.id} className="grid gap-4 py-5 lg:grid-cols-[minmax(0,1fr)_150px_220px_minmax(0,.8fr)] lg:items-center">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2"><p className="font-medium text-white">{run.source_name}</p><RunStatus status={run.status} /></div>
+              <p className="mt-1 text-xs text-muted-foreground">{run.source_key} · Run {run.id.slice(0,8)} · {formatDateTime(run.started_at)}</p>
+              {run.error_message ? <p className="mt-2 max-w-2xl text-xs leading-5 text-[#E8AAA3]">{run.error_message}</p> : null}
+            </div>
+            <div><p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">Duración / retries</p><p className="mt-1 text-sm text-[#D5E0E3]">{run.duration_ms === null ? "En curso" : formatDuration(run.duration_ms)}</p><p className="mt-1 text-xs text-muted-foreground">{run.retries} reintento{run.retries===1?"":"s"}</p></div>
+            <div><p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">Conteos</p><p className="mt-1 text-sm text-[#D5E0E3]">{run.fetched.toLocaleString("es-CL")} leídos · {run.upserted.toLocaleString("es-CL")} upserts</p><p className="mt-1 text-xs text-muted-foreground">{run.changes.toLocaleString("es-CL")} cambios · {run.rejected.toLocaleString("es-CL")} rechazados</p></div>
+            <div><p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">Integridad</p><p className="mt-1 text-sm text-[#D5E0E3]">{run.reconciled===true?"Contadores reconciliados":run.reconciled===false?"Revisar discrepancia":"Sin contrato de reconciliación"}</p><p className="mt-1 text-xs text-muted-foreground">{run.failed_stage ? `Etapa: ${run.failed_stage}` : "Pipeline sin etapa fallida"}</p></div>
+          </article>)}
+          {!health.recent_runs.length ? <div className="py-7"><p className="text-sm font-medium text-white">Aún no hay corridas en la bitácora Grade A.</p><p className="mt-1 text-xs leading-5 text-muted-foreground">La próxima ejecución normal del cron INAPI registrará inicio, fin, contadores, retries, estado y reconciliación.</p></div> : null}
+        </div>
+      </section>
+
+      <section className="border-b border-border/80 py-9">
+        <OperationalSectionHeader eyebrow="03 / Calidad" title="Checks que bloquean confianza" meta={health.quality.run_id ? `Run ${health.quality.run_id.slice(0, 8)}` : "Sin corrida"} />
         <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Los warnings se muestran como deuda real. Un check crítico fallido hace que el cron termine con estado de calidad no apto, aunque la ingestión fuente haya terminado correctamente.</p>
         <div className="mt-6 divide-y divide-border/80 border-y border-border/80">
           {health.quality.results.map(item => <div key={item.key} className="grid gap-3 py-4 sm:grid-cols-[28px_minmax(0,1fr)_auto] sm:items-start">
@@ -169,7 +204,7 @@ export default function SourcesHealthPage() {
       </section>
 
       <section className="py-9">
-        <OperationalSectionHeader eyebrow="03 / Cobertura" title="Qué puede sostener hoy el motor" />
+        <OperationalSectionHeader eyebrow="04 / Cobertura" title="Qué puede sostener hoy el motor" />
         <div className="mt-6 grid gap-px bg-border/70 sm:grid-cols-2 xl:grid-cols-4">
           <Coverage icon={Database} value={health.coverage.company_identities.toLocaleString("es-CL")} label="Identidades corporativas" detail={`${health.coverage.company_aliases.toLocaleString("es-CL")} alias resueltos`} />
           <Coverage icon={Clock3} value={health.coverage.company_activity_12m.toLocaleString("es-CL")} label="Expedientes / 12 meses" detail="Actividad IP enlazada a empresa" />
@@ -184,6 +219,12 @@ export default function SourcesHealthPage() {
 function StatusBadge({ status }: { status: SourceStatus }) {
   const warning = ["degraded", "stale", "initializing", "credentials_required"].includes(status)
   return <Badge variant="outline" className={warning ? "border-[#8D7042] bg-[#2C291F] text-[#D8C49C]" : status === "operational" ? "border-[#345E55] bg-[#173B37] text-[#B7D3D1]" : "bg-[#13272D] text-muted-foreground"}>{STATUS_LABEL[status]}</Badge>
+}
+
+function RunStatus({ status }: { status: string }) {
+  const good=status==="completed"
+  const warning=status==="partial"||status==="running"||status==="queued"
+  return <Badge variant="outline" className={good?"border-[#345E55] bg-[#173B37] text-[#B7D3D1]":warning?"border-[#8D7042] bg-[#2C291F] text-[#D8C49C]":"border-[#75423F] bg-[#3A2525] text-[#E8AAA3]"}>{status.toUpperCase()}</Badge>
 }
 
 function Coverage({ icon: Icon, value, label, detail }: { icon: typeof Database; value: string; label: string; detail: string }) {

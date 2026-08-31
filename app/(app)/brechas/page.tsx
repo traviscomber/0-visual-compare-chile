@@ -1,12 +1,13 @@
 "use client"
 
-import { FormEvent, useEffect, useMemo, useState } from "react"
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { AlertTriangle, ArrowRight, Building2, CheckCircle2, GitCompareArrows, Loader2, Search, ShieldCheck, Sparkles } from "lucide-react"
 import { OperationalHeader, OperationalMetric, OperationalMetricRail, OperationalPage, OperationalPanel, OperationalSectionHeader } from "@/components/app/operational-ui"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { portfolioGapHref, spaceHref } from "@/lib/intelligence/navigation-context"
 
 type Candidate = { id: string; canonical_name: string; country: string | null; resolution_confidence: number; similarity_score: number; activity_12m: number }
 type Binding = { id: string; identity_id: string; canonical_name: string; country: string | null; resolution_confidence: number; updated_at: string }
@@ -45,10 +46,26 @@ export default function PortfolioGapPage() {
   const [searchingCompetitor, setSearchingCompetitor] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const deepLinkRef = useRef<{ id: string; name: string } | null>(null)
+  const deepLinkAppliedRef = useRef(false)
 
   const selectedOrg = useMemo(() => organizations.find(item => item.id === selectedOrgId) ?? organizations[0] ?? null, [organizations, selectedOrgId])
 
-  useEffect(() => { void loadOrganizations() }, [])
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const competitor = params.get("competitor")?.trim() ?? ""
+    const competitorIdentityId = params.get("competitorIdentityId")?.trim() ?? ""
+    if (competitor) setCompetitorQuery(competitor)
+    if (competitorIdentityId) deepLinkRef.current = { id: competitorIdentityId, name: competitor || competitorIdentityId }
+    void loadOrganizations()
+  }, [])
+
+  useEffect(() => {
+    const deepLink = deepLinkRef.current
+    if (deepLinkAppliedRef.current || loading || !selectedOrg?.binding || !deepLink) return
+    deepLinkAppliedRef.current = true
+    void analyzeCompetitor({ id: deepLink.id, canonical_name: deepLink.name, country: null, resolution_confidence: 1, similarity_score: 1, activity_12m: 0 }, false)
+  }, [loading, selectedOrg?.id, selectedOrg?.binding?.identity_id])
 
   async function loadOrganizations() {
     setLoading(true)
@@ -117,13 +134,14 @@ export default function PortfolioGapPage() {
     finally { setSearchingCompetitor(false) }
   }
 
-  async function analyzeCompetitor(candidate: Candidate) {
+  async function analyzeCompetitor(candidate: Candidate, syncUrl: boolean = true) {
     if (!selectedOrg?.binding) return
     setAnalyzing(true)
     setError(null)
     setCompetitorCandidates([])
     try {
       const params = new URLSearchParams({ organizationId: selectedOrg.id, competitorIdentityId: candidate.id })
+      if (syncUrl && typeof window !== "undefined") window.history.replaceState(null, "", portfolioGapHref(candidate.canonical_name, candidate.id))
       const response = await fetch(`/api/intelligence/portfolio-gap?${params.toString()}`, { cache: "no-store" })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.error || "No pudimos comparar los portafolios.")
@@ -154,7 +172,7 @@ export default function PortfolioGapPage() {
       <section className="grid gap-8 border-b border-border/80 py-8 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.75fr)] xl:gap-10">
         <div>
           <OperationalSectionHeader eyebrow="01 / Empresa propia" title="Identidad que representa tu portafolio" meta={selectedOrg?.role === "admin" ? "Editable" : "Sólo lectura"} />
-          {organizations.length > 1 ? <label className="mt-5 block"><span className="mb-2 block text-xs text-muted-foreground">Organización</span><select value={selectedOrg?.id ?? ""} onChange={event => { setSelectedOrgId(event.target.value); setResult(null) }} className="h-11 w-full rounded-[10px] border border-border bg-card/40 px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/45">{organizations.map(org => <option key={org.id} value={org.id}>{org.name}</option>)}</select></label> : null}
+          {organizations.length > 1 ? <label className="mt-5 block"><span className="mb-2 block text-xs text-muted-foreground">Organización</span><select value={selectedOrg?.id ?? ""} onChange={event => { setSelectedOrgId(event.target.value); setResult(null); deepLinkAppliedRef.current = true }} className="h-11 w-full rounded-[10px] border border-border bg-card/40 px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/45">{organizations.map(org => <option key={org.id} value={org.id}>{org.name}</option>)}</select></label> : null}
 
           {selectedOrg?.binding ? <div className="mt-5 border-y border-border/80 py-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><div className="flex items-center gap-2"><Badge variant="outline" className="rounded-md">Vinculada</Badge><span className="text-xs text-muted-foreground">{selectedOrg.name}</span></div><p className="mt-3 text-lg font-medium text-white">{selectedOrg.binding.canonical_name}</p><p className="mt-1 text-xs text-muted-foreground">{selectedOrg.binding.country || "País no informado"} · resolución {Math.round(selectedOrg.binding.resolution_confidence * 100)}%</p></div><CheckCircle2 className="h-5 w-5 text-primary" /></div></div> : <div className="mt-5 border-y border-border/80 py-6"><p className="text-sm font-medium text-white">Aún no hay empresa propia vinculada.</p><p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">No la inferimos desde el perfil. Un administrador debe seleccionar la identidad corporativa exacta.</p></div>}
 
@@ -219,9 +237,9 @@ function Results({ result }: { result: GapResult }) {
 function RecommendationRow({ item }: { item: Recommendation }) {
   const tone = item.score.tier === "alta" ? "border-red-400/20 bg-red-400/[0.06] text-red-300" : item.score.tier === "media" ? "border-amber-300/20 bg-amber-300/[0.06] text-amber-200" : "border-border bg-card/30 text-muted-foreground"
   const components = item.score.components
-  return <article className="px-2 py-5"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className={`rounded-md ${tone}`}>{item.score.total}/100 · {item.score.tier}</Badge><Badge variant="outline" className="rounded-md">{item.classification} {item.code}</Badge></div><h3 className="mt-3 text-base font-medium text-white">{item.headline}</h3><p className="mt-2 text-sm leading-6 text-foreground">{item.action}</p><div className="mt-3 grid gap-1 text-xs leading-5 text-muted-foreground">{item.evidence.map(line => <span key={line}>• {line}</span>)}</div><p className="mt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Materialidad {components.materiality}/25 · Novedad {components.novelty}/20 · Convergencia {components.convergence}/20 · Persistencia {components.persistence}/20 · Proximidad {components.proximity}/15</p><p className="mt-2 text-xs leading-5 text-muted-foreground">{item.guardrail}</p></article>
+  return <article className="px-2 py-5"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className={`rounded-md ${tone}`}>{item.score.total}/100 · {item.score.tier}</Badge><Badge variant="outline" className="rounded-md">{item.classification} {item.code}</Badge><Button asChild size="sm" variant="ghost"><Link href={spaceHref(item.asset_type, item.code)}>Abrir espacio <ArrowRight className="h-3.5 w-3.5" /></Link></Button></div><h3 className="mt-3 text-base font-medium text-white">{item.headline}</h3><p className="mt-2 text-sm leading-6 text-foreground">{item.action}</p><div className="mt-3 grid gap-1 text-xs leading-5 text-muted-foreground">{item.evidence.map(line => <span key={line}>• {line}</span>)}</div><p className="mt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Materialidad {components.materiality}/25 · Novedad {components.novelty}/20 · Convergencia {components.convergence}/20 · Persistencia {components.persistence}/20 · Proximidad {components.proximity}/15</p><p className="mt-2 text-xs leading-5 text-muted-foreground">{item.guardrail}</p></article>
 }
 
 function GapList({ title, eyebrow, gaps }: { title: string; eyebrow: string; gaps: Gap[] }) {
-  return <div><OperationalSectionHeader eyebrow={eyebrow} title={title} meta={`${gaps.length} visibles`} /><div className="mt-5 divide-y divide-border/80 border-y border-border/80">{gaps.length ? gaps.map(gap => <div key={`${gap.asset_type}-${gap.code}`} className="grid gap-3 px-2 py-4 sm:grid-cols-[auto_1fr_auto] sm:items-center"><Badge variant="outline" className="w-fit rounded-md">{gap.code}</Badge><div><p className="text-sm text-white">{gap.competitor_filings} expedientes del competidor · {gap.competitor_active_quarters}/4 trimestres</p><p className="mt-1 text-xs text-muted-foreground">Mercado actual: {gap.market.current_companies} actores · {gap.market.entrant_companies} entrantes</p></div><GitCompareArrows className="h-4 w-4 text-muted-foreground" /></div>) : <div className="py-8 text-sm text-muted-foreground">Sin brechas repetidas en esta capa.</div>}</div></div>
+  return <div><OperationalSectionHeader eyebrow={eyebrow} title={title} meta={`${gaps.length} visibles`} /><div className="mt-5 divide-y divide-border/80 border-y border-border/80">{gaps.length ? gaps.map(gap => <div key={`${gap.asset_type}-${gap.code}`} className="grid gap-3 px-2 py-4 sm:grid-cols-[auto_1fr_auto] sm:items-center"><Badge variant="outline" className="w-fit rounded-md">{gap.code}</Badge><div><p className="text-sm text-white">{gap.competitor_filings} expedientes del competidor · {gap.competitor_active_quarters}/4 trimestres</p><p className="mt-1 text-xs text-muted-foreground">Mercado actual: {gap.market.current_companies} actores · {gap.market.entrant_companies} entrantes</p></div><Button asChild size="sm" variant="ghost"><Link href={spaceHref(gap.asset_type, gap.code)}>Espacio <GitCompareArrows className="h-4 w-4" /></Link></Button></div>) : <div className="py-8 text-sm text-muted-foreground">Sin brechas repetidas en esta capa.</div>}</div></div>
 }

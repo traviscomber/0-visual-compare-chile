@@ -145,13 +145,13 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
             <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Fuente → evidencia → contexto → acción</span>
           </div>
           <div className="max-w-xl pb-12">
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">VIDENTIA / inteligencia marcaria</p>
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">VIDENTIA / inteligencia de propiedad intelectual y tecnología</p>
             <p className="mt-5 text-3xl font-medium leading-tight tracking-[-0.035em] text-foreground">
               Busca. Entiende.<br />Decide. Vigila.
             </p>
             <div className="mt-8 divide-y divide-border border-y border-border">
               <AuthPrinciple number="01" title="Fuente visible" text="El origen y la disponibilidad de la evidencia no se ocultan." />
-              <AuthPrinciple number="02" title="Señales separadas" text="La prioridad organiza revisión; no reemplaza el juicio jurídico." />
+              <AuthPrinciple number="02" title="Señales separadas" text="La prioridad organiza revisión; no reemplaza el juicio jurídico ni estratégico." />
               <AuthPrinciple number="03" title="Trazabilidad" text="Casos, decisiones y cambios conservan contexto para volver a revisar." />
             </div>
           </div>

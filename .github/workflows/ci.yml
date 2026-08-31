@@ -55,11 +55,23 @@ jobs:
       - name: Company direction regression
         run: node scripts/company-direction-regression.mts
 
+      - name: Company identity quality benchmark
+        run: node scripts/company-identity-quality-benchmark.mts
+
       - name: Grade A block 1-3 regression
         run: node scripts/grade-a-block-1-3-regression.mts
 
       - name: Grade A block 4-6 regression
         run: node scripts/grade-a-block-4-6-regression.mts
+
+      - name: Positioning regression
+        run: node scripts/positioning-regression.mts
+
+      - name: Technology evidence relevance regression
+        run: node scripts/technology-evidence-relevance-regression.mts
+
+      - name: Technology corroboration regression
+        run: node scripts/technology-corroboration-regression.mts
 
       - name: TypeScript
         run: pnpm exec tsc --noEmit

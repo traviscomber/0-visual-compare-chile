@@ -35,12 +35,24 @@ const trajectoryRoute = await readFile("app/api/intelligence/company-trajectory/
 const healthRoute = await readFile("app/api/intelligence/health/route.ts", "utf8")
 const healthModel = await readFile("lib/intelligence/health.ts", "utf8")
 const cronRoute = await readFile("app/api/cron/inapi-open-data/route.ts", "utf8")
+const healthSweepRoute = await readFile("app/api/cron/intelligence-health/route.ts", "utf8")
+const vercelConfig = await readFile("vercel.json", "utf8")
+const ingestionObservability = await readFile("lib/intelligence/ingestion-observability.ts", "utf8")
+const retryPolicy = await readFile("lib/intelligence/fetch-with-retry.ts", "utf8")
 const companiesPage = await readFile("app/(app)/empresas/page.tsx", "utf8")
+const spacesPage = await readFile("app/(app)/espacios/page.tsx", "utf8")
+const gapsPage = await readFile("app/(app)/brechas/page.tsx", "utf8")
+const technologyWorkbench = await readFile("components/intelligence/technology-signals-workbench.tsx", "utf8")
+const newStrategicWatchPage = await readFile("app/(app)/monitorear/estrategico/nueva/page.tsx", "utf8")
+const navigationContext = await readFile("lib/intelligence/navigation-context.ts", "utf8")
 const sourcesPage = await readFile("app/(app)/fuentes/page.tsx", "utf8")
+const dashboardPage = await readFile("app/(app)/dashboard/page.tsx", "utf8")
 const healthMigration = await readFile("supabase/migrations/20260830214913_add_intelligence_health_quality.sql", "utf8")
 const graphMigration = await readFile("supabase/migrations/20260830215014_add_company_entity_graph_v2.sql", "utf8")
 const graphFixMigration = await readFile("supabase/migrations/20260830215054_fix_company_graph_v2_counts.sql", "utf8")
 const bootstrapMigration = await readFile("supabase/migrations/20260830215519_bootstrap_observed_source_health.sql", "utf8")
+const catalogHealthMigration = await readFile("supabase/migrations/20260830231309_align_catalog_only_source_health.sql", "utf8")
+const healthHistoryMigration = await readFile("supabase/migrations/20260830233236_add_intelligence_health_history_alerts.sql", "utf8")
 
 for (const needle of [
   'q0 >= 2 && prior === 0',
@@ -60,11 +72,81 @@ for (const needle of ["startIntelligenceIngestion", "finishIntelligenceIngestion
   if (!cronRoute.includes(needle)) fail(`INAPI cron not wired to ${needle}`)
 }
 if (!cronRoute.includes("qualityFailures > 0")) fail("critical quality failures do not affect cron status")
+if (!cronRoute.includes('status: "partial"')) fail("cron does not persist partial pipeline outcomes")
+if (!cronRoute.includes('ingestionStatus: coreSyncCompleted ? "partial" : "failed"')) fail("cron response does not distinguish partial from failed ingestion")
+if (!cronRoute.includes("withSourceRetry")) fail("INAPI cron does not use bounded transient retries")
+if (!cronRoute.includes("IntelligenceCircuitOpenError")) fail("INAPI cron does not expose circuit-blocked execution")
+const qualityIndex = cronRoute.indexOf('run_intelligence_quality_checks')
+const completedIndex = cronRoute.indexOf('status: "completed"')
+if (qualityIndex < 0 || completedIndex < 0 || completedIndex < qualityIndex) fail("ingestion is marked completed before quality checks finish")
+
+for (const needle of ["CRON_SECRET", "run_intelligence_health_sweep", 'p_context: "vercel_health_cron"']) {
+  if (!healthSweepRoute.includes(needle)) fail(`independent health sweep missing invariant: ${needle}`)
+}
+if (!vercelConfig.includes('"/api/cron/intelligence-health"') || !vercelConfig.includes('"25 * * * *"')) {
+  fail("independent hourly health sweep is not scheduled")
+}
+
+const partialBranchStart = ingestionObservability.indexOf('if (status === "partial")')
+const completedStateStart = ingestionObservability.indexOf('const { error: stateError }', partialBranchStart)
+if (partialBranchStart < 0 || completedStateStart < 0) fail("partial ingestion health branch is missing")
+const partialBranch = ingestionObservability.slice(partialBranchStart, completedStateStart)
+if (partialBranch.includes("last_success_at")) fail("partial ingestion incorrectly advances last_success_at")
+if (!partialBranch.includes("last_attempt_at")) fail("partial ingestion does not preserve last attempt evidence")
+if (!partialBranch.includes("last_error")) fail("partial ingestion does not degrade source health")
+for (const needle of ["blockedByCircuit", 'circuit_state: circuitIsOpen ? "half_open"', "circuit_open_until"]) {
+  if (!ingestionObservability.includes(needle)) fail(`circuit breaker missing invariant: ${needle}`)
+}
+for (const needle of ["withSourceRetry", "isTransientSourceError", "attempts", "baseDelayMs"]) {
+  if (!retryPolicy.includes(needle)) fail(`retry policy missing invariant: ${needle}`)
+}
+
 if (!healthModel.includes('diaria: 36')) fail("daily source SLA is not explicit")
 if (!healthModel.includes('semanal: 24 * 9')) fail("weekly source SLA is not explicit")
 if (!sourcesPage.includes("Saber qué fuente está fresca antes de decidir")) fail("source health workspace missing trust narrative")
+if (!sourcesPage.includes("Bitácora de corridas y reconciliación")) fail("source health workspace missing ingestion history")
 if (!companiesPage.includes("Hacia dónde se está moviendo la protección")) fail("company UI missing trajectory surface")
 if (!companiesPage.includes("Relaciones corporativas verificadas")) fail("company UI missing graph v2 surface")
+
+for (const question of [
+  "¿Qué cambió esta semana?",
+  "¿Qué está protegiendo ahora que hace seis meses no protegía?",
+  "¿Dónde está llevando su tecnología?",
+  "¿Quién está entrando en mi espacio?",
+  "¿Qué tecnologías están acelerándose?",
+  "¿Dónde aparecen oportunidades?",
+]) if (!dashboardPage.includes(question)) fail(`dashboard missing executive question: ${question}`)
+for (const href of ["/monitorear/estrategico", "/empresas", "/espacios", "/tecnologias", "/brechas"]) {
+  if (!dashboardPage.includes(`href:\"${href}\"`) && !dashboardPage.includes(`href=\"${href}\"`)) fail(`dashboard missing executive route ${href}`)
+}
+if (!dashboardPage.includes('from("intelligence_watches")') || !dashboardPage.includes('from("intelligence_watch_events")')) fail("dashboard executive layer is not grounded in the user strategic watch state")
+
+for (const needle of [
+  'buildHref("/empresas"', '"company"', '"identityId"',
+  'buildHref("/espacios"', '"type"', '"code"',
+  'buildHref("/tecnologias"', '"technology"', '"windowDays"',
+  'buildHref("/monitorear/estrategico/nueva"',
+  'buildHref("/brechas"', '"competitor"', '"competitorIdentityId"',
+]) if (!navigationContext.includes(needle)) fail(`executive navigation context missing invariant: ${needle}`)
+
+for (const needle of [
+  'params.get("company")', 'params.get("identityId")', "companyHref(", "portfolioGapHref(", "strategicWatchHref(", "spaceHref(", "window.history.replaceState",
+]) if (!companiesPage.includes(needle)) fail(`company cross-link contract missing: ${needle}`)
+for (const needle of [
+  'params.get("code")', 'params.get("type")', "spaceHref(", "companyHref(", "portfolioGapHref(", "window.history.replaceState",
+]) if (!spacesPage.includes(needle)) fail(`space cross-link contract missing: ${needle}`)
+for (const needle of [
+  'params.get("competitor")', 'params.get("competitorIdentityId")', "portfolioGapHref(", "spaceHref(", "window.history.replaceState",
+]) if (!gapsPage.includes(needle)) fail(`gap cross-link contract missing: ${needle}`)
+for (const needle of [
+  'params.get("technology")', 'params.get("windowDays")', "technologyHref(", "strategicWatchHref(", "window.history.replaceState",
+]) if (!technologyWorkbench.includes(needle)) fail(`technology cross-link contract missing: ${needle}`)
+for (const needle of [
+  "Confirma qué quieres vigilar.", "Acción explícita", "async function createWatch", 'method: "POST"', "/api/intelligence/strategic-watchlist",
+]) if (!newStrategicWatchPage.includes(needle)) fail(`strategic watch confirmation flow missing: ${needle}`)
+const watchSubmitIndex = newStrategicWatchPage.indexOf("async function createWatch")
+const watchPostIndex = newStrategicWatchPage.indexOf('method: "POST"')
+if (watchSubmitIndex < 0 || watchPostIndex < watchSubmitIndex) fail("strategic watch mutation is not contained inside the explicit submit flow")
 
 for (const needle of [
   "intelligence_quality_runs",
@@ -80,5 +162,19 @@ for (const needle of ["intelligence_company_entity_links", "intelligence_company
 if (!graphMigration.includes("parent_of") || !graphMigration.includes("subsidiary_of")) fail("corporate graph lacks explicit relation semantics")
 if (!graphFixMigration.includes("marks_all") || !graphFixMigration.includes("classifications as")) fail("graph count multiplication regression is unprotected")
 if (!bootstrapMigration.includes("max(last_synced_at)") || !bootstrapMigration.includes("source_key='tdpi'")) fail("source health bootstrap is not evidence-based")
+for (const sourceKey of ["registro_empresas", "superir", "wipo_lex_cl"]) {
+  if (!catalogHealthMigration.includes(sourceKey)) fail(`catalog-only health migration missing ${sourceKey}`)
+}
+if (!catalogHealthMigration.includes("is_active = false")) fail("catalog-only sources are still presented as operational")
+for (const needle of [
+  "intelligence_source_health_history",
+  "intelligence_source_alerts",
+  "source_health_alert",
+  "source_health_resolved",
+  "run_intelligence_health_sweep",
+  "grant execute on function public.run_intelligence_health_sweep(text) to service_role",
+]) if (!healthHistoryMigration.includes(needle)) fail(`health history migration missing ${needle}`)
+if (!healthHistoryMigration.includes("revoke all on public.intelligence_source_health_history from public, anon, authenticated")) fail("health history table is exposed to client roles")
+if (!healthHistoryMigration.includes("revoke all on public.intelligence_source_alerts from public, anon, authenticated")) fail("source alerts table is exposed to client roles")
 
-console.log("Grade A block 1-3 regression PASS: health/quality wiring, non-destructive entity graph, 360-day trajectory guardrails, authenticated APIs and migration history.")
+console.log("Grade A block 1-3 regression PASS: health/quality wiring, partial-success lifecycle, independent SLA sweep, retry/circuit policy, curated identity quality gate, persistent executive context/cross-links, entity graph and trajectory guardrails.")

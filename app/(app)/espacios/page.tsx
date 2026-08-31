@@ -1,12 +1,13 @@
 "use client"
 
-import { FormEvent, useState } from "react"
+import { FormEvent, useEffect, useState } from "react"
 import Link from "next/link"
 import { Activity, ArrowRight, Building2, FlaskConical, Loader2, Radar, Search, Sparkles } from "lucide-react"
 import { OperationalHeader, OperationalMetric, OperationalMetricRail, OperationalPage, OperationalPanel, OperationalSectionHeader } from "@/components/app/operational-ui"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { companyHref, portfolioGapHref, spaceHref } from "@/lib/intelligence/navigation-context"
 
 type Movement = "entrante" | "experimental" | "acelerando" | "consolidado" | "retirandose" | "sin_senal"
 type Company = {
@@ -49,13 +50,16 @@ export default function CompetitiveSpacesPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function analyze(event?: FormEvent) {
+  async function analyze(event?: FormEvent, override?: { type: "patent" | "trademark"; code: string }, syncUrl: boolean = true) {
     event?.preventDefault()
-    if (!code.trim() || loading) return
+    const nextType = override?.type ?? type
+    const nextCode = (override?.code ?? code).trim()
+    if (!nextCode || loading) return
     setLoading(true)
     setError(null)
     try {
-      const params = new URLSearchParams({ type, code: code.trim() })
+      const params = new URLSearchParams({ type: nextType, code: nextCode })
+      if (syncUrl && typeof window !== "undefined") window.history.replaceState(null, "", spaceHref(nextType, nextCode))
       const response = await fetch(`/api/intelligence/ip-space?${params.toString()}`, { cache: "no-store" })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.error || "No pudimos analizar el espacio.")
@@ -66,6 +70,16 @@ export default function CompetitiveSpacesPage() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const requestedCode = params.get("code")?.trim()
+    if (!requestedCode) return
+    const requestedType = params.get("type") === "trademark" ? "trademark" : "patent"
+    setType(requestedType)
+    setCode(requestedCode)
+    void analyze(undefined, { type: requestedType, code: requestedCode }, false)
+  }, [])
 
   function choose(nextType: "patent" | "trademark") {
     setType(nextType)
@@ -144,6 +158,6 @@ function CompanyRow({ company }: { company: Company }) {
   const label: Record<Movement, string> = { entrante: "Entrante", experimental: "Experimental", acelerando: "Acelerando", consolidado: "Consolidado", retirandose: "En descenso", sin_senal: "Sin señal" }
   return <div className="grid gap-3 px-2 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
     <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="rounded-md">{label[company.movement]}</Badge>{company.country ? <span className="text-xs text-muted-foreground">{company.country}</span> : null}</div><p className="mt-2 truncate text-sm font-medium text-white">{company.canonical_name}</p></div>
-    <div className="flex items-center gap-5 text-xs text-muted-foreground"><span><strong className="font-medium text-white">{company.current_count}</strong> actual</span><span>{company.previous_count} previo</span><Activity className="h-4 w-4" /></div>
+    <div className="flex flex-wrap items-center justify-end gap-2 text-xs text-muted-foreground"><span><strong className="font-medium text-white">{company.current_count}</strong> actual</span><span>{company.previous_count} previo</span><Activity className="h-4 w-4" /><Button asChild size="sm" variant="ghost"><Link href={companyHref(company.canonical_name, company.identity_id)}>Empresa</Link></Button><Button asChild size="sm" variant="ghost"><Link href={portfolioGapHref(company.canonical_name, company.identity_id)}>Brecha</Link></Button></div>
   </div>
 }

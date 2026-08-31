@@ -49,6 +49,23 @@ export type IntelligenceHealthResult = {
       duration_ms: number | null
     }
   }>
+  recent_runs: Array<{
+    id: string
+    source_key: string
+    source_name: string
+    status: string
+    started_at: string
+    finished_at: string | null
+    fetched: number
+    upserted: number
+    changes: number
+    rejected: number
+    duration_ms: number | null
+    retries: number
+    failed_stage: string | null
+    error_message: string | null
+    reconciled: boolean | null
+  }>
   quality: {
     run_id: string | null
     status: string | null
@@ -106,8 +123,10 @@ type RunRow = {
   inserted_count: number | string
   updated_count: number | string
   rejected_count: number | string
+  error_message: string | null
   started_at: string
   finished_at: string | null
+  metadata: Record<string, unknown> | null
 }
 
 const SLA_HOURS: Record<string, number> = {
@@ -121,7 +140,7 @@ export async function buildIntelligenceHealth(admin: SupabaseClient): Promise<In
   const [sourcesResult, statesResult, runsResult, qualityRunResult, coverage] = await Promise.all([
     admin.from("intelligence_sources").select("id,source_key,name,authority,freshness_policy,is_active").order("source_key"),
     admin.from("intelligence_source_state").select("source_id,last_success_at,last_attempt_at,consecutive_failures,circuit_state,last_error"),
-    admin.from("intelligence_ingestion_runs").select("id,source_id,status,fetched_count,inserted_count,updated_count,rejected_count,started_at,finished_at").order("started_at", { ascending: false }).limit(100),
+    admin.from("intelligence_ingestion_runs").select("id,source_id,status,fetched_count,inserted_count,updated_count,rejected_count,error_message,started_at,finished_at,metadata").order("started_at", { ascending: false }).limit(100),
     admin.from("intelligence_quality_runs").select("id,run_context,status,check_count,warning_count,failure_count,started_at,finished_at,metadata").order("started_at", { ascending: false }).limit(1).maybeSingle(),
     loadCoverage(admin, now),
   ])
@@ -131,14 +150,17 @@ export async function buildIntelligenceHealth(admin: SupabaseClient): Promise<In
   if (runsResult.error) throw new Error(`No pudimos leer las corridas de ingestión: ${runsResult.error.message}`)
   if (qualityRunResult.error) throw new Error(`No pudimos leer la última corrida de calidad: ${qualityRunResult.error.message}`)
 
+  const sourceRows = (sourcesResult.data ?? []) as SourceRow[]
+  const runRows = (runsResult.data ?? []) as RunRow[]
+  const sourceById = new Map(sourceRows.map(row => [String(row.id), row]))
   const states = new Map(((statesResult.data ?? []) as StateRow[]).map(row => [String(row.source_id), row]))
   const latestRuns = new Map<string, RunRow>()
-  for (const row of (runsResult.data ?? []) as RunRow[]) {
+  for (const row of runRows) {
     const key = String(row.source_id)
     if (!latestRuns.has(key)) latestRuns.set(key, row)
   }
 
-  const sources = ((sourcesResult.data ?? []) as SourceRow[]).map(source => {
+  const sources = sourceRows.map(source => {
     const state = states.get(String(source.id)) ?? null
     const run = latestRuns.get(String(source.id)) ?? null
     const definition = sourceDefinition(source.source_key)
@@ -171,17 +193,21 @@ export async function buildIntelligenceHealth(admin: SupabaseClient): Promise<In
       consecutive_failures: Number(state?.consecutive_failures ?? 0),
       circuit_state: state?.circuit_state ?? null,
       last_error: state?.last_error ?? null,
-      latest_run: run ? {
-        id: String(run.id),
-        status: run.status,
-        started_at: run.started_at,
-        finished_at: run.finished_at,
-        fetched: Number(run.fetched_count ?? 0),
-        upserted: Number(run.inserted_count ?? 0),
-        changes: Number(run.updated_count ?? 0),
-        rejected: Number(run.rejected_count ?? 0),
-        duration_ms: run.finished_at ? Math.max(0, new Date(run.finished_at).getTime() - new Date(run.started_at).getTime()) : null,
-      } : null,
+      latest_run: run ? summarizeRun(run) : null,
+    }
+  })
+
+  const recentRuns: IntelligenceHealthResult["recent_runs"] = runRows.slice(0, 12).map(run => {
+    const source = sourceById.get(String(run.source_id))
+    const summary = summarizeRun(run)
+    return {
+      ...summary,
+      source_key: source?.source_key ?? String(run.source_id),
+      source_name: source?.name ?? "Fuente desconocida",
+      retries: retryCount(run.metadata),
+      failed_stage: metadataText(run.metadata, "failedStage"),
+      error_message: run.error_message,
+      reconciled: reconcileRunCounts(run),
     }
   })
 
@@ -231,6 +257,7 @@ export async function buildIntelligenceHealth(admin: SupabaseClient): Promise<In
       manual_or_inactive: sources.filter(item => item.status === "manual" || item.status === "inactive").length,
     },
     sources,
+    recent_runs: recentRuns,
     quality: {
       run_id: latestQuality?.id ?? null,
       status: latestQuality?.status ?? null,
@@ -244,6 +271,57 @@ export async function buildIntelligenceHealth(admin: SupabaseClient): Promise<In
     },
     coverage,
   }
+}
+
+function summarizeRun(run: RunRow) {
+  return {
+    id: String(run.id),
+    status: run.status,
+    started_at: run.started_at,
+    finished_at: run.finished_at,
+    fetched: Number(run.fetched_count ?? 0),
+    upserted: Number(run.inserted_count ?? 0),
+    changes: Number(run.updated_count ?? 0),
+    rejected: Number(run.rejected_count ?? 0),
+    duration_ms: run.finished_at ? Math.max(0, new Date(run.finished_at).getTime() - new Date(run.started_at).getTime()) : null,
+  }
+}
+
+function retryCount(metadata: Record<string, unknown> | null): number {
+  const retries = objectValue(metadata, "retries")
+  if (!retries) return 0
+  let total = 0
+  for (const value of Object.values(retries)) total += Math.max(0, Number(value ?? 0) || 0)
+  return total
+}
+
+function reconcileRunCounts(run: RunRow): boolean | null {
+  const trademarks = objectValue(run.metadata, "trademarks")
+  const patents = objectValue(run.metadata, "patents")
+  if (!trademarks || !patents) return null
+
+  const expectedFetched = numeric(trademarks.fetched) + numeric(patents.fetched)
+  const expectedUpserted = numeric(trademarks.upserted) + numeric(patents.upserted)
+  const expectedChanges = numeric(trademarks.changeEvents) + numeric(patents.changeEvents)
+
+  return expectedFetched === Number(run.fetched_count ?? 0)
+    && expectedUpserted === Number(run.inserted_count ?? 0)
+    && expectedChanges === Number(run.updated_count ?? 0)
+}
+
+function objectValue(value: Record<string, unknown> | null, key: string) {
+  const candidate = value?.[key]
+  return candidate && typeof candidate === "object" && !Array.isArray(candidate) ? candidate as Record<string, unknown> : null
+}
+
+function metadataText(metadata: Record<string, unknown> | null, key: string) {
+  const value = metadata?.[key]
+  return typeof value === "string" && value.trim() ? value : null
+}
+
+function numeric(value: unknown) {
+  const number = Number(value ?? 0)
+  return Number.isFinite(number) ? number : 0
 }
 
 async function loadCoverage(admin: SupabaseClient, now: Date): Promise<IntelligenceHealthResult["coverage"]> {

@@ -1,5 +1,6 @@
 const CROSSREF_BASE = "https://api.crossref.org/works"
 const TIMEOUT_MS = 9000
+const STOPWORDS = new Set(["de", "del", "la", "el", "los", "las", "y", "e", "en", "con", "para", "por", "un", "una", "the", "of", "and", "in", "for", "to", "on", "with"])
 
 export type CrossrefWorkSignal = {
   source: "crossref"
@@ -20,11 +21,13 @@ type CrossrefResponse = {
 
 export async function searchCrossrefWorks(query: string, from: Date, to: Date, limit = 8): Promise<CrossrefWorkSignal[]> {
   const url = new URL(CROSSREF_BASE)
-  url.searchParams.set("query.bibliographic", query)
+  // Technology evidence is title-led. Bibliographic search can rank papers that only
+  // match a generic token in unrelated metadata, which is too noisy for VIDENTIA.
+  url.searchParams.set("query.title", query)
   url.searchParams.set("filter", `from-pub-date:${dateOnly(from)},until-pub-date:${dateOnly(to)}`)
-  url.searchParams.set("sort", "published")
-  url.searchParams.set("order", "desc")
-  url.searchParams.set("rows", String(Math.min(Math.max(limit, 1), 20)))
+  // Keep Crossref's relevance ranking and fetch extra candidates because the local
+  // topical filter intentionally prefers precision over recall.
+  url.searchParams.set("rows", String(Math.min(Math.max(limit * 2, 8), 20)))
 
   const mailto = String(process.env.CROSSREF_MAILTO ?? "").trim()
   if (mailto) url.searchParams.set("mailto", mailto)
@@ -55,6 +58,8 @@ export async function searchCrossrefWorks(query: string, from: Date, to: Date, l
       return subject ? [subject] : []
     }).slice(0, 8)
 
+    if (!isCrossrefQueryRelevant(query, title, subjects)) return []
+
     return [{
       source: "crossref" as const,
       sourceRecordId: doi,
@@ -67,7 +72,27 @@ export async function searchCrossrefWorks(query: string, from: Date, to: Date, l
       subjects,
       citedByCount: Number(row["is-referenced-by-count"] ?? 0),
     }]
-  })
+  }).slice(0, Math.min(Math.max(limit, 1), 20))
+}
+
+export function isCrossrefQueryRelevant(query: string, title: string, subjects: string[] = []) {
+  const terms = unique(significantTokens(query))
+  if (!terms.length) return true
+
+  const evidenceTokens = new Set(significantTokens([title, ...subjects].join(" ")))
+  const matches = terms.filter(term => evidenceTokens.has(term)).length
+  const requiredMatches = terms.length === 1 ? 1 : Math.min(2, terms.length)
+  return matches >= requiredMatches
+}
+
+function significantTokens(value: string) {
+  return normalizeText(value)
+    .split(/[^a-z0-9]+/)
+    .filter(token => token.length >= 4 && !STOPWORDS.has(token))
+}
+
+function normalizeText(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
 }
 
 function extractDate(row: Record<string, unknown>) {
@@ -85,3 +110,4 @@ function extractDate(row: Record<string, unknown>) {
 
 function dateOnly(value: Date) { return value.toISOString().slice(0, 10) }
 function asString(value: unknown) { return typeof value === "string" && value.trim() ? value.trim() : null }
+function unique(values: string[]) { return [...new Set(values)] }
