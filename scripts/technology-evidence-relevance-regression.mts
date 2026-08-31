@@ -107,7 +107,7 @@ if (!signals.includes('"no_disponible"')) fail("technology momentum lacks an una
 if (!signals.includes("current_publications: currentCount")) fail("technology momentum does not preserve nullable source state")
 if (signals.includes("openalex: { available: true")) fail("OpenAlex availability is hard-coded true")
 if (!signals.includes("openAlexAvailable")) fail("OpenAlex availability is not derived from source outcomes")
-if (!workbench.includes("no interpreta una fuente sin respuesta como ausencia de actividad")) fail("UI does not explain unavailable-source semantics")
+if (!workbench.includes("El resultado no asume que eso signifique cero actividad")) fail("UI does not explain unavailable-source semantics in plain language")
 if (!workbench.includes('value={result.momentum.current_publications ?? "—"}')) fail("UI can still render source failure as zero publications")
 
 console.log("Technology evidence relevance regression PASS: OpenAlex is title-led, accent-normalized, cached for six hours, deduplicated to two window calls, Crossref rejects weak matches, transient limits retry, and source outages never become false zero activity.")
