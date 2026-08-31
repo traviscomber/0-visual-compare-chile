@@ -1,0 +1,25 @@
+{
+  "organization": {
+    "slug": "qa-executive-flow",
+    "name": "QA Executive Flow",
+    "role": "admin"
+  },
+  "ownIdentity": {
+    "id": "00000000-0000-4000-8000-000000000101",
+    "name": "QA Own Portfolio"
+  },
+  "competitorIdentity": {
+    "id": "00000000-0000-4000-8000-000000000202",
+    "name": "QA Competitor Portfolio"
+  },
+  "space": {
+    "type": "patent",
+    "code": "H02J3/32",
+    "ownFilings": 0,
+    "competitorFilings": 2
+  },
+  "watch": {
+    "type": "technology",
+    "query": "almacenamiento de energía con sodio"
+  }
+}

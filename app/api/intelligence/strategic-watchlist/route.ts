@@ -44,13 +44,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Datos de vigilancia estratégica inválidos." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
+  const normalizedQuery = normalize(parsed.data.query)
   const { data, error } = await auth.supabase
     .from("intelligence_watches")
     .insert({
       user_id: auth.user.id,
       watch_type: parsed.data.type,
       query: parsed.data.query,
-      normalized_query: normalize(parsed.data.query),
+      normalized_query: normalizedQuery,
       metadata: {},
     })
     .select(WATCH_SELECT)
@@ -58,13 +59,24 @@ export async function POST(request: Request) {
 
   if (error) {
     if (error.code === "23505") {
-      return NextResponse.json({ error: "Esta vigilancia estratégica ya existe." }, { status: 409, headers: PRIVATE_NO_STORE_HEADERS })
+      const { data: existing, error: existingError } = await auth.supabase
+        .from("intelligence_watches")
+        .select(WATCH_SELECT)
+        .eq("user_id", auth.user.id)
+        .eq("watch_type", parsed.data.type)
+        .eq("normalized_query", normalizedQuery)
+        .maybeSingle()
+      if (existingError || !existing) {
+        console.error("[strategic-watchlist:post:existing]", existingError)
+        return NextResponse.json({ error: "No pudimos confirmar la vigilancia estratégica existente." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
+      }
+      return NextResponse.json({ watch: existing, created: false }, { headers: PRIVATE_NO_STORE_HEADERS })
     }
     console.error("[strategic-watchlist:post]", error)
     return NextResponse.json({ error: "No pudimos crear la vigilancia estratégica." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
-  return NextResponse.json({ watch: data }, { status: 201, headers: PRIVATE_NO_STORE_HEADERS })
+  return NextResponse.json({ watch: data, created: true }, { status: 201, headers: PRIVATE_NO_STORE_HEADERS })
 }
 
 export async function PATCH(request: Request) {
