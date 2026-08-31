@@ -2,18 +2,26 @@
 
 import Link from "next/link"
 import { FormEvent, useEffect, useState } from "react"
-import { ArrowLeft, Building2, Factory, FlaskConical, Loader2, Plus } from "lucide-react"
+import { ArrowLeft, Building2, CheckCircle2, ClipboardCheck, Factory, FlaskConical, Loader2, Plus } from "lucide-react"
 import { OperationalHeader, OperationalPage, OperationalPanel, OperationalSectionHeader } from "@/components/app/operational-ui"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
 type WatchType = "technology" | "company" | "competitor"
 
+type ActionResponse = {
+  href?: string
+  error?: string
+}
+
 export default function NewStrategicWatchPage() {
   const [type, setType] = useState<WatchType>("technology")
   const [query, setQuery] = useState("")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [taskSaving, setTaskSaving] = useState(false)
+  const [taskError, setTaskError] = useState<string | null>(null)
+  const [taskHref, setTaskHref] = useState<string | null>(null)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -22,6 +30,11 @@ export default function NewStrategicWatchPage() {
     if (requestedType === "company" || requestedType === "competitor" || requestedType === "technology") setType(requestedType)
     if (requestedQuery) setQuery(requestedQuery.slice(0, 160))
   }, [])
+
+  useEffect(() => {
+    setTaskHref(null)
+    setTaskError(null)
+  }, [type, query])
 
   async function createWatch(event: FormEvent) {
     event.preventDefault()
@@ -41,6 +54,41 @@ export default function NewStrategicWatchPage() {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No pudimos crear la vigilancia.")
       setSaving(false)
+    }
+  }
+
+  async function createTask() {
+    const normalized = query.trim()
+    if (normalized.length < 2 || taskSaving) return
+    setTaskSaving(true)
+    setTaskError(null)
+    try {
+      const response = await fetch("/api/intelligence/actions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          contextType: type === "technology" ? "technology" : "company",
+          contextQuery: normalized,
+          caseTitle: limitText(`${watchTypeLabel(type)}: ${normalized}`, 160),
+          itemType: "watch",
+          sourceId: actionSourceId(type, normalized),
+          sourceTitle: limitText(`Contexto estratégico: ${normalized}`, 240),
+          actionTitle: "Revisar evidencia y decidir seguimiento",
+          priority: "normal",
+          evidence: {
+            origin: "strategic_watch_confirmation",
+            watchType: type,
+            query: normalized,
+          },
+        }),
+      })
+      const payload = await response.json().catch(() => ({})) as ActionResponse
+      if (!response.ok || !payload.href) throw new Error(payload.error || "No pudimos crear la tarea.")
+      setTaskHref(payload.href)
+    } catch (cause) {
+      setTaskError(cause instanceof Error ? cause.message : "No pudimos crear la tarea.")
+    } finally {
+      setTaskSaving(false)
     }
   }
 
@@ -65,9 +113,18 @@ export default function NewStrategicWatchPage() {
           <Input className="mt-4" value={query} onChange={event => setQuery(event.target.value)} maxLength={160} placeholder={type === "technology" ? "Ej: almacenamiento de energía con sodio" : type === "company" ? "Ej: SQM" : "Ej: competidor o actor a seguir"} aria-label="Consulta a vigilar" />
           <p className="mt-3 text-xs leading-5 text-muted-foreground">La primera ejecución establece una línea base. Sólo evidencia observada después de esa línea base se presenta como cambio nuevo.</p>
           {error ? <div role="alert" className="mt-4 rounded-[10px] bg-[#3A2525] p-4 text-sm text-[#E8AAA3]">{error}</div> : null}
-          <div className="mt-6 flex justify-end">
-            <Button disabled={query.trim().length < 2 || saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}{saving ? "Guardando" : "Crear vigilancia"}</Button>
+          {taskError ? <div role="alert" className="mt-4 rounded-[10px] bg-[#3A2525] p-4 text-sm text-[#E8AAA3]">{taskError}</div> : null}
+          <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            {taskHref ? (
+              <Button asChild type="button" variant="outline"><Link href={taskHref}><CheckCircle2 className="h-4 w-4" />Abrir tarea</Link></Button>
+            ) : (
+              <Button type="button" variant="outline" disabled={query.trim().length < 2 || taskSaving} onClick={() => void createTask()}>
+                {taskSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardCheck className="h-4 w-4" />}{taskSaving ? "Creando tarea" : "Crear tarea"}
+              </Button>
+            )}
+            <Button type="submit" disabled={query.trim().length < 2 || saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}{saving ? "Guardando" : "Crear vigilancia"}</Button>
           </div>
+          <p className="mt-3 text-right text-[11px] leading-5 text-muted-foreground">Crear tarea y crear vigilancia son decisiones independientes. Ninguna se ejecuta automáticamente.</p>
         </form>
       </OperationalPanel>
     </section>
@@ -76,4 +133,24 @@ export default function NewStrategicWatchPage() {
 
 function TypeButton({ active, icon: Icon, label, onClick }: { active: boolean; icon: typeof FlaskConical; label: string; onClick: () => void }) {
   return <Button type="button" size="sm" variant={active ? "secondary" : "ghost"} className="min-w-0 px-2" onClick={onClick}><Icon className="h-4 w-4" /><span className="truncate">{label}</span></Button>
+}
+
+function watchTypeLabel(type: WatchType) {
+  if (type === "technology") return "Tecnología"
+  if (type === "company") return "Empresa"
+  return "Competidor"
+}
+
+function actionSourceId(type: WatchType, query: string) {
+  const normalized = query
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+  return limitText(`strategic-watch:${type}:${normalized || "contexto"}`, 240)
+}
+
+function limitText(value: string, max: number) {
+  return value.length <= max ? value : value.slice(0, max).trimEnd()
 }
