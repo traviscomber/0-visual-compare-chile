@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { FormEvent, useEffect, useState } from "react"
 import {
+  AlertTriangle,
   ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
@@ -20,6 +21,7 @@ import { Input } from "@/components/ui/input"
 import { strategicWatchHref, technologyHref } from "@/lib/intelligence/navigation-context"
 
 const EXAMPLES = ["extracción directa de litio", "hidrógeno verde", "almacenamiento térmico", "desalación electroquímica"]
+const SOURCE_LABELS: Record<string, string> = { openalex: "OpenAlex", crossref: "Crossref", gdelt: "GDELT" }
 
 type PublicationEvidence = {
   source: "openalex" | "crossref"
@@ -50,10 +52,11 @@ type TechnologySignalResponse = {
   period_days: number
   observed_at: string
   momentum: {
-    current_publications: number
-    previous_publications: number
+    available: boolean
+    current_publications: number | null
+    previous_publications: number | null
     change_percent: number | null
-    trend: "acelerando" | "estable" | "desacelerando" | "sin_base"
+    trend: "acelerando" | "estable" | "desacelerando" | "sin_base" | "no_disponible"
     basis: string
   }
   evidence: {
@@ -177,6 +180,8 @@ function TechnologyResult({ result }: { result: TechnologySignalResponse }) {
   const change = result.momentum.change_percent
   const publicationCount = result.evidence.publications.length
   const newsCount = result.evidence.news.length
+  const unavailableSources = Object.entries(result.sources).filter(([, source]) => !source.available).map(([key]) => SOURCE_LABELS[key] ?? key)
+  const publicationSourcesAvailable = Boolean(result.sources.openalex?.available || result.sources.crossref?.available)
 
   return (
     <div>
@@ -194,12 +199,18 @@ function TechnologyResult({ result }: { result: TechnologySignalResponse }) {
           </div>
         </div>
         <p className="mt-4 max-w-3xl text-sm leading-6 text-muted-foreground">{result.momentum.basis}</p>
+        {unavailableSources.length ? (
+          <div role="status" className="mt-5 flex max-w-3xl items-start gap-3 border-y border-[#7A5B41]/45 bg-[#332C24]/35 px-3 py-3 text-xs leading-5 text-[#D6C3A8]">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[#D6A46F]" />
+            <p>Fuentes temporalmente no disponibles: {unavailableSources.join(" · ")}. VIDENTIA no interpreta una fuente sin respuesta como ausencia de actividad.</p>
+          </div>
+        ) : null}
       </section>
 
       <OperationalMetricRail>
-        <OperationalMetric value={result.momentum.current_publications} label="Publicaciones recientes" detail={`Últimos ${result.period_days} días`} tone="success" />
-        <OperationalMetric value={result.momentum.previous_publications} label="Período anterior" detail={`${result.period_days} días anteriores`} />
-        <OperationalMetric value={change === null ? "—" : `${change > 0 ? "+" : ""}${change}%`} label="Variación observada" detail="Actividad indexada por OpenAlex" tone={change !== null && change >= 20 ? "success" : change !== null && change <= -20 ? "warning" : "neutral"} />
+        <OperationalMetric value={result.momentum.current_publications ?? "—"} label="Publicaciones recientes" detail={result.momentum.available ? `Últimos ${result.period_days} días` : "OpenAlex no disponible"} tone={result.momentum.available ? "success" : "neutral"} />
+        <OperationalMetric value={result.momentum.previous_publications ?? "—"} label="Período anterior" detail={result.momentum.available ? `${result.period_days} días anteriores` : "Sin base comparable"} />
+        <OperationalMetric value={change === null ? "—" : `${change > 0 ? "+" : ""}${change}%`} label="Variación observada" detail={result.momentum.available ? "Actividad indexada por OpenAlex" : "No calculada"} tone={change !== null && change >= 20 ? "success" : change !== null && change <= -20 ? "warning" : "neutral"} />
         <OperationalMetric value={publicationCount + newsCount} label="Evidencias revisables" detail={`${publicationCount} publicaciones · ${newsCount} noticias`} />
       </OperationalMetricRail>
 
@@ -210,7 +221,7 @@ function TechnologyResult({ result }: { result: TechnologySignalResponse }) {
             <div className="mt-5 divide-y divide-border/80 border-y border-border/80">
               {result.evidence.publications.map((item) => <PublicationRow key={`${item.source}:${item.sourceRecordId}`} item={item} />)}
             </div>
-          ) : <EmptyEvidence text="No encontramos publicaciones recientes para esta consulta en las fuentes disponibles." />}
+          ) : <EmptyEvidence text={publicationSourcesAvailable ? "No encontramos publicaciones recientes para esta consulta en las fuentes disponibles." : "Las fuentes científicas no respondieron de forma completa. VIDENTIA no presenta este vacío como ausencia de publicaciones."} />}
         </div>
 
         <aside>
@@ -219,7 +230,7 @@ function TechnologyResult({ result }: { result: TechnologySignalResponse }) {
             <div className="mt-5 divide-y divide-border/80 border-y border-border/80">
               {result.evidence.news.map((item) => <NewsRow key={item.sourceRecordId} item={item} />)}
             </div>
-          ) : <EmptyEvidence text="No encontramos noticias recientes asociadas a la consulta." />}
+          ) : <EmptyEvidence text={result.sources.gdelt?.available ? "No encontramos noticias recientes asociadas a la consulta." : "GDELT no está disponible temporalmente. VIDENTIA no presenta este vacío como ausencia de noticias."} />}
           <div className="mt-6 border-t border-border/80 pt-5 text-xs leading-5 text-muted-foreground">
             <p className="font-medium text-white">Cómo leer esta señal</p>
             <p className="mt-2">Un aumento de publicaciones puede indicar mayor actividad investigativa, pero por sí solo no demuestra adopción comercial, inversión ni ventaja competitiva.</p>
@@ -292,6 +303,7 @@ function trendPresentation(trend: TechnologySignalResponse["momentum"]["trend"])
   if (trend === "acelerando") return { label: "Actividad en aumento", icon: ArrowUpRight, className: "border-[#4A7F74]/50 bg-[#173B37] text-[#96B5A6]" }
   if (trend === "desacelerando") return { label: "Actividad en descenso", icon: ArrowDownRight, className: "border-[#7A5B41]/60 bg-[#332C24] text-[#D6A46F]" }
   if (trend === "sin_base") return { label: "Actividad nueva en la ventana", icon: ArrowUpRight, className: "border-[#456E8E]/55 bg-[#172F34] text-[#B7D3D1]" }
+  if (trend === "no_disponible") return { label: "Variación no disponible", icon: AlertTriangle, className: "border-[#7A5B41]/60 bg-[#332C24] text-[#D6A46F]" }
   return { label: "Actividad estable", icon: Minus, className: "border-border bg-[#13272D] text-muted-foreground" }
 }
 
