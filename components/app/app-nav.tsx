@@ -3,414 +3,52 @@
 import type { CSSProperties, ReactNode } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import {
-  Activity,
-  Bell,
-  BellRing,
-  BriefcaseBusiness,
-  Building2,
-  CircleDot,
-  FlaskConical,
-  GitCompareArrows,
-  History,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  Radar,
-  Search,
-  Settings,
-  Target,
-  Waypoints,
-  type LucideIcon,
-} from "lucide-react"
+import { Activity, Bell, BellRing, CircleDot, FlaskConical, History, LayoutDashboard, LogOut, Menu, Search, Settings, type LucideIcon } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarRail,
-  SidebarSeparator,
-  SidebarTrigger,
-  useSidebar,
-} from "@/components/ui/sidebar"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarSeparator, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 
-type NavigationItem = {
-  href: string
-  label: string
-  icon: LucideIcon
-  aliases: readonly string[]
-}
+type NavigationItem={href:string;label:string;icon:LucideIcon;aliases:readonly string[]}
 
-type NavigationGroup = {
-  label: string
-  items: readonly NavigationItem[]
-}
-
-const navigationGroups: readonly NavigationGroup[] = [
-  {
-    label: "Operar",
-    items: [
-      { href: "/dashboard", label: "Resumen", icon: LayoutDashboard, aliases: [] },
-      {
-        href: "/investigar",
-        label: "Marcas",
-        icon: Search,
-        aliases: ["/evaluar", "/agente", "/compare", "/comparisons", "/consulta-inapi", "/consulta"],
-      },
-      { href: "/patentes", label: "Patentes", icon: FlaskConical, aliases: ["/patentes/alertas"] },
-      { href: "/tecnologias", label: "Tecnologías", icon: Activity, aliases: [] },
-      { href: "/empresas", label: "Empresas", icon: Building2, aliases: [] },
-      { href: "/espacios", label: "Espacios", icon: Radar, aliases: [] },
-      { href: "/brechas", label: "Brechas IP", icon: GitCompareArrows, aliases: [] },
-      { href: "/oportunidades", label: "Oportunidades", icon: Target, aliases: [] },
-      { href: "/portfolio", label: "Portafolio", icon: Waypoints, aliases: [] },
-      { href: "/casos", label: "Casos", icon: BriefcaseBusiness, aliases: [] },
-    ],
-  },
-  {
-    label: "Seguimiento",
-    items: [
-      { href: "/monitorear", label: "Vigilancia", icon: BellRing, aliases: [] },
-      { href: "/notificaciones", label: "Notificaciones", icon: Bell, aliases: [] },
-      { href: "/reportes", label: "Reportes", icon: History, aliases: ["/history"] },
-    ],
-  },
+const navigationItems:readonly NavigationItem[]=[
+  {href:"/dashboard",label:"Resumen",icon:LayoutDashboard,aliases:[]},
+  {href:"/investigar",label:"Marcas",icon:Search,aliases:["/evaluar","/agente","/compare","/comparisons","/consulta-inapi","/consulta","/portfolio"]},
+  {href:"/patentes",label:"Patentes",icon:FlaskConical,aliases:[]},
+  {href:"/tecnologias",label:"Tecnologías",icon:Activity,aliases:["/empresas","/espacios","/brechas","/oportunidades"]},
+  {href:"/monitorear",label:"Watches",icon:BellRing,aliases:["/monitorear/estrategico","/patentes/alertas","/notificaciones"]},
+  {href:"/reportes",label:"Reportes",icon:History,aliases:["/history"]},
 ]
 
-const navigationItems: readonly NavigationItem[] = navigationGroups.flatMap((group) => group.items)
-
-const shellTokens = {
-  "--sidebar-width": "16rem",
-  "--sidebar-width-icon": "3.75rem",
-  "--background": "#0F2A33",
-  "--foreground": "#E7DFCE",
-  "--card": "#13272D",
-  "--card-foreground": "#FFFFFF",
-  "--popover": "#13272D",
-  "--popover-foreground": "#FFFFFF",
-  "--primary": "#4A7F74",
-  "--primary-foreground": "#FFFFFF",
-  "--secondary": "#172F34",
-  "--secondary-foreground": "#FFFFFF",
-  "--muted": "#172F34",
-  "--muted-foreground": "#BDBEBD",
-  "--accent": "#20393A",
-  "--accent-foreground": "#FFFFFF",
-  "--destructive": "#C46A61",
-  "--destructive-foreground": "#FFFFFF",
-  "--border": "#263D44",
-  "--input": "#263D44",
-  "--ring": "#96B5A6",
-  "--chart-1": "#4A7F74",
-  "--chart-2": "#96B5A6",
-  "--chart-3": "#456E8E",
-  "--chart-4": "#B7D3D1",
-  "--chart-5": "#BDBEBD",
-  "--sidebar": "#091A20",
-  "--sidebar-foreground": "#E7DFCE",
-  "--sidebar-primary": "#4A7F74",
-  "--sidebar-primary-foreground": "#FFFFFF",
-  "--sidebar-accent": "#173B37",
-  "--sidebar-accent-foreground": "#FFFFFF",
-  "--sidebar-border": "#20363E",
-  "--sidebar-ring": "#96B5A6",
+const shellTokens={
+  "--sidebar-width":"16rem","--sidebar-width-icon":"3.75rem","--background":"#0F2A33","--foreground":"#E7DFCE","--card":"#13272D","--card-foreground":"#FFFFFF","--popover":"#13272D","--popover-foreground":"#FFFFFF","--primary":"#4A7F74","--primary-foreground":"#FFFFFF","--secondary":"#172F34","--secondary-foreground":"#FFFFFF","--muted":"#172F34","--muted-foreground":"#BDBEBD","--accent":"#20393A","--accent-foreground":"#FFFFFF","--destructive":"#C46A61","--destructive-foreground":"#FFFFFF","--border":"#263D44","--input":"#263D44","--ring":"#96B5A6","--chart-1":"#4A7F74","--chart-2":"#96B5A6","--chart-3":"#456E8E","--chart-4":"#B7D3D1","--chart-5":"#BDBEBD","--sidebar":"#091A20","--sidebar-foreground":"#E7DFCE","--sidebar-primary":"#4A7F74","--sidebar-primary-foreground":"#FFFFFF","--sidebar-accent":"#173B37","--sidebar-accent-foreground":"#FFFFFF","--sidebar-border":"#20363E","--sidebar-ring":"#96B5A6",
 } as CSSProperties
 
-function matchesPath(pathname: string, href: string) {
-  return pathname === href || (href !== "/dashboard" && pathname.startsWith(`${href}/`))
+function matchesPath(pathname:string,href:string){return pathname===href||(href!=="/dashboard"&&pathname.startsWith(`${href}/`))}
+function currentNavigationItem(pathname:string){return navigationItems.find(item=>matchesPath(pathname,item.href)||item.aliases.some(alias=>matchesPath(pathname,alias)))}
+
+function BrandMark(){return <span className="flex min-w-0 items-center gap-3 group-data-[collapsible=icon]:justify-center"><span className="relative grid size-9 shrink-0 place-items-center rounded-[10px] bg-[#13272D] text-[11px] font-medium tracking-[0.08em] text-[#E7DFCE] ring-1 ring-inset ring-white/[0.05] group-data-[collapsible=icon]:size-8">V<span aria-hidden="true" className="absolute right-[6px] top-[6px] size-1.5 rounded-full bg-[#4A7F74]"/></span><span className="min-w-0 leading-none group-data-[collapsible=icon]:hidden"><span className="block truncate text-[15px] font-normal tracking-[0.22em] text-[#E7DFCE]">ViDENTiA</span><span className="mt-1.5 block truncate text-[7px] font-medium uppercase tracking-[0.16em] text-[#8F9998]">IP & Technology Intelligence</span></span></span>}
+
+function NavigationMenu(){
+  const pathname=usePathname();const {isMobile,setOpenMobile}=useSidebar()
+  return <SidebarGroup className="pt-2"><SidebarGroupLabel className="px-3 text-[8px] font-semibold uppercase tracking-[0.2em] text-[#738180] group-data-[collapsible=icon]:hidden">Plataforma</SidebarGroupLabel><SidebarGroupContent><SidebarMenu className="gap-1">{navigationItems.map(item=>{const Icon=item.icon;const active=matchesPath(pathname,item.href)||item.aliases.some(alias=>matchesPath(pathname,alias));return <SidebarMenuItem key={item.href}><SidebarMenuButton asChild isActive={active} tooltip={item.label} className="relative h-10 rounded-[9px] px-3 text-[12.5px] font-medium text-[#AEB6B4] transition-colors duration-150 hover:bg-[#13272D] hover:text-white data-[active=true]:bg-[#173B37] data-[active=true]:text-white data-[active=true]:shadow-[inset_3px_0_0_0_#4A7F74] data-[active=true]:[&>svg]:text-[#96B5A6]"><Link href={item.href} aria-current={active?"page":undefined} onClick={()=>{if(isMobile)setOpenMobile(false)}}><Icon strokeWidth={1.55} className="text-[#83908F]"/><span>{item.label}</span></Link></SidebarMenuButton></SidebarMenuItem>})}</SidebarMenu></SidebarGroupContent></SidebarGroup>
 }
 
-function currentNavigationItem(pathname: string) {
-  return navigationItems.find(
-    (item) => matchesPath(pathname, item.href) || item.aliases.some((alias) => matchesPath(pathname, alias)),
-  )
+function AccountMenu({userEmail,fullName,companyName}:{userEmail:string;fullName:string|null;companyName:string|null}){
+  const router=useRouter();const initials=(fullName??userEmail).split(/\s+/).map(part=>part[0]).filter(Boolean).slice(0,2).join("").toUpperCase()
+  const handleLogout=async()=>{const supabase=createClient();if(!supabase){router.push("/");router.refresh();return}await supabase.auth.signOut();router.push("/");router.refresh()}
+  return <DropdownMenu><DropdownMenuTrigger asChild><SidebarMenuButton size="lg" className="rounded-[10px] bg-[#0D222A] ring-1 ring-inset ring-white/[0.04] data-[state=open]:bg-[#13272D]"><Avatar className="size-8 rounded-full ring-1 ring-inset ring-[#29434A]"><AvatarFallback className="bg-[#173B37] text-[10px] font-semibold text-[#E7DFCE]">{initials||"U"}</AvatarFallback></Avatar><span className="min-w-0 flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden"><span className="block truncate text-xs font-medium text-[#E7DFCE]">{fullName??userEmail}</span><span className="mt-1 block truncate text-[10px] text-[#83908F]">{companyName??userEmail}</span></span></SidebarMenuButton></DropdownMenuTrigger><DropdownMenuContent side="right" align="end" className="w-72 border-[#294047] bg-[#13272D]"><DropdownMenuLabel className="font-normal"><span className="block text-sm font-medium text-popover-foreground">{fullName??"Usuario"}</span><span className="mt-1 block truncate text-xs text-muted-foreground">{userEmail}</span>{companyName?<span className="mt-1 block truncate text-xs text-muted-foreground">{companyName}</span>:null}</DropdownMenuLabel><DropdownMenuSeparator/><DropdownMenuGroup><DropdownMenuItem asChild><Link href="/settings"><Settings/>Configuración</Link></DropdownMenuItem><DropdownMenuItem onClick={()=>void handleLogout()}><LogOut/>Cerrar sesión</DropdownMenuItem></DropdownMenuGroup></DropdownMenuContent></DropdownMenu>
 }
 
-function BrandMark() {
-  return (
-    <span className="flex min-w-0 items-center gap-3 group-data-[collapsible=icon]:justify-center">
-      <span className="relative grid size-9 shrink-0 place-items-center rounded-[10px] bg-[#13272D] text-[11px] font-medium tracking-[0.08em] text-[#E7DFCE] ring-1 ring-inset ring-white/[0.05] group-data-[collapsible=icon]:size-8">
-        V
-        <span aria-hidden="true" className="absolute right-[6px] top-[6px] size-1.5 rounded-full bg-[#4A7F74]" />
-      </span>
-      <span className="min-w-0 leading-none group-data-[collapsible=icon]:hidden">
-        <span className="block truncate text-[15px] font-normal tracking-[0.22em] text-[#E7DFCE]">ViDENTiA</span>
-        <span className="mt-1.5 block truncate text-[7px] font-medium uppercase tracking-[0.16em] text-[#8F9998]">
-          Inteligencia de propiedad intelectual
-        </span>
-      </span>
-    </span>
-  )
-}
+function CurrentSection(){const pathname=usePathname();const current=currentNavigationItem(pathname);return <div className="hidden min-w-0 md:block"><p className="text-[8px] font-semibold uppercase tracking-[0.18em] text-[#6F807E]">VIDENTIA / INTELLIGENCE OS</p><p className="mt-1 truncate text-[13px] font-medium text-[#E7DFCE]">{current?.label??"Workspace"}</p></div>}
 
-function NavigationMenu() {
-  const pathname = usePathname()
-  const { isMobile, setOpenMobile } = useSidebar()
+const mobileNavigationItems=navigationItems.filter(item=>["/dashboard","/investigar","/patentes","/tecnologias"].includes(item.href))
 
-  return (
-    <>
-      {navigationGroups.map((group, groupIndex) => (
-        <SidebarGroup key={group.label} className={groupIndex === 0 ? "pt-2" : "pt-0"}>
-          <SidebarGroupLabel className="px-3 text-[8px] font-semibold uppercase tracking-[0.2em] text-[#738180] group-data-[collapsible=icon]:hidden">
-            {group.label}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="gap-1">
-              {group.items.map((item) => {
-                const Icon = item.icon
-                const active = matchesPath(pathname, item.href) || item.aliases.some((alias) => matchesPath(pathname, alias))
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={active}
-                      tooltip={item.label}
-                      className="relative h-10 rounded-[9px] px-3 text-[12.5px] font-medium text-[#AEB6B4] transition-colors duration-150 hover:bg-[#13272D] hover:text-[#FFFFFF] data-[active=true]:bg-[#173B37] data-[active=true]:text-[#FFFFFF] data-[active=true]:shadow-[inset_3px_0_0_0_#4A7F74] data-[active=true]:[&>svg]:text-[#96B5A6]"
-                    >
-                      <Link
-                        href={item.href}
-                        aria-current={active ? "page" : undefined}
-                        onClick={() => {
-                          if (isMobile) setOpenMobile(false)
-                        }}
-                      >
-                        <Icon strokeWidth={1.55} className="text-[#83908F]" />
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      ))}
-    </>
-  )
-}
+function MobileNavigation(){const pathname=usePathname();const {setOpenMobile}=useSidebar();return <nav aria-label="Navegación principal móvil" className="fixed inset-x-0 bottom-0 z-40 border-t border-[#294047] bg-[#091A20]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"><div className="grid h-16 grid-cols-5">{mobileNavigationItems.map(item=>{const Icon=item.icon;const active=matchesPath(pathname,item.href)||item.aliases.some(alias=>matchesPath(pathname,alias));return <Link key={item.href} href={item.href} aria-current={active?"page":undefined} className={`relative flex min-w-0 flex-col items-center justify-center gap-1 px-1 text-[9px] font-medium transition-colors ${active?"text-[#E7DFCE]":"text-[#83908F]"}`}>{active?<span aria-hidden="true" className="absolute inset-x-4 top-0 h-0.5 bg-[#4A7F74]"/>:null}<Icon className={active?"size-5 text-[#96B5A6]":"size-5"} strokeWidth={1.65}/><span className="truncate">{item.label}</span></Link>})}<button type="button" onClick={()=>setOpenMobile(true)} className="flex min-w-0 flex-col items-center justify-center gap-1 px-1 text-[9px] font-medium text-[#83908F] transition-colors hover:text-[#E7DFCE] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#96B5A6]" aria-label="Abrir menú completo"><Menu className="size-5" strokeWidth={1.65}/><span>Más</span></button></div></nav>}
 
-function AccountMenu({
-  userEmail,
-  fullName,
-  companyName,
-}: {
-  userEmail: string
-  fullName: string | null
-  companyName: string | null
-}) {
-  const router = useRouter()
-  const initials = (fullName ?? userEmail)
-    .split(/\s+/)
-    .map((part) => part[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase()
-
-  const handleLogout = async () => {
-    const supabase = createClient()
-    if (!supabase) {
-      router.push("/")
-      router.refresh()
-      return
-    }
-    await supabase.auth.signOut()
-    router.push("/")
-    router.refresh()
-  }
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <SidebarMenuButton size="lg" className="rounded-[10px] bg-[#0D222A] ring-1 ring-inset ring-white/[0.04] data-[state=open]:bg-[#13272D]">
-          <Avatar className="size-8 rounded-full ring-1 ring-inset ring-[#29434A]">
-            <AvatarFallback className="bg-[#173B37] text-[10px] font-semibold text-[#E7DFCE]">
-              {initials || "U"}
-            </AvatarFallback>
-          </Avatar>
-          <span className="min-w-0 flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
-            <span className="block truncate text-xs font-medium text-[#E7DFCE]">{fullName ?? userEmail}</span>
-            <span className="mt-1 block truncate text-[10px] text-[#83908F]">{companyName ?? userEmail}</span>
-          </span>
-        </SidebarMenuButton>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="right" align="end" className="w-72 border-[#294047] bg-[#13272D]">
-        <DropdownMenuLabel className="font-normal">
-          <span className="block text-sm font-medium text-popover-foreground">{fullName ?? "Usuario"}</span>
-          <span className="mt-1 block truncate text-xs text-muted-foreground">{userEmail}</span>
-          {companyName ? <span className="mt-1 block truncate text-xs text-muted-foreground">{companyName}</span> : null}
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem asChild>
-            <Link href="/settings">
-              <Settings />
-              Configuración
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => void handleLogout()}>
-            <LogOut />
-            Cerrar sesión
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
-}
-
-function CurrentSection() {
-  const pathname = usePathname()
-  const current = currentNavigationItem(pathname)
-
-  return (
-    <div className="hidden min-w-0 md:block">
-      <p className="text-[8px] font-semibold uppercase tracking-[0.18em] text-[#6F807E]">VIDENTIA / OPERACIÓN</p>
-      <p className="mt-1 truncate text-[13px] font-medium text-[#E7DFCE]">{current?.label ?? "Workspace"}</p>
-    </div>
-  )
-}
-
-const mobileNavigationItems = [
-  navigationItems.find((item) => item.href === "/dashboard"),
-  navigationItems.find((item) => item.href === "/investigar"),
-  navigationItems.find((item) => item.href === "/patentes"),
-  navigationItems.find((item) => item.href === "/casos"),
-].filter((item): item is NavigationItem => Boolean(item))
-
-function MobileNavigation() {
-  const pathname = usePathname()
-  const { setOpenMobile } = useSidebar()
-
-  return (
-    <nav
-      aria-label="Navegación principal móvil"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-[#294047] bg-[#091A20]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
-    >
-      <div className="grid h-16 grid-cols-5">
-        {mobileNavigationItems.map((item) => {
-          const Icon = item.icon
-          const active = matchesPath(pathname, item.href) || item.aliases.some((alias) => matchesPath(pathname, alias))
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={active ? "page" : undefined}
-              className={`relative flex min-w-0 flex-col items-center justify-center gap-1 px-1 text-[9px] font-medium transition-colors ${active ? "text-[#E7DFCE]" : "text-[#83908F]"}`}
-            >
-              {active ? <span aria-hidden="true" className="absolute inset-x-4 top-0 h-0.5 bg-[#4A7F74]" /> : null}
-              <Icon className={active ? "size-5 text-[#96B5A6]" : "size-5"} strokeWidth={1.65} />
-              <span className="truncate">{item.label}</span>
-            </Link>
-          )
-        })}
-        <button
-          type="button"
-          onClick={() => setOpenMobile(true)}
-          className="flex min-w-0 flex-col items-center justify-center gap-1 px-1 text-[9px] font-medium text-[#83908F] transition-colors hover:text-[#E7DFCE] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#96B5A6]"
-          aria-label="Abrir menú completo"
-        >
-          <Menu className="size-5" strokeWidth={1.65} />
-          <span>Más</span>
-        </button>
-      </div>
-    </nav>
-  )
-}
-
-export function AppNav({
-  userEmail,
-  fullName,
-  companyName,
-  children,
-}: {
-  userEmail: string
-  fullName: string | null
-  companyName: string | null
-  children: ReactNode
-}) {
-  return (
-    <SidebarProvider className="dark min-h-svh overflow-x-hidden bg-[#091A20] text-foreground" style={shellTokens}>
-      <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-[#091A20]">
-        <SidebarHeader className="px-3 pb-3 pt-4">
-          <Link
-            href="/dashboard"
-            aria-label="VIDENTIA, resumen"
-            className="rounded-[10px] px-1 py-1 outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:px-0"
-          >
-            <BrandMark />
-          </Link>
-        </SidebarHeader>
-
-        <SidebarSeparator className="mx-3 w-auto bg-[#20363E]" />
-        <SidebarContent className="py-2">
-          <NavigationMenu />
-        </SidebarContent>
-
-        <SidebarFooter className="gap-3 px-3 pb-4">
-          <div className="flex items-start gap-2.5 border-t border-[#20363E] pt-3 text-[9px] leading-4 text-[#738180] group-data-[collapsible=icon]:hidden">
-            <CircleDot className="mt-0.5 size-3.5 shrink-0 text-[#4A7F74]" strokeWidth={1.7} aria-hidden="true" />
-            <span>Fuentes oficiales · evidencia trazable</span>
-          </div>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <AccountMenu userEmail={userEmail} fullName={fullName} companyName={companyName} />
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
-        <SidebarRail />
-      </Sidebar>
-
-      <SidebarInset className="relative min-w-0 overflow-hidden bg-[#0F2A33] text-foreground">
-        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-[#263D44] bg-[#0F2A33] px-4 sm:px-6 lg:px-8">
-          <div className="flex min-w-0 items-center gap-3">
-            <SidebarTrigger label="Menú" className="h-9 w-auto gap-2 rounded-[9px] bg-[#13272D] px-3 text-[#9CA6A4] ring-1 ring-inset ring-white/[0.05] hover:bg-[#172F34] hover:text-[#FFFFFF] md:size-9 md:px-0 [&>span]:not-sr-only md:[&>span]:sr-only" />
-            <Link href="/dashboard" className="truncate text-[13px] font-normal tracking-[0.18em] text-[#E7DFCE] md:hidden">
-              ViDENTiA
-            </Link>
-            <CurrentSection />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm" className="hidden h-9 rounded-[9px] bg-[#13272D] px-3 text-[#D8DDDB] ring-1 ring-inset ring-white/[0.05] hover:bg-[#172F34] hover:text-white sm:inline-flex">
-              <Link href="/investigar">
-                <Search data-icon="inline-start" strokeWidth={1.6} />
-                Buscar una marca
-              </Link>
-            </Button>
-            <Button asChild variant="ghost" size="icon" aria-label="Notificaciones" className="size-9 rounded-[9px] bg-[#13272D] text-[#AAB3B1] ring-1 ring-inset ring-white/[0.05] hover:bg-[#172F34] hover:text-white">
-              <Link href="/notificaciones">
-                <Bell strokeWidth={1.6} />
-              </Link>
-            </Button>
-            <Button asChild size="sm" className="hidden h-9 rounded-[9px] bg-[#4A7F74] px-4 font-medium text-white hover:bg-[#568D81] lg:inline-flex">
-              <Link href="/investigar">Nueva investigación</Link>
-            </Button>
-          </div>
-        </header>
-
-        <div className="relative z-10 min-h-[calc(100svh-4rem)] min-w-0 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">{children}</div>
-        <MobileNavigation />
-      </SidebarInset>
-    </SidebarProvider>
-  )
+export function AppNav({userEmail,fullName,companyName,children}:{userEmail:string;fullName:string|null;companyName:string|null;children:ReactNode}){
+  return <SidebarProvider className="dark min-h-svh overflow-x-hidden bg-[#091A20] text-foreground" style={shellTokens}><Sidebar collapsible="icon" className="border-r border-sidebar-border bg-[#091A20]"><SidebarHeader className="px-3 pb-3 pt-4"><Link href="/dashboard" aria-label="VIDENTIA, resumen" className="rounded-[10px] px-1 py-1 outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:px-0"><BrandMark/></Link></SidebarHeader><SidebarSeparator className="mx-3 w-auto bg-[#20363E]"/><SidebarContent className="py-2"><NavigationMenu/></SidebarContent><SidebarFooter className="gap-3 px-3 pb-4"><div className="flex items-start gap-2.5 border-t border-[#20363E] pt-3 text-[9px] leading-4 text-[#738180] group-data-[collapsible=icon]:hidden"><CircleDot className="mt-0.5 size-3.5 shrink-0 text-[#4A7F74]" strokeWidth={1.7}/><span>Brands · Patents · Technologies<br/>Search once—or keep watching.</span></div><SidebarMenu><SidebarMenuItem><AccountMenu userEmail={userEmail} fullName={fullName} companyName={companyName}/></SidebarMenuItem></SidebarMenu></SidebarFooter><SidebarRail/></Sidebar>
+    <SidebarInset className="relative min-w-0 overflow-hidden bg-[#0F2A33] text-foreground"><header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-[#263D44] bg-[#0F2A33] px-4 sm:px-6 lg:px-8"><div className="flex min-w-0 items-center gap-3"><SidebarTrigger label="Menú" className="h-9 w-auto gap-2 rounded-[9px] bg-[#13272D] px-3 text-[#9CA6A4] ring-1 ring-inset ring-white/[0.05] hover:bg-[#172F34] hover:text-white md:size-9 md:px-0 [&>span]:not-sr-only md:[&>span]:sr-only"/><Link href="/dashboard" className="truncate text-[13px] font-normal tracking-[0.18em] text-[#E7DFCE] md:hidden">ViDENTiA</Link><CurrentSection/></div><div className="flex items-center gap-2"><Button asChild variant="ghost" size="sm" className="hidden h-9 rounded-[9px] bg-[#13272D] px-3 text-[#D8DDDB] ring-1 ring-inset ring-white/[0.05] hover:bg-[#172F34] hover:text-white sm:inline-flex"><Link href="/investigar"><Search data-icon="inline-start" strokeWidth={1.6}/>Nueva búsqueda</Link></Button><Button asChild variant="ghost" size="icon" aria-label="Notificaciones" className="size-9 rounded-[9px] bg-[#13272D] text-[#AAB3B1] ring-1 ring-inset ring-white/[0.05] hover:bg-[#172F34] hover:text-white"><Link href="/notificaciones"><Bell strokeWidth={1.6}/></Link></Button><Button asChild size="sm" className="hidden h-9 rounded-[9px] bg-[#4A7F74] px-4 font-medium text-white hover:bg-[#568D81] lg:inline-flex"><Link href="/monitorear">Crear watch</Link></Button></div></header><div className="relative z-10 min-h-[calc(100svh-4rem)] min-w-0 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">{children}</div><MobileNavigation/></SidebarInset>
+  </SidebarProvider>
 }
