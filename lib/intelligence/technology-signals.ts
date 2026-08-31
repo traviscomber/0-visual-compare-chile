@@ -2,7 +2,12 @@ import { countOpenAlexWorks, searchOpenAlexWorks } from "@/lib/intelligence/open
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
 import { searchGdeltNews } from "@/lib/intelligence/gdelt"
 
-export type TechnologyTrend = "acelerando" | "estable" | "desacelerando" | "sin_base"
+export type TechnologyTrend = "acelerando" | "estable" | "desacelerando" | "sin_base" | "no_disponible"
+
+type SourceResult<T> = {
+  ok: boolean
+  value: T
+}
 
 export async function buildTechnologySignals(query: string, windowDays = 180) {
   const now = new Date()
@@ -11,44 +16,55 @@ export async function buildTechnologySignals(query: string, windowDays = 180) {
   const previousFrom = daysAgo(previousTo, windowDays)
   const newsFrom = daysAgo(now, 7)
 
-  const [currentCount, previousCount, openAlexWorks, crossrefWorks, news] = await Promise.all([
-    safe(() => countOpenAlexWorks(query, currentFrom, now), 0),
-    safe(() => countOpenAlexWorks(query, previousFrom, previousTo), 0),
-    safe(() => searchOpenAlexWorks(query, currentFrom, now, 10), []),
-    safe(() => searchCrossrefWorks(query, currentFrom, now, 10), []),
-    safe(() => searchGdeltNews(query, newsFrom, now, 10), []),
+  const [currentCountResult, previousCountResult, openAlexWorksResult, crossrefWorksResult, newsResult] = await Promise.all([
+    captureSource("openalex-current", () => countOpenAlexWorks(query, currentFrom, now), 0),
+    captureSource("openalex-previous", () => countOpenAlexWorks(query, previousFrom, previousTo), 0),
+    captureSource("openalex-evidence", () => searchOpenAlexWorks(query, currentFrom, now, 10), []),
+    captureSource("crossref", () => searchCrossrefWorks(query, currentFrom, now, 10), []),
+    captureSource("gdelt", () => searchGdeltNews(query, newsFrom, now, 10), []),
   ])
 
-  const growth = previousCount > 0 ? ((currentCount - previousCount) / previousCount) * 100 : null
-  const trend: TechnologyTrend = previousCount === 0
-    ? (currentCount > 0 ? "sin_base" : "estable")
-    : growth !== null && growth >= 20
-      ? "acelerando"
-      : growth !== null && growth <= -20
-        ? "desacelerando"
-        : "estable"
+  const openAlexAvailable = currentCountResult.ok && previousCountResult.ok && openAlexWorksResult.ok
+  const currentCount = openAlexAvailable ? currentCountResult.value : null
+  const previousCount = openAlexAvailable ? previousCountResult.value : null
+  const growth = currentCount !== null && previousCount !== null && previousCount > 0
+    ? ((currentCount - previousCount) / previousCount) * 100
+    : null
 
-  const publicationEvidence = dedupePublications(openAlexWorks, crossrefWorks)
+  const trend: TechnologyTrend = !openAlexAvailable
+    ? "no_disponible"
+    : previousCount === 0
+      ? (currentCount && currentCount > 0 ? "sin_base" : "estable")
+      : growth !== null && growth >= 20
+        ? "acelerando"
+        : growth !== null && growth <= -20
+          ? "desacelerando"
+          : "estable"
+
+  const publicationEvidence = dedupePublications(openAlexWorksResult.value, crossrefWorksResult.value)
 
   return {
     query,
     period_days: windowDays,
     observed_at: now.toISOString(),
     momentum: {
+      available: openAlexAvailable,
       current_publications: currentCount,
       previous_publications: previousCount,
       change_percent: growth === null ? null : Math.round(growth * 10) / 10,
       trend,
-      basis: "Actividad de publicaciones indexadas por OpenAlex; es una señal de actividad, no una predicción.",
+      basis: openAlexAvailable
+        ? "Actividad de publicaciones indexadas por OpenAlex; es una señal de actividad, no una predicción."
+        : "OpenAlex no respondió de forma completa. VIDENTIA conserva la evidencia disponible, pero no calcula una variación hasta recuperar una base comparable.",
     },
     evidence: {
       publications: publicationEvidence,
-      news,
+      news: newsResult.value,
     },
     sources: {
-      openalex: { available: true, evidence_count: openAlexWorks.length },
-      crossref: { available: true, evidence_count: crossrefWorks.length },
-      gdelt: { available: true, evidence_count: news.length },
+      openalex: { available: openAlexAvailable, evidence_count: openAlexWorksResult.value.length },
+      crossref: { available: crossrefWorksResult.ok, evidence_count: crossrefWorksResult.value.length },
+      gdelt: { available: newsResult.ok, evidence_count: newsResult.value.length },
     },
   }
 }
@@ -75,8 +91,14 @@ function dedupePublications(openAlex: Awaited<ReturnType<typeof searchOpenAlexWo
     .slice(0, 14)
 }
 
-async function safe<T>(operation: () => Promise<T>, fallback: T): Promise<T> {
-  try { return await operation() } catch (error) { console.warn("[technology-signals] source unavailable", error); return fallback }
+async function captureSource<T>(source: string, operation: () => Promise<T>, fallback: T): Promise<SourceResult<T>> {
+  try {
+    return { ok: true, value: await operation() }
+  } catch (error) {
+    console.warn(`[technology-signals] ${source} unavailable`, error)
+    return { ok: false, value: fallback }
+  }
 }
+
 function daysAgo(reference: Date, days: number) { return new Date(reference.getTime() - days * 24 * 60 * 60 * 1000) }
 function normalizeDoi(value: string | null) { return value ? value.toLowerCase().replace(/^https?:\/\/(dx\.)?doi\.org\//, "") : null }
