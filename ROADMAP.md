@@ -26,16 +26,17 @@ VIDENTIA nunca debe presentar una predicción, intención empresarial o conclusi
 
 ## 2. Estado de referencia
 
-Baseline actualizado después del merge del **PR #158 — Grade A Block A**:
+Baseline actualizado después de los merges de **#158, #160, #161 y #163**:
 
 - Repositorio: `traviscomber/0-visual-compare-chile`
 - Rama productiva: `main`
-- Commit productivo: `189530a03f38e4b358cd0e47866ad8d46dd2a76a`
-- PR relevante: `#158`, merged a `main`
+- Commit productivo: `b9a7a7886702e3123b53ece1064fca2dd84be2b3`
+- PRs relevantes: `#158` Grade A Block A, `#160` Action Layer foundation, `#161` contexto GDELT y `#163` executive flow gates
 - Producto productivo: `https://videntia.app`
-- Deployment productivo: `dpl_DBDktMpJm2CzZPUed83fmhT8KyPa` — `READY`
-- CI post-merge `#832`: `success`
-- CodeQL post-merge `#833`: `success`
+- Deployment productivo: `dpl_HyyXaKcHWjpPsdFcYT9gFQ79ZeWZ` — `READY`
+- CI de #163 `#841`: `success`
+- CodeQL de #163 `#842`: `success`
+- Runtime errors del deployment de #163 después del release: `0`
 - Stack: Next.js 16.2.4 + Supabase + Vercel + OpenAI + fuentes públicas externas
 
 ### Baseline de confianza actual
@@ -84,7 +85,7 @@ Baseline actualizado después del merge del **PR #158 — Grade A Block A**:
 | **2. Intelligence Quality** | Que las conclusiones sean defendibles | **IN PROGRESS — avanzado** | Inteligencia reproducible, calibrada y auditada |
 | **3. Executive Intelligence** | Responder las preguntas clave en 1–2 clics | **IN PROGRESS — avanzado** | Las seis preguntas estratégicas tienen respuesta trazable de punta a punta |
 | **4. Recommendation Engine** | Pasar de señal a decisión | IN PROGRESS | Cada cambio relevante produce recomendación o descarte explicado |
-| **5. Action Layer** | Que VIDENTIA haga trabajo | **NEXT** | Señal → acción sin salir de VIDENTIA |
+| **5. Action Layer** | Que VIDENTIA haga trabajo | **IN PROGRESS — foundation merged** | Señal → acción sin salir de VIDENTIA |
 | **6. Coverage Moat** | Crear una ventaja de datos difícil de replicar | IN PROGRESS | Inteligencia multi-source real, enlazada a empresa/tecnología/mercado |
 | **7. Enterprise Grade** | Poder venderlo seriamente a corporativos | **IN PROGRESS — foundations** | Seguridad, RBAC, SSO, SLA, cuotas, observabilidad y recovery verificados |
 | **8. Product Polish** | Que el producto se sienta Grade A | **IN PROGRESS** | Coherencia visual, UX, responsive y dashboards ejecutivos completos |
@@ -216,12 +217,14 @@ Responder en 1–2 clics las preguntas que realmente importan al usuario ejecuti
 - Navegación `Espacio → Brecha` verificada hasta el guardrail de empresa propia.
 - Pantalla de confirmación `Tecnología → Vigilar` verificada; navegar hacia ella no crea una vigilancia por accidente.
 - Interfaz de Tecnología simplificada a lenguaje ejecutivo: qué pasa, qué significa, evidencia y próximo paso.
+- Gate contractual permanente `Executive flow gates regression` con fixture aislado `qa-*` para binding, brecha repetida, confirmación/creación idempotente de vigilancia y deep-links contextuales.
+- Creación de vigilancia estratégica idempotente ante doble clic o reintento.
 
 ## Pendiente real para Grade A
 
-1. **Cerrar `Empresa → Espacio → Brecha` de punta a punta** con un binding de empresa propia en fixture/organización aislada. No usar organizaciones reales como datos descartables.
-2. **Ejercitar la creación efectiva de una vigilancia estratégica** mediante submit real y verificar persistencia/resultado.
-3. **Cerrar `Dashboard → análisis contextual`** con una vigilancia y señal estratégica de prueba realmente existentes.
+1. **Ejecutar QA autenticado real de `Empresa → Espacio → Brecha`** con un binding de empresa propia en fixture/organización aislada. El contrato automatizado está cubierto; falta la prueba física de navegador y persistencia.
+2. **Ejercitar la creación efectiva de una vigilancia estratégica en navegador autenticado** y verificar persistencia/resultado. La API ya es idempotente y está fijada por CI.
+3. **Cerrar `Dashboard → análisis contextual` en navegador autenticado** con una vigilancia y señal estratégica de prueba realmente existentes. Los deep-links y ownership están fijados por CI.
 4. Unificar actor vs mercado y actor vs portafolio propio en las superficies ejecutivas donde corresponda.
 5. Asegurar filtros temporales coherentes `90d / 180d / 365d / histórico` en los módulos que lo necesitan.
 6. Consolidar “oportunidades” como una superficie ejecutiva propia, evitando convertir whitespace o actividad débil en predicción.
@@ -284,13 +287,13 @@ Que VIDENTIA convierta inteligencia en trabajo ejecutable sin obligar al usuario
 
 ## Estado actual
 
-Este es el **siguiente foco prioritario**.
+La foundation canónica está mergeada en #160 y el primer flujo de acción idempotente quedó reforzado en #163.
 
-Ya existen piezas reutilizables —casos, vigilancia, notificaciones, briefs y CTAs— pero todavía no existe un modelo canónico que complete:
+`create_intelligence_action` ya convierte inteligencia atómicamente en el modelo existente de Caso + Evidencia + Acción, conserva RLS y deduplica trabajo abierto. Todavía falta completar:
 
 `Señal → Recomendación → Acción → Responsable → Seguimiento → Outcome`
 
-La creación de vigilancia estratégica es el primer flujo de acción a cerrar E2E.
+La creación de vigilancia estratégica tiene contrato automatizado e idempotencia; su submit autenticado real sigue pendiente de QA de navegador.
 
 ## Plan de construcción
 
@@ -536,7 +539,7 @@ Un usuario puede entender qué está pasando, por qué importa y qué puede hace
 
 **Trust Layer + Intelligence Quality + Executive Intelligence**
 
-Estado: **MERGED a `main` en PR #158; criterios de salida finales aún abiertos.**
+Estado: **MERGED a `main` en #158 y reforzado por #160, #161 y #163; criterios productivos naturales y QA visual autenticado aún abiertos.**
 
 Lo que quedó cerrado:
 
@@ -552,9 +555,9 @@ Lo que quedó cerrado:
 Cierre pendiente de Bloque A:
 
 1. Change Engine `4/4` por ciclo natural.
-2. Brecha E2E con binding de portafolio controlado.
-3. Creación efectiva de vigilancia E2E.
-4. Dashboard contextual con señal estratégica real/controlada.
+2. QA autenticado real de Brecha con binding de portafolio controlado; el gate contractual ya está en CI.
+3. Submit autenticado real de vigilancia; creación/reutilización idempotente ya está en CI.
+4. Dashboard contextual en navegador con señal estratégica real/controlada; deep-link y ownership ya están en CI.
 5. Expandir benchmark y calibración antes de declarar Intelligence Quality `DONE`.
 
 ## Bloque B — Fases 4–6
@@ -564,15 +567,15 @@ Cierre pendiente de Bloque A:
 Estado:
 
 - Fase 4: avanzada, lifecycle incompleto.
-- Fase 5: **NEXT**.
+- Fase 5: foundation canónica mergeada; lifecycle, responsable, due date y outcome aún incompletos.
 - Fase 6: v1 multi-source tecnológica operativa; mercado/empresa global aún parcial.
 
 Orden operativo recomendado:
 
 1. Cerrar los tres gates E2E residuales del Bloque A sin fabricar datos.
-2. Mapear `casos + vigilancia + notificaciones + briefs` y definir Canonical Action Model.
-3. Cerrar `Vigilar tecnología` como primera acción completa.
-4. Implementar recommendation lifecycle y conversión a acción.
+2. Extender la foundation Caso + Evidencia + Acción con responsable, due date, seguimiento y outcome.
+3. Cerrar el submit autenticado de `Vigilar tecnología` y su retorno contextual.
+4. Implementar recommendation lifecycle y conversión a la action foundation existente.
 5. Construir capa semántica de demanda comercial y luego conectar Mercado Público.
 6. Incorporar CMF al entity graph y EPO al eje patentario.
 7. Añadir regulación/demanda como nuevos ejes de confidence.
@@ -599,10 +602,10 @@ Orden operativo:
 ## P0 — bloquean declarar Grade A
 
 1. **Change Engine 0/4 baselines.** Debe cerrarse por ciclo cron normal.
-2. **Brecha E2E incompleta** por ausencia de empresa propia vinculada en el fixture autenticado probado.
-3. **Creación efectiva de vigilancia no ejercitada E2E.** La confirmación existe; falta probar el POST real y su persistencia.
-4. **Dashboard contextual no ejercitado con una señal estratégica real/controlada.**
-5. **Action Layer no canónico.** Existen piezas, pero todavía no hay `señal → responsable → outcome` unificado.
+2. **QA autenticado físico de Brecha pendiente.** El contrato con fixture aislado está fijado en CI; falta comprobar persistencia y UI real.
+3. **Creación efectiva de vigilancia no ejercitada en navegador autenticado.** La API es idempotente; falta comprobar submit y persistencia reales.
+4. **Dashboard contextual no ejercitado en navegador con una señal estratégica real/controlada.**
+5. **Action lifecycle incompleto.** La foundation Caso + Evidencia + Acción es atómica y RLS-safe, pero falta `responsable → due date → seguimiento → outcome`.
 6. **Cobertura comercial insuficiente.** Mercado Público aún no puede ponderarse semánticamente por tecnología con la precisión exigida.
 7. **Enterprise Grade incompleto.** Faltan RBAC transversal, tenant-isolation suite, SSO, quotas, recovery drill y observabilidad formal.
 
