@@ -88,6 +88,9 @@ jobs:
       - name: Public product architecture regression
         run: node scripts/public-product-architecture-regression.mts
 
+      - name: Portal and common watches regression
+        run: node scripts/portal-common-watches-regression.mts
+
       - name: Positioning regression
         run: node scripts/positioning-regression.mts
 
