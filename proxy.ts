@@ -1,14 +1,41 @@
 import { updateSession } from "@/lib/supabase/proxy"
 import { NextResponse, type NextRequest } from "next/server"
 
-const PUBLIC_INDEXABLE_PATHS = new Set(["/", "/es", "/en", "/demo", "/contacto", "/docs", "/privacidad", "/terminos"])
-const LOCALIZED_INDEXABLE_PATHS = new Set(["/es", "/en", "/es/demo", "/en/demo"])
+const PUBLIC_INDEXABLE_PATHS = new Set([
+  "/",
+  "/trademarks",
+  "/patents",
+  "/technologies",
+  "/es",
+  "/demo",
+  "/contacto",
+  "/docs",
+  "/privacidad",
+  "/terminos",
+  "/es/marcas",
+  "/es/patentes",
+  "/es/tecnologias",
+  "/es/demo",
+  "/en/demo",
+  "/es/docs",
+  "/en/docs",
+  "/es/privacidad",
+  "/en/privacidad",
+  "/es/terminos",
+  "/en/terminos",
+])
+
 const LEGACY_REDIRECTS: Record<string, string> = {
   "/consulta": "/demo",
   "/comparador": "/demo",
   "/brandbook": "/",
   "/casos-de-uso": "/",
+  "/en": "/",
+  "/en/patents": "/patents",
+  "/en/technologies": "/technologies",
 }
+
+const CANONICAL_ENGLISH_PATHS = new Set(["/", "/trademarks", "/patents", "/technologies"])
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -21,14 +48,16 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 308)
   }
 
-  const locale = pathname.split("/")[1]
+  const localeSegment = pathname.split("/")[1]
   const requestHeaders = new Headers(request.headers)
-  const localized = locale === "es" || locale === "en"
-  if (localized) requestHeaders.set("x-videntia-locale", locale)
+  const localized = localeSegment === "es" || localeSegment === "en"
 
-  const response = await updateSession(request, localized ? requestHeaders : undefined)
+  if (localized) requestHeaders.set("x-videntia-locale", localeSegment)
+  else if (CANONICAL_ENGLISH_PATHS.has(pathname)) requestHeaders.set("x-videntia-locale", "en")
 
-  if (!PUBLIC_INDEXABLE_PATHS.has(pathname) && !LOCALIZED_INDEXABLE_PATHS.has(pathname)) {
+  const response = await updateSession(request, requestHeaders)
+
+  if (!PUBLIC_INDEXABLE_PATHS.has(pathname)) {
     response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive")
   }
 

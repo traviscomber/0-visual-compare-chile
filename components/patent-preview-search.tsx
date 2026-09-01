@@ -31,7 +31,7 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
   const [error, setError] = useState<string | null>(null)
   const [limitResetAt, setLimitResetAt] = useState<string | null>(null)
   const base = `/${locale}`
-  const publicReturn = locale === "es" ? "/es/patentes" : "/en/patents"
+  const publicReturn = locale === "es" ? "/es/patentes" : "/patents"
   const signupHref = `${base}/auth/sign-up?redirectTo=${encodeURIComponent(publicReturn)}`
   const enterpriseHref = `${base}/acceso-empresarial`
   const labels = locale === "es" ? {
@@ -97,17 +97,19 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
     : null
 
   return (
-    <section className="border-y border-[#263D44] bg-[#0B2027] px-5 py-14 lg:px-10 lg:py-20">
+    <section id="patent-preview-search" className="scroll-mt-24 border-y border-[#263D44] bg-[#0B2027] px-5 py-14 lg:px-10 lg:py-20">
       <div className="mx-auto grid max-w-[1480px] gap-8 lg:grid-cols-[0.85fr_1.15fr]">
         <div>
           <h2 className="text-[clamp(2.4rem,4vw,4.2rem)] font-light leading-[0.98] tracking-[-0.045em] text-[#E7DFCE]">{labels.title}</h2>
           <p className="mt-5 max-w-xl text-sm leading-7 text-[#9EAAA8]">{labels.body}</p>
         </div>
         <div>
-          <form onSubmit={submit} className="flex border border-[#36515A] bg-[#0F2A33]">
-            <Search className="ml-4 mt-4 h-5 w-5 shrink-0 text-[#96B5A6]" strokeWidth={1.5} aria-hidden="true" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} maxLength={120} placeholder={labels.placeholder} className="min-w-0 flex-1 bg-transparent px-4 py-4 text-sm text-white outline-none placeholder:text-[#738180]" />
-            <button type="submit" disabled={query.trim().length < 2 || loading} className="inline-flex min-w-36 items-center justify-center gap-2 bg-[#4A7F74] px-5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-45">
+          <form onSubmit={submit} className="border border-[#36515A] bg-[#0F2A33] sm:flex">
+            <div className="flex min-w-0 flex-1">
+              <Search className="ml-4 mt-4 h-5 w-5 shrink-0 text-[#96B5A6]" strokeWidth={1.5} aria-hidden="true" />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} maxLength={120} placeholder={labels.placeholder} className="min-w-0 flex-1 bg-transparent px-4 py-4 text-sm text-white outline-none placeholder:text-[#738180]" />
+            </div>
+            <button type="submit" disabled={query.trim().length < 2 || loading} className="inline-flex min-h-12 w-full items-center justify-center gap-2 bg-[#4A7F74] px-5 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-0 sm:w-auto sm:min-w-36 sm:py-0">
               {loading ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" /> : null}{loading ? labels.loading : labels.submit}
             </button>
           </form>

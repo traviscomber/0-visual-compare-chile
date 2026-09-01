@@ -12,8 +12,10 @@ const SUPPORTED_LOCALES = new Set(["es", "en"])
 const LOCALIZED_PUBLIC_PATHS = new Set([
   "/",
   "/demo",
+  "/marcas",
   "/patentes",
   "/patents",
+  "/tecnologias",
   "/acceso-empresarial",
   "/contacto",
   "/docs",

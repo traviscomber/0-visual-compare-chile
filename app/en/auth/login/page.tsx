@@ -8,7 +8,14 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
+function canonicalEnglishRedirect(value?: string) {
+  const redirect = safeInternalRedirect(value)
+  if (redirect === "/patentes" || redirect === "/en/patents") return "/patents"
+  if (redirect === "/tecnologias" || redirect === "/en/technologies") return "/technologies"
+  return redirect
+}
+
 export default async function EnglishLoginPage({ searchParams }: { searchParams?: Promise<{ redirectTo?: string }> }) {
   const params = await searchParams
-  return <LocalizedLoginForm locale="en" redirectTo={safeInternalRedirect(params?.redirectTo)} />
+  return <LocalizedLoginForm locale="en" redirectTo={canonicalEnglishRedirect(params?.redirectTo)} />
 }
