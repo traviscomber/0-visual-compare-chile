@@ -18,7 +18,6 @@ const sectionPaths = {
     pricing: "/en/acceso-empresarial",
     resources: "/en/docs",
     login: "/en/auth/login",
-    start: "/#search-gateway",
   },
   es: {
     home: "/es",
@@ -28,7 +27,6 @@ const sectionPaths = {
     pricing: "/es/acceso-empresarial",
     resources: "/es/docs",
     login: "/es/auth/login",
-    start: "/es#brands",
   },
 } as const
 
@@ -69,10 +67,25 @@ function languageSwitch(active: PublicSection, locale: PublicNavLocale) {
   return { href: "/", label: "EN" }
 }
 
+function searchHref(active: PublicSection, locale: PublicNavLocale) {
+  if (locale === "en") {
+    if (active === "trademarks") return "/en/demo"
+    if (active === "patents") return "/patents#patent-preview-search"
+    if (active === "technologies") return "/en/auth/login?redirectTo=%2Ftecnologias"
+    return "/#directions"
+  }
+
+  if (active === "trademarks") return "/es/demo"
+  if (active === "patents") return "/es/patentes#patent-preview-search"
+  if (active === "technologies") return "/es/auth/login?redirectTo=%2Ftecnologias"
+  return "/es#brands"
+}
+
 export function PublicPlatformNav({ active = "home", locale = "en", sticky = true }: PublicPlatformNavProps) {
   const paths = sectionPaths[locale]
   const text = labels[locale]
   const switcher = languageSwitch(active, locale)
+  const startHref = searchHref(active, locale)
   const navItems = [
     ["trademarks", text.trademarks, paths.trademarks],
     ["patents", text.patents, paths.patents],
@@ -95,11 +108,11 @@ export function PublicPlatformNav({ active = "home", locale = "en", sticky = tru
           <Link href={paths.resources} className="hidden hover:text-white xl:inline">{text.resources}</Link>
           <Link href={switcher.href} className="text-[#96B5A6]">{switcher.label}</Link>
           <Link href={paths.login} className="hidden hover:text-white lg:inline" prefetch={false}>{text.login}</Link>
-          <Link href={paths.start} className="bg-[#4A7F74] px-4 py-2.5 text-white">{text.start}</Link>
+          <Link href={startHref} className="bg-[#4A7F74] px-4 py-2.5 text-white">{text.start}</Link>
         </div>
 
         <div className="flex items-center gap-3 md:hidden">
-          <Link href={paths.start} className="bg-[#4A7F74] px-3 py-2.5 text-[9px] font-medium tracking-[0.06em] text-white">{text.start}</Link>
+          <Link href={startHref} className="bg-[#4A7F74] px-3 py-2.5 text-[9px] font-medium tracking-[0.06em] text-white">{text.start}</Link>
           <details className="group relative">
             <summary className="cursor-pointer list-none border border-[#36515A] px-3 py-2.5 text-[9px] font-medium tracking-[0.1em] text-[#E7DFCE] [&::-webkit-details-marker]:hidden">{text.menu}</summary>
             <div className="absolute right-0 top-[calc(100%+12px)] w-[min(82vw,320px)] border border-[#294047] bg-[#091A20] p-2 shadow-2xl">
