@@ -7,7 +7,6 @@ const PUBLIC_INDEXABLE_PATHS = new Set([
   "/patents",
   "/technologies",
   "/es",
-  "/en",
   "/demo",
   "/contacto",
   "/docs",
@@ -15,9 +14,7 @@ const PUBLIC_INDEXABLE_PATHS = new Set([
   "/terminos",
   "/es/marcas",
   "/es/patentes",
-  "/en/patents",
   "/es/tecnologias",
-  "/en/technologies",
   "/es/demo",
   "/en/demo",
   "/es/docs",
@@ -33,6 +30,9 @@ const LEGACY_REDIRECTS: Record<string, string> = {
   "/comparador": "/demo",
   "/brandbook": "/",
   "/casos-de-uso": "/",
+  "/en": "/",
+  "/en/patents": "/patents",
+  "/en/technologies": "/technologies",
 }
 
 const CANONICAL_ENGLISH_PATHS = new Set(["/", "/trademarks", "/patents", "/technologies"])
