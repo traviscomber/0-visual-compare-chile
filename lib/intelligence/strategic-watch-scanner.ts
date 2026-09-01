@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
 import { hasEpoOpsCredentials, searchEpoPatentFamilies } from "@/lib/intelligence/epo-ops"
-import { searchGdeltNews } from "@/lib/intelligence/gdelt"
+import { searchGoogleNews } from "@/lib/intelligence/google-news"
 import { searchOpenAlexWorks } from "@/lib/intelligence/openalex"
 import { normalizeIntelligenceSearchText } from "@/lib/intelligence/source-change-recorder"
 
@@ -19,7 +19,7 @@ export type StrategicWatch = {
 
 export type StrategicCandidateSignal = {
   signal_key: string
-  source_key: "inapi_open_data" | "openalex" | "crossref" | "gdelt" | "epo_ops"
+  source_key: "inapi_open_data" | "openalex" | "crossref" | "google_news_rss" | "epo_ops"
   event_type: "patent" | "trademark" | "publication" | "news"
   title: string
   summary: string | null
@@ -232,17 +232,17 @@ async function scanEpoFamilies(watch: StrategicWatch): Promise<StrategicCandidat
 }
 
 async function scanNews(watch: StrategicWatch, from: Date, to: Date): Promise<StrategicCandidateSignal[]> {
-  const items = await searchGdeltNews(watch.query, from, to, 10)
+  const items = await searchGoogleNews(watch.query, from, to, 10)
   return items.map(item => ({
-    signal_key: `gdelt:news:${item.sourceRecordId}`,
-    source_key: "gdelt" as const,
+    signal_key: `google_news_rss:news:${item.sourceRecordId}`,
+    source_key: "google_news_rss" as const,
     event_type: "news" as const,
     title: item.title,
-    summary: [item.domain, item.sourceCountry].filter(Boolean).join(" · ") || "Cobertura pública reciente.",
+    summary: item.publisher || "Cobertura pública reciente.",
     source_url: item.url,
     occurred_at: item.date,
     relevance: "baja" as const,
-    payload: { domain: item.domain, source_country: item.sourceCountry, language: item.language },
+    payload: { publisher: item.publisher, role: "context_only" },
   }))
 }
 
