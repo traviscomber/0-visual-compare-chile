@@ -13,6 +13,8 @@ const [
   roadmap,
   landing,
   demo,
+  umbrellaDemo,
+  patentPreview,
   esPage,
   enPage,
   patents,
@@ -29,6 +31,8 @@ const [
   readFile("ROADMAP.md", "utf8"),
   readFile("components/localized-landing-page.tsx", "utf8"),
   readFile("components/public-intelligence-demo.tsx", "utf8"),
+  readFile("components/umbrella-demo.tsx", "utf8"),
+  readFile("components/patent-preview-search.tsx", "utf8"),
   readFile("app/es/[[...path]]/page.tsx", "utf8"),
   readFile("app/en/[[...path]]/page.tsx", "utf8"),
   readFile("components/localized-patents-page.tsx", "utf8"),
@@ -108,9 +112,31 @@ requireText(enTechnologies, 'technologiesMetadata("en")', "English technology ro
 for (const needle of ['"/marcas"', '"/patentes"', '"/tecnologias"']) requireText(sessionProxy, needle, "localized public routing")
 requireText(sessionProxy, "isLocalizedPublicPath", "localized public routing")
 
-for (const needle of ["/trademarks", "/patents", "/technologies", "START A SEARCH", "MENU"]) requireText(publicNav, needle, "shared public navigation")
+for (const needle of ["/trademarks", "/patents", "/technologies", "START A SEARCH", "MENU", "focus-visible:ring-2"]) requireText(publicNav, needle, "shared public navigation")
 requireText(publicNav, "/en/auth/login?redirectTo=%2Ftechnologies", "English technology search CTA")
 requireText(publicNav, "/es/auth/login?redirectTo=%2Fes%2Ftecnologias", "Spanish technology search CTA")
+
+for (const needle of [
+  'role="tablist"',
+  'role="tab"',
+  "aria-controls",
+  'role="tabpanel"',
+  "aria-labelledby",
+  "handleTabKeyDown",
+  'event.key === "ArrowRight"',
+  'event.key === "Home"',
+  "focus-visible:ring-2",
+]) requireText(umbrellaDemo, needle, "keyboard-accessible umbrella demo")
+
+for (const needle of [
+  'htmlFor="patent-preview-query"',
+  'id="patent-preview-query"',
+  'aria-describedby="patent-preview-description"',
+  'aria-busy={loading}',
+  'aria-live="polite"',
+  "focus-within:border-[#96B5A6]",
+  "focus-visible:ring-2",
+]) requireText(patentPreview, needle, "accessible patent preview")
 
 for (const needle of ["/patents", "/technologies"]) requireText(englishLogin, needle, "English canonical auth return")
 for (const needle of ["/es/patentes", "/es/tecnologias"]) requireText(spanishLogin, needle, "Spanish canonical auth return")
@@ -119,4 +145,4 @@ requireText(loginForm, "VIDENTIA / IP & TECHNOLOGY INTELLIGENCE", "login positio
 requireText(loginForm, "Search. Compare. Evaluate. Watch. Report.", "login positioning")
 if (loginForm.includes("VIDENTIA / trademark intelligence")) fail("login must not revert to trademark-only positioning")
 
-console.log("Public product architecture regression PASS: VIDENTIA is locked as one Brands/Patents/Technologies intelligence platform with shared navigation, locale-safe public routes, canonical auth returns, aligned workspace positioning, guarded patent claims and non-generic Bauhaus marketing surfaces.")
+console.log("Public product architecture regression PASS: VIDENTIA is locked as one Brands/Patents/Technologies intelligence platform with shared navigation, locale-safe public routes, canonical auth returns, aligned workspace positioning, guarded patent claims, non-generic Bauhaus marketing surfaces and keyboard-accessible public controls.")
