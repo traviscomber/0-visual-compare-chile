@@ -70,7 +70,7 @@ if (esPage.includes("Inteligencia y protección de marcas") || enPage.includes("
 }
 
 for (const needle of ["SOURCE ≠ ANALYSIS ≠ LEGAL CONCLUSION", "Family resolution", "jurisdictions", "citations"]) requireText(patents, needle, "public patents")
-for (const needle of ["SIGNATURE READOUT", "WHAT CHANGED", "WHO IS MOVING", "A search can become a watch."]) requireText(technologies, needle, "public technologies")
+for (const needle of ["TECHNOLOGY REPORT", "WHAT CHANGED", "WHO IS MOVING", "A search can become a watch."]) requireText(technologies, needle, "public technologies")
 requireText(esTechnologies, 'technologiesMetadata("es")', "Spanish technology route")
 requireText(enTechnologies, 'technologiesMetadata("en")', "English technology route")
 
