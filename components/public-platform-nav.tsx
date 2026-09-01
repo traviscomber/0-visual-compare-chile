@@ -71,13 +71,13 @@ function searchHref(active: PublicSection, locale: PublicNavLocale) {
   if (locale === "en") {
     if (active === "trademarks") return "/en/demo"
     if (active === "patents") return "/patents#patent-preview-search"
-    if (active === "technologies") return "/en/auth/login?redirectTo=%2Ftecnologias"
+    if (active === "technologies") return "/en/auth/login?redirectTo=%2Ftechnologies"
     return "/#directions"
   }
 
   if (active === "trademarks") return "/es/demo"
   if (active === "patents") return "/es/patentes#patent-preview-search"
-  if (active === "technologies") return "/es/auth/login?redirectTo=%2Ftecnologias"
+  if (active === "technologies") return "/es/auth/login?redirectTo=%2Fes%2Ftecnologias"
   return "/es#brands"
 }
 
