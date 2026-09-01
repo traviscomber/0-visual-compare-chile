@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { LocalizedLandingPage } from "@/components/locked-trademark-landing"
 import { PublicPlatformNav } from "@/components/public-platform-nav"
+import { PublicStructuredData } from "@/components/public-structured-data"
 
 const description = "Busca, compara, protege y monitorea marcas con inteligencia marcaria trazable."
 
@@ -33,6 +34,7 @@ export const metadata: Metadata = {
 export default function SpanishTrademarksPage() {
   return (
     <>
+      <PublicStructuredData page="trademarks-es" />
       <PublicPlatformNav active="trademarks" locale="es" />
       <div className="[&_.px-nav]:hidden">
         <LocalizedLandingPage locale="es" />
