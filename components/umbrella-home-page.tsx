@@ -39,6 +39,8 @@ const engine = [
   ["05", "REPORT", "What requires attention?"],
 ] as const
 
+const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#96B5A6] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F2A33]"
+
 function TrademarkGeometry() {
   return (
     <div className="relative h-44 w-full max-w-[260px]" aria-hidden="true">
@@ -92,8 +94,8 @@ export function UmbrellaHomePage() {
             <h1 className="mt-6 max-w-4xl text-[clamp(3.8rem,7.2vw,7.6rem)] font-light leading-[0.88] tracking-[-0.06em] text-[#E7DFCE]">Intelligence for what you build, protect and follow.</h1>
             <p className="mt-8 max-w-2xl text-base leading-8 text-[#BDBEBD]">Search, analyze and continuously monitor trademarks, patents and technologies from one intelligence platform.</p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <Link href="#directions" className="bg-[#4A7F74] px-5 py-3.5 text-xs font-medium tracking-[0.06em] text-white">START A SEARCH</Link>
-              <Link href="#engine" className="border border-[#456E8E] px-5 py-3.5 text-xs font-medium tracking-[0.06em] text-[#E7DFCE]">EXPLORE THE PLATFORM</Link>
+              <Link href="#directions" className={`bg-[#4A7F74] px-5 py-3.5 text-xs font-medium tracking-[0.06em] text-white ${focusRing}`}>START A SEARCH</Link>
+              <Link href="#engine" className={`border border-[#456E8E] px-5 py-3.5 text-xs font-medium tracking-[0.06em] text-[#E7DFCE] ${focusRing}`}>EXPLORE THE PLATFORM</Link>
             </div>
           </div>
           <div className="relative min-h-[430px] overflow-hidden bg-[#091A20] sm:min-h-[520px]" aria-hidden="true">
@@ -120,7 +122,7 @@ export function UmbrellaHomePage() {
                   <p className="text-[10px] font-medium tracking-[0.16em] text-[#96B5A6]">{item.label}</p>
                   <h3 className="mt-4 max-w-3xl text-3xl font-light leading-tight tracking-[-0.035em] text-[#E7DFCE] sm:text-4xl">{item.question}</h3>
                   <p className="mt-5 max-w-2xl text-sm leading-7 text-[#BDBEBD]">{item.body}</p>
-                  <Link href={item.href} className="mt-7 inline-block text-xs font-medium tracking-[0.08em] text-white underline decoration-[#4A7F74] underline-offset-8">{item.cta}</Link>
+                  <Link href={item.href} className={`mt-7 inline-block text-xs font-medium tracking-[0.08em] text-white underline decoration-[#4A7F74] underline-offset-8 ${focusRing}`}>{item.cta}</Link>
                 </div>
                 <VerticalGeometry type={item.visual} />
               </article>
@@ -174,7 +176,7 @@ export function UmbrellaHomePage() {
         <div className="mx-auto max-w-[1480px]">
           <h2 className="max-w-5xl text-[clamp(3.4rem,6.2vw,6.5rem)] font-light leading-[0.9] tracking-[-0.06em] text-[#E7DFCE]">What do you need to understand next?</h2>
           <div className="mt-14 grid gap-px bg-[#294047] md:grid-cols-3">
-            {verticals.map((item) => <Link key={item.label} href={item.href} className="bg-[#0F2A33] p-7 text-xs font-medium tracking-[0.08em] text-white transition-colors hover:bg-[#132F35] sm:p-9">{item.cta}</Link>)}
+            {verticals.map((item) => <Link key={item.label} href={item.href} className={`bg-[#0F2A33] p-7 text-xs font-medium tracking-[0.08em] text-white transition-colors hover:bg-[#132F35] sm:p-9 ${focusRing}`}>{item.cta}</Link>)}
           </div>
         </div>
       </section>
@@ -182,7 +184,7 @@ export function UmbrellaHomePage() {
       <footer className="border-t border-[#294047] bg-[#091A20] px-5 py-10 lg:px-10">
         <div className="mx-auto flex max-w-[1480px] flex-col justify-between gap-8 sm:flex-row sm:items-end">
           <div><strong className="text-[15px] font-normal tracking-[0.22em] text-[#E7DFCE]">ViDENTiA</strong><p className="mt-3 max-w-lg text-xs leading-6 text-[#7F918F]">Intelligence for intellectual property and technology. Research and evidence are not automatic legal conclusions.</p></div>
-          <div className="flex flex-wrap gap-5 text-[10px] tracking-[0.08em] text-[#BDBEBD]"><Link href="/trademarks">TRADEMARKS</Link><Link href="/patents">PATENTS</Link><Link href="/technologies">TECHNOLOGIES</Link></div>
+          <div className="flex flex-wrap gap-5 text-[10px] tracking-[0.08em] text-[#BDBEBD]"><Link href="/trademarks" className={focusRing}>TRADEMARKS</Link><Link href="/patents" className={focusRing}>PATENTS</Link><Link href="/technologies" className={focusRing}>TECHNOLOGIES</Link></div>
         </div>
       </footer>
     </main>
