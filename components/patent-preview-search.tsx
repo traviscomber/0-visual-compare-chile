@@ -24,6 +24,8 @@ type PreviewResponse = {
   resetAt?: string
 }
 
+const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#96B5A6] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B2027]"
+
 export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
   const [query, setQuery] = useState("")
   const [loading, setLoading] = useState(false)
@@ -37,9 +39,11 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
   const labels = locale === "es" ? {
     title: "Prueba una vista preliminar.",
     body: "Puedes hacer hasta 3 consultas por hora. Cada una muestra hasta 3 coincidencias resumidas; expedientes, solicitantes, inventores, perfiles competitivos y alertas quedan reservados al workspace empresarial.",
+    queryLabel: "Término de búsqueda de patentes",
     placeholder: "Ej. litio, NOVARTIS, baterías",
     submit: "Buscar patentes",
     loading: "Buscando",
+    resultsShown: "resultados mostrados",
     locked: "resultados adicionales fuera de esta vista preliminar",
     access: "Acceso empresarial",
     signup: "Crear acceso preliminar",
@@ -51,9 +55,11 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
   } : {
     title: "Try a preliminary view.",
     body: "You can run up to 3 queries per hour. Each shows up to 3 summarized matches; records, applicants, inventors, competitive profiles and alerts remain reserved for the enterprise workspace.",
+    queryLabel: "Patent search term",
     placeholder: "E.g. lithium, NOVARTIS, batteries",
     submit: "Search patents",
     loading: "Searching",
+    resultsShown: "results shown",
     locked: "additional results outside this preliminary view",
     access: "Enterprise access",
     signup: "Create preliminary access",
@@ -95,24 +101,34 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
   const resetLabel = limitResetAt
     ? new Date(limitResetAt).toLocaleTimeString(locale === "es" ? "es-CL" : "en-US", { hour: "2-digit", minute: "2-digit" })
     : null
+  const visibleResults = result?.results ?? []
+  const liveStatus = loading
+    ? labels.loading
+    : result
+      ? visibleResults.length === 0
+        ? labels.noResults
+        : `${visibleResults.length} ${labels.resultsShown}`
+      : ""
 
   return (
-    <section id="patent-preview-search" className="scroll-mt-24 border-y border-[#263D44] bg-[#0B2027] px-5 py-14 lg:px-10 lg:py-20">
+    <section id="patent-preview-search" aria-labelledby="patent-preview-title" className="scroll-mt-24 border-y border-[#263D44] bg-[#0B2027] px-5 py-14 lg:px-10 lg:py-20">
       <div className="mx-auto grid max-w-[1480px] gap-8 lg:grid-cols-[0.85fr_1.15fr]">
         <div>
-          <h2 className="text-[clamp(2.4rem,4vw,4.2rem)] font-light leading-[0.98] tracking-[-0.045em] text-[#E7DFCE]">{labels.title}</h2>
-          <p className="mt-5 max-w-xl text-sm leading-7 text-[#9EAAA8]">{labels.body}</p>
+          <h2 id="patent-preview-title" className="text-[clamp(2.4rem,4vw,4.2rem)] font-light leading-[0.98] tracking-[-0.045em] text-[#E7DFCE]">{labels.title}</h2>
+          <p id="patent-preview-description" className="mt-5 max-w-xl text-sm leading-7 text-[#9EAAA8]">{labels.body}</p>
         </div>
         <div>
-          <form onSubmit={submit} className="border border-[#36515A] bg-[#0F2A33] sm:flex">
+          <form onSubmit={submit} aria-busy={loading} className="border border-[#36515A] bg-[#0F2A33] transition-[border-color,box-shadow] focus-within:border-[#96B5A6] focus-within:ring-2 focus-within:ring-[#96B5A6]/30 sm:flex">
             <div className="flex min-w-0 flex-1">
               <Search className="ml-4 mt-4 h-5 w-5 shrink-0 text-[#96B5A6]" strokeWidth={1.5} aria-hidden="true" />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} maxLength={120} placeholder={labels.placeholder} className="min-w-0 flex-1 bg-transparent px-4 py-4 text-sm text-white outline-none placeholder:text-[#738180]" />
+              <label htmlFor="patent-preview-query" className="sr-only">{labels.queryLabel}</label>
+              <input id="patent-preview-query" name="query" value={query} onChange={(event) => setQuery(event.target.value)} maxLength={120} placeholder={labels.placeholder} aria-describedby="patent-preview-description" autoComplete="off" className="min-w-0 flex-1 bg-transparent px-4 py-4 text-sm text-white outline-none placeholder:text-[#738180]" />
             </div>
-            <button type="submit" disabled={query.trim().length < 2 || loading} className="inline-flex min-h-12 w-full items-center justify-center gap-2 bg-[#4A7F74] px-5 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-0 sm:w-auto sm:min-w-36 sm:py-0">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" /> : null}{loading ? labels.loading : labels.submit}
+            <button type="submit" disabled={query.trim().length < 2 || loading} className={`inline-flex min-h-12 w-full items-center justify-center gap-2 bg-[#4A7F74] px-5 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-0 sm:w-auto sm:min-w-36 sm:py-0 ${focusRing}`}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" /> : null}{loading ? labels.loading : labels.submit}
             </button>
           </form>
+          <p className="sr-only" aria-live="polite" aria-atomic="true">{liveStatus}</p>
 
           {error ? (
             <div role="alert" className="mt-4 border-l-2 border-[#C46A61] bg-[#13272D] px-4 py-4 text-sm text-[#E8B0AA]">
@@ -120,11 +136,11 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
               {resetLabel ? <p className="mt-1 text-xs text-[#BDBEBD]">{labels.limitReset} {resetLabel}.</p> : null}
               {limitResetAt ? (
                 <div className="mt-4 flex flex-wrap items-center gap-4">
-                  <Link href={signupHref} className="inline-flex min-h-10 items-center gap-2 bg-[#4A7F74] px-4 text-xs font-medium text-white hover:bg-[#568D81]">
-                    {labels.signup}<ArrowRight className="h-3.5 w-3.5" />
+                  <Link href={signupHref} className={`inline-flex min-h-10 items-center gap-2 bg-[#4A7F74] px-4 text-xs font-medium text-white hover:bg-[#568D81] ${focusRing}`}>
+                    {labels.signup}<ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                   </Link>
-                  <Link href={enterpriseHref} className="inline-flex items-center gap-2 text-xs font-medium text-[#96B5A6] hover:text-white">
-                    {labels.access}<ArrowRight className="h-3.5 w-3.5" />
+                  <Link href={enterpriseHref} className={`inline-flex items-center gap-2 text-xs font-medium text-[#96B5A6] hover:text-white ${focusRing}`}>
+                    {labels.access}<ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                   </Link>
                 </div>
               ) : null}
@@ -133,12 +149,12 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
 
           {result ? (
             <div className="mt-5 border-t border-[#263D44]">
-              {(result.results ?? []).length === 0 ? (
+              {visibleResults.length === 0 ? (
                 <div className="py-5">
                   <p className="text-sm text-[#E7DFCE]">{labels.noResults}</p>
                   <p className="mt-2 text-xs leading-5 text-[#9EAAA8]">{labels.noResultsBody}</p>
                 </div>
-              ) : (result.results ?? []).map((hit, index) => (
+              ) : visibleResults.map((hit, index) => (
                 <article key={`${hit.title}-${index}`} className="grid gap-3 border-b border-[#263D44] py-5 sm:grid-cols-[1fr_auto] sm:items-start">
                   <div>
                     <h3 className="text-base font-medium leading-6 text-[#E7DFCE]">{hit.title}</h3>
@@ -155,11 +171,11 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
                   <p className={`${(result.locked_count ?? 0) > 0 ? "mt-2 " : ""}max-w-2xl text-xs leading-5 text-[#879492]`}>{labels.signupBody}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-4 sm:justify-end">
-                  <Link href={signupHref} className="inline-flex min-h-10 items-center gap-2 bg-[#4A7F74] px-4 text-sm font-medium text-white hover:bg-[#568D81]">
-                    {labels.signup}<ArrowRight className="h-4 w-4" />
+                  <Link href={signupHref} className={`inline-flex min-h-10 items-center gap-2 bg-[#4A7F74] px-4 text-sm font-medium text-white hover:bg-[#568D81] ${focusRing}`}>
+                    {labels.signup}<ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </Link>
-                  <Link href={enterpriseHref} className="inline-flex items-center gap-2 text-sm font-medium text-[#96B5A6] hover:text-white">
-                    {labels.access}<ArrowRight className="h-4 w-4" />
+                  <Link href={enterpriseHref} className={`inline-flex items-center gap-2 text-sm font-medium text-[#96B5A6] hover:text-white ${focusRing}`}>
+                    {labels.access}<ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </Link>
                 </div>
               </div>
