@@ -31,7 +31,13 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 }
 
-const patentReportLayoutFix = `
+const patentPublicFixes = `
+.patents-public-page a:focus-visible,
+.patents-public-page button:focus-visible {
+  outline: 2px solid #96B5A6;
+  outline-offset: 3px;
+}
+
 @media (min-width: 1024px) {
   .patents-public-page > main > section:nth-of-type(6) > div {
     grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
@@ -55,8 +61,8 @@ export default function PatentsPage() {
     <>
       <PublicStructuredData page="patents" />
       <PublicPlatformNav active="patents" />
-      <style>{patentReportLayoutFix}</style>
-      <div className="patents-public-page [&>main>nav]:hidden">
+      <style>{patentPublicFixes}</style>
+      <div id="main-content" tabIndex={-1} className="patents-public-page [&>main>nav]:hidden focus:outline-none">
         <LocalizedPatentsPage locale="en" />
       </div>
     </>
