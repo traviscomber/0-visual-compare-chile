@@ -14,7 +14,7 @@
     },
     {
       "path": "/api/cron/strategic-watches",
-      "schedule": "40 * * * *"
+      "schedule": "30 * * * *"
     }
   ]
 }
