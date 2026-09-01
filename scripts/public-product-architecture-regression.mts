@@ -150,17 +150,21 @@ for (const needle of [
   "OpenAlex + Crossref",
   "INAPI Open Data",
   "INAPI Datos Abiertos",
-  "GDELT",
+  "Google News RSS",
   "EPO OPS",
   "OPERATIONAL EVIDENCE",
   "EVIDENCIA OPERACIONAL",
   "OFFICIAL MIRROR · DAILY",
   "MIRROR OFICIAL · DIARIO",
-  "CREDENTIAL-GATED COVERAGE",
-  "COBERTURA CON CREDENCIALES",
+  "OPERATIONAL CONTEXT",
+  "CONTEXTO OPERACIONAL",
+  "CLIENT READY · CREDENTIAL-GATED",
+  "CLIENTE LISTO · REQUIERE CREDENCIALES",
   "Evidence ≠ analysis. Analysis ≠ legal conclusion.",
   "Evidencia ≠ análisis. Análisis ≠ conclusión legal.",
 ]) requireText(technologyCoverage, needle, "technology source coverage")
+
+if (technologyCoverage.includes('"GDELT"')) fail("technology source coverage must not advertise disabled GDELT as operational")
 
 for (const [source, label, active] of [
   [esPatents, "Spanish patent route", 'active="patents"'],
