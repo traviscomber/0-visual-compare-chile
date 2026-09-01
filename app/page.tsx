@@ -1,10 +1,31 @@
 import type { Metadata } from "next"
 import { UmbrellaHomePage } from "@/components/umbrella-home-page"
 
+const description = "Search, analyze and continuously monitor trademarks, patents and technologies with traceable IP and technology intelligence."
+
 export const metadata: Metadata = {
-  title: "VIDENTIA — IP & Technology Intelligence",
-  description: "Search, analyze and monitor trademarks, patents and emerging technologies with traceable intelligence.",
-  alternates: { canonical: "/" },
+  title: { absolute: "VIDENTIA — IP & Technology Intelligence" },
+  description,
+  alternates: {
+    canonical: "/",
+    languages: { en: "/", "es-CL": "/es", "x-default": "/" },
+  },
+  openGraph: {
+    title: "VIDENTIA — IP & Technology Intelligence",
+    description,
+    url: "/",
+    siteName: "VIDENTIA",
+    type: "website",
+    locale: "en_US",
+    alternateLocale: ["es_CL"],
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "VIDENTIA — IP & Technology Intelligence" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "VIDENTIA — IP & Technology Intelligence",
+    description,
+    images: ["/opengraph-image"],
+  },
   robots: { index: true, follow: true },
 }
 
