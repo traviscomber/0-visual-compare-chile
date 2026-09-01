@@ -77,8 +77,16 @@ export const SOURCE_NETWORK: SourceDefinition[] = [
   {
     key: "gdelt",
     layer: "noticias",
-    purpose: "Cambios recientes y señales públicas en medios para complementar evidencia de mercado y competidores.",
+    purpose: "GDELT DOC API para búsqueda de artículos y contexto cuando el endpoint esté disponible desde el runtime.",
     automationPolicy: "allowed",
+    note: "El endpoint DOC permanece desactivado operativamente por timeout desde Vercel; no se usa como fuente canónica.",
+  },
+  {
+    key: "gdelt_raw_feed",
+    layer: "noticias",
+    purpose: "Eventos globales GDELT 2.0 normalizados desde el raw feed oficial, preservando cada observación y su evidencia de origen.",
+    automationPolicy: "allowed",
+    note: "Fuente canónica automatizada por GLOBALEVENTID; el transporte raw se publica aproximadamente cada 15 minutos.",
   },
   {
     key: "wipo_global_brand_db",
