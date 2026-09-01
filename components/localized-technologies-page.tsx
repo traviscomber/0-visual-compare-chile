@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import type { PublicLocale } from "@/lib/marketing-locale"
+import { TechnologySourceCoverage } from "@/components/technology-source-coverage"
 
 const copy = {
   es: {
@@ -170,6 +171,8 @@ export function LocalizedTechnologiesPage({ locale }: { locale: PublicLocale }) 
           <div className="mt-14 border-y border-[#294047]">{c.axes.map(([title, body], index) => <article key={title} className="grid gap-4 border-b border-[#294047] py-8 last:border-b-0 md:grid-cols-[80px_260px_1fr]"><span className="text-[10px] text-[#456E8E]">0{index + 1}</span><h3 className="text-sm font-medium tracking-[0.1em] text-[#E7DFCE]">{title}</h3><p className="max-w-3xl text-sm leading-7 text-[#BDBEBD]">{body}</p></article>)}</div>
         </div>
       </section>
+
+      <TechnologySourceCoverage locale={locale} />
 
       <section className="border-y border-[#294047] bg-[#091A20] px-5 py-24 lg:px-10 lg:py-32">
         <div className="mx-auto max-w-[1480px]">
