@@ -1,5 +1,7 @@
+import { fetchWithRetry } from "@/lib/intelligence/fetch-with-retry"
+
 const GDELT_DOC_API = "https://api.gdeltproject.org/api/v2/doc/doc"
-const TIMEOUT_MS = 9000
+const TIMEOUT_MS = 15000
 
 export type GdeltNewsSignal = {
   source: "gdelt"
@@ -24,10 +26,13 @@ export async function searchGdeltNews(query: string, from: Date, to: Date, limit
   url.searchParams.set("startdatetime", gdeltDate(from))
   url.searchParams.set("enddatetime", gdeltDate(to))
 
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     cache: "no-store",
     headers: { Accept: "application/json", "User-Agent": "VIDENTIA/1.0" },
-    signal: AbortSignal.timeout(TIMEOUT_MS),
+  }, {
+    attempts: 3,
+    baseDelayMs: 750,
+    timeoutMs: TIMEOUT_MS,
   })
   if (!response.ok) throw new Error(`GDELT respondió ${response.status}`)
 
