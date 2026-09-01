@@ -8,8 +8,8 @@ const coverage = {
     rows: [
       ["INVESTIGACIÓN", "OpenAlex + Crossref", "EVIDENCIA OPERACIONAL", "Publicaciones, DOI, autores e instituciones para observar recurrencia temática y dirección temporal. VIDENTIA ya registra señales provenientes de ambas fuentes."],
       ["PATENTES · CHILE", "INAPI Datos Abiertos", "MIRROR OFICIAL · DIARIO", "Solicitudes, fechas, estados, IPC, solicitantes y procedencia oficial de Chile. La evidencia se conserva separada del análisis."],
-      ["CONTEXTO PÚBLICO", "GDELT", "CONECTOR DE CONTEXTO", "Noticias y actividad pública pueden contextualizar un movimiento. No se usan por sí solas para declarar una tendencia."],
-      ["FAMILIAS GLOBALES", "EPO OPS", "COBERTURA CON CREDENCIALES", "Familias internacionales, bibliografía y estado legal requieren cobertura EPO OPS configurada. Mientras no esté disponible en runtime, VIDENTIA declara ese límite en lugar de inferir ausencia."],
+      ["CONTEXTO PÚBLICO", "Google News RSS", "CONTEXTO OPERACIONAL", "Noticias públicas recientes contextualizan un movimiento con fuente y fecha. Se mantienen como contexto de baja relevancia y nunca se usan por sí solas para declarar una tendencia."],
+      ["FAMILIAS GLOBALES", "EPO OPS", "CLIENTE LISTO · REQUIERE CREDENCIALES", "El cliente OAuth, búsqueda bibliográfica y familias simples ya están integrados. La cobertura se activa sólo cuando las credenciales EPO OPS están configuradas; hasta entonces el sistema declara el límite."],
     ],
     note: "Cobertura de fuente ≠ exhaustividad. Evidencia ≠ análisis. Análisis ≠ conclusión legal.",
   },
@@ -20,8 +20,8 @@ const coverage = {
     rows: [
       ["RESEARCH", "OpenAlex + Crossref", "OPERATIONAL EVIDENCE", "Publications, DOI metadata, authors and institutions for observing recurring topics and temporal direction. VIDENTIA already records signals from both sources."],
       ["PATENTS · CHILE", "INAPI Open Data", "OFFICIAL MIRROR · DAILY", "Applications, dates, status, IPC, applicants and official Chilean provenance. Evidence remains separate from analysis."],
-      ["PUBLIC CONTEXT", "GDELT", "CONTEXT CONNECTOR", "News and public activity can contextualize movement. They are not used on their own to declare a trend."],
-      ["GLOBAL FAMILIES", "EPO OPS", "CREDENTIAL-GATED COVERAGE", "International families, bibliography and legal status require configured EPO OPS coverage. Until it is runtime-ready, VIDENTIA declares the limitation instead of inferring absence."],
+      ["PUBLIC CONTEXT", "Google News RSS", "OPERATIONAL CONTEXT", "Recent public news contextualizes movement with source and date. It remains low-relevance context and is never used on its own to declare a trend."],
+      ["GLOBAL FAMILIES", "EPO OPS", "CLIENT READY · CREDENTIAL-GATED", "OAuth, bibliographic search and simple-family retrieval are integrated. Coverage activates only when EPO OPS credentials are configured; until then VIDENTIA declares the limitation."],
     ],
     note: "Source coverage ≠ completeness. Evidence ≠ analysis. Analysis ≠ legal conclusion.",
   },
