@@ -23,6 +23,7 @@ const [
   esTrademarkRoute,
   patents,
   technologies,
+  technologyCoverage,
   patentRoute,
   technologyRoute,
   esPatents,
@@ -47,6 +48,7 @@ const [
   readFile("app/es/marcas/page.tsx", "utf8"),
   readFile("components/localized-patents-page.tsx", "utf8"),
   readFile("components/localized-technologies-page.tsx", "utf8"),
+  readFile("components/technology-source-coverage.tsx", "utf8"),
   readFile("app/patents/page.tsx", "utf8"),
   readFile("app/technologies/page.tsx", "utf8"),
   readFile("app/es/patentes/page.tsx", "utf8"),
@@ -86,12 +88,12 @@ for (const needle of [
   "/images/videntia-hero-comparison-hd.webp",
 ]) requireText(landing, needle, "umbrella landing")
 
-if (landing.includes("from \"lucide-react\"") || patents.includes("from \"lucide-react\"") || technologies.includes("from \"lucide-react\"")) {
+if (landing.includes("from \"lucide-react\"") || patents.includes("from \"lucide-react\"") || technologies.includes("from \"lucide-react\"") || technologyCoverage.includes("from \"lucide-react\"")) {
   fail("public umbrella, patent and technology surfaces must not depend on generic Lucide icon language")
 }
 
 for (const forbidden of ["bg-gradient", "linear-gradient", "radial-gradient", "glassmorphism"]) {
-  if (landing.includes(forbidden) || patents.includes(forbidden) || technologies.includes(forbidden)) {
+  if (landing.includes(forbidden) || patents.includes(forbidden) || technologies.includes(forbidden) || technologyCoverage.includes(forbidden)) {
     fail(`public product surfaces must not use forbidden visual language: ${forbidden}`)
   }
 }
@@ -141,7 +143,24 @@ for (const [source, label, text] of [
 }
 
 for (const needle of ["SOURCE ≠ ANALYSIS ≠ LEGAL CONCLUSION", "Family resolution", "jurisdictions", "citations"]) requireText(patents, needle, "public patents")
-for (const needle of ["TECHNOLOGY REPORT", "WHAT CHANGED", "WHO IS MOVING", "A search can become a watch."]) requireText(technologies, needle, "public technologies")
+for (const needle of ["TECHNOLOGY REPORT", "WHAT CHANGED", "WHO IS MOVING", "A search can become a watch.", "TechnologySourceCoverage"]) requireText(technologies, needle, "public technologies")
+
+for (const needle of [
+  "SOURCE COVERAGE",
+  "OpenAlex + Crossref",
+  "INAPI Open Data",
+  "INAPI Datos Abiertos",
+  "GDELT",
+  "EPO OPS",
+  "OPERATIONAL EVIDENCE",
+  "EVIDENCIA OPERACIONAL",
+  "OFFICIAL MIRROR · DAILY",
+  "MIRROR OFICIAL · DIARIO",
+  "CREDENTIAL-GATED COVERAGE",
+  "COBERTURA CON CREDENCIALES",
+  "Evidence ≠ analysis. Analysis ≠ legal conclusion.",
+  "Evidencia ≠ análisis. Análisis ≠ conclusión legal.",
+]) requireText(technologyCoverage, needle, "technology source coverage")
 
 for (const [source, label, active] of [
   [esPatents, "Spanish patent route", 'active="patents"'],
@@ -233,4 +252,4 @@ requireText(loginForm, "VIDENTIA / IP & TECHNOLOGY INTELLIGENCE", "login positio
 requireText(loginForm, "Search. Compare. Evaluate. Watch. Report.", "login positioning")
 if (loginForm.includes("VIDENTIA / trademark intelligence")) fail("login must not revert to trademark-only positioning")
 
-console.log("Public product architecture regression PASS: VIDENTIA is locked as one Brands/Patents/Technologies intelligence platform with shared navigation, locale-safe public routes, canonical auth returns, aligned workspace positioning, guarded patent claims, patent evidence provenance, non-generic Bauhaus marketing surfaces, skip navigation and keyboard-accessible public controls.")
+console.log("Public product architecture regression PASS: VIDENTIA is locked as one Brands/Patents/Technologies intelligence platform with shared navigation, locale-safe public routes, canonical auth returns, aligned workspace positioning, guarded patent claims, patent evidence provenance, explicit technology source coverage, non-generic Bauhaus marketing surfaces, skip navigation and keyboard-accessible public controls.")
