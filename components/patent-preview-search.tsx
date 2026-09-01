@@ -31,7 +31,7 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
   const [error, setError] = useState<string | null>(null)
   const [limitResetAt, setLimitResetAt] = useState<string | null>(null)
   const base = `/${locale}`
-  const publicReturn = locale === "es" ? "/es/patentes" : "/en/patents"
+  const publicReturn = locale === "es" ? "/es/patentes" : "/patents"
   const signupHref = `${base}/auth/sign-up?redirectTo=${encodeURIComponent(publicReturn)}`
   const enterpriseHref = `${base}/acceso-empresarial`
   const labels = locale === "es" ? {
@@ -97,7 +97,7 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
     : null
 
   return (
-    <section className="border-y border-[#263D44] bg-[#0B2027] px-5 py-14 lg:px-10 lg:py-20">
+    <section id="patent-preview-search" className="scroll-mt-24 border-y border-[#263D44] bg-[#0B2027] px-5 py-14 lg:px-10 lg:py-20">
       <div className="mx-auto grid max-w-[1480px] gap-8 lg:grid-cols-[0.85fr_1.15fr]">
         <div>
           <h2 className="text-[clamp(2.4rem,4vw,4.2rem)] font-light leading-[0.98] tracking-[-0.045em] text-[#E7DFCE]">{labels.title}</h2>
