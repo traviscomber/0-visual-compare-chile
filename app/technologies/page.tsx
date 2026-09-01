@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { LocalizedTechnologiesPage } from "@/components/localized-technologies-page"
 import { PublicPlatformNav } from "@/components/public-platform-nav"
+import { PublicStructuredData } from "@/components/public-structured-data"
 
 const description = "Track R&D, patents, research, companies and technology signals with traceable intelligence."
 
@@ -33,6 +34,7 @@ export const metadata: Metadata = {
 export default function TechnologiesPage() {
   return (
     <>
+      <PublicStructuredData page="technologies" />
       <PublicPlatformNav active="technologies" />
       <div className="[&>main>nav]:hidden">
         <LocalizedTechnologiesPage locale="en" />
