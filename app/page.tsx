@@ -36,7 +36,9 @@ export default function RootPage() {
     <>
       <PublicStructuredData page="home" />
       <PublicPlatformNav />
-      <UmbrellaHomePage />
+      <div id="main-content" tabIndex={-1} className="focus:outline-none">
+        <UmbrellaHomePage />
+      </div>
     </>
   )
 }
