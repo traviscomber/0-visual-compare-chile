@@ -36,7 +36,7 @@ export default function TrademarksPage() {
     <>
       <PublicStructuredData page="trademarks" />
       <PublicPlatformNav active="trademarks" />
-      <div className="[&_.px-nav]:hidden">
+      <div id="main-content" tabIndex={-1} className="[&_.px-nav]:hidden focus:outline-none">
         <LocalizedLandingPage locale="en" />
       </div>
     </>
