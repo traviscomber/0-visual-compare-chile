@@ -85,6 +85,17 @@ for (const forbidden of ["bg-gradient", "linear-gradient", "radial-gradient", "g
 }
 
 for (const needle of ["BRAND", "PATENT", "TECHNOLOGY", "The same system. Three ways to ask."]) requireText(demo, needle, "product demo")
+for (const needle of [
+  'role="tablist"',
+  'role="tab"',
+  "aria-controls",
+  'role="tabpanel"',
+  "aria-labelledby",
+  "handleTabKeyDown",
+  'event.key === "ArrowRight"',
+  'event.key === "Home"',
+  "focus-visible:ring-2",
+]) requireText(demo, needle, "live product demo accessibility")
 
 requireText(esPage, "Inteligencia de propiedad intelectual y tecnología", "Spanish metadata")
 requireText(esPage, "marcas, patentes y tecnologías", "Spanish metadata")
