@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
 import { hasEpoOpsCredentials, searchEpoPatentFamilies } from "@/lib/intelligence/epo-ops"
-import { searchGdeltNews } from "@/lib/intelligence/gdelt"
+import { searchGoogleNews } from "@/lib/intelligence/google-news"
 import {
   failIntelligenceIngestion,
   finishIntelligenceIngestion,
@@ -124,7 +124,7 @@ async function runSourceProbes(admin: ReturnType<typeof createAdminClient>, quer
   const probes = await Promise.all([
     probeSource(admin, "openalex", async () => (await searchOpenAlexWorks(query, fromScience, now, 3)).length),
     probeSource(admin, "crossref", async () => (await searchCrossrefWorks(query, fromScience, now, 3)).length),
-    probeSource(admin, "gdelt", async () => (await searchGdeltNews(query, fromNews, now, 3)).length),
+    probeSource(admin, "google_news_rss", async () => (await searchGoogleNews(query, fromNews, now, 3)).length),
   ])
 
   if (hasEpoOpsCredentials()) {
@@ -138,7 +138,7 @@ async function runSourceProbes(admin: ReturnType<typeof createAdminClient>, quer
 
 async function probeSource(
   admin: ReturnType<typeof createAdminClient>,
-  sourceKey: "openalex" | "crossref" | "gdelt" | "epo_ops",
+  sourceKey: "openalex" | "crossref" | "google_news_rss" | "epo_ops",
   operation: () => Promise<number>,
 ): Promise<ProbeResult> {
   let ingestion: Awaited<ReturnType<typeof startIntelligenceIngestion>> | null = null
