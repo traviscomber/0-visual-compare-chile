@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
 import { hasEpoOpsCredentials, searchEpoPatentFamilies } from "@/lib/intelligence/epo-ops"
-import { probeGdeltAwsOpenData } from "@/lib/intelligence/gdelt-aws"
+import { probeGdeltRawFeed } from "@/lib/intelligence/gdelt-raw-feed"
 import { searchGoogleNews } from "@/lib/intelligence/google-news"
 import {
   failIntelligenceIngestion,
@@ -138,27 +138,26 @@ async function runSourceProbes(admin: ReturnType<typeof createAdminClient>, quer
   ])
 
   try {
-    const aws = await probeGdeltAwsOpenData(now)
+    const raw = await probeGdeltRawFeed(now)
     probes.push({
-      source: "gdelt_aws_open_data",
+      source: "gdelt_raw_feed",
       ok: true,
       fetched: 1,
       blocking: false,
       details: {
-        bucket: aws.bucket,
-        prefix: aws.prefix,
-        listStatus: aws.listStatus,
-        objectKey: aws.objectKey,
-        objectSize: aws.objectSize,
-        lastModified: aws.lastModified,
-        rangeStatus: aws.rangeStatus,
-        sampleBytes: aws.sampleBytes,
-        firstRowColumns: aws.firstRowColumns,
+        lastUpdateStatus: raw.lastUpdateStatus,
+        artifactStatus: raw.artifactStatus,
+        artifactUrl: raw.artifactUrl,
+        artifactBytes: raw.artifactBytes,
+        artifactTimestamp: raw.artifactTimestamp,
+        ageMinutes: raw.ageMinutes,
+        sampleBytes: raw.sampleBytes,
+        zipMagic: raw.zipMagic,
       },
     })
   } catch (error) {
     probes.push({
-      source: "gdelt_aws_open_data",
+      source: "gdelt_raw_feed",
       ok: false,
       fetched: 0,
       blocking: false,
