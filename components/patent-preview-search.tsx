@@ -104,10 +104,12 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
           <p className="mt-5 max-w-xl text-sm leading-7 text-[#9EAAA8]">{labels.body}</p>
         </div>
         <div>
-          <form onSubmit={submit} className="flex border border-[#36515A] bg-[#0F2A33]">
-            <Search className="ml-4 mt-4 h-5 w-5 shrink-0 text-[#96B5A6]" strokeWidth={1.5} aria-hidden="true" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} maxLength={120} placeholder={labels.placeholder} className="min-w-0 flex-1 bg-transparent px-4 py-4 text-sm text-white outline-none placeholder:text-[#738180]" />
-            <button type="submit" disabled={query.trim().length < 2 || loading} className="inline-flex min-w-36 items-center justify-center gap-2 bg-[#4A7F74] px-5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-45">
+          <form onSubmit={submit} className="border border-[#36515A] bg-[#0F2A33] sm:flex">
+            <div className="flex min-w-0 flex-1">
+              <Search className="ml-4 mt-4 h-5 w-5 shrink-0 text-[#96B5A6]" strokeWidth={1.5} aria-hidden="true" />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} maxLength={120} placeholder={labels.placeholder} className="min-w-0 flex-1 bg-transparent px-4 py-4 text-sm text-white outline-none placeholder:text-[#738180]" />
+            </div>
+            <button type="submit" disabled={query.trim().length < 2 || loading} className="inline-flex min-h-12 w-full items-center justify-center gap-2 bg-[#4A7F74] px-5 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-0 sm:w-auto sm:min-w-36 sm:py-0">
               {loading ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" /> : null}{loading ? labels.loading : labels.submit}
             </button>
           </form>
