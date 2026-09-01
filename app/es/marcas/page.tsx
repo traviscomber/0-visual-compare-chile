@@ -36,7 +36,7 @@ export default function SpanishTrademarksPage() {
     <>
       <PublicStructuredData page="trademarks-es" />
       <PublicPlatformNav active="trademarks" locale="es" />
-      <div className="[&_.px-nav]:hidden">
+      <div id="main-content" tabIndex={-1} className="[&_.px-nav]:hidden focus:outline-none">
         <LocalizedLandingPage locale="es" />
       </div>
     </>
