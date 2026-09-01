@@ -24,6 +24,7 @@ const [
   sessionProxy,
   englishLogin,
   spanishLogin,
+  loginForm,
 ] = await Promise.all([
   readFile("ROADMAP.md", "utf8"),
   readFile("components/localized-landing-page.tsx", "utf8"),
@@ -39,6 +40,7 @@ const [
   readFile("lib/supabase/proxy.ts", "utf8"),
   readFile("app/en/auth/login/page.tsx", "utf8"),
   readFile("app/es/auth/login/page.tsx", "utf8"),
+  readFile("components/localized-login-form.tsx", "utf8"),
 ])
 
 for (const needle of [
@@ -113,4 +115,8 @@ requireText(publicNav, "/es/auth/login?redirectTo=%2Fes%2Ftecnologias", "Spanish
 for (const needle of ["/patents", "/technologies"]) requireText(englishLogin, needle, "English canonical auth return")
 for (const needle of ["/es/patentes", "/es/tecnologias"]) requireText(spanishLogin, needle, "Spanish canonical auth return")
 
-console.log("Public product architecture regression PASS: VIDENTIA is locked as one Brands/Patents/Technologies intelligence platform with shared navigation, locale-safe public routes, canonical auth returns, guarded patent claims and non-generic Bauhaus marketing surfaces.")
+requireText(loginForm, "VIDENTIA / IP & TECHNOLOGY INTELLIGENCE", "login positioning")
+requireText(loginForm, "Search. Compare. Evaluate. Watch. Report.", "login positioning")
+if (loginForm.includes("VIDENTIA / trademark intelligence")) fail("login must not revert to trademark-only positioning")
+
+console.log("Public product architecture regression PASS: VIDENTIA is locked as one Brands/Patents/Technologies intelligence platform with shared navigation, locale-safe public routes, canonical auth returns, aligned workspace positioning, guarded patent claims and non-generic Bauhaus marketing surfaces.")
