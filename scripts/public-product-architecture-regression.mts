@@ -17,8 +17,13 @@ const [
   patentPreview,
   esPage,
   enPage,
+  rootPage,
+  trademarkRoute,
+  esTrademarkRoute,
   patents,
   technologies,
+  patentRoute,
+  technologyRoute,
   esPatents,
   esTechnologies,
   enTechnologies,
@@ -35,8 +40,13 @@ const [
   readFile("components/patent-preview-search.tsx", "utf8"),
   readFile("app/es/[[...path]]/page.tsx", "utf8"),
   readFile("app/en/[[...path]]/page.tsx", "utf8"),
+  readFile("app/page.tsx", "utf8"),
+  readFile("app/trademarks/page.tsx", "utf8"),
+  readFile("app/es/marcas/page.tsx", "utf8"),
   readFile("components/localized-patents-page.tsx", "utf8"),
   readFile("components/localized-technologies-page.tsx", "utf8"),
+  readFile("app/patents/page.tsx", "utf8"),
+  readFile("app/technologies/page.tsx", "utf8"),
   readFile("app/es/patentes/page.tsx", "utf8"),
   readFile("app/es/tecnologias/page.tsx", "utf8"),
   readFile("app/en/technologies/page.tsx", "utf8"),
@@ -106,6 +116,28 @@ if (esPage.includes("Inteligencia y protección de marcas") || enPage.includes("
   fail("root public metadata must not revert to trademark-only positioning")
 }
 
+for (const [source, label] of [
+  [rootPage, "canonical root route"],
+  [trademarkRoute, "English trademark route"],
+  [esTrademarkRoute, "Spanish trademark route"],
+  [patentRoute, "English patent route"],
+  [technologyRoute, "English technology route"],
+  [esPatents, "Spanish patent route"],
+  [esTechnologies, "Spanish technology route"],
+] as const) {
+  requireText(source, 'id="main-content"', label)
+  requireText(source, "tabIndex={-1}", label)
+}
+
+for (const [source, label, text] of [
+  [enPage, "English legacy root", "SKIP TO CONTENT"],
+  [esPage, "Spanish public root", "SALTAR AL CONTENIDO"],
+] as const) {
+  requireText(source, 'href="#main-content"', label)
+  requireText(source, 'id="main-content"', label)
+  requireText(source, text, label)
+}
+
 for (const needle of ["SOURCE ≠ ANALYSIS ≠ LEGAL CONCLUSION", "Family resolution", "jurisdictions", "citations"]) requireText(patents, needle, "public patents")
 for (const needle of ["TECHNOLOGY REPORT", "WHAT CHANGED", "WHO IS MOVING", "A search can become a watch."]) requireText(technologies, needle, "public technologies")
 
@@ -123,9 +155,26 @@ requireText(enTechnologies, 'technologiesMetadata("en")', "English technology ro
 for (const needle of ['"/marcas"', '"/patentes"', '"/tecnologias"']) requireText(sessionProxy, needle, "localized public routing")
 requireText(sessionProxy, "isLocalizedPublicPath", "localized public routing")
 
-for (const needle of ["/trademarks", "/patents", "/technologies", "START A SEARCH", "MENU", "focus-visible:ring-2"]) requireText(publicNav, needle, "shared public navigation")
+for (const needle of [
+  "/trademarks",
+  "/patents",
+  "/technologies",
+  "START A SEARCH",
+  "MENU",
+  "focus-visible:ring-2",
+  'href="#main-content"',
+  "SKIP TO CONTENT",
+  "SALTAR AL CONTENIDO",
+]) requireText(publicNav, needle, "shared public navigation")
 requireText(publicNav, "/en/auth/login?redirectTo=%2Ftechnologies", "English technology search CTA")
 requireText(publicNav, "/es/auth/login?redirectTo=%2Fes%2Ftecnologias", "Spanish technology search CTA")
+
+for (const [source, label] of [
+  [patentRoute, "English patent route focus"],
+  [esPatents, "Spanish patent route focus"],
+  [technologyRoute, "English technology route focus"],
+  [esTechnologies, "Spanish technology route focus"],
+] as const) requireText(source, ":focus-visible", label)
 
 for (const needle of [
   'role="tablist"',
@@ -156,4 +205,4 @@ requireText(loginForm, "VIDENTIA / IP & TECHNOLOGY INTELLIGENCE", "login positio
 requireText(loginForm, "Search. Compare. Evaluate. Watch. Report.", "login positioning")
 if (loginForm.includes("VIDENTIA / trademark intelligence")) fail("login must not revert to trademark-only positioning")
 
-console.log("Public product architecture regression PASS: VIDENTIA is locked as one Brands/Patents/Technologies intelligence platform with shared navigation, locale-safe public routes, canonical auth returns, aligned workspace positioning, guarded patent claims, non-generic Bauhaus marketing surfaces and keyboard-accessible public controls.")
+console.log("Public product architecture regression PASS: VIDENTIA is locked as one Brands/Patents/Technologies intelligence platform with shared navigation, locale-safe public routes, canonical auth returns, aligned workspace positioning, guarded patent claims, non-generic Bauhaus marketing surfaces, skip navigation and keyboard-accessible public controls.")
