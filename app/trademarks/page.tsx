@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { LocalizedLandingPage } from "@/components/locked-trademark-landing"
+import { PublicPlatformNav } from "@/components/public-platform-nav"
 
 const description = "Search, compare, protect and monitor brands with traceable trademark intelligence."
 
@@ -30,5 +31,12 @@ export const metadata: Metadata = {
 }
 
 export default function TrademarksPage() {
-  return <LocalizedLandingPage locale="en" canonicalNav />
+  return (
+    <>
+      <PublicPlatformNav active="trademarks" />
+      <div className="[&_.px-nav]:hidden">
+        <LocalizedLandingPage locale="en" />
+      </div>
+    </>
+  )
 }
