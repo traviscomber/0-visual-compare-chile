@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { UmbrellaHomePage } from "@/components/umbrella-home-page"
+import { PublicPlatformNav } from "@/components/public-platform-nav"
 
 const description = "Search, analyze and continuously monitor trademarks, patents and technologies with traceable IP and technology intelligence."
 
@@ -30,5 +31,12 @@ export const metadata: Metadata = {
 }
 
 export default function RootPage() {
-  return <UmbrellaHomePage />
+  return (
+    <>
+      <PublicPlatformNav />
+      <div className="[&>main>nav]:hidden">
+        <UmbrellaHomePage />
+      </div>
+    </>
+  )
 }
