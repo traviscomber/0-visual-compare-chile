@@ -15,6 +15,9 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
 
+const COMPANY_ACTIVITY_BATCH_LIMIT = 500
+const COMPANY_ACTIVITY_MAX_BATCHES = 24
+
 type IngestionHandle = Awaited<ReturnType<typeof startIntelligenceIngestion>>
 
 type RunCounts = {
@@ -22,6 +25,17 @@ type RunCounts = {
   inserted: number
   updated: number
   rejected: number
+}
+
+type CompanyActivityBatch = Record<string, unknown> & {
+  done?: boolean
+  batch_records?: number
+  identity_upserts?: number
+  alias_upserts?: number
+  activity_upserts?: number
+  reviews_pending?: number
+  window_start?: string
+  window_end?: string
 }
 
 export async function GET(request: Request) {
@@ -80,17 +94,11 @@ export async function GET(request: Request) {
     const activitySince = [trademarks.startedAt, patents.startedAt]
       .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0]
 
-    // Maintain the company/titular identity layer from exactly the records touched
-    // in this sync. Historical patent backfill runs later and cannot pollute the
-    // 12-month direction comparison.
+    // Keep each PostgREST statement comfortably under Supabase's 8-second
+    // authenticator statement_timeout. The database function persists a fixed
+    // upper watermark and keyset cursor, so retries resume without skipping rows.
     stage = "company_activity_refresh"
-    const { data: companyActivity, error: companyActivityError } = await admin.rpc(
-      "refresh_company_ip_activity_from_sync",
-      { p_since: activitySince },
-    )
-    if (companyActivityError) {
-      throw new Error(`Company activity refresh failed: ${companyActivityError.message}`)
-    }
+    const companyActivity = await refreshCompanyActivityBatches(admin, activitySince)
 
     coreMetadata = {
       countSemantics: "inserted_count stores current-year upserts; updated_count stores detected change events",
@@ -248,5 +256,47 @@ export async function GET(request: Request) {
       },
       { status: 500 },
     )
+  }
+}
+
+async function refreshCompanyActivityBatches(
+  admin: ReturnType<typeof createAdminClient>,
+  activitySince: string,
+) {
+  const batches: CompanyActivityBatch[] = []
+
+  for (let index = 0; index < COMPANY_ACTIVITY_MAX_BATCHES; index += 1) {
+    const { data, error } = await admin.rpc("refresh_company_ip_activity_from_sync_batch", {
+      p_since: activitySince,
+      p_limit: COMPANY_ACTIVITY_BATCH_LIMIT,
+    })
+
+    if (error) {
+      throw new Error(`Company activity refresh batch ${index + 1} failed: ${error.message}`)
+    }
+
+    const batch = (data ?? {}) as CompanyActivityBatch
+    batches.push(batch)
+    if (batch.done === true) return summarizeCompanyActivityBatches(batches)
+  }
+
+  throw new Error(`Company activity refresh exceeded ${COMPANY_ACTIVITY_MAX_BATCHES} batches without reaching its checkpoint.`)
+}
+
+function summarizeCompanyActivityBatches(batches: CompanyActivityBatch[]) {
+  const first = batches[0]
+  const last = batches[batches.length - 1]
+  const sum = (key: keyof CompanyActivityBatch) => batches.reduce((total, batch) => total + Number(batch[key] ?? 0), 0)
+
+  return {
+    done: last?.done === true,
+    batches: batches.length,
+    batchRecords: sum("batch_records"),
+    identityUpserts: sum("identity_upserts"),
+    aliasUpserts: sum("alias_upserts"),
+    activityUpserts: sum("activity_upserts"),
+    reviewsPending: sum("reviews_pending"),
+    windowStart: first?.window_start ?? null,
+    windowEnd: last?.window_end ?? null,
   }
 }
