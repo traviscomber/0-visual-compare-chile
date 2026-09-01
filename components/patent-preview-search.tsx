@@ -10,6 +10,10 @@ type PreviewHit = {
   status: string | null
   country: string | null
   ipc: string[]
+  application_number: string | null
+  filing_date: string | null
+  source_url: string | null
+  last_synced_at: string | null
 }
 
 type PreviewResponse = {
@@ -19,12 +23,30 @@ type PreviewResponse = {
   locked_count?: number
   source?: string
   newest_sync?: string | null
+  coverage?: {
+    source_jurisdiction?: string
+    source_host?: string
+    includes?: string[]
+    excludes?: string[]
+  }
   error?: string
   code?: string
   resetAt?: string
 }
 
 const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#96B5A6] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B2027]"
+
+function formatEvidenceDate(value: string | null | undefined, locale: PublicLocale) {
+  if (!value) return null
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00Z` : value
+  const date = new Date(normalized)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleDateString(locale === "es" ? "es-CL" : "en-US", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  })
+}
 
 export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
   const [query, setQuery] = useState("")
@@ -38,7 +60,7 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
   const enterpriseHref = `${base}/acceso-empresarial`
   const labels = locale === "es" ? {
     title: "Prueba una vista preliminar.",
-    body: "Puedes hacer hasta 3 consultas por hora. Cada una muestra hasta 3 coincidencias resumidas; expedientes, solicitantes, inventores, perfiles competitivos y alertas quedan reservados al workspace empresarial.",
+    body: "Puedes hacer hasta 3 consultas por hora. Cada una muestra hasta 3 coincidencias resumidas con procedencia de evidencia pública; expedientes completos, solicitantes, inventores, perfiles competitivos y alertas quedan reservados al workspace empresarial.",
     queryLabel: "Término de búsqueda de patentes",
     placeholder: "Ej. litio, NOVARTIS, baterías",
     submit: "Buscar patentes",
@@ -52,9 +74,17 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
     noResultsBody: "Puedes probar otro término o crear tu acceso preliminar para seguir explorando VIDENTIA.",
     limitTitle: "Ya usaste las 3 consultas preliminares de esta hora.",
     limitReset: "Podrás volver a probar",
+    coverageTitle: "COBERTURA DE EVIDENCIA",
+    coverageBody: "Referencia de solicitud, fecha, país, estado e IPC desde el espejo de datos abiertos chilenos. Familias internacionales, citas y conclusiones de patentabilidad/FTO no forman parte de esta vista preliminar.",
+    source: "FUENTE",
+    sync: "ESPEJO ACTUALIZADO",
+    application: "SOLICITUD",
+    filed: "PRESENTADA",
+    officialDataset: "DATASET OFICIAL",
+    preliminary: "EVIDENCIA PRELIMINAR · NO ES CONCLUSIÓN LEGAL",
   } : {
     title: "Try a preliminary view.",
-    body: "You can run up to 3 queries per hour. Each shows up to 3 summarized matches; records, applicants, inventors, competitive profiles and alerts remain reserved for the enterprise workspace.",
+    body: "You can run up to 3 queries per hour. Each shows up to 3 summarized matches with public evidence provenance; full records, applicants, inventors, competitive profiles and alerts remain reserved for the enterprise workspace.",
     queryLabel: "Patent search term",
     placeholder: "E.g. lithium, NOVARTIS, batteries",
     submit: "Search patents",
@@ -68,6 +98,14 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
     noResultsBody: "Try another term or create preliminary access to keep exploring VIDENTIA.",
     limitTitle: "You have used the 3 preliminary queries available this hour.",
     limitReset: "You can try again",
+    coverageTitle: "EVIDENCE COVERAGE",
+    coverageBody: "Application reference, filing date, country, status and IPC from the Chilean open-data mirror. International families, citations and patentability/FTO conclusions are not included in this preliminary view.",
+    source: "SOURCE",
+    sync: "MIRROR UPDATED",
+    application: "APPLICATION",
+    filed: "FILED",
+    officialDataset: "OFFICIAL DATASET",
+    preliminary: "PRELIMINARY EVIDENCE · NOT A LEGAL CONCLUSION",
   }
 
   const submit = async (event: FormEvent) => {
@@ -102,6 +140,7 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
     ? new Date(limitResetAt).toLocaleTimeString(locale === "es" ? "es-CL" : "en-US", { hour: "2-digit", minute: "2-digit" })
     : null
   const visibleResults = result?.results ?? []
+  const newestSyncLabel = formatEvidenceDate(result?.newest_sync, locale)
   const liveStatus = loading
     ? labels.loading
     : result
@@ -149,21 +188,49 @@ export function PatentPreviewSearch({ locale }: { locale: PublicLocale }) {
 
           {result ? (
             <div className="mt-5 border-t border-[#263D44]">
+              {visibleResults.length > 0 ? (
+                <div className="border-b border-[#263D44] py-5">
+                  <p className="text-[10px] font-medium tracking-[0.16em] text-[#96B5A6]">{labels.coverageTitle}</p>
+                  <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[11px] text-[#BDBEBD]">
+                    {result.source ? <span><span className="text-[#6F807E]">{labels.source}</span> · {result.source}</span> : null}
+                    {newestSyncLabel ? <span><span className="text-[#6F807E]">{labels.sync}</span> · {newestSyncLabel}</span> : null}
+                  </div>
+                  <p className="mt-3 max-w-2xl text-xs leading-5 text-[#879492]">{labels.coverageBody}</p>
+                </div>
+              ) : null}
+
               {visibleResults.length === 0 ? (
                 <div className="py-5">
                   <p className="text-sm text-[#E7DFCE]">{labels.noResults}</p>
                   <p className="mt-2 text-xs leading-5 text-[#9EAAA8]">{labels.noResultsBody}</p>
                 </div>
-              ) : visibleResults.map((hit, index) => (
-                <article key={`${hit.title}-${index}`} className="grid gap-3 border-b border-[#263D44] py-5 sm:grid-cols-[1fr_auto] sm:items-start">
-                  <div>
-                    <h3 className="text-base font-medium leading-6 text-[#E7DFCE]">{hit.title}</h3>
-                    <p className="mt-2 text-xs text-[#879492]">{hit.country || "—"} · {hit.status || "—"}</p>
-                    <div className="mt-3 flex flex-wrap gap-2">{hit.ipc.map((code) => <span key={code} className="font-mono text-[10px] text-[#96B5A6]">IPC {code}</span>)}</div>
-                  </div>
-                  <span className="text-[10px] uppercase tracking-[0.16em] text-[#6F807E]">Preview</span>
-                </article>
-              ))}
+              ) : visibleResults.map((hit, index) => {
+                const filingDate = formatEvidenceDate(hit.filing_date, locale)
+                const syncDate = formatEvidenceDate(hit.last_synced_at, locale)
+                return (
+                  <article key={`${hit.application_number || hit.title}-${index}`} className="border-b border-[#263D44] py-5">
+                    <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+                      <div>
+                        <h3 className="text-base font-medium leading-6 text-[#E7DFCE]">{hit.title}</h3>
+                        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[11px] text-[#879492]">
+                          {hit.application_number ? <span><span className="text-[#6F807E]">{labels.application}</span> · {hit.application_number}</span> : null}
+                          {filingDate ? <span><span className="text-[#6F807E]">{labels.filed}</span> · {filingDate}</span> : null}
+                          <span>{hit.country || "—"}</span>
+                          <span>{hit.status || "—"}</span>
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-3">{hit.ipc.map((code) => <span key={code} className="font-mono text-[10px] text-[#96B5A6]">IPC {code}</span>)}</div>
+                      </div>
+                      <span className="max-w-40 text-right text-[9px] uppercase leading-4 tracking-[0.12em] text-[#6F807E]">{labels.preliminary}</span>
+                    </div>
+                    {(hit.source_url || syncDate) ? (
+                      <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-[#20363E] pt-3 text-[10px] tracking-[0.06em] text-[#6F807E]">
+                        {hit.source_url ? <a href={hit.source_url} target="_blank" rel="noreferrer" className={`text-[#96B5A6] underline decoration-[#36515A] underline-offset-4 hover:text-white ${focusRing}`}>{labels.officialDataset}</a> : null}
+                        {syncDate ? <span>{labels.sync} · {syncDate}</span> : null}
+                      </div>
+                    ) : null}
+                  </article>
+                )
+              })}
 
               <div className="grid gap-4 py-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                 <div>
