@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
+import { hasEpoOpsCredentials, searchEpoPatentFamilies } from "@/lib/intelligence/epo-ops"
 import { searchGdeltNews } from "@/lib/intelligence/gdelt"
 import { searchOpenAlexWorks } from "@/lib/intelligence/openalex"
 import { normalizeIntelligenceSearchText } from "@/lib/intelligence/source-change-recorder"
@@ -18,7 +19,7 @@ export type StrategicWatch = {
 
 export type StrategicCandidateSignal = {
   signal_key: string
-  source_key: "inapi_open_data" | "openalex" | "crossref" | "gdelt"
+  source_key: "inapi_open_data" | "openalex" | "crossref" | "gdelt" | "epo_ops"
   event_type: "patent" | "trademark" | "publication" | "news"
   title: string
   summary: string | null
@@ -46,6 +47,7 @@ export async function scanStrategicWatch(admin: AdminClient, watch: StrategicWat
 
   if (watch.watch_type === "technology") {
     tasks.push(scanScience(watch, daysAgo(now, SCIENCE_WINDOW_DAYS), now))
+    if (hasEpoOpsCredentials()) tasks.push(scanEpoFamilies(watch))
   } else {
     tasks.push(scanTrademarks(admin, watch, daysAgo(now, TRADEMARK_WINDOW_DAYS)))
   }
@@ -205,6 +207,28 @@ async function scanScience(watch: StrategicWatch, from: Date, to: Date): Promise
   }
 
   return rows
+}
+
+async function scanEpoFamilies(watch: StrategicWatch): Promise<StrategicCandidateSignal[]> {
+  const items = await searchEpoPatentFamilies(watch.query, 5)
+  return items.map(item => ({
+    signal_key: `epo_ops:family:${item.sourceRecordId}`,
+    source_key: "epo_ops" as const,
+    event_type: "patent" as const,
+    title: item.title,
+    summary: item.jurisdictions.length
+      ? `Familia global observada en ${item.jurisdictions.length} jurisdicciones: ${item.jurisdictions.join(", ")}.`
+      : "Familia global observada en EPO OPS.",
+    source_url: item.url,
+    occurred_at: null,
+    relevance: "media" as const,
+    payload: {
+      publication: item.publication,
+      family_members: item.familyMembers,
+      jurisdictions: item.jurisdictions,
+      coverage: "EPO OPS simple patent family",
+    },
+  }))
 }
 
 async function scanNews(watch: StrategicWatch, from: Date, to: Date): Promise<StrategicCandidateSignal[]> {
