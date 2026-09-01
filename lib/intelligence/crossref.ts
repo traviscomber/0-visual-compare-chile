@@ -1,6 +1,11 @@
 const CROSSREF_BASE = "https://api.crossref.org/works"
 const TIMEOUT_MS = 9000
+const MIN_REQUEST_GAP_MS = 550
+const MAX_RETRIES = 2
 const STOPWORDS = new Set(["de", "del", "la", "el", "los", "las", "y", "e", "en", "con", "para", "por", "un", "una", "the", "of", "and", "in", "for", "to", "on", "with"])
+
+let crossrefQueue: Promise<void> = Promise.resolve()
+let lastCrossrefRequestAt = 0
 
 export type CrossrefWorkSignal = {
   source: "crossref"
@@ -32,13 +37,7 @@ export async function searchCrossrefWorks(query: string, from: Date, to: Date, l
   const mailto = String(process.env.CROSSREF_MAILTO ?? "").trim()
   if (mailto) url.searchParams.set("mailto", mailto)
 
-  const response = await fetch(url, {
-    cache: "no-store",
-    headers: { Accept: "application/json", "User-Agent": "VIDENTIA/1.0" },
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-  })
-  if (!response.ok) throw new Error(`Crossref respondió ${response.status}`)
-
+  const response = await withCrossrefSlot(() => fetchCrossrefWithRetry(url))
   const payload = await response.json() as CrossrefResponse
   return (payload.message?.items ?? []).flatMap(row => {
     const doi = asString(row.DOI)
@@ -85,6 +84,46 @@ export function isCrossrefQueryRelevant(query: string, title: string, subjects: 
   return matches >= requiredMatches
 }
 
+async function withCrossrefSlot<T>(operation: () => Promise<T>): Promise<T> {
+  const previous = crossrefQueue
+  let release: () => void = () => undefined
+  crossrefQueue = new Promise<void>(resolve => { release = resolve })
+  await previous
+
+  try {
+    const elapsed = Date.now() - lastCrossrefRequestAt
+    if (elapsed < MIN_REQUEST_GAP_MS) await sleep(MIN_REQUEST_GAP_MS - elapsed)
+    return await operation()
+  } finally {
+    lastCrossrefRequestAt = Date.now()
+    release()
+  }
+}
+
+async function fetchCrossrefWithRetry(url: URL): Promise<Response> {
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
+    const response = await fetch(url, {
+      cache: "no-store",
+      headers: { Accept: "application/json", "User-Agent": "VIDENTIA/1.0 (+https://videntia.app)" },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    })
+
+    if (response.ok) return response
+
+    const retryable = response.status === 429 || response.status === 500 || response.status === 502 || response.status === 503 || response.status === 504
+    if (!retryable || attempt === MAX_RETRIES) throw new Error(`Crossref respondió ${response.status}`)
+
+    const retryAfterSeconds = Number(response.headers.get("retry-after") ?? "0")
+    const fallbackDelayMs = 1200 * (attempt + 1)
+    const delayMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+      ? Math.min(retryAfterSeconds * 1000, 8000)
+      : fallbackDelayMs
+    await sleep(delayMs)
+  }
+
+  throw new Error("Crossref retry exhausted")
+}
+
 function significantTokens(value: string) {
   return normalizeText(value)
     .split(/[^a-z0-9]+/)
@@ -111,3 +150,4 @@ function extractDate(row: Record<string, unknown>) {
 function dateOnly(value: Date) { return value.toISOString().slice(0, 10) }
 function asString(value: unknown) { return typeof value === "string" && value.trim() ? value.trim() : null }
 function unique(values: string[]) { return [...new Set(values)] }
+function sleep(ms: number) { return new Promise(resolve => setTimeout(resolve, ms)) }
