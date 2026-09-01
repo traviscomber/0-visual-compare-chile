@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/inapi-open-data",
-      "schedule": "45 * * * *"
+      "schedule": "53 * * * *"
     },
     {
       "path": "/api/cron/case-automation",
