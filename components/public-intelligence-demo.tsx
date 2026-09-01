@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { type KeyboardEvent, useRef, useState } from "react"
 import type { PublicLocale } from "@/lib/marketing-locale"
 
 type Mode = "brand" | "patent" | "technology"
@@ -56,6 +56,9 @@ const demoCopy = {
   },
 } as const
 
+const modes: Mode[] = ["brand", "patent", "technology"]
+const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#96B5A6] focus-visible:ring-offset-2 focus-visible:ring-offset-[#091A20]"
+
 function DemoSymbol({ mode }: { mode: Mode }) {
   if (mode === "brand") {
     return (
@@ -89,9 +92,26 @@ function DemoSymbol({ mode }: { mode: Mode }) {
 
 export function PublicIntelligenceDemo({ locale }: { locale: PublicLocale }) {
   const [mode, setMode] = useState<Mode>("brand")
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
   const copy = demoCopy[locale]
   const current = copy[mode]
-  const modes: Mode[] = ["brand", "patent", "technology"]
+
+  const activateTab = (index: number) => {
+    const next = modes[index]
+    setMode(next)
+    tabRefs.current[index]?.focus()
+  }
+
+  const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    let nextIndex: number | null = null
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") nextIndex = (index + 1) % modes.length
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") nextIndex = (index - 1 + modes.length) % modes.length
+    if (event.key === "Home") nextIndex = 0
+    if (event.key === "End") nextIndex = modes.length - 1
+    if (nextIndex === null) return
+    event.preventDefault()
+    activateTab(nextIndex)
+  }
 
   return (
     <section className="border-y border-[#294047] bg-[#091A20] px-5 py-24 lg:px-10 lg:py-32">
@@ -100,14 +120,19 @@ export function PublicIntelligenceDemo({ locale }: { locale: PublicLocale }) {
         <div className="mt-4 flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
           <h2 className="max-w-3xl text-[clamp(2.7rem,5vw,5.2rem)] font-light leading-[0.96] tracking-[-0.05em] text-[#E7DFCE]">{copy.title}</h2>
           <div className="flex flex-wrap gap-2" role="tablist" aria-label={copy.eyebrow}>
-            {modes.map((item) => (
+            {modes.map((item, index) => (
               <button
                 key={item}
+                ref={(node) => { tabRefs.current[index] = node }}
+                id={`public-intelligence-tab-${item}`}
                 type="button"
                 role="tab"
                 aria-selected={mode === item}
+                aria-controls={`public-intelligence-panel-${item}`}
+                tabIndex={mode === item ? 0 : -1}
                 onClick={() => setMode(item)}
-                className={`min-h-10 px-4 text-xs font-medium tracking-[0.08em] transition-colors ${mode === item ? "bg-[#4A7F74] text-white" : "bg-[#13272D] text-[#BDBEBD] hover:bg-[#172F34] hover:text-white"}`}
+                onKeyDown={(event) => handleTabKeyDown(event, index)}
+                className={`min-h-10 px-4 text-xs font-medium tracking-[0.08em] transition-colors ${focusRing} ${mode === item ? "bg-[#4A7F74] text-white" : "bg-[#13272D] text-[#BDBEBD] hover:bg-[#172F34] hover:text-white"}`}
               >
                 {copy[item].label}
               </button>
@@ -115,7 +140,13 @@ export function PublicIntelligenceDemo({ locale }: { locale: PublicLocale }) {
           </div>
         </div>
 
-        <div className="mt-12 grid border-y border-[#294047] lg:grid-cols-[0.72fr_1.28fr]">
+        <div
+          id={`public-intelligence-panel-${mode}`}
+          role="tabpanel"
+          aria-labelledby={`public-intelligence-tab-${mode}`}
+          tabIndex={0}
+          className={`mt-12 grid border-y border-[#294047] lg:grid-cols-[0.72fr_1.28fr] ${focusRing}`}
+        >
           <div className="flex min-h-[320px] flex-col justify-between border-b border-[#294047] py-8 lg:border-b-0 lg:border-r lg:py-10 lg:pr-12">
             <DemoSymbol mode={mode} />
             <div>
@@ -147,7 +178,7 @@ export function PublicIntelligenceDemo({ locale }: { locale: PublicLocale }) {
                   locale === "es" ? "QUÉ REVISAR" : "WHAT TO REVIEW",
                 ].map((label, index) => (
                   <div key={label} className="flex items-center gap-4">
-                    <span className={`h-2.5 w-2.5 ${index === 0 ? "rounded-full bg-[#96B5A6]" : index === 1 ? "bg-[#4A7F74]" : index === 2 ? "rotate-45 bg-[#456E8E]" : "rounded-full border-2 border-[#96B5A6]"}`} />
+                    <span aria-hidden="true" className={`h-2.5 w-2.5 ${index === 0 ? "rounded-full bg-[#96B5A6]" : index === 1 ? "bg-[#4A7F74]" : index === 2 ? "rotate-45 bg-[#456E8E]" : "rounded-full border-2 border-[#96B5A6]"}`} />
                     <span className="text-xs font-medium tracking-[0.1em] text-[#E7DFCE]">{label}</span>
                   </div>
                 ))}
