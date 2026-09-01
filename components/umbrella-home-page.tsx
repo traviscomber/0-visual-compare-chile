@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { UmbrellaDemo } from "@/components/umbrella-demo"
 
 const verticals = [
   {
@@ -84,24 +85,6 @@ function VerticalGeometry({ type }: { type: (typeof verticals)[number]["visual"]
 export function UmbrellaHomePage() {
   return (
     <main className="min-h-screen bg-[#0F2A33] text-white">
-      <nav className="sticky top-0 z-50 border-b border-[#20363E] bg-[#091A20]/95 backdrop-blur" aria-label="Primary navigation">
-        <div className="mx-auto flex h-20 max-w-[1480px] items-center justify-between gap-5 px-5 lg:px-10">
-          <Link href="/" className="shrink-0" aria-label="VIDENTIA home">
-            <span className="block text-[15px] tracking-[0.22em] text-[#E7DFCE]">ViDENTiA</span>
-            <span className="mt-1 hidden text-[7px] uppercase tracking-[0.16em] text-[#7F918F] sm:block">IP & TECHNOLOGY INTELLIGENCE</span>
-          </Link>
-          <div className="flex items-center gap-4 text-[10px] font-medium tracking-[0.07em] text-[#BDBEBD] sm:gap-5">
-            <Link href="/trademarks" className="hidden hover:text-white md:inline">TRADEMARKS</Link>
-            <Link href="/patents" className="hidden hover:text-white md:inline">PATENTS</Link>
-            <Link href="/technologies" className="hidden hover:text-white lg:inline">TECHNOLOGIES</Link>
-            <Link href="/en/acceso-empresarial" className="hidden hover:text-white xl:inline">PRICING</Link>
-            <Link href="/en/docs" className="hidden hover:text-white xl:inline">RESOURCES</Link>
-            <Link href="/en/auth/login" className="hidden hover:text-white sm:inline" prefetch={false}>LOG IN</Link>
-            <Link href="#directions" className="bg-[#4A7F74] px-4 py-2.5 text-white">START A SEARCH</Link>
-          </div>
-        </div>
-      </nav>
-
       <section className="border-b border-[#294047] px-5 py-20 lg:px-10 lg:py-28">
         <div className="mx-auto grid max-w-[1480px] gap-14 lg:grid-cols-[0.98fr_1.02fr] lg:items-center">
           <div>
@@ -124,10 +107,11 @@ export function UmbrellaHomePage() {
         </div>
       </section>
 
-      <section id="directions" className="px-5 py-24 lg:px-10 lg:py-32">
+      <section id="directions" className="scroll-mt-24 px-5 py-24 lg:px-10 lg:py-32">
         <div className="mx-auto max-w-[1480px]">
-          <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#96B5A6]">01. THREE DIRECTIONS</p>
-          <h2 className="mt-5 max-w-4xl text-[clamp(3rem,5.4vw,5.8rem)] font-light leading-[0.94] tracking-[-0.055em] text-[#E7DFCE]">Three questions. One intelligence system.</h2>
+          <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#96B5A6]">01. START HERE</p>
+          <h2 className="mt-5 max-w-4xl text-[clamp(3rem,5.4vw,5.8rem)] font-light leading-[0.94] tracking-[-0.055em] text-[#E7DFCE]">Choose the question you need to answer.</h2>
+          <p className="mt-6 max-w-2xl text-sm leading-7 text-[#9EAAA8]">VIDENTIA routes the investigation by evidence type first. Select a vertical to move into the appropriate search, analysis and monitoring workflow.</p>
           <div className="mt-16 border-y border-[#294047]">
             {verticals.map((item) => (
               <article key={item.label} className="grid gap-8 border-b border-[#294047] py-10 last:border-b-0 md:grid-cols-[70px_1fr_280px] md:items-center lg:grid-cols-[80px_1fr_330px]">
@@ -145,7 +129,7 @@ export function UmbrellaHomePage() {
         </div>
       </section>
 
-      <section id="engine" className="border-y border-[#294047] bg-[#091A20] px-5 py-24 lg:px-10 lg:py-32">
+      <section id="engine" className="scroll-mt-24 border-y border-[#294047] bg-[#091A20] px-5 py-24 lg:px-10 lg:py-32">
         <div className="mx-auto max-w-[1480px]">
           <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#96B5A6]">02. ONE INTELLIGENCE ENGINE</p>
           <h2 className="mt-5 max-w-4xl text-[clamp(3rem,5.4vw,5.8rem)] font-light leading-[0.94] tracking-[-0.055em] text-[#E7DFCE]">Search once—or keep watching.</h2>
@@ -164,18 +148,11 @@ export function UmbrellaHomePage() {
       <section className="px-5 py-24 lg:px-10 lg:py-32">
         <div className="mx-auto grid max-w-[1480px] gap-14 lg:grid-cols-[0.85fr_1.15fr]">
           <div>
-            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#96B5A6]">03. SEE IT WORK</p>
+            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#96B5A6]">03. SEE THE LOGIC</p>
             <h2 className="mt-5 max-w-3xl text-[clamp(3rem,5vw,5.4rem)] font-light leading-[0.94] tracking-[-0.055em] text-[#E7DFCE]">Different questions. The same intelligence logic.</h2>
+            <p className="mt-6 max-w-2xl text-sm leading-7 text-[#9EAAA8]">Switch between verticals to see which evidence dimensions VIDENTIA organizes before you open the corresponding product experience.</p>
           </div>
-          <div className="bg-[#091A20] p-7 sm:p-10">
-            <div className="flex flex-wrap gap-5 border-b border-[#294047] pb-5 text-[10px] font-medium tracking-[0.1em] text-[#96B5A6]"><span className="text-white">TRADEMARKS</span><span>PATENTS</span><span>TECHNOLOGIES</span></div>
-            <p className="mt-8 text-[10px] uppercase tracking-[0.16em] text-[#7F918F]">SEARCH</p>
-            <p className="mt-3 text-3xl font-light tracking-[-0.04em] text-[#E7DFCE]">N3URALIA</p>
-            <div className="mt-9 grid gap-px bg-[#294047] sm:grid-cols-3">
-              {["Name similarity", "Visual similarity", "Class overlap"].map((label, index) => <div key={label} className="bg-[#13272D] p-5"><span className="text-[10px] text-[#456E8E]">0{index + 1}</span><p className="mt-5 text-xs tracking-[0.08em] text-[#E7DFCE]">{label}</p><p className="mt-3 text-sm text-[#96B5A6]">Observed evidence</p></div>)}
-            </div>
-            <Link href="/trademarks" className="mt-8 inline-block bg-[#4A7F74] px-5 py-3.5 text-xs font-medium tracking-[0.06em] text-white">OPEN TRADEMARK INTELLIGENCE</Link>
-          </div>
+          <UmbrellaDemo />
         </div>
       </section>
 
