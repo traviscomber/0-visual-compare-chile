@@ -11,12 +11,24 @@ export const dynamic = "force-dynamic"
 
 const MAX_QUERY_LENGTH = 120
 const PUBLIC_RESULT_LIMIT = 3
+const PUBLIC_SOURCE_HOST = "datos.gob.cl"
 
 function previewHeaders(extra: Record<string, string> = {}) {
   return {
     "Cache-Control": "private, no-store",
     "X-Robots-Tag": "noindex, nofollow, noarchive",
     ...extra,
+  }
+}
+
+function publicSourceUrl(value: string | null) {
+  if (!value) return null
+  try {
+    const url = new URL(value)
+    if (url.protocol !== "https:" || url.hostname !== PUBLIC_SOURCE_HOST) return null
+    return url.toString()
+  } catch {
+    return null
   }
 }
 
@@ -62,6 +74,10 @@ export async function GET(request: NextRequest) {
       status: hit.status,
       country: hit.country,
       ipc: hit.ipc.slice(0, 4),
+      application_number: hit.applicationNumber,
+      filing_date: hit.filingDate,
+      source_url: publicSourceUrl(hit.sourceUrl),
+      last_synced_at: hit.lastSyncedAt,
     }))
 
     return NextResponse.json(
@@ -73,6 +89,12 @@ export async function GET(request: NextRequest) {
         preview: true,
         source: "INAPI Open Data · VIDENTIA mirror",
         newest_sync: result.newestSync,
+        coverage: {
+          source_jurisdiction: "CL",
+          source_host: PUBLIC_SOURCE_HOST,
+          includes: ["application_number", "filing_date", "country", "status", "ipc", "source_url", "last_synced_at"],
+          excludes: ["international_family_resolution", "citations", "patentability_conclusion", "fto_conclusion"],
+        },
       },
       { headers: previewHeaders(rateHeaders) },
     )
