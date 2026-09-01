@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { LocalizedPatentsPage } from "@/components/localized-patents-page"
 import { PublicPlatformNav } from "@/components/public-platform-nav"
+import { PublicStructuredData } from "@/components/public-structured-data"
 
 const description = "Research inventions, prior art and patent activity with traceable evidence and structured review."
 
@@ -33,6 +34,7 @@ export const metadata: Metadata = {
 export default function PatentsPage() {
   return (
     <>
+      <PublicStructuredData page="patents" />
       <PublicPlatformNav active="patents" />
       <div className="[&>main>nav]:hidden">
         <LocalizedPatentsPage locale="en" />
