@@ -25,7 +25,9 @@ assert.match(sync, /createHash\("sha256"\)/, "artifact bytes must be fingerprint
 assert.match(sync, /MAX_COMPRESSED_BYTES/, "compressed payload must be bounded")
 assert.match(sync, /MAX_UNCOMPRESSED_BYTES/, "uncompressed payload must be bounded")
 assert.match(sync, /artifact_id,global_event_id/, "version writes must be idempotent by exact source identity")
-assert.doesNotMatch(sync, /source_url.*onConflict|onConflict.*source_url/s, "source URL must never be used as event identity")
+const conflictKeys = [...sync.matchAll(/onConflict:\s*"([^"]+)"/g)].map(match => match[1])
+assert.deepEqual(new Set(conflictKeys), new Set(["artifact_id,global_event_id", "global_event_id"]), "only exact artifact/event and GLOBALEVENTID identities may drive canonical upserts")
+assert.ok(conflictKeys.every(key => !key.includes("source_url")), "source URL must never be used as event identity")
 
 assert.match(route, /CRON_SECRET/, "canonical cron must require Vercel cron authentication")
 assert.match(route, /syncGdeltRawFeed/, "canonical cron must invoke the canonical sync")
