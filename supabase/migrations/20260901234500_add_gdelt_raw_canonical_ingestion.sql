@@ -6,7 +6,7 @@ values (
   'GDELT Event Database Raw Feed',
   'GDELT Project',
   'https://data.gdeltproject.org/gdeltv2',
-  'event_data',
+  'official_dataset',
   null,
   '15-minute event exports; synchronized with a landing offset',
   true,
