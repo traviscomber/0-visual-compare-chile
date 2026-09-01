@@ -34,9 +34,7 @@ export default function RootPage() {
   return (
     <>
       <PublicPlatformNav />
-      <div className="[&>main>nav]:hidden">
-        <UmbrellaHomePage />
-      </div>
+      <UmbrellaHomePage />
     </>
   )
 }
