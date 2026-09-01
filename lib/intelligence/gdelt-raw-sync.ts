@@ -251,12 +251,16 @@ export async function syncGdeltRawFeed(admin: SupabaseClient, now = new Date()):
     }
   } catch (error) {
     if (artifactId) {
-      await admin.from("gdelt_raw_artifacts").update({
-        status: "failed",
-        finished_at: new Date().toISOString(),
-        error_message: (error instanceof Error ? error.message : String(error)).slice(0, 4000),
-        updated_at: new Date().toISOString(),
-      }).eq("id", artifactId).catch(() => undefined)
+      try {
+        await admin.from("gdelt_raw_artifacts").update({
+          status: "failed",
+          finished_at: new Date().toISOString(),
+          error_message: (error instanceof Error ? error.message : String(error)).slice(0, 4000),
+          updated_at: new Date().toISOString(),
+        }).eq("id", artifactId)
+      } catch {
+        // Best-effort failure telemetry must never mask the source failure.
+      }
     }
     await failIntelligenceIngestion(admin, {
       runId: ingestion.runId,
