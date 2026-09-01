@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
 import { hasEpoOpsCredentials, searchEpoPatentFamilies } from "@/lib/intelligence/epo-ops"
+import { probeGdeltAwsOpenData } from "@/lib/intelligence/gdelt-aws"
 import { searchGoogleNews } from "@/lib/intelligence/google-news"
 import {
   failIntelligenceIngestion,
@@ -17,7 +18,16 @@ export const dynamic = "force-dynamic"
 export const maxDuration = 300
 
 type CronWatch = StrategicWatch & { user_id: string }
-type ProbeResult = { source: string; ok: boolean | null; fetched: number; error?: string; blockedUntil?: string | null; skipped?: string }
+type ProbeResult = {
+  source: string
+  ok: boolean | null
+  fetched: number
+  blocking?: boolean
+  error?: string
+  blockedUntil?: string | null
+  skipped?: string
+  details?: Record<string, unknown>
+}
 
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET
@@ -97,7 +107,7 @@ export async function GET(request: Request) {
     if (checkedError) throw new Error(`Could not update watch checkpoints: ${checkedError.message}`)
 
     const probes = await probesPromise
-    const failedProbes = probes.filter(probe => probe.ok === false)
+    const failedProbes = probes.filter(probe => probe.ok === false && probe.blocking !== false)
 
     return NextResponse.json({
       ok: failedProbes.length === 0,
@@ -126,6 +136,35 @@ async function runSourceProbes(admin: ReturnType<typeof createAdminClient>, quer
     probeSource(admin, "crossref", async () => (await searchCrossrefWorks(query, fromScience, now, 3)).length),
     probeSource(admin, "google_news_rss", async () => (await searchGoogleNews(query, fromNews, now, 3)).length),
   ])
+
+  try {
+    const aws = await probeGdeltAwsOpenData(now)
+    probes.push({
+      source: "gdelt_aws_open_data",
+      ok: true,
+      fetched: 1,
+      blocking: false,
+      details: {
+        bucket: aws.bucket,
+        prefix: aws.prefix,
+        listStatus: aws.listStatus,
+        objectKey: aws.objectKey,
+        objectSize: aws.objectSize,
+        lastModified: aws.lastModified,
+        rangeStatus: aws.rangeStatus,
+        sampleBytes: aws.sampleBytes,
+        firstRowColumns: aws.firstRowColumns,
+      },
+    })
+  } catch (error) {
+    probes.push({
+      source: "gdelt_aws_open_data",
+      ok: false,
+      fetched: 0,
+      blocking: false,
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
 
   if (hasEpoOpsCredentials()) {
     probes.push(await probeSource(admin, "epo_ops", async () => (await searchEpoPatentFamilies(query, 3)).length))
