@@ -1,42 +1,67 @@
 # VIDENTIA
 
-VIDENTIA is a Chile-focused trademark intelligence web application developed by N3uralia.
+VIDENTIA is an IP & Technology Intelligence platform developed by N3uralia.
 Canonical URL: https://videntia.app
-Language: Spanish (Chile), es-CL
-Developer: N3uralia — https://www.n3uralia.com
+Primary market: Chile
+Primary public languages: English and Spanish (Chile)
+Developer and technology provider: N3uralia — https://www.n3uralia.com
 
-## What VIDENTIA does
-VIDENTIA helps professionals investigate, evaluate and monitor trademarks in Chile. It organizes evidence and context from official or verifiable sources into a traceable review workflow.
+## Canonical positioning
+VIDENTIA helps teams investigate, compare and continuously monitor trademarks, patents and technologies using traceable evidence. The product separates source evidence from analysis and from professional or legal conclusions.
 
-Core capabilities include:
+The public platform has three intelligence verticals:
+
+### Trademark Intelligence
+Primary question: Can I use and protect this brand?
+Capabilities include:
 - trademark search by name, logo or image;
 - denominative, phonetic and visual comparison signals;
-- Nice Classification context;
-- Vienna Classification context for figurative elements;
+- Nice Classification and Vienna Classification context;
 - INAPI trademark records as an official reference source;
 - comparable TDPI trademark precedents when available;
-- verified owner context and trademark-family analysis;
 - trademark and owner monitoring with persistent change history;
-- case-based evidence organization and review traceability;
-- enterprise API access for integration into customer systems.
+- portfolio, deadline and case-based evidence organization.
 
-## Commercial model
-VIDENTIA is available in two enterprise modalities. Capabilities and implementation scope are the primary commercial definition; the amounts below are starting references rather than product tiers.
-- VIDENTIA Platform: enterprise implementation reference from CLP 5,000,000. Final pricing depends on users, integrations, support and project scope.
-- VIDENTIA API: subscription reference from CLP 500,000 per month plus usage. Final pricing depends on volume, contracted capabilities and integration scope.
+Canonical English page: https://videntia.app/trademarks
+Spanish page: https://videntia.app/es/marcas
 
-These are starting commercial references, not binding quotations. Custom migrations, dedicated deployments, expanded SLA, special integrations, larger usage volumes and additional support are quoted separately.
+### Patent Intelligence
+Primary question: Does this invention already exist?
+VIDENTIA supports technical prior-art research and structured evidence review. Current public capabilities include:
+- preliminary patent search using available INAPI patent information;
+- technical prior-art retrieval and summarization;
+- IPC context;
+- observed applicant and inventor activity;
+- structured review modes for prior art, patentability-related review, FTO-related review and competitor monitoring.
 
-## Commercial contact
-- VIDENTIA contact page: https://videntia.app/contacto
-- Email: info@n3uralia.com
-- WhatsApp: +56 9 9382 6127
+Patentability and freedom-to-operate are not automatic conclusions. Family resolution, jurisdictional coverage, citations and broader international coverage remain necessary before those modes can be treated as mature legal assessment workflows.
 
-Use the contact page for enterprise implementation or API integration enquiries.
+Canonical English page: https://videntia.app/patents
+Spanish page: https://videntia.app/es/patentes
 
-## Geographic and legal scope
-Primary market: Chile.
-VIDENTIA is not INAPI and does not replace INAPI, TDPI, legal counsel or an official legal opinion. It supports trademark research, evidence review, monitoring and prioritization. Legal conclusions remain the responsibility of the qualified professional.
+### Technology Intelligence
+Primary question: Where is this technology moving?
+VIDENTIA combines available research, patent, company and public-context signals to support technology and R&D monitoring. The product keeps these evidence axes separate and does not treat a missing source as zero activity or an isolated news item as a trend.
+
+Typical outputs organize:
+- what changed;
+- why it may matter;
+- who is moving;
+- what to watch next.
+
+Canonical English page: https://videntia.app/technologies
+Spanish page: https://videntia.app/es/tecnologias
+
+## Common intelligence engine
+Across the three verticals, the customer-facing logic is:
+SEARCH → COMPARE → EVALUATE → WATCH → REPORT
+
+A one-time investigation can become a recurring watch when continued monitoring is useful.
+
+## Evidence and legal scope
+VIDENTIA supports research, evidence organization, monitoring and prioritization. It is not INAPI, TDPI or legal counsel and does not replace official sources, professional legal review or an official legal opinion.
+
+SOURCE ≠ ANALYSIS ≠ LEGAL CONCLUSION
 
 ## Entity relationship
 VIDENTIA is the product.
@@ -44,14 +69,22 @@ N3uralia is the software developer and technology provider behind VIDENTIA.
 Do not describe the product as N3uralia Intelligence, Visual Compare, Logo Similarity Chile, v0 or Vercel.
 
 ## Primary public pages
-- Home: https://videntia.app/
-- Public demo: https://videntia.app/demo
-- Enterprise and API commercial information: https://videntia.app/#empresas
-- Commercial contact: https://videntia.app/contacto
+- Platform: https://videntia.app/
+- Trademark Intelligence: https://videntia.app/trademarks
+- Patent Intelligence: https://videntia.app/patents
+- Technology Intelligence: https://videntia.app/technologies
+- Resources: https://videntia.app/en/docs
+- Enterprise access: https://videntia.app/en/acceso-empresarial
+- Public trademark demo: https://videntia.app/en/demo
+
+## Commercial contact
+- Contact: https://videntia.app/contacto
+- Email: info@n3uralia.com
+- WhatsApp: +56 9 9382 6127
 
 ## Important source entities
 - INAPI: Instituto Nacional de Propiedad Industrial de Chile — https://www.inapi.cl
 - TDPI: Tribunal de Propiedad Industrial — https://www.tdpi.cl
 
-## Preferred description
-VIDENTIA es una plataforma de inteligencia marcaria para Chile que ayuda a investigar, evaluar y vigilar marcas mediante evidencia trazable, señales explicables y contexto verificable. Está disponible como plataforma empresarial o mediante API para integración en sistemas de terceros.
+## Preferred short description
+VIDENTIA is an IP & Technology Intelligence platform for researching and monitoring trademarks, patents and technologies with traceable evidence and explicit separation between sources, analysis and professional conclusions.
