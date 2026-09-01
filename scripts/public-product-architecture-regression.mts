@@ -15,6 +15,7 @@ const [
   demo,
   umbrellaDemo,
   patentPreview,
+  patentPreviewRoute,
   esPage,
   enPage,
   rootPage,
@@ -38,6 +39,7 @@ const [
   readFile("components/public-intelligence-demo.tsx", "utf8"),
   readFile("components/umbrella-demo.tsx", "utf8"),
   readFile("components/patent-preview-search.tsx", "utf8"),
+  readFile("app/api/v1/public/patent-preview/route.ts", "utf8"),
   readFile("app/es/[[...path]]/page.tsx", "utf8"),
   readFile("app/en/[[...path]]/page.tsx", "utf8"),
   readFile("app/page.tsx", "utf8"),
@@ -198,6 +200,32 @@ for (const needle of [
   "focus-visible:ring-2",
 ]) requireText(patentPreview, needle, "accessible patent preview")
 
+for (const needle of [
+  "EVIDENCE COVERAGE",
+  "COBERTURA DE EVIDENCIA",
+  "OFFICIAL DATASET",
+  "DATASET OFICIAL",
+  "application_number",
+  "filing_date",
+  "source_url",
+  "last_synced_at",
+  "NOT A LEGAL CONCLUSION",
+  "NO ES CONCLUSIÓN LEGAL",
+]) requireText(patentPreview, needle, "patent preview evidence provenance")
+
+for (const needle of [
+  'PUBLIC_SOURCE_HOST = "datos.gob.cl"',
+  'url.hostname !== PUBLIC_SOURCE_HOST',
+  "application_number",
+  "filing_date",
+  "source_url",
+  "last_synced_at",
+  "international_family_resolution",
+  "citations",
+  "patentability_conclusion",
+  "fto_conclusion",
+]) requireText(patentPreviewRoute, needle, "patent preview provenance API")
+
 for (const needle of ["/patents", "/technologies"]) requireText(englishLogin, needle, "English canonical auth return")
 for (const needle of ["/es/patentes", "/es/tecnologias"]) requireText(spanishLogin, needle, "Spanish canonical auth return")
 
@@ -205,4 +233,4 @@ requireText(loginForm, "VIDENTIA / IP & TECHNOLOGY INTELLIGENCE", "login positio
 requireText(loginForm, "Search. Compare. Evaluate. Watch. Report.", "login positioning")
 if (loginForm.includes("VIDENTIA / trademark intelligence")) fail("login must not revert to trademark-only positioning")
 
-console.log("Public product architecture regression PASS: VIDENTIA is locked as one Brands/Patents/Technologies intelligence platform with shared navigation, locale-safe public routes, canonical auth returns, aligned workspace positioning, guarded patent claims, non-generic Bauhaus marketing surfaces, skip navigation and keyboard-accessible public controls.")
+console.log("Public product architecture regression PASS: VIDENTIA is locked as one Brands/Patents/Technologies intelligence platform with shared navigation, locale-safe public routes, canonical auth returns, aligned workspace positioning, guarded patent claims, patent evidence provenance, non-generic Bauhaus marketing surfaces, skip navigation and keyboard-accessible public controls.")
