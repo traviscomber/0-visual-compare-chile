@@ -32,8 +32,19 @@ export const metadata: Metadata = {
 }
 
 const trademarkHeroStyles = `
+.trademarks-public-page .px-hero-visual,
 .trademarks-public-page .px-hero-art {
-  background: url('/images/VidentiaTrademarks.svg') center / contain no-repeat !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+.trademarks-public-page .px-hero-art {
+  background-image: url('/images/VidentiaTrademarks.svg') !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: contain !important;
 }
 
 .trademarks-public-page .px-hero-art > img {
