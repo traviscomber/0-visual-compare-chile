@@ -133,3 +133,36 @@
     max-width: 440px;
   }
 }
+
+/* Exact supplied VIDENTIA vertical artwork. Only the viewport is corrected;
+   paths, colors and proportions remain untouched. */
+#directions article > div:last-child > div {
+  width: 192px !important;
+  height: 192px !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: contain !important;
+}
+
+#directions article:nth-child(1) > div:last-child > div {
+  background-image: url('/vertical-trademarks.svg') !important;
+}
+
+#directions article:nth-child(2) > div:last-child > div {
+  background-image: url('/vertical-patents.svg') !important;
+}
+
+#directions article:nth-child(3) > div:last-child > div {
+  background-image: url('/vertical-technologies.svg') !important;
+}
+
+@media (max-width: 767px) {
+  #directions article > div:last-child {
+    justify-content: flex-start !important;
+  }
+
+  #directions article > div:last-child > div {
+    width: 164px !important;
+    height: 164px !important;
+  }
+}
