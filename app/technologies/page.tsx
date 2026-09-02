@@ -39,11 +39,14 @@ const technologyFocusStyles = `
 }
 
 .technologies-public-page > main > section:first-of-type > div > div:last-child {
-  background-color: #091A20;
+  background-color: transparent !important;
   background-image: url('/images/VidentiaTechnologies.svg');
   background-repeat: no-repeat;
   background-position: center 44%;
   background-size: auto min(68%, 390px);
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
 .technologies-public-page > main > section:first-of-type > div > div:last-child > div:first-child {
