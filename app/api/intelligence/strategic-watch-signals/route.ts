@@ -13,6 +13,22 @@ export const dynamic = "force-dynamic"
 
 const ReviewSchema = z.object({ watchId: z.string().uuid().optional() })
 
+type HistoryEventRow = {
+  id: string
+  watch_id: string
+  signal_key: string
+  source_key: string
+  event_type: string
+  title: string
+  summary: string | null
+  source_url: string | null
+  occurred_at: string | null
+  relevance: string
+  payload: Record<string, unknown>
+  first_seen_at: string
+  last_seen_at: string
+}
+
 export async function GET() {
   const auth = await requireUser()
   if (!auth.ok) return auth.response
@@ -107,18 +123,18 @@ export async function GET() {
   }
 
   const watchMap = new Map(active.map(watch => [watch.id, watch]))
-  const historyByWatch = new Map<string, Array<Record<string, unknown>>>()
-  for (const row of history ?? []) {
-    const watchId = String(row.watch_id)
-    const current = historyByWatch.get(watchId) ?? []
-    current.push(row as Record<string, unknown>)
-    historyByWatch.set(watchId, current)
+  const historyByWatch = new Map<string, HistoryEventRow[]>()
+  for (const raw of history ?? []) {
+    const row = normalizeHistoryRow(raw)
+    const current = historyByWatch.get(row.watch_id) ?? []
+    current.push(row)
+    historyByWatch.set(row.watch_id, current)
   }
 
-  const visibleHistory = active.flatMap(watch => {
+  const visibleHistory: HistoryEventRow[] = active.flatMap(watch => {
     const sourceRows = historyByWatch.get(watch.id) ?? []
     if (watch.watch_type !== "technology") return sourceRows
-    const originals = new Map(sourceRows.map(row => [String(row.signal_key), row]))
+    const originals = new Map(sourceRows.map(row => [row.signal_key, row]))
     const candidates = sourceRows.map(historyCandidate)
     const qualified = qualifySignals(watch, candidates, profiles, new Date(scanCompletedAt))
     return qualified.flatMap(candidate => {
@@ -128,10 +144,10 @@ export async function GET() {
   })
 
   const signals = visibleHistory.map(row => {
-    const watch = watchMap.get(String(row.watch_id))
+    const watch = watchMap.get(row.watch_id)
     const isFirstScan = !watch?.last_checked_at
     const reviewedAt = watch?.last_reviewed_at
-    const isNew = !isFirstScan && (reviewedAt ? new Date(String(row.first_seen_at)).getTime() > new Date(reviewedAt).getTime() : true)
+    const isNew = !isFirstScan && (reviewedAt ? new Date(row.first_seen_at).getTime() > new Date(reviewedAt).getTime() : true)
     return {
       ...row,
       watch_query: watch?.query ?? "Vigilancia estratégica",
@@ -142,9 +158,9 @@ export async function GET() {
     if (a.is_new !== b.is_new) return a.is_new ? -1 : 1
     const score = payloadScore(b.payload) - payloadScore(a.payload)
     if (score) return score
-    const relevance = rank(String(b.relevance)) - rank(String(a.relevance))
+    const relevance = rank(b.relevance) - rank(a.relevance)
     if (relevance) return relevance
-    return new Date(String(b.first_seen_at)).getTime() - new Date(String(a.first_seen_at)).getTime()
+    return new Date(b.first_seen_at).getTime() - new Date(a.first_seen_at).getTime()
   })
 
   const newSignals = signals.filter(item => item.is_new)
@@ -210,20 +226,38 @@ function searchIntentFor(watch: StrategicWatch) {
   return buildStrategicSearchIntent(watch.query, readStrategicSearchScope(watch.metadata), readStrategicQueryAliases(watch.metadata))
 }
 
-function historyCandidate(row: Record<string, unknown>): StrategicCandidateSignal {
-  const payload = row.payload && typeof row.payload === "object" && !Array.isArray(row.payload)
-    ? row.payload as Record<string, unknown>
+function normalizeHistoryRow(raw: Record<string, unknown>): HistoryEventRow {
+  const payload = raw.payload && typeof raw.payload === "object" && !Array.isArray(raw.payload)
+    ? raw.payload as Record<string, unknown>
     : {}
   return {
-    signal_key: String(row.signal_key ?? row.id ?? ""),
-    source_key: String(row.source_key ?? "google_news_rss") as StrategicCandidateSignal["source_key"],
-    event_type: String(row.event_type ?? "news") as StrategicCandidateSignal["event_type"],
-    title: String(row.title ?? "Señal sin título"),
-    summary: typeof row.summary === "string" ? row.summary : null,
-    source_url: typeof row.source_url === "string" ? row.source_url : null,
-    occurred_at: typeof row.occurred_at === "string" ? row.occurred_at : null,
-    relevance: (row.relevance === "alta" || row.relevance === "media" ? row.relevance : "baja") as StrategicCandidateSignal["relevance"],
+    id: String(raw.id ?? ""),
+    watch_id: String(raw.watch_id ?? ""),
+    signal_key: String(raw.signal_key ?? raw.id ?? ""),
+    source_key: String(raw.source_key ?? ""),
+    event_type: String(raw.event_type ?? "news"),
+    title: String(raw.title ?? "Señal sin título"),
+    summary: typeof raw.summary === "string" ? raw.summary : null,
+    source_url: typeof raw.source_url === "string" ? raw.source_url : null,
+    occurred_at: typeof raw.occurred_at === "string" ? raw.occurred_at : null,
+    relevance: String(raw.relevance ?? "baja"),
     payload,
+    first_seen_at: String(raw.first_seen_at ?? ""),
+    last_seen_at: String(raw.last_seen_at ?? ""),
+  }
+}
+
+function historyCandidate(row: HistoryEventRow): StrategicCandidateSignal {
+  return {
+    signal_key: row.signal_key,
+    source_key: row.source_key as StrategicCandidateSignal["source_key"],
+    event_type: row.event_type as StrategicCandidateSignal["event_type"],
+    title: row.title,
+    summary: row.summary,
+    source_url: row.source_url,
+    occurred_at: row.occurred_at,
+    relevance: (row.relevance === "alta" || row.relevance === "media" ? row.relevance : "baja") as StrategicCandidateSignal["relevance"],
+    payload: row.payload,
   }
 }
 
