@@ -1,7 +1,7 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { headers } from "next/headers"
-import { Montserrat } from "next/font/google"
+import { Inter, Montserrat } from "next/font/google"
 import { Toaster } from "@/components/ui/sonner"
 import { VidentiaAnalytics } from "@/components/videntia-analytics"
 import { AuthProvider } from "@/lib/auth-context"
@@ -20,9 +20,9 @@ import "./landing-footer-polish.css"
 import "./landing-nav-polish.css"
 import "./demo-premium.css"
 import "./demo-results-polish.css"
-import "./hero-fix.css"
 
 const montserrat = Montserrat({ subsets: ["latin"], display: "swap", variable: "--font-montserrat" })
+const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-inter", weight: ["300", "400", "500"] })
 const CANONICAL_ORIGIN = "https://videntia.app"
 const GOOGLE_SITE_VERIFICATION = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim()
 
@@ -73,5 +73,5 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const requestHeaders = await headers()
   const locale = requestHeaders.get("x-videntia-locale") === "en" ? "en" : "es-CL"
 
-  return <html lang={locale}><body className={`${montserrat.className} ${montserrat.variable} bg-[#0F2A33] text-foreground antialiased`}><AuthProvider>{children}</AuthProvider><VidentiaAnalytics /><Toaster richColors position="top-right" /></body></html>
+  return <html lang={locale}><body className={`${montserrat.className} ${montserrat.variable} ${inter.variable} bg-[#0F2A33] text-foreground antialiased`}><AuthProvider>{children}</AuthProvider><VidentiaAnalytics /><Toaster richColors position="top-right" /></body></html>
 }
