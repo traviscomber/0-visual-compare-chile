@@ -38,25 +38,109 @@ const technologyFocusStyles = `
   outline-offset: 3px;
 }
 
+nav[aria-label="Primary navigation"] > div {
+  height: 88px !important;
+}
+
+nav[aria-label="Primary navigation"] > div > a:first-child > span:first-child {
+  transform: scale(1.08);
+  transform-origin: left center;
+}
+
+@media (min-width: 1024px) {
+  nav[aria-label="Primary navigation"] > div > div {
+    gap: 1.65rem !important;
+    font-size: 11px !important;
+  }
+}
+
+.technologies-public-page > main > section:first-of-type {
+  min-height: calc(100svh - 88px);
+  display: flex;
+  align-items: center;
+  padding-top: 64px !important;
+  padding-bottom: 72px !important;
+}
+
+.technologies-public-page > main > section:first-of-type > div {
+  width: 100%;
+  grid-template-columns: minmax(0, .92fr) minmax(460px, 1.08fr) !important;
+  gap: clamp(3rem, 6vw, 7rem) !important;
+  align-items: center !important;
+}
+
+.technologies-public-page > main > section:first-of-type h1 {
+  max-width: 8.9ch !important;
+  font-size: clamp(4.15rem, 5.45vw, 5.75rem) !important;
+  line-height: .92 !important;
+  letter-spacing: -.058em !important;
+}
+
+.technologies-public-page > main > section:first-of-type > div > div:first-child > p:nth-of-type(2) {
+  max-width: 620px !important;
+  font-size: 15px !important;
+  line-height: 1.85 !important;
+}
+
 .technologies-public-page > main > section:first-of-type > div > div:last-child {
+  position: relative;
+  min-height: 620px !important;
+  padding: 0 !important;
   background-color: transparent !important;
-  background-image: url('/images/VidentiaTechnologies.svg');
-  background-repeat: no-repeat;
-  background-position: center 44%;
-  background-size: auto min(68%, 390px);
+  background-image: url('/images/VidentiaTechnologies.svg') !important;
+  background-repeat: no-repeat !important;
+  background-position: 50% 42% !important;
+  background-size: auto min(86%, 590px) !important;
   border: 0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
 }
 
 .technologies-public-page > main > section:first-of-type > div > div:last-child > div:first-child {
-  opacity: 0;
+  display: none !important;
+}
+
+.technologies-public-page > main > section:first-of-type > div > div:last-child > div:last-child {
+  position: absolute;
+  left: 7%;
+  bottom: 10px;
+  max-width: 520px;
+}
+
+.technologies-public-page > main > section:first-of-type > div > div:last-child > div:last-child p:nth-child(2) {
+  font-size: clamp(1.7rem, 2vw, 2.35rem) !important;
 }
 
 @media (max-width: 1023px) {
+  nav[aria-label="Primary navigation"] > div {
+    height: 80px !important;
+  }
+
+  .technologies-public-page > main > section:first-of-type {
+    min-height: auto;
+    padding-top: 56px !important;
+    padding-bottom: 64px !important;
+  }
+
+  .technologies-public-page > main > section:first-of-type > div {
+    grid-template-columns: 1fr !important;
+    gap: 48px !important;
+  }
+
+  .technologies-public-page > main > section:first-of-type h1 {
+    max-width: 10ch !important;
+    font-size: clamp(3.5rem, 10vw, 5.2rem) !important;
+  }
+
   .technologies-public-page > main > section:first-of-type > div > div:last-child {
-    background-position: center 42%;
-    background-size: auto min(66%, 350px);
+    min-height: 470px !important;
+    background-position: center 38% !important;
+    background-size: auto min(84%, 510px) !important;
+  }
+
+  .technologies-public-page > main > section:first-of-type > div > div:last-child > div:last-child {
+    left: 0;
+    bottom: 0;
   }
 }
 `
