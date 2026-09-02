@@ -4,6 +4,7 @@ import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { scanStrategicWatch, type StrategicWatch } from "@/lib/intelligence/strategic-watch-scanner"
 import { buildWeeklyBriefContext, type WeeklyBriefContext } from "@/lib/intelligence/weekly-brief"
+import { buildStrategicSearchIntent, readStrategicQueryAliases, readStrategicSearchScope } from "@/lib/intelligence/search-intent"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -16,7 +17,7 @@ export async function GET() {
 
   const { data: watches, error: watchError } = await auth.supabase
     .from("intelligence_watches")
-    .select("id,watch_type,query,is_active,created_at,last_checked_at,last_reviewed_at")
+    .select("id,watch_type,query,is_active,created_at,last_checked_at,last_reviewed_at,metadata")
     .eq("is_active", true)
     .order("updated_at", { ascending: false })
     .limit(10)
@@ -28,8 +29,12 @@ export async function GET() {
 
   const admin = createAdminClient()
   const active = (watches ?? []) as StrategicWatch[]
+  const contextQueries = active.flatMap(watch => {
+    const intent = buildStrategicSearchIntent(watch.query, readStrategicSearchScope(watch.metadata), readStrategicQueryAliases(watch.metadata))
+    return [intent.canonicalQuery, ...intent.aliases]
+  })
   const contextPromise = buildWeeklyBriefContext(admin)
-    .then(context => scopeWeeklyBriefContext(context, active.map(watch => watch.query)))
+    .then(context => scopeWeeklyBriefContext(context, contextQueries))
 
   if (!active.length) {
     const context = await contextPromise
@@ -64,9 +69,6 @@ export async function GET() {
     if (upsertError) console.error("[strategic-watch-signals:upsert]", upsertError)
   }
 
-  // Baseline must be recorded after event persistence. `first_seen_at` is assigned by
-  // Postgres during the upsert, so using scanStartedAt here can make baseline events
-  // look newer than the review timestamp on the next request.
   const scanCompletedAt = new Date().toISOString()
   const firstScanIds = active.filter(watch => !watch.last_checked_at).map(watch => watch.id)
   if (firstScanIds.length) {

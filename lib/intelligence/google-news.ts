@@ -13,16 +13,31 @@ export type GoogleNewsSignal = {
   publisher: string | null
 }
 
-export async function searchGoogleNews(query: string, from: Date, to: Date, limit = 10): Promise<GoogleNewsSignal[]> {
+export type GoogleNewsMarket = "chile" | "global"
+
+export async function searchGoogleNews(
+  query: string,
+  from: Date,
+  to: Date,
+  limit = 10,
+  market: GoogleNewsMarket = "global",
+): Promise<GoogleNewsSignal[]> {
   const normalized = query.replace(/[\u0000-\u001f]/g, " ").trim()
   if (!normalized) return []
 
   const days = Math.max(1, Math.min(30, Math.ceil((to.getTime() - from.getTime()) / 86400000)))
   const url = new URL(GOOGLE_NEWS_RSS)
   url.searchParams.set("q", `${normalized} when:${days}d`)
-  url.searchParams.set("hl", "en-US")
-  url.searchParams.set("gl", "US")
-  url.searchParams.set("ceid", "US:en")
+
+  if (market === "chile") {
+    url.searchParams.set("hl", "es-419")
+    url.searchParams.set("gl", "CL")
+    url.searchParams.set("ceid", "CL:es-419")
+  } else {
+    url.searchParams.set("hl", "en-US")
+    url.searchParams.set("gl", "US")
+    url.searchParams.set("ceid", "US:en")
+  }
 
   const response = await fetchWithRetry(url, {
     cache: "no-store",

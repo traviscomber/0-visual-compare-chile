@@ -81,6 +81,8 @@ jobs:
         run: node scripts/technology-corroboration-regression.mts
       - name: Technology strategy regression
         run: node scripts/technology-strategy-regression.mts
+      - name: Search intent regression
+        run: node scripts/search-intent-regression.mts
       - name: GDELT raw canonical regression
         run: node scripts/gdelt-raw-canonical-regression.mts
       - name: GDELT context fusion regression

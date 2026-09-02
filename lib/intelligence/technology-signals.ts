@@ -3,6 +3,7 @@ import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
 import { searchGdeltNews } from "@/lib/intelligence/gdelt"
 import { buildTechnologyCorroboration } from "@/lib/intelligence/technology-corroboration-rules"
 import { buildTechnologyPatentSignal, emptyTechnologyPatentSignal } from "@/lib/intelligence/technology-patent-corroboration"
+import { buildStrategicSearchIntent, type StrategicSearchScope } from "@/lib/intelligence/search-intent"
 
 export type TechnologyTrend = "acelerando" | "estable" | "desacelerando" | "sin_base" | "no_disponible"
 
@@ -11,19 +12,29 @@ type SourceResult<T> = {
   value: T
 }
 
-export async function buildTechnologySignals(query: string, windowDays = 180) {
+export async function buildTechnologySignals(query: string, windowDays = 180, scope: StrategicSearchScope = "both") {
   const now = new Date()
   const currentFrom = daysAgo(now, windowDays)
   const previousTo = new Date(currentFrom.getTime() - 1000)
   const previousFrom = daysAgo(previousTo, windowDays)
   const newsFrom = daysAgo(now, 7)
+  const intent = buildStrategicSearchIntent(query, scope)
+  const globalQuery = intent.globalQueries[0] ?? intent.canonicalQuery
+  const chileQuery = intent.chileQueries[0] ?? intent.canonicalQuery
+  const useGlobal = scope !== "chile"
+  const useChile = scope !== "global"
+
+  const disabledOpenAlex: SourceResult<{ count: number; works: OpenAlexWorkSignal[] }> = { ok: false, value: { count: 0, works: [] } }
+  const disabledWorks: SourceResult<Awaited<ReturnType<typeof searchCrossrefWorks>>> = { ok: false, value: [] }
+  const disabledPatents: SourceResult<ReturnType<typeof emptyTechnologyPatentSignal>> = { ok: false, value: emptyTechnologyPatentSignal() }
+  const disabledNews: SourceResult<Awaited<ReturnType<typeof searchGdeltNews>>> = { ok: false, value: [] }
 
   const [currentOpenAlexResult, previousOpenAlexResult, crossrefWorksResult, patentSignalResult, newsResult] = await Promise.all([
-    captureSource("openalex-current", () => queryOpenAlexWindow(query, currentFrom, now, 10), { count: 0, works: [] as OpenAlexWorkSignal[] }),
-    captureSource("openalex-previous", () => queryOpenAlexWindow(query, previousFrom, previousTo, 1), { count: 0, works: [] as OpenAlexWorkSignal[] }),
-    captureSource("crossref", () => searchCrossrefWorks(query, currentFrom, now, 10), []),
-    captureSource("inapi-patents", () => buildTechnologyPatentSignal(query, currentFrom, now), emptyTechnologyPatentSignal()),
-    captureSource("gdelt", () => searchGdeltNews(query, newsFrom, now, 10), []),
+    useGlobal ? captureSource("openalex-current", () => queryOpenAlexWindow(globalQuery, currentFrom, now, 10), { count: 0, works: [] as OpenAlexWorkSignal[] }) : Promise.resolve(disabledOpenAlex),
+    useGlobal ? captureSource("openalex-previous", () => queryOpenAlexWindow(globalQuery, previousFrom, previousTo, 1), { count: 0, works: [] as OpenAlexWorkSignal[] }) : Promise.resolve(disabledOpenAlex),
+    useGlobal ? captureSource("crossref", () => searchCrossrefWorks(globalQuery, currentFrom, now, 10), []) : Promise.resolve(disabledWorks),
+    useChile ? captureSource("inapi-patents", () => buildTechnologyPatentSignal(chileQuery, currentFrom, now), emptyTechnologyPatentSignal()) : Promise.resolve(disabledPatents),
+    captureSource("gdelt", () => searchGdeltNews(scope === "chile" ? `${chileQuery} Chile` : globalQuery, newsFrom, now, 10), []),
   ])
 
   const openAlexAvailable = currentOpenAlexResult.ok && previousOpenAlexResult.ok
@@ -57,6 +68,13 @@ export async function buildTechnologySignals(query: string, windowDays = 180) {
     query,
     period_days: windowDays,
     observed_at: now.toISOString(),
+    search_intent: {
+      scope,
+      chile_query: useChile ? chileQuery : null,
+      global_query: useGlobal ? globalQuery : null,
+      aliases: intent.aliases,
+      normalization: "bilingual-es-en-v1",
+    },
     momentum: {
       available: openAlexAvailable,
       current_publications: currentCount,
@@ -64,8 +82,10 @@ export async function buildTechnologySignals(query: string, windowDays = 180) {
       change_percent: growth === null ? null : Math.round(growth * 10) / 10,
       trend,
       basis: openAlexAvailable
-        ? "Señal conservadora: compara publicaciones cuyo título coincide con la consulta en OpenAlex. Patentes INAPI se evalúan como un eje independiente de corroboración y no inflan el momentum científico."
-        : "OpenAlex no respondió de forma completa. VIDENTIA conserva la evidencia disponible, pero no calcula una variación hasta recuperar una base comparable.",
+        ? `Señal conservadora: compara publicaciones cuyo título coincide con la variante global “${globalQuery}” en OpenAlex. La búsqueda local usa “${chileQuery}” como variante separada y no infla el momentum científico.`
+        : scope === "chile"
+          ? "Ámbito Chile: la investigación científica global queda fuera de esta lectura por decisión del usuario."
+          : "OpenAlex no respondió de forma completa. VIDENTIA conserva la evidencia disponible, pero no calcula una variación hasta recuperar una base comparable.",
     },
     corroboration,
     evidence: {
@@ -79,7 +99,11 @@ export async function buildTechnologySignals(query: string, windowDays = 180) {
       selected_matches: patentSignalResult.value.historicalMatches,
       distinct_applicants: patentSignalResult.value.distinctApplicants,
       latest_filing_date: patentSignalResult.value.latestFilingDate,
-      basis: "Coincidencias de alta precisión en títulos del corpus local de patentes INAPI. Se exige relevancia léxica fuerte y no se presenta esta muestra como el universo completo de patentes de la tecnología.",
+      basis: patentSignalResult.ok
+        ? `Coincidencias de alta precisión en títulos del corpus local de patentes INAPI usando la variante chilena “${chileQuery}”. Se exige relevancia léxica fuerte y no se presenta esta muestra como el universo completo de patentes de la tecnología.`
+        : scope === "global"
+          ? "Ámbito global: INAPI Chile queda fuera de esta lectura por decisión del usuario."
+          : "INAPI no respondió de forma suficiente para construir esta señal.",
     },
     sources: {
       openalex: { available: openAlexAvailable, evidence_count: currentOpenAlexResult.value.works.length },
