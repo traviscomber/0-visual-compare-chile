@@ -1,38 +1,41 @@
 /* Production-safe VIDENTIA hero artwork.
-   Scoped to the public hero's unique image alt so other screens are untouched. */
-section:has(> img[alt="VIDENTIA geometric intelligence artwork"]) {
+   Scope: the public home hero is the first section inside the unique dark umbrella main. */
+main.min-h-screen.bg-\[\#0F2A33\] > section:first-child {
   position: relative;
   background-color: #0f141e;
 }
 
-section:has(> img[alt="VIDENTIA geometric intelligence artwork"])::before {
+main.min-h-screen.bg-\[\#0F2A33\] > section:first-child::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image: url("/images/videntia-hero-vector.svg");
+  background-image: url("/images/videntia-hero-original.jpg");
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center center;
+  filter: saturate(.92) contrast(1.04) brightness(1.04);
 }
 
-section:has(> img[alt="VIDENTIA geometric intelligence artwork"]) > img[alt="VIDENTIA geometric intelligence artwork"] {
+/* The original Next image remains in markup for now, but is removed from the visual layer.
+   Rendering is owned by the direct CSS background above, avoiding optimizer/preload issues. */
+main.min-h-screen.bg-\[\#0F2A33\] > section:first-child > img[aria-hidden="true"] {
   opacity: 0 !important;
   visibility: hidden !important;
 }
 
 @media (max-width: 900px) {
-  section:has(> img[alt="VIDENTIA geometric intelligence artwork"])::before {
+  main.min-h-screen.bg-\[\#0F2A33\] > section:first-child::before {
     background-size: auto 100%;
     background-position: 66% center;
   }
 }
 
 @media (max-width: 640px) {
-  section:has(> img[alt="VIDENTIA geometric intelligence artwork"])::before {
+  main.min-h-screen.bg-\[\#0F2A33\] > section:first-child::before {
     background-size: auto 92%;
     background-position: 72% 5%;
-    opacity: 0.82;
+    opacity: .88;
   }
 }
