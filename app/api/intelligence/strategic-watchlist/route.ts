@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
 import { mergeStrategicSearchMetadata, strategicSemanticKey } from "@/lib/intelligence/search-intent"
+import { getOrCreatePrimaryOrganization } from "@/lib/onboarding/server"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -53,7 +54,11 @@ export async function POST(request: Request) {
   const normalizedQuery = parsed.data.type === "technology"
     ? strategicSemanticKey(parsed.data.query)
     : normalize(parsed.data.query)
-  const metadata = mergeStrategicSearchMetadata(null, parsed.data.query, parsed.data.scope)
+  const organization = await getOrCreatePrimaryOrganization(auth.user)
+  const metadata = withOrganization(
+    mergeStrategicSearchMetadata(null, parsed.data.query, parsed.data.scope),
+    organization.id,
+  )
   const { data, error } = await auth.supabase
     .from("intelligence_watches")
     .insert({
@@ -80,7 +85,10 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "No pudimos confirmar la vigilancia estratégica existente." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
       }
 
-      const mergedMetadata = mergeStrategicSearchMetadata(existing.metadata, parsed.data.query, parsed.data.scope)
+      const mergedMetadata = withOrganization(
+        mergeStrategicSearchMetadata(existing.metadata, parsed.data.query, parsed.data.scope),
+        organization.id,
+      )
       const { data: updated, error: updateError } = await auth.supabase
         .from("intelligence_watches")
         .update({
@@ -130,7 +138,11 @@ export async function PATCH(request: Request) {
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
   if (parsed.data.active !== undefined) updates.is_active = parsed.data.active
   if (parsed.data.scope) {
-    updates.metadata = mergeStrategicSearchMetadata(existing.metadata, existing.query, parsed.data.scope)
+    const organization = await getOrCreatePrimaryOrganization(auth.user)
+    updates.metadata = withOrganization(
+      mergeStrategicSearchMetadata(existing.metadata, existing.query, parsed.data.scope),
+      organization.id,
+    )
     updates.last_checked_at = null
     updates.last_reviewed_at = null
   }
@@ -167,6 +179,10 @@ export async function DELETE(request: Request) {
   }
 
   return NextResponse.json({ ok: true }, { headers: PRIVATE_NO_STORE_HEADERS })
+}
+
+function withOrganization(metadata: Record<string, unknown>, organizationId: string) {
+  return { ...metadata, organization_id: organizationId }
 }
 
 function isHiddenArchive(metadata: unknown) {
