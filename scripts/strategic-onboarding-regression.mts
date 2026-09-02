@@ -33,6 +33,8 @@ for (const needle of [
   "requireUser()",
   "getOrCreatePrimaryOrganization(auth.user)",
   "saveOrganizationIntelligenceProfile",
+  "parsed.data.completed && !profile.onboarding_completed_at",
+  "status: 409",
   'action: parsed.data.completed ? "onboarding.completed" : "onboarding.profile_updated"',
 ]) requireText(profileApi, needle, "profile API")
 
@@ -61,8 +63,13 @@ if ((onboardingUi.match(/\/ 04/g) ?? []).length < 2) fail("four-step progress co
 
 requireText(onboardingPage, "ensureOrganizationIntelligenceProfile", "onboarding page")
 requireText(onboardingPage, 'redirect("/dashboard")', "onboarding completion redirect")
-requireText(appLayout, 'if (!onboardingComplete) redirect("/onboarding")', "app onboarding gate")
-requireText(appLayout, "isFreeAccessUser(user)", "free preview bypass")
+for (const needle of [
+  'if (!onboardingComplete) redirect("/onboarding")',
+  "isFreeAccessUser(user)",
+  "onboardingCompletedAt",
+  "Perfil estratégico configurado.",
+  'role="status"',
+]) requireText(appLayout, needle, "app onboarding gate")
 
 for (const needle of [
   "organization_members",
@@ -73,4 +80,4 @@ for (const needle of [
 const onboardingSources = [profileApi, analyzerApi, onboardingPage, onboardingUi, server].join("\n")
 if (/n3uralia/i.test(onboardingSources)) fail("onboarding implementation must remain tenant-agnostic")
 
-console.log("Strategic onboarding regression PASS: four-step, organization-scoped, progressive onboarding is tenant-agnostic, server-gated, and website analysis is bounded against SSRF/prompt injection.")
+console.log("Strategic onboarding regression PASS: four-step, organization-scoped, progressive onboarding is tenant-agnostic, server-gated, completion-verified, user-confirmed, and website analysis is bounded against SSRF/prompt injection.")
