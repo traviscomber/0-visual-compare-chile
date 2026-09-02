@@ -1,1 +1,1 @@
-Using exact uploaded artwork for hero; binary replacement performed via git blob in next commit.
+Hero source verified against the uploaded 2048x1061 artwork (21(3).jfif). public/images/videntia-hero-original.jpg already contains the same source image. Desktop composition must preserve the complete artwork without object-cover cropping; responsive crop is allowed only below 900px for legibility.
