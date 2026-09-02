@@ -31,12 +31,23 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 }
 
+const trademarkHeroStyles = `
+.trademarks-public-page .px-hero-art {
+  background: url('/images/VidentiaTrademarks.svg') center / contain no-repeat !important;
+}
+
+.trademarks-public-page .px-hero-art > img {
+  opacity: 0 !important;
+}
+`
+
 export default function TrademarksPage() {
   return (
     <>
       <PublicStructuredData page="trademarks" />
       <PublicPlatformNav active="trademarks" />
-      <div id="main-content" tabIndex={-1} className="[&_.px-nav]:hidden focus:outline-none">
+      <style>{trademarkHeroStyles}</style>
+      <div id="main-content" tabIndex={-1} className="trademarks-public-page [&_.px-nav]:hidden focus:outline-none">
         <LocalizedLandingPage locale="en" />
       </div>
     </>
