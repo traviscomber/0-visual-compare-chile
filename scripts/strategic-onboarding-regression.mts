@@ -9,7 +9,7 @@ function requireText(source: string, needle: string, label: string) {
   if (!source.includes(needle)) fail(`${label} missing ${needle}`)
 }
 
-const [migration, profileApi, analyzerApi, onboardingPage, onboardingUi, appLayout, server] = await Promise.all([
+const [migration, profileApi, analyzerApi, onboardingPage, onboardingUi, appLayout, server, watchlistApi] = await Promise.all([
   readFile("supabase/migrations/20260902014500_add_organization_intelligence_profiles.sql", "utf8"),
   readFile("app/api/onboarding/profile/route.ts", "utf8"),
   readFile("app/api/onboarding/analyze-site/route.ts", "utf8"),
@@ -17,6 +17,7 @@ const [migration, profileApi, analyzerApi, onboardingPage, onboardingUi, appLayo
   readFile("components/onboarding/strategic-onboarding.tsx", "utf8"),
   readFile("app/(app)/layout.tsx", "utf8"),
   readFile("lib/onboarding/server.ts", "utf8"),
+  readFile("app/api/intelligence/strategic-watchlist/route.ts", "utf8"),
 ])
 
 for (const needle of [
@@ -77,7 +78,14 @@ for (const needle of [
   "created_by: user.id",
 ]) requireText(server, needle, "organization profile server")
 
+for (const needle of [
+  '"strategic_profile_reset"',
+  '"query_precision_refinement"',
+  "HIDDEN_ARCHIVE_REASONS",
+  "deactivated_reason",
+]) requireText(watchlistApi, needle, "strategic watchlist archive filtering")
+
 const onboardingSources = [profileApi, analyzerApi, onboardingPage, onboardingUi, server].join("\n")
 if (/n3uralia/i.test(onboardingSources)) fail("onboarding implementation must remain tenant-agnostic")
 
-console.log("Strategic onboarding regression PASS: four-step, organization-scoped, progressive onboarding is tenant-agnostic, server-gated, completion-verified, user-confirmed, and website analysis is bounded against SSRF/prompt injection.")
+console.log("Strategic onboarding regression PASS: four-step, organization-scoped, progressive onboarding is tenant-agnostic, server-gated, completion-verified, user-confirmed, archived profile watches stay out of the current radar, and website analysis is bounded against SSRF/prompt injection.")
