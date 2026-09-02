@@ -1,37 +1,198 @@
-/* VIDENTIA hero media layer: artwork only, no embedded UI, no stacked fallbacks. */
-main.min-h-screen.bg-\[\#0F2A33\] > section:first-of-type {
+/* VIDENTIA home hero — single-source composition.
+   One clean artwork layer, one restrained readability layer, one HTML content layer. */
+
+#main-content > main > section:first-child {
   position: relative;
   isolation: isolate;
-  background: #071119;
+  min-height: clamp(760px, calc(100svh - 5rem), 920px) !important;
+  overflow: hidden;
+  background: #0d131d !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
-main.min-h-screen.bg-\[\#0F2A33\] > section:first-of-type::before {
+/* Use the original clean artwork exactly. Do not redraw, stretch, blur, or stack fallbacks. */
+#main-content > main > section:first-child::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image: url("/images/videntia-hero-clean.svg");
+  background-color: #0d131d;
+  background-image: url("/images/videntia-hero-original.jpg");
   background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center center;
+  background-size: auto 100%;
+  background-position: right center;
 }
 
-/* Disable the old Next image completely so there is exactly one media layer. */
-main.min-h-screen.bg-\[\#0F2A33\] > section:first-of-type > img[aria-hidden="true"] {
+/* Preserve the artwork while creating a clean editorial field for the copy. */
+#main-content > main > section:first-child::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(7, 17, 25, 0.99) 0%, rgba(7, 17, 25, 0.97) 22%, rgba(7, 17, 25, 0.76) 39%, rgba(7, 17, 25, 0.24) 56%, rgba(7, 17, 25, 0) 72%),
+    linear-gradient(180deg, rgba(7, 17, 25, 0.03) 0%, rgba(7, 17, 25, 0) 62%, rgba(7, 17, 25, 0.34) 100%);
+}
+
+/* Remove the obsolete Next image and its three legacy overlay layers. */
+#main-content > main > section:first-child > img,
+#main-content > main > section:first-child > div:nth-of-type(1),
+#main-content > main > section:first-child > div:nth-of-type(2),
+#main-content > main > section:first-child > div:nth-of-type(3) {
   display: none !important;
 }
 
-@media (max-width: 1100px) {
-  main.min-h-screen.bg-\[\#0F2A33\] > section:first-of-type::before {
-    background-size: auto 100%;
-    background-position: 66% center;
+/* Editorial canvas. */
+#main-content > main > section:first-child > div:last-of-type {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 1480px !important;
+  min-height: clamp(760px, calc(100svh - 5rem), 920px) !important;
+  margin-inline: auto;
+  padding: clamp(76px, 9vh, 108px) 40px 22px !important;
+}
+
+#main-content > main > section:first-child > div:last-of-type > div:first-child {
+  width: min(100%, 560px);
+  max-width: 560px !important;
+}
+
+#main-content > main > section:first-child h1 {
+  max-width: 540px;
+  margin-top: 28px !important;
+  font-size: clamp(64px, 5.45vw, 96px) !important;
+  line-height: 0.91 !important;
+  letter-spacing: -0.058em !important;
+  text-wrap: balance;
+}
+
+#main-content > main > section:first-child h1 + p {
+  max-width: 450px !important;
+  margin-top: 28px !important;
+  font-size: 15px !important;
+  line-height: 1.8 !important;
+}
+
+#main-content > main > section:first-child h1 + p + div {
+  margin-top: 32px !important;
+  gap: 12px !important;
+}
+
+/* One quiet capability rail, aligned to the copy rather than stretched across the viewport. */
+#main-content > main > section:first-child > div:last-of-type > div:last-child {
+  width: min(100%, 980px);
+  max-width: 980px;
+  margin-top: auto;
+  padding-top: 52px !important;
+}
+
+#main-content > main > section:first-child > div:last-of-type > div:last-child > div:first-child {
+  width: 100%;
+  border-radius: 8px !important;
+  border-color: rgba(78, 125, 126, 0.56) !important;
+  background: rgba(5, 17, 24, 0.78) !important;
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.22) !important;
+  backdrop-filter: blur(16px) saturate(112%);
+  -webkit-backdrop-filter: blur(16px) saturate(112%);
+}
+
+#main-content > main > section:first-child > div:last-of-type > div:last-child > div:first-child > a {
+  min-height: 166px !important;
+  padding: 24px 22px !important;
+  border-color: rgba(69, 105, 109, 0.52) !important;
+  background: transparent !important;
+  transform: none !important;
+}
+
+#main-content > main > section:first-child > div:last-of-type > div:last-child > div:first-child > a:hover {
+  background: rgba(10, 29, 37, 0.78) !important;
+}
+
+#main-content > main > section:first-child > div:last-of-type > div:last-child > div:first-child > a p {
+  margin-top: 16px !important;
+  font-size: 13px !important;
+  line-height: 1.62 !important;
+}
+
+#main-content > main > section:first-child > div:last-of-type > div:last-child > div:first-child > a > span:last-child {
+  bottom: 20px !important;
+  left: 22px !important;
+  font-size: 23px !important;
+}
+
+#main-content > main > section:first-child > div:last-of-type > div:last-child > a:last-child {
+  margin-top: 22px !important;
+}
+
+@media (max-width: 1180px) {
+  #main-content > main > section:first-child::before {
+    background-size: auto 96%;
+    background-position: 62% center;
+  }
+
+  #main-content > main > section:first-child::after {
+    background: linear-gradient(90deg, rgba(7, 17, 25, 0.99) 0%, rgba(7, 17, 25, 0.94) 36%, rgba(7, 17, 25, 0.52) 62%, rgba(7, 17, 25, 0.14) 84%);
+  }
+
+  #main-content > main > section:first-child > div:last-of-type {
+    padding-inline: 28px !important;
   }
 }
 
-@media (max-width: 640px) {
-  main.min-h-screen.bg-\[\#0F2A33\] > section:first-of-type::before {
-    background-size: auto 92%;
-    background-position: 72% 3%;
+@media (max-width: 760px) {
+  #main-content > main > section:first-child {
+    min-height: auto !important;
+  }
+
+  #main-content > main > section:first-child::before {
+    inset: 0 0 auto 0;
+    height: 520px;
+    opacity: 0.62;
+    background-size: auto 88%;
+    background-position: 76% 0;
+  }
+
+  #main-content > main > section:first-child::after {
+    background:
+      linear-gradient(180deg, rgba(7, 17, 25, 0.1) 0%, rgba(7, 17, 25, 0.8) 40%, #071119 66%),
+      linear-gradient(90deg, rgba(7, 17, 25, 0.95) 0%, rgba(7, 17, 25, 0.34) 100%);
+  }
+
+  #main-content > main > section:first-child > div:last-of-type {
+    min-height: auto !important;
+    padding: 76px 20px 28px !important;
+  }
+
+  #main-content > main > section:first-child h1 {
+    max-width: 430px;
+    font-size: clamp(52px, 15vw, 72px) !important;
+  }
+
+  #main-content > main > section:first-child h1 + p {
+    max-width: 360px !important;
+    font-size: 14px !important;
+  }
+
+  #main-content > main > section:first-child > div:last-of-type > div:last-child {
+    width: 100%;
+    max-width: none;
+    padding-top: 72px !important;
+  }
+
+  #main-content > main > section:first-child > div:last-of-type > div:last-child > div:first-child > a {
+    min-height: 168px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #main-content > main > section:first-child *,
+  #main-content > main > section:first-child *::before,
+  #main-content > main > section:first-child *::after {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition-duration: 0.01ms !important;
   }
 }
