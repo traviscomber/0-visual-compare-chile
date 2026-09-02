@@ -37,7 +37,11 @@ for(const needle of [
   'Una sola bandeja para todo lo que decides seguir.',
   '(["brand","patent","technology"] as WatchType[])',
   'SUBTYPE_OPTIONS',
-  'Frecuencia y geografía comunes se incorporarán cuando exista persistencia canónica; no se simulan aquí.',
+  'aria-label="Dónde buscar"',
+  '<option value="chile">Chile</option>',
+  '<option value="global">Global</option>',
+  '<option value="both">Ambos</option>',
+  'IA / AI',
   'href="/monitorear/estrategico"',
   'href="/patentes/alertas"',
 ])requireText(page,needle,"common watch workspace")
@@ -51,6 +55,8 @@ for(const needle of [
   'key: `patent:${row.id}`',
   'key: `technology:${row.id}`',
   '.eq("user_id", auth.user.id)',
+  'SearchScopeSchema',
+  'readStrategicSearchScope',
 ])requireText(watchesApi,needle,"common watch API")
 
 for(const needle of [
@@ -66,4 +72,4 @@ for(const [source,label] of [[watchesApi,"watch API"],[signalsApi,"signal API"]]
   if(source.includes("createAdminClient")||source.includes("SUPABASE_SERVICE_ROLE_KEY"))fail(`${label} must remain behind authenticated RLS, not service role`)
 }
 
-console.log("Portal/Common Watches regression PASS: six-destination IA is locked, deep tools remain contextual, and brand/patent/technology watches plus signals are normalized through authenticated RLS facades without a destructive migration.")
+console.log("Portal/Common Watches regression PASS: six-destination IA is locked, deep tools remain contextual, and brand/patent/technology watches plus scoped Chile/Global/Both technology searches are normalized through authenticated RLS facades without a destructive migration.")
