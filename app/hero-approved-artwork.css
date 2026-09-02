@@ -1,0 +1,53 @@
+/* Approved VIDENTIA landing artwork. Uses the exact user-provided SVG. */
+#main-content > main > section:first-child {
+  position: relative;
+  isolation: isolate;
+  background: #061019 !important;
+}
+
+/* Retire the previous generated intelligence-field artwork. */
+#main-content > main > section:first-child > div:first-child {
+  display: none !important;
+}
+
+#main-content > main > section:first-child::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: url('/images/VidentiaLanding.svg');
+  background-repeat: no-repeat;
+  background-position: right center;
+  background-size: auto 100%;
+}
+
+/* Keep copy and capability rail above the artwork. */
+#main-content > main > section:first-child > div:last-child {
+  position: relative;
+  z-index: 2;
+}
+
+@media (max-width: 1100px) {
+  #main-content > main > section:first-child::before {
+    background-position: 72% center;
+    background-size: auto 94%;
+  }
+}
+
+@media (max-width: 760px) {
+  #main-content > main > section:first-child::before {
+    background-position: 61% top;
+    background-size: auto 72%;
+    opacity: .9;
+  }
+
+  #main-content > main > section:first-child::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(6,16,25,.08) 0%, rgba(6,16,25,.2) 36%, rgba(6,16,25,.88) 68%, #061019 88%);
+  }
+}
