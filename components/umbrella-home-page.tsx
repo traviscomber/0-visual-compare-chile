@@ -1,3 +1,4 @@
+import Image from "next/image"
 import Link from "next/link"
 import { UmbrellaDemo } from "@/components/umbrella-demo"
 
@@ -39,7 +40,52 @@ const engine = [
   ["05", "REPORT", "What requires attention?"],
 ] as const
 
-const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#96B5A6] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F2A33]"
+const heroCapabilities = [
+  ["graph", "Knowledge Graph", "Connect complex evidence and expose relationships that drive insight.", "/technologies"],
+  ["agents", "AI Agents", "Research assistants that analyze, reason and accelerate evidence review.", "/technologies"],
+  ["secure", "Secure by Design", "Enterprise controls, traceability and evidence governance across the platform.", "/en/docs"],
+  ["impact", "Real Impact", "Move from search to defensible decisions, monitoring and action.", "#directions"],
+] as const
+
+const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72D4C5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#071119]"
+
+function CapabilityIcon({ type }: { type: (typeof heroCapabilities)[number][0] }) {
+  if (type === "graph") {
+    return (
+      <span className="relative block h-8 w-8" aria-hidden="true">
+        <i className="absolute left-1 top-4 h-px w-7 -rotate-[28deg] bg-[#63D0BF]" />
+        <i className="absolute left-1 top-4 h-px w-7 rotate-[28deg] bg-[#63D0BF]" />
+        <i className="absolute left-0 top-3 h-2.5 w-2.5 rounded-full border border-[#63D0BF] bg-[#08131A]" />
+        <i className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full border border-[#63D0BF] bg-[#08131A]" />
+        <i className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-[#63D0BF] bg-[#08131A]" />
+      </span>
+    )
+  }
+
+  if (type === "agents") {
+    return (
+      <span className="flex h-8 w-8 items-end gap-1" aria-hidden="true">
+        <i className="h-2 w-1 border border-[#63D0BF]" />
+        <i className="h-4 w-1 border border-[#63D0BF]" />
+        <i className="h-7 w-1 border border-[#63D0BF]" />
+        <i className="h-5 w-1 border border-[#63D0BF]" />
+      </span>
+    )
+  }
+
+  if (type === "secure") {
+    return (
+      <span className="relative block h-8 w-8 border border-[#63D0BF] [clip-path:polygon(50%_0,100%_18%,100%_62%,50%_100%,0_62%,0_18%)]" aria-hidden="true" />
+    )
+  }
+
+  return (
+    <span className="relative block h-8 w-8 rounded-full border border-[#63D0BF]" aria-hidden="true">
+      <i className="absolute inset-[7px] rounded-full border border-[#63D0BF]" />
+      <i className="absolute -right-1 top-0 h-2.5 w-2.5 rounded-full bg-[#63D0BF]" />
+    </span>
+  )
+}
 
 function TrademarkGeometry() {
   return (
@@ -87,24 +133,63 @@ function VerticalGeometry({ type }: { type: (typeof verticals)[number]["visual"]
 export function UmbrellaHomePage() {
   return (
     <main className="min-h-screen bg-[#0F2A33] text-white">
-      <section className="border-b border-[#294047] px-5 py-20 lg:px-10 lg:py-28">
-        <div className="mx-auto grid max-w-[1480px] gap-14 lg:grid-cols-[0.98fr_1.02fr] lg:items-center">
-          <div>
-            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#96B5A6]">IP & TECHNOLOGY INTELLIGENCE</p>
-            <h1 className="mt-6 max-w-4xl text-[clamp(3.8rem,7.2vw,7.6rem)] font-light leading-[0.88] tracking-[-0.06em] text-[#E7DFCE]">Intelligence for what you build, protect and follow.</h1>
-            <p className="mt-8 max-w-2xl text-base leading-8 text-[#BDBEBD]">Search, analyze and continuously monitor trademarks, patents and technologies from one intelligence platform.</p>
+      <section className="relative min-h-[calc(100svh-5rem)] overflow-hidden border-b border-white/10 bg-[#071119]">
+        <Image
+          src="/images/videntia-hero-original.jpg"
+          alt="VIDENTIA geometric intelligence artwork"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-[68%_center] opacity-90 md:object-center"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,#071119_0%,rgba(7,17,25,0.94)_26%,rgba(7,17,25,0.55)_50%,rgba(7,17,25,0.12)_72%,rgba(7,17,25,0.05)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,17,25,0.18)_0%,rgba(7,17,25,0.03)_43%,rgba(7,17,25,0.9)_100%)]" />
+        <div className="absolute inset-x-0 bottom-0 h-[44%] bg-[linear-gradient(180deg,transparent,rgba(5,13,19,0.96))]" />
+
+        <div className="relative mx-auto flex min-h-[calc(100svh-5rem)] max-w-[1480px] flex-col px-5 pb-10 pt-[clamp(5rem,12vh,9rem)] lg:px-10">
+          <div className="max-w-[660px]">
+            <p className="flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.18em] text-[#63D0BF] sm:text-[11px]">
+              <span className="h-2 w-2 rounded-full bg-[#63D0BF]" />
+              N3URALIA INTELLIGENCE PLATFORM
+            </p>
+            <h1 className="mt-7 text-[clamp(3.8rem,7.3vw,7.6rem)] font-light leading-[0.91] tracking-[-0.06em] text-[#F3F1ED]">
+              Surface <span className="text-[#63D0BF]">truth.</span><br />
+              Unlock <span className="text-[#63D0BF]">value.</span>
+            </h1>
+            <p className="mt-8 max-w-[520px] text-[15px] leading-7 text-[#BEC4C4] sm:text-base sm:leading-8">
+              VIDENTIA connects data, people and AI to reveal what matters and act with confidence.
+            </p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <Link href="#directions" className={`bg-[#4A7F74] px-5 py-3.5 text-xs font-medium tracking-[0.06em] text-white ${focusRing}`}>START A SEARCH</Link>
-              <Link href="#engine" className={`border border-[#456E8E] px-5 py-3.5 text-xs font-medium tracking-[0.06em] text-[#E7DFCE] ${focusRing}`}>EXPLORE THE PLATFORM</Link>
+              <Link href="#directions" className={`group inline-flex items-center gap-5 rounded-[5px] bg-[#62BEB2] px-6 py-4 text-sm font-medium text-[#071119] transition-colors hover:bg-[#78D2C6] ${focusRing}`}>
+                Explore Platform <span aria-hidden="true" className="text-xl font-light transition-transform group-hover:translate-x-1">→</span>
+              </Link>
+              <Link href="#engine" className={`group inline-flex items-center gap-5 rounded-full border border-white/20 bg-[#09151D]/35 px-6 py-4 text-sm text-[#D5D9D8] backdrop-blur-sm transition-colors hover:border-white/35 hover:bg-[#09151D]/65 ${focusRing}`}>
+                Watch Overview <span aria-hidden="true" className="text-[11px]">▷</span>
+              </Link>
             </div>
           </div>
-          <div className="relative min-h-[430px] overflow-hidden bg-[#091A20] sm:min-h-[520px]" aria-hidden="true">
-            <span className="absolute left-[8%] top-[13%] h-40 w-40 rounded-full border-[26px] border-[#4A7F74] sm:h-52 sm:w-52" />
-            <span className="absolute left-[31%] top-[13%] h-40 w-40 rounded-full border-[26px] border-[#96B5A6] sm:h-52 sm:w-52" />
-            <span className="absolute bottom-[23%] left-[11%] h-[3px] w-[58%] bg-[#456E8E]" />
-            <span className="absolute bottom-[13%] left-[11%] h-[3px] w-[70%] bg-[#4A7F74]" />
-            <span className="absolute bottom-[8%] right-[13%] h-5 w-5 rounded-full bg-[#96B5A6]" />
-            <span className="absolute bottom-[18%] right-[23%] h-5 w-5 rounded-full bg-[#456E8E]" />
+
+          <div className="mt-auto pt-16">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {heroCapabilities.map(([type, title, body, href]) => (
+                <Link
+                  key={title}
+                  href={href}
+                  className={`group min-h-[220px] border border-[#2C5554]/70 bg-[#071119]/74 p-7 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-[#63D0BF]/60 hover:bg-[#091820]/88 ${focusRing}`}
+                >
+                  <div className="flex items-center gap-5">
+                    <CapabilityIcon type={type} />
+                    <h2 className="text-base font-normal text-[#8FE0D4]">{title}</h2>
+                  </div>
+                  <p className="mt-5 max-w-[250px] text-sm leading-6 text-[#B8BDBD]">{body}</p>
+                  <span className="mt-8 inline-block text-2xl font-light text-[#63D0BF] transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
+                </Link>
+              ))}
+            </div>
+            <a href="#directions" className={`mx-auto mt-8 flex w-fit flex-col items-center gap-3 text-[10px] tracking-[0.28em] text-[#D7D9D7] ${focusRing}`}>
+              SCROLL TO EXPLORE
+              <span className="h-3 w-3 rotate-45 border-b border-r border-[#63D0BF]" aria-hidden="true" />
+            </a>
           </div>
         </div>
       </section>
