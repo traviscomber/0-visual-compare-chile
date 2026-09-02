@@ -1,27 +1,112 @@
 export type StrategicSearchScope = "chile" | "global" | "both"
 
+export type StrategicConceptBlocks = {
+  core: string[]
+  context: string[]
+  exclusions: string[]
+}
+
 export type StrategicSearchIntent = {
   canonicalQuery: string
+  conceptKey: string
   scope: StrategicSearchScope
   aliases: string[]
   chileQueries: string[]
   globalQueries: string[]
+  concept: StrategicConceptBlocks
 }
 
 const MAX_VARIANTS = 6
+const MAX_CONCEPT_TERMS = 8
 
-const EXACT_BILINGUAL_PATTERNS: Array<{ test: RegExp; es: string; en: string }> = [
-  { test: /\benterprise\s+(?:ai|artificial intelligence)\s+agents?\b/i, es: "agentes de IA empresariales", en: "enterprise AI agents" },
-  { test: /\bagentes?\s+de\s+(?:ia|inteligencia artificial)\s+empresarial(?:es)?\b/i, es: "agentes de IA empresariales", en: "enterprise AI agents" },
-  { test: /\b(?:ai|artificial intelligence)\s+workflow\s+automation\s+enterprise\b/i, es: "automatización de flujos de trabajo empresariales con IA", en: "enterprise AI workflow automation" },
-  { test: /\benterprise\s+(?:ai|artificial intelligence)\s+workflow\s+automation\b/i, es: "automatización de flujos de trabajo empresariales con IA", en: "enterprise AI workflow automation" },
-  { test: /\bautomatizaci[oó]n\s+de\s+flujos?\s+de\s+trabajo.*\b(?:ia|inteligencia artificial)\b/i, es: "automatización de flujos de trabajo empresariales con IA", en: "enterprise AI workflow automation" },
-  { test: /\boperational\s+intelligence.*\b(?:ai|artificial intelligence)\b/i, es: "software de inteligencia operacional con IA", en: "operational intelligence AI software" },
-  { test: /\binteligencia\s+oper(?:acional|ativa).*\b(?:ia|inteligencia artificial)\b/i, es: "software de inteligencia operacional con IA", en: "operational intelligence AI software" },
-  { test: /\bmachine\s+learning\b/i, es: "aprendizaje automático", en: "machine learning" },
-  { test: /\baprendizaje\s+autom[aá]tico\b/i, es: "aprendizaje automático", en: "machine learning" },
-  { test: /\bartificial\s+intelligence\b/i, es: "inteligencia artificial", en: "artificial intelligence" },
-  { test: /\binteligencia\s+artificial\b/i, es: "inteligencia artificial", en: "artificial intelligence" },
+const EXACT_BILINGUAL_PATTERNS: Array<{
+  test: RegExp
+  es: string
+  en: string
+  core: string[]
+  context?: string[]
+  exclusions?: string[]
+}> = [
+  {
+    test: /\benterprise\s+(?:ai|artificial intelligence)\s+agents?\b/i,
+    es: "agentes de IA empresariales",
+    en: "enterprise AI agents",
+    core: ["enterprise AI agents", "artificial intelligence agents", "agentic AI", "autonomous AI agents"],
+    context: ["enterprise", "business", "workflow", "operations"],
+    exclusions: ["agent-based model", "multi-agent reinforcement learning"],
+  },
+  {
+    test: /\bagentes?\s+de\s+(?:ia|inteligencia artificial)\s+empresarial(?:es)?\b/i,
+    es: "agentes de IA empresariales",
+    en: "enterprise AI agents",
+    core: ["enterprise AI agents", "artificial intelligence agents", "agentic AI", "autonomous AI agents"],
+    context: ["enterprise", "business", "workflow", "operations"],
+    exclusions: ["agent-based model", "multi-agent reinforcement learning"],
+  },
+  {
+    test: /\b(?:ai|artificial intelligence)\s+workflow\s+automation\s+enterprise\b/i,
+    es: "automatización de flujos de trabajo empresariales con IA",
+    en: "enterprise AI workflow automation",
+    core: ["enterprise AI workflow automation", "AI workflow automation", "agentic workflow", "intelligent workflow automation"],
+    context: ["enterprise", "business", "operations", "process"],
+    exclusions: ["laboratory automation"],
+  },
+  {
+    test: /\benterprise\s+(?:ai|artificial intelligence)\s+workflow\s+automation\b/i,
+    es: "automatización de flujos de trabajo empresariales con IA",
+    en: "enterprise AI workflow automation",
+    core: ["enterprise AI workflow automation", "AI workflow automation", "agentic workflow", "intelligent workflow automation"],
+    context: ["enterprise", "business", "operations", "process"],
+    exclusions: ["laboratory automation"],
+  },
+  {
+    test: /\bautomatizaci[oó]n\s+de\s+flujos?\s+de\s+trabajo.*\b(?:ia|inteligencia artificial)\b/i,
+    es: "automatización de flujos de trabajo empresariales con IA",
+    en: "enterprise AI workflow automation",
+    core: ["enterprise AI workflow automation", "AI workflow automation", "agentic workflow", "intelligent workflow automation"],
+    context: ["enterprise", "business", "operations", "process"],
+    exclusions: ["laboratory automation"],
+  },
+  {
+    test: /\boperational\s+intelligence.*\b(?:ai|artificial intelligence)\b/i,
+    es: "software de inteligencia operacional con IA",
+    en: "operational intelligence AI software",
+    core: ["operational intelligence AI", "operational intelligence software", "AI operations software", "decision intelligence software"],
+    context: ["enterprise", "operations", "workflow", "decision"],
+    exclusions: ["emotional intelligence", "military intelligence"],
+  },
+  {
+    test: /\binteligencia\s+oper(?:acional|ativa).*\b(?:ia|inteligencia artificial)\b/i,
+    es: "software de inteligencia operacional con IA",
+    en: "operational intelligence AI software",
+    core: ["operational intelligence AI", "operational intelligence software", "AI operations software", "decision intelligence software"],
+    context: ["enterprise", "operations", "workflow", "decision"],
+    exclusions: ["emotional intelligence", "military intelligence"],
+  },
+  {
+    test: /\bmachine\s+learning\b/i,
+    es: "aprendizaje automático",
+    en: "machine learning",
+    core: ["machine learning", "aprendizaje automático"],
+  },
+  {
+    test: /\baprendizaje\s+autom[aá]tico\b/i,
+    es: "aprendizaje automático",
+    en: "machine learning",
+    core: ["machine learning", "aprendizaje automático"],
+  },
+  {
+    test: /\bartificial\s+intelligence\b/i,
+    es: "inteligencia artificial",
+    en: "artificial intelligence",
+    core: ["artificial intelligence", "inteligencia artificial", "AI", "IA"],
+  },
+  {
+    test: /\binteligencia\s+artificial\b/i,
+    es: "inteligencia artificial",
+    en: "artificial intelligence",
+    core: ["artificial intelligence", "inteligencia artificial", "AI", "IA"],
+  },
 ]
 
 export function buildStrategicSearchIntent(
@@ -57,12 +142,26 @@ export function buildStrategicSearchIntent(
         canonicalLooksSpanish ? undefined : canonicalQuery,
       ]).slice(0, MAX_VARIANTS)
 
+  const aliases = unique([...es, ...en])
+    .filter(value => normalizeForComparison(value) !== normalizeForComparison(canonicalQuery))
+    .slice(0, MAX_VARIANTS)
+  const concept = exact
+    ? {
+        core: unique(exact.core).slice(0, MAX_CONCEPT_TERMS),
+        context: unique(exact.context ?? []).slice(0, MAX_CONCEPT_TERMS),
+        exclusions: unique(exact.exclusions ?? []).slice(0, MAX_CONCEPT_TERMS),
+      }
+    : buildFallbackConcept(canonicalQuery, aliases)
+  const globalCanonical = exact?.en ?? en[0] ?? canonicalQuery
+
   return {
     canonicalQuery,
+    conceptKey: normalizeForComparison(globalCanonical),
     scope,
-    aliases: unique([...es, ...en]).filter(value => normalizeForComparison(value) !== normalizeForComparison(canonicalQuery)).slice(0, MAX_VARIANTS),
+    aliases,
     chileQueries: es.length ? es : [canonicalQuery],
     globalQueries: en.length ? en : [canonicalQuery],
+    concept,
   }
 }
 
@@ -71,8 +170,8 @@ export function strategicSearchMetadata(query: string, scope: StrategicSearchSco
   return {
     search_scope: scope,
     query_aliases: intent.aliases,
-    normalization_version: "bilingual-es-en-v1",
-    semantic_key: strategicSemanticKey(query),
+    normalization_version: "search-intent-v2",
+    semantic_key: intent.conceptKey,
   }
 }
 
@@ -84,9 +183,7 @@ export function mergeStrategicSearchMetadata(metadata: unknown, query: string, s
 }
 
 export function strategicSemanticKey(query: string) {
-  const intent = buildStrategicSearchIntent(query, "both")
-  const canonical = intent.globalQueries[0] ?? intent.chileQueries[0] ?? intent.canonicalQuery
-  return normalizeForComparison(canonical)
+  return buildStrategicSearchIntent(query, "both").conceptKey
 }
 
 export function readStrategicSearchScope(metadata: unknown): StrategicSearchScope {
@@ -98,7 +195,18 @@ export function readStrategicSearchScope(metadata: unknown): StrategicSearchScop
 export function readStrategicQueryAliases(metadata: unknown): string[] {
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return []
   const aliases = (metadata as Record<string, unknown>).query_aliases
-  return Array.isArray(aliases) ? aliases.filter((value): value is string => typeof value === "string" && value.trim().length >= 2).slice(0, MAX_VARIANTS) : []
+  return Array.isArray(aliases)
+    ? aliases.filter((value): value is string => typeof value === "string" && value.trim().length >= 2).slice(0, MAX_VARIANTS)
+    : []
+}
+
+function buildFallbackConcept(canonicalQuery: string, aliases: string[]): StrategicConceptBlocks {
+  const candidates = unique([canonicalQuery, ...aliases]).slice(0, 4)
+  return {
+    core: candidates.length ? candidates : [canonicalQuery],
+    context: [],
+    exclusions: [],
+  }
 }
 
 function toSpanishVariant(query: string) {
@@ -146,6 +254,10 @@ function unique(values: Array<string | undefined>) {
     output.push(value)
   }
   return output
+}
+
+export function normalizeStrategicText(value: string) {
+  return normalizeForComparison(value)
 }
 
 function normalizeForComparison(value: string) {
