@@ -30,7 +30,8 @@
     "test:analytics": "node scripts/analytics-privacy-regression.mts",
     "test:api-key-listing": "node scripts/api-key-listing-regression.mts",
     "test:phase1-window": "node scripts/phase1-window-regression.mts",
-    "test:case-roles": "node scripts/case-role-regression.mts"
+    "test:case-roles": "node scripts/case-role-regression.mts",
+    "test:business-opportunity-domain": "node scripts/business-opportunity-domain-regression.mts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
