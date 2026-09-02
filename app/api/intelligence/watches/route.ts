@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
+import { readStrategicSearchScope, strategicSearchMetadata, type StrategicSearchScope } from "@/lib/intelligence/search-intent"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -13,6 +14,7 @@ type CommonWatch = {
   subtype: string
   query: string
   niceClasses: number[]
+  searchScope: StrategicSearchScope | null
   isActive: boolean
   lastCheckedAt: string | null
   lastReviewedAt: string | null
@@ -20,11 +22,13 @@ type CommonWatch = {
   updatedAt: string
 }
 
+const SearchScopeSchema = z.enum(["chile", "global", "both"])
 const CreateSchema = z.object({
   type: z.enum(["brand", "patent", "technology"]),
   subtype: z.string().trim().max(32).optional(),
   query: z.string().trim().min(2).max(160),
   niceClasses: z.array(z.number().int().min(1).max(45)).max(20).optional().default([]),
+  scope: SearchScopeSchema.optional(),
 })
 
 const ChangeSchema = z.object({
@@ -51,7 +55,7 @@ export async function GET() {
       .eq("user_id", auth.user.id),
     auth.supabase
       .from("intelligence_watches")
-      .select("id,watch_type,query,is_active,last_checked_at,last_reviewed_at,created_at,updated_at")
+      .select("id,watch_type,query,is_active,last_checked_at,last_reviewed_at,metadata,created_at,updated_at")
       .eq("user_id", auth.user.id),
   ])
 
@@ -69,6 +73,7 @@ export async function GET() {
       subtype: row.watch_type,
       query: row.query,
       niceClasses: Array.isArray(row.nice_classes) ? row.nice_classes : [],
+      searchScope: null,
       isActive: row.is_active,
       lastCheckedAt: row.last_checked_at,
       lastReviewedAt: row.last_reviewed_at,
@@ -82,6 +87,7 @@ export async function GET() {
       subtype: row.watch_type,
       query: row.query,
       niceClasses: [],
+      searchScope: null,
       isActive: row.is_active,
       lastCheckedAt: row.last_checked_at,
       lastReviewedAt: null,
@@ -95,6 +101,7 @@ export async function GET() {
       subtype: row.watch_type,
       query: row.query,
       niceClasses: [],
+      searchScope: readStrategicSearchScope(row.metadata),
       isActive: row.is_active,
       lastCheckedAt: row.last_checked_at,
       lastReviewedAt: row.last_reviewed_at,
@@ -159,6 +166,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ watch: normalizePatent(data) }, { status: 201, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
+  const scope = parsed.data.scope ?? "both"
+  const metadata = strategicSearchMetadata(query, scope)
   const { data, error } = await auth.supabase
     .from("intelligence_watches")
     .upsert({
@@ -166,11 +175,13 @@ export async function POST(request: Request) {
       watch_type: subtype,
       query,
       normalized_query: normalizedQuery,
-      metadata: {},
+      metadata,
       is_active: true,
+      last_checked_at: null,
+      last_reviewed_at: null,
       updated_at: now,
     }, { onConflict: "user_id,watch_type,normalized_query" })
-    .select("id,watch_type,query,is_active,last_checked_at,last_reviewed_at,created_at,updated_at")
+    .select("id,watch_type,query,is_active,last_checked_at,last_reviewed_at,metadata,created_at,updated_at")
     .single()
   if (error) return watchWriteError("technology", error)
   return NextResponse.json({ watch: normalizeTechnology(data) }, { status: 201, headers: PRIVATE_NO_STORE_HEADERS })
@@ -257,13 +268,13 @@ function tableFor(source: WatchSource) {
 }
 
 function normalizeBrand(row: Record<string, any>): CommonWatch {
-  return { key: `brand:${row.id}`, id: row.id, type: "brand", subtype: row.watch_type, query: row.query, niceClasses: row.nice_classes ?? [], isActive: row.is_active, lastCheckedAt: row.last_checked_at, lastReviewedAt: row.last_reviewed_at, createdAt: row.created_at, updatedAt: row.updated_at }
+  return { key: `brand:${row.id}`, id: row.id, type: "brand", subtype: row.watch_type, query: row.query, niceClasses: row.nice_classes ?? [], searchScope: null, isActive: row.is_active, lastCheckedAt: row.last_checked_at, lastReviewedAt: row.last_reviewed_at, createdAt: row.created_at, updatedAt: row.updated_at }
 }
 function normalizePatent(row: Record<string, any>): CommonWatch {
-  return { key: `patent:${row.id}`, id: row.id, type: "patent", subtype: row.watch_type, query: row.query, niceClasses: [], isActive: row.is_active, lastCheckedAt: row.last_checked_at, lastReviewedAt: null, createdAt: row.created_at, updatedAt: row.updated_at }
+  return { key: `patent:${row.id}`, id: row.id, type: "patent", subtype: row.watch_type, query: row.query, niceClasses: [], searchScope: null, isActive: row.is_active, lastCheckedAt: row.last_checked_at, lastReviewedAt: null, createdAt: row.created_at, updatedAt: row.updated_at }
 }
 function normalizeTechnology(row: Record<string, any>): CommonWatch {
-  return { key: `technology:${row.id}`, id: row.id, type: "technology", subtype: row.watch_type, query: row.query, niceClasses: [], isActive: row.is_active, lastCheckedAt: row.last_checked_at, lastReviewedAt: row.last_reviewed_at, createdAt: row.created_at, updatedAt: row.updated_at }
+  return { key: `technology:${row.id}`, id: row.id, type: "technology", subtype: row.watch_type, query: row.query, niceClasses: [], searchScope: readStrategicSearchScope(row.metadata), isActive: row.is_active, lastCheckedAt: row.last_checked_at, lastReviewedAt: row.last_reviewed_at, createdAt: row.created_at, updatedAt: row.updated_at }
 }
 
 function countByType(watches: CommonWatch[]) {
