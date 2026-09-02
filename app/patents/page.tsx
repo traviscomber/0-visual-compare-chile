@@ -39,11 +39,14 @@ const patentPublicFixes = `
 }
 
 .patents-public-page > main > section:first-of-type > div > div:last-child {
-  background-color: #091A20;
+  background-color: transparent !important;
   background-image: url('/images/VidentiaPatents.svg');
   background-repeat: no-repeat;
   background-position: center 34%;
   background-size: min(42%, 360px) auto;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
 .patents-public-page > main > section:first-of-type > div > div:last-child > div:first-child {
