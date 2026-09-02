@@ -86,47 +86,26 @@ function CapabilityIcon({ type }: { type: (typeof heroCapabilities)[number][0] }
   )
 }
 
-function TrademarkGeometry() {
-  return (
-    <div className="relative h-44 w-full max-w-[260px]" aria-hidden="true">
-      <span className="absolute left-3 top-5 h-28 w-28 rounded-full border-[18px] border-[#4A7F74]" />
-      <span className="absolute left-[86px] top-5 h-28 w-28 rounded-full border-[18px] border-[#96B5A6]" />
-      <span className="absolute left-[66px] top-[54px] h-12 w-12 rounded-full bg-[#456E8E]" />
-    </div>
-  )
-}
-
-function PatentGeometry() {
-  return (
-    <div className="relative h-44 w-full max-w-[260px]" aria-hidden="true">
-      <span className="absolute left-3 top-4 h-[3px] w-48 bg-[#456E8E]" />
-      <span className="absolute left-3 top-14 h-[3px] w-48 bg-[#4A7F74]" />
-      <span className="absolute left-3 top-24 h-[3px] w-48 bg-[#96B5A6]" />
-      <span className="absolute left-14 top-0 h-36 w-[3px] bg-[#456E8E]" />
-      <span className="absolute left-32 top-0 h-36 w-[3px] bg-[#4A7F74]" />
-      <span className="absolute left-[110px] top-[64px] h-14 w-14 border-[14px] border-[#96B5A6]" />
-    </div>
-  )
-}
-
-function TechnologyGeometry() {
-  return (
-    <div className="relative h-44 w-full max-w-[260px]" aria-hidden="true">
-      <span className="absolute left-3 top-4 h-5 w-5 rounded-full bg-[#456E8E]" />
-      <span className="absolute left-3 top-[72px] h-5 w-5 rounded-full bg-[#4A7F74]" />
-      <span className="absolute left-3 top-[132px] h-5 w-5 rounded-full bg-[#96B5A6]" />
-      <span className="absolute left-8 top-[26px] h-px w-32 rotate-[18deg] bg-[#456E8E]" />
-      <span className="absolute left-8 top-[82px] h-px w-32 bg-[#4A7F74]" />
-      <span className="absolute left-8 top-[137px] h-px w-32 -rotate-[18deg] bg-[#96B5A6]" />
-      <span className="absolute right-3 top-[50px] h-20 w-20 rounded-full border-[16px] border-[#96B5A6]" />
-    </div>
-  )
-}
+const verticalArtworkPosition = {
+  trademark: "left center",
+  patent: "center center",
+  technology: "right center",
+} as const
 
 function VerticalGeometry({ type }: { type: (typeof verticals)[number]["visual"] }) {
-  if (type === "trademark") return <TrademarkGeometry />
-  if (type === "patent") return <PatentGeometry />
-  return <TechnologyGeometry />
+  return (
+    <div className="flex h-52 w-full items-center justify-center md:justify-end" aria-hidden="true">
+      <div
+        className="h-44 w-44 shrink-0 lg:h-48 lg:w-48"
+        style={{
+          backgroundImage: "url('/VidentiaVerticalsIcons.svg')",
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "auto 100%",
+          backgroundPosition: verticalArtworkPosition[type],
+        }}
+      />
+    </div>
+  )
 }
 
 function HeroIntelligenceField() {
