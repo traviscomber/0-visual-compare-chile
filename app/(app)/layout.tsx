@@ -41,6 +41,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     return <FreePreviewShell userEmail={user.email ?? ""}>{children}</FreePreviewShell>
   }
 
+  let onboardingComplete = true
+  try {
+    const { getOrCreatePrimaryOrganization, ensureOrganizationIntelligenceProfile } = await import("@/lib/onboarding/server")
+    const organization = await getOrCreatePrimaryOrganization(user)
+    const strategicProfile = await ensureOrganizationIntelligenceProfile(user, organization)
+    onboardingComplete = Boolean(strategicProfile.onboarding_completed_at)
+  } catch (error) {
+    console.error("[app-layout:onboarding]", error)
+  }
+
+  if (!onboardingComplete) redirect("/onboarding")
+
   const metadataName = typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : null
   const metadataCompany = typeof user.user_metadata?.company_name === "string" ? user.user_metadata.company_name : null
 
