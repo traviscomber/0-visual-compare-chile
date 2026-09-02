@@ -23,10 +23,11 @@ const workflow = buildStrategicSearchIntent("AI workflow automation enterprise",
 if (!workflow.chileQueries.some(value => /automatizaci[oó]n de flujos de trabajo empresariales con IA/i.test(value))) fail("workflow automation must have a controlled Spanish expansion")
 if (strategicSemanticKey("AI workflow automation enterprise") !== strategicSemanticKey("automatización de flujos de trabajo empresariales con IA")) fail("workflow ES/EN equivalents must share one semantic watch key")
 
-const [googleNews, watchlist, commonWatches, scanner, technologySignals, technologyRoute, newWatchPage] = await Promise.all([
+const [googleNews, watchlist, commonWatches, commonWatchesPage, scanner, technologySignals, technologyRoute, newWatchPage] = await Promise.all([
   readFile("lib/intelligence/google-news.ts", "utf8"),
   readFile("app/api/intelligence/strategic-watchlist/route.ts", "utf8"),
   readFile("app/api/intelligence/watches/route.ts", "utf8"),
+  readFile("app/(app)/monitorear/page.tsx", "utf8"),
   readFile("lib/intelligence/strategic-watch-scanner.ts", "utf8"),
   readFile("lib/intelligence/technology-signals.ts", "utf8"),
   readFile("app/api/intelligence/technology-signals/route.ts", "utf8"),
@@ -37,9 +38,10 @@ for (const needle of ['"es-419"', '"CL"', '"CL:es-419"', '"en-US"', '"US:en"']) 
 for (const needle of ['z.enum(["chile", "global", "both"])', "strategicSemanticKey", "mergeStrategicSearchMetadata", '"semantic_duplicate"', "last_checked_at: null", "last_reviewed_at: null"]) requireText(watchlist, needle, "strategic watchlist")
 for (const needle of ["SearchScopeSchema", "strategicSemanticKey(query)", "mergeStrategicSearchMetadata", "readStrategicSearchScope(row.metadata)", '"semantic_duplicate"', "last_checked_at: null", "last_reviewed_at: null"]) requireText(commonWatches, needle, "common Watches API")
 if (commonWatches.includes("metadata: {}")) fail("common Watches API must never erase technology search intent metadata")
+for (const needle of ['type SearchScope = "chile" | "global" | "both"', 'aria-label="Dónde buscar"', '<option value="chile">Chile</option>', '<option value="global">Global</option>', '<option value="both">Ambos</option>', 'type==="technology"?{scope}:{}', 'scopeLabel(watch.searchScope)', 'IA / AI']) requireText(commonWatchesPage, needle, "common Watches UI")
 for (const needle of ['scope !== "global"', 'scope !== "chile"', 'search_scope: "chile"', 'search_scope: "global"', "intent.chileQueries", "intent.globalQueries"]) requireText(scanner, needle, "strategic scanner")
 for (const needle of ["globalQuery", "chileQuery", "buildTechnologyPatentSignal(chileQuery", "queryOpenAlexWindow(globalQuery", 'normalization: "bilingual-es-en-v1"']) requireText(technologySignals, needle, "technology signals")
 for (const needle of ["videntia_search_scope", "buildTechnologySignals(parsed.data.q, parsed.data.windowDays, parsed.data.scope"]) requireText(technologyRoute, needle, "technology route")
 for (const needle of ['label="Chile"', 'label="Global"', 'label="Ambos"', "IA / AI", "scope"]) requireText(newWatchPage, needle, "new strategic watch UI")
 
-console.log("Search intent regression PASS: AI/IA and controlled ES/EN equivalents share one semantic watch identity, hybrid aliases are rejected, Chile/global sources stay scoped, and all watch entrypoints preserve search intent metadata.")
+console.log("Search intent regression PASS: AI/IA equivalents share one semantic identity, Chile/global sources stay scoped, and both strategic and common Watches entrypoints expose and preserve Chile / Global / Ambos search scope.")
