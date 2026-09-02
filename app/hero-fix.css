@@ -1,6 +1,5 @@
 /* VIDENTIA hero — exact artwork composition.
-   The hero uses the real Next.js image already rendered by UmbrellaHomePage.
-   No pseudo-image, duplicate media layer, or redraw. */
+   Preserve the complete approved hero artwork instead of cropping it to the viewport. */
 
 #main-content > main > section:first-child {
   position: relative;
@@ -11,19 +10,20 @@
   border-color: rgba(255,255,255,.08) !important;
 }
 
-/* Use the approved artwork itself as the full-bleed hero background. */
+/* The artwork already contains the intended negative space, cube and ivory path.
+   `contain` is deliberate: no part of the approved composition may be cropped. */
 #main-content > main > section:first-child > img {
   display: block !important;
   z-index: 0 !important;
   opacity: 1 !important;
-  object-fit: cover !important;
-  object-position: center center !important;
+  object-fit: contain !important;
+  object-position: right center !important;
+  background: #0b111b !important;
   filter: none !important;
   transform: none !important;
 }
 
-/* The uploaded artwork already contains its own dark field and lighting.
-   Remove legacy gradients so the image is not obscured or recolored. */
+/* The uploaded artwork owns its own dark field and lighting. */
 #main-content > main > section:first-child > div:nth-of-type(1),
 #main-content > main > section:first-child > div:nth-of-type(2),
 #main-content > main > section:first-child > div:nth-of-type(3) {
@@ -108,7 +108,6 @@
   -webkit-backdrop-filter: blur(8px);
 }
 
-/* Full-width glass capability rail, like the approved composition. */
 #main-content > main > section:first-child > div:last-of-type > div:last-child {
   width: 100%;
   max-width: none !important;
@@ -164,7 +163,7 @@
 
 @media (max-width: 1180px) {
   #main-content > main > section:first-child > img {
-    object-position: 60% center !important;
+    object-position: right center !important;
   }
 
   #main-content > main > section:first-child > div:last-of-type {
@@ -182,7 +181,8 @@
   }
 
   #main-content > main > section:first-child > img {
-    object-position: 67% center !important;
+    object-fit: cover !important;
+    object-position: 70% center !important;
   }
 
   #main-content > main > section:first-child > div:last-of-type {
@@ -194,7 +194,6 @@
     font-size: clamp(60px, 9vw, 80px) !important;
   }
 
-  /* Lightweight readability veil only on compact viewports. */
   #main-content > main > section:first-child::after {
     content: "";
     position: absolute;
