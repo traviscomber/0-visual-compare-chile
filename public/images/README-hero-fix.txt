@@ -1,0 +1,1 @@
+Using exact uploaded artwork for hero; binary replacement performed via git blob in next commit.
