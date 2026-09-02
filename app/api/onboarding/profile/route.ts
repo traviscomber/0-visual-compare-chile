@@ -102,6 +102,13 @@ export async function PATCH(request: Request) {
       },
     })
 
+    if (parsed.data.completed && !profile.onboarding_completed_at) {
+      return NextResponse.json({
+        error: "Todavía falta información mínima para completar el onboarding. Revisa Tu empresa, Qué quieres descubrir y Tu foco.",
+        profile,
+      }, { status: 409, headers: PRIVATE_NO_STORE_HEADERS })
+    }
+
     await auth.supabase.from("usage_logs").insert({
       user_id: auth.user.id,
       organization_id: nextOrganization.id,
