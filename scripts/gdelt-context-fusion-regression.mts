@@ -1,10 +1,11 @@
 import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 
-const [migration, contextSync, watchFusion, gleif, route, sourceNetwork] = await Promise.all([
+const [migration, contextSync, watchFusion, watchWriter, gleif, route, sourceNetwork] = await Promise.all([
   readFile("supabase/migrations/20260902002000_add_gdelt_context_fusion.sql", "utf8"),
   readFile("lib/intelligence/gdelt-context-sync.ts", "utf8"),
   readFile("lib/intelligence/gdelt-watch-fusion.ts", "utf8"),
+  readFile("lib/intelligence/watch-event-writer.ts", "utf8"),
   readFile("lib/intelligence/gleif.ts", "utf8"),
   readFile("app/api/cron/gdelt-raw-feed/route.ts", "utf8"),
   readFile("lib/intelligence/source-network.ts", "utf8"),
@@ -47,7 +48,10 @@ assert.match(watchFusion, /\.range\(from, from \+ WATCH_PAGE_SIZE - 1\)/, "all a
 assert.doesNotMatch(watchFusion, /\.limit\(WATCH_LIMIT\)/, "watch fusion must not silently stop at 100 watches")
 assert.match(watchFusion, /search_gdelt_watch_signals/, "watch fusion must use canonical GDELT search")
 assert.match(watchFusion, /gdelt-events-mentions-gkg-gleif-v1/, "signal lineage must be explicit")
-assert.match(watchFusion, /onConflict: "user_id,watch_id,signal_key"/, "watch fusion must remain idempotent")
+assert.match(watchFusion, /persistIntelligenceWatchEvents/, "GDELT watch fusion must persist through the canonical event writer")
+assert.doesNotMatch(watchFusion, /\.from\("intelligence_watch_events"\).*\.upsert/s, "GDELT fusion must not bypass the canonical writer")
+assert.match(watchWriter, /onConflict: "user_id,watch_id,signal_key"/, "canonical event writer must preserve idempotent watch identity")
+assert.match(watchWriter, /mergeIntelligenceWatchEvent/, "canonical event writer must preserve monotonic enrichment")
 assert.ok(route.indexOf("syncGdeltRawFeed") < route.indexOf("syncGdeltContextBundle"), "Events must precede context")
 assert.ok(route.indexOf("syncGdeltContextBundle") < route.indexOf("fuseGdeltIntoStrategicWatches"), "context must precede watch fusion")
 for (const source of ["gdelt_mentions", "gdelt_gkg", "gleif"]) assert.match(sourceNetwork, new RegExp(`key: "${source}"`), `${source} must be registered`)
