@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 1061" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="road" x1="0" y1="1" x2="0.76" y2="0.28">
+      <stop offset="0" stop-color="#111720" stop-opacity="0"/>
+      <stop offset="0.38" stop-color="#4a4947" stop-opacity="0.34"/>
+      <stop offset="0.72" stop-color="#b4aa97" stop-opacity="0.88"/>
+      <stop offset="1" stop-color="#e1d3b8"/>
+    </linearGradient>
+    <linearGradient id="shadow" x1="0" y1="1" x2="0.75" y2="0.25">
+      <stop offset="0" stop-color="#0d131d" stop-opacity="0"/>
+      <stop offset="0.46" stop-color="#080f17" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#071016" stop-opacity="0.94"/>
+    </linearGradient>
+    <linearGradient id="top" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#355f5b"/>
+      <stop offset="1" stop-color="#44746f"/>
+    </linearGradient>
+    <linearGradient id="right" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3c6a66"/>
+      <stop offset="1" stop-color="#396763"/>
+    </linearGradient>
+    <radialGradient id="orb" cx="35%" cy="30%" r="70%">
+      <stop offset="0" stop-color="#1b302f"/>
+      <stop offset="1" stop-color="#122322"/>
+    </radialGradient>
+  </defs>
+  <rect width="2048" height="1061" fill="#0f141e"/>
+  <path d="M760 1061 L1508 648 L1661 548 L1698 570 L1545 696 L1060 1061 Z" fill="url(#road)"/>
+  <path d="M1116 1061 L1510 708 L1546 676 L1590 705 L1265 1061 Z" fill="url(#shadow)"/>
+  <polygon points="1504,170 1660,78 1812,169 1659,260" fill="url(#top)"/>
+  <polygon points="1504,170 1659,260 1659,550 1504,458" fill="#174d46"/>
+  <polygon points="1659,260 1812,169 1812,458 1698,567 1698,280" fill="url(#right)"/>
+  <polygon points="1659,260 1812,169 1698,281 1698,567 1659,550" fill="#dfd1b8"/>
+  <circle cx="1512" cy="670" r="28" fill="url(#orb)"/>
+</svg>
