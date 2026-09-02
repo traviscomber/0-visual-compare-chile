@@ -3,7 +3,7 @@ import { z } from "zod"
 import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { scanStrategicWatch, type StrategicWatch } from "@/lib/intelligence/strategic-watch-scanner"
-import { buildWeeklyBriefContext } from "@/lib/intelligence/weekly-brief"
+import { buildWeeklyBriefContext, type WeeklyBriefContext } from "@/lib/intelligence/weekly-brief"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -27,8 +27,9 @@ export async function GET() {
   }
 
   const admin = createAdminClient()
-  const contextPromise = buildWeeklyBriefContext(admin)
   const active = (watches ?? []) as StrategicWatch[]
+  const contextPromise = buildWeeklyBriefContext(admin)
+    .then(context => scopeWeeklyBriefContext(context, active.map(watch => watch.query)))
 
   if (!active.length) {
     const context = await contextPromise
@@ -153,3 +154,78 @@ function emptySummary() {
 }
 
 function rank(value: string) { return value === "alta" ? 3 : value === "media" ? 2 : 1 }
+
+function scopeWeeklyBriefContext(context: WeeklyBriefContext, queries: string[]): WeeklyBriefContext {
+  const tokens = profileTokens(queries)
+  if (!tokens.length) {
+    return {
+      ...context,
+      change_detection: {
+        ...context.change_detection,
+        events_7d: 0,
+        strategic_changes_7d: 0,
+        last_observed_at: null,
+      },
+      strategic_changes: [],
+      observed_changes: [],
+      recent_activity: [],
+    }
+  }
+
+  const strategicChanges = context.strategic_changes.filter(item => matchesTokens(tokens, [
+    item.subject_name,
+    item.title,
+    item.observed_fact,
+    item.interpretation,
+    item.why_it_matters,
+    ...item.classification_codes,
+    ...item.evidence.flatMap(evidence => [evidence.title, evidence.summary ?? ""]),
+  ]))
+  const observedChanges = context.observed_changes.filter(item => matchesTokens(tokens, [
+    item.title,
+    item.summary ?? "",
+    ...item.changed_fields,
+  ]))
+  const recentActivity = context.recent_activity.filter(item => matchesTokens(tokens, [
+    item.title,
+    item.actor ?? "",
+  ]))
+  const lastObservedAt = [
+    ...strategicChanges.map(item => item.last_observed_at),
+    ...observedChanges.map(item => item.observed_at),
+  ].filter(Boolean).sort().at(-1) ?? null
+
+  return {
+    ...context,
+    change_detection: {
+      ...context.change_detection,
+      events_7d: observedChanges.length,
+      strategic_changes_7d: strategicChanges.length,
+      last_observed_at: lastObservedAt,
+    },
+    strategic_changes: strategicChanges,
+    observed_changes: observedChanges,
+    recent_activity: recentActivity,
+  }
+}
+
+function profileTokens(queries: string[]) {
+  const stopwords = new Set(["para", "como", "desde", "sobre", "entre", "hacia", "with", "from", "that", "this", "technology", "tecnologia", "empresa", "empresas"])
+  return [...new Set(queries
+    .flatMap(query => normalizeText(query).split(/\s+/))
+    .filter(token => token.length >= 4 && !stopwords.has(token)))]
+}
+
+function matchesTokens(tokens: string[], values: string[]) {
+  const haystack = normalizeText(values.join(" "))
+  return tokens.some(token => haystack.includes(token))
+}
+
+function normalizeText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+}
