@@ -1,0 +1,38 @@
+/* Production-safe VIDENTIA hero artwork.
+   Scoped to the public hero's unique image alt so other screens are untouched. */
+section:has(> img[alt="VIDENTIA geometric intelligence artwork"]) {
+  position: relative;
+  background-color: #0f141e;
+}
+
+section:has(> img[alt="VIDENTIA geometric intelligence artwork"])::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: url("/images/videntia-hero-vector.svg");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center center;
+}
+
+section:has(> img[alt="VIDENTIA geometric intelligence artwork"]) > img[alt="VIDENTIA geometric intelligence artwork"] {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+@media (max-width: 900px) {
+  section:has(> img[alt="VIDENTIA geometric intelligence artwork"])::before {
+    background-size: auto 100%;
+    background-position: 66% center;
+  }
+}
+
+@media (max-width: 640px) {
+  section:has(> img[alt="VIDENTIA geometric intelligence artwork"])::before {
+    background-size: auto 92%;
+    background-position: 72% 5%;
+    opacity: 0.82;
+  }
+}
