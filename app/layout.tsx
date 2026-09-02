@@ -20,7 +20,6 @@ import "./landing-footer-polish.css"
 import "./landing-nav-polish.css"
 import "./demo-premium.css"
 import "./demo-results-polish.css"
-import "./hero-fix.css"
 
 const montserrat = Montserrat({ subsets: ["latin"], display: "swap", variable: "--font-montserrat" })
 const CANONICAL_ORIGIN = "https://videntia.app"
