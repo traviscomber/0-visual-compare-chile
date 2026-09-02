@@ -38,6 +38,25 @@ const patentPublicFixes = `
   outline-offset: 3px;
 }
 
+.patents-public-page > main > section:first-of-type > div > div:last-child {
+  background-color: #091A20;
+  background-image: url('/images/VidentiaPatents.svg');
+  background-repeat: no-repeat;
+  background-position: center 34%;
+  background-size: min(42%, 360px) auto;
+}
+
+.patents-public-page > main > section:first-of-type > div > div:last-child > div:first-child {
+  opacity: 0;
+}
+
+@media (max-width: 1023px) {
+  .patents-public-page > main > section:first-of-type > div > div:last-child {
+    background-position: center 30%;
+    background-size: min(48%, 300px) auto;
+  }
+}
+
 @media (min-width: 1024px) {
   .patents-public-page > main > section:nth-of-type(6) > div {
     grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
