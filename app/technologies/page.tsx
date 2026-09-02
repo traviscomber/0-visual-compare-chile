@@ -37,6 +37,25 @@ const technologyFocusStyles = `
   outline: 2px solid #96B5A6;
   outline-offset: 3px;
 }
+
+.technologies-public-page > main > section:first-of-type > div > div:last-child {
+  background-color: #091A20;
+  background-image: url('/images/VidentiaTechnologies.svg');
+  background-repeat: no-repeat;
+  background-position: center 44%;
+  background-size: auto min(68%, 390px);
+}
+
+.technologies-public-page > main > section:first-of-type > div > div:last-child > div:first-child {
+  opacity: 0;
+}
+
+@media (max-width: 1023px) {
+  .technologies-public-page > main > section:first-of-type > div > div:last-child {
+    background-position: center 42%;
+    background-size: auto min(66%, 350px);
+  }
+}
 `
 
 export default function TechnologiesPage() {
