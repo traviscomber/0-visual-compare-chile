@@ -17,7 +17,7 @@ export type StrategicSearchIntent = {
 }
 
 const MAX_VARIANTS = 6
-const MAX_CONCEPT_TERMS = 8
+const MAX_CONCEPT_TERMS = 10
 
 const EXACT_BILINGUAL_PATTERNS: Array<{
   test: RegExp
@@ -31,57 +31,57 @@ const EXACT_BILINGUAL_PATTERNS: Array<{
     test: /\benterprise\s+(?:ai|artificial intelligence)\s+agents?\b/i,
     es: "agentes de IA empresariales",
     en: "enterprise AI agents",
-    core: ["enterprise AI agents", "artificial intelligence agents", "agentic AI", "autonomous AI agents"],
-    context: ["enterprise", "business", "workflow", "operations"],
-    exclusions: ["agent-based model", "multi-agent reinforcement learning"],
+    core: ["enterprise AI agents", "agentes de IA empresariales", "artificial intelligence agents", "agentic AI", "IA agéntica", "autonomous AI agents"],
+    context: ["enterprise", "business", "workflow", "operations", "empresarial", "negocio", "flujos de trabajo", "operaciones"],
+    exclusions: ["agent-based model", "modelo basado en agentes", "multi-agent reinforcement learning"],
   },
   {
     test: /\bagentes?\s+de\s+(?:ia|inteligencia artificial)\s+empresarial(?:es)?\b/i,
     es: "agentes de IA empresariales",
     en: "enterprise AI agents",
-    core: ["enterprise AI agents", "artificial intelligence agents", "agentic AI", "autonomous AI agents"],
-    context: ["enterprise", "business", "workflow", "operations"],
-    exclusions: ["agent-based model", "multi-agent reinforcement learning"],
+    core: ["enterprise AI agents", "agentes de IA empresariales", "artificial intelligence agents", "agentic AI", "IA agéntica", "autonomous AI agents"],
+    context: ["enterprise", "business", "workflow", "operations", "empresarial", "negocio", "flujos de trabajo", "operaciones"],
+    exclusions: ["agent-based model", "modelo basado en agentes", "multi-agent reinforcement learning"],
   },
   {
     test: /\b(?:ai|artificial intelligence)\s+workflow\s+automation\s+enterprise\b/i,
     es: "automatización de flujos de trabajo empresariales con IA",
     en: "enterprise AI workflow automation",
-    core: ["enterprise AI workflow automation", "AI workflow automation", "agentic workflow", "intelligent workflow automation"],
-    context: ["enterprise", "business", "operations", "process"],
-    exclusions: ["laboratory automation"],
+    core: ["enterprise AI workflow automation", "automatización de flujos de trabajo empresariales con IA", "AI workflow automation", "agentic workflow", "flujos agénticos", "intelligent workflow automation"],
+    context: ["enterprise", "business", "operations", "process", "empresarial", "negocio", "operaciones", "procesos"],
+    exclusions: ["laboratory automation", "automatización de laboratorio"],
   },
   {
     test: /\benterprise\s+(?:ai|artificial intelligence)\s+workflow\s+automation\b/i,
     es: "automatización de flujos de trabajo empresariales con IA",
     en: "enterprise AI workflow automation",
-    core: ["enterprise AI workflow automation", "AI workflow automation", "agentic workflow", "intelligent workflow automation"],
-    context: ["enterprise", "business", "operations", "process"],
-    exclusions: ["laboratory automation"],
+    core: ["enterprise AI workflow automation", "automatización de flujos de trabajo empresariales con IA", "AI workflow automation", "agentic workflow", "flujos agénticos", "intelligent workflow automation"],
+    context: ["enterprise", "business", "operations", "process", "empresarial", "negocio", "operaciones", "procesos"],
+    exclusions: ["laboratory automation", "automatización de laboratorio"],
   },
   {
     test: /\bautomatizaci[oó]n\s+de\s+flujos?\s+de\s+trabajo.*\b(?:ia|inteligencia artificial)\b/i,
     es: "automatización de flujos de trabajo empresariales con IA",
     en: "enterprise AI workflow automation",
-    core: ["enterprise AI workflow automation", "AI workflow automation", "agentic workflow", "intelligent workflow automation"],
-    context: ["enterprise", "business", "operations", "process"],
-    exclusions: ["laboratory automation"],
+    core: ["enterprise AI workflow automation", "automatización de flujos de trabajo empresariales con IA", "AI workflow automation", "agentic workflow", "flujos agénticos", "intelligent workflow automation"],
+    context: ["enterprise", "business", "operations", "process", "empresarial", "negocio", "operaciones", "procesos"],
+    exclusions: ["laboratory automation", "automatización de laboratorio"],
   },
   {
     test: /\boperational\s+intelligence.*\b(?:ai|artificial intelligence)\b/i,
     es: "software de inteligencia operacional con IA",
     en: "operational intelligence AI software",
-    core: ["operational intelligence AI", "operational intelligence software", "AI operations software", "decision intelligence software"],
-    context: ["enterprise", "operations", "workflow", "decision"],
-    exclusions: ["emotional intelligence", "military intelligence"],
+    core: ["operational intelligence AI", "software de inteligencia operacional con IA", "operational intelligence software", "AI operations software", "decision intelligence software", "software de inteligencia de decisiones"],
+    context: ["enterprise", "operations", "workflow", "decision", "empresarial", "operaciones", "flujos de trabajo", "decisión"],
+    exclusions: ["emotional intelligence", "inteligencia emocional", "military intelligence", "inteligencia militar"],
   },
   {
     test: /\binteligencia\s+oper(?:acional|ativa).*\b(?:ia|inteligencia artificial)\b/i,
     es: "software de inteligencia operacional con IA",
     en: "operational intelligence AI software",
-    core: ["operational intelligence AI", "operational intelligence software", "AI operations software", "decision intelligence software"],
-    context: ["enterprise", "operations", "workflow", "decision"],
-    exclusions: ["emotional intelligence", "military intelligence"],
+    core: ["operational intelligence AI", "software de inteligencia operacional con IA", "operational intelligence software", "AI operations software", "decision intelligence software", "software de inteligencia de decisiones"],
+    context: ["enterprise", "operations", "workflow", "decision", "empresarial", "operaciones", "flujos de trabajo", "decisión"],
+    exclusions: ["emotional intelligence", "inteligencia emocional", "military intelligence", "inteligencia militar"],
   },
   {
     test: /\bmachine\s+learning\b/i,
