@@ -4,8 +4,9 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { resolveLegalEntityInGleif, type GleifLegalEntityMatch } from "@/lib/intelligence/gleif"
 
 const LOOKBACK_HOURS = 6
-const WATCH_LIMIT = 100
+const WATCH_PAGE_SIZE = 100
 const SIGNAL_LIMIT_PER_WATCH = 12
+const GLEIF_BUDGET_MS = 7_500
 
 type WatchRow = { id: string; user_id: string; watch_type: "technology" | "company" | "competitor"; query: string; normalized_query: string; is_active: boolean }
 type GdeltSignalRow = { global_event_id: number | string; event_date: string | null; actor1_name: string | null; actor2_name: string | null; action_geo_full_name: string | null; event_code: string | null; goldstein_scale: number | null; event_tone: number | null; source_url: string | null; mention_count: number | string | null; distinct_sources: number | string | null; average_confidence: number | string | null; document_tone: number | string | null; organizations: string[] | null; persons: string[] | null; themes: string[] | null; primary_document_identifier: string | null }
@@ -15,17 +16,22 @@ export type GdeltWatchFusionSummary = { watchesScanned: number; candidates: numb
 export async function fuseGdeltIntoStrategicWatches(admin: SupabaseClient, now = new Date()): Promise<GdeltWatchFusionSummary> {
   const generatedAt = now.toISOString()
   const since = new Date(now.getTime() - LOOKBACK_HOURS * 60 * 60 * 1000).toISOString()
-  const { data, error } = await admin.from("intelligence_watches").select("id,user_id,watch_type,query,normalized_query,is_active").eq("is_active", true).in("watch_type", ["technology", "company", "competitor"]).order("created_at", { ascending: true }).limit(WATCH_LIMIT)
-  if (error) throw new Error(`Could not load strategic watches for GDELT fusion: ${error.message}`)
-  const watches = (data ?? []) as WatchRow[]
+  const watches = await loadEligibleWatches(admin)
   let candidates = 0, persisted = 0, gleifResolved = 0
+  const gleifStartedAt = Date.now()
+  const gleifCache = new Map<string, GleifLegalEntityMatch | null>()
 
   for (const watch of watches) {
     let gleif: GleifLegalEntityMatch | null = null
-    if (watch.watch_type === "company" || watch.watch_type === "competitor") {
-      try { gleif = await resolveLegalEntityInGleif(watch.query); if (gleif) gleifResolved += 1 }
-      catch (error) { console.warn("[gdelt/watch-fusion] GLEIF unavailable", { watchId: watch.id, error: error instanceof Error ? error.message : String(error) }) }
+    if ((watch.watch_type === "company" || watch.watch_type === "competitor") && Date.now() - gleifStartedAt < GLEIF_BUDGET_MS) {
+      const key = watch.normalized_query || normalize(watch.query)
+      if (gleifCache.has(key)) gleif = gleifCache.get(key) ?? null
+      else {
+        try { gleif = await resolveLegalEntityInGleif(watch.query); gleifCache.set(key, gleif); if (gleif) gleifResolved += 1 }
+        catch (error) { gleifCache.set(key, null); console.warn("[gdelt/watch-fusion] GLEIF unavailable", { watchId: watch.id, error: error instanceof Error ? error.message : String(error) }) }
+      }
     }
+
     const { data: signalRows, error: signalError } = await admin.rpc("search_gdelt_watch_signals", { p_query: watch.query, p_since: since, p_limit: SIGNAL_LIMIT_PER_WATCH })
     if (signalError) throw new Error(`Could not search GDELT strategic signals for watch ${watch.id}: ${signalError.message}`)
     const rows = (signalRows ?? []) as GdeltSignalRow[]
@@ -36,6 +42,23 @@ export async function fuseGdeltIntoStrategicWatches(admin: SupabaseClient, now =
     persisted += saved?.length ?? 0
   }
   return { watchesScanned: watches.length, candidates, persisted, gleifResolved, generatedAt }
+}
+
+async function loadEligibleWatches(admin: SupabaseClient) {
+  const watches: WatchRow[] = []
+  for (let from = 0; ; from += WATCH_PAGE_SIZE) {
+    const { data, error } = await admin.from("intelligence_watches")
+      .select("id,user_id,watch_type,query,normalized_query,is_active")
+      .eq("is_active", true)
+      .in("watch_type", ["technology", "company", "competitor"])
+      .order("created_at", { ascending: true })
+      .range(from, from + WATCH_PAGE_SIZE - 1)
+    if (error) throw new Error(`Could not load strategic watches for GDELT fusion: ${error.message}`)
+    const page = (data ?? []) as WatchRow[]
+    watches.push(...page)
+    if (page.length < WATCH_PAGE_SIZE) break
+  }
+  return watches
 }
 
 function toWatchEvent(watch: WatchRow, row: GdeltSignalRow, gleif: GleifLegalEntityMatch | null, now: string) {
