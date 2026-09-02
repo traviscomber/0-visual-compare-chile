@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
-import { readStrategicSearchScope, strategicSearchMetadata, type StrategicSearchScope } from "@/lib/intelligence/search-intent"
+import {
+  mergeStrategicSearchMetadata,
+  readStrategicSearchScope,
+  strategicSemanticKey,
+  type StrategicSearchScope,
+} from "@/lib/intelligence/search-intent"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -22,6 +27,7 @@ type CommonWatch = {
   updatedAt: string
 }
 
+const HIDDEN_TECHNOLOGY_ARCHIVES = new Set(["strategic_profile_reset", "query_precision_refinement", "semantic_duplicate"])
 const SearchScopeSchema = z.enum(["chile", "global", "both"])
 const CreateSchema = z.object({
   type: z.enum(["brand", "patent", "technology"]),
@@ -65,6 +71,7 @@ export async function GET() {
     return NextResponse.json({ error: "No pudimos cargar todas tus vigilancias." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
+  const technologyRows = (technologyResult.data ?? []).filter(row => !isHiddenTechnologyArchive(row.metadata))
   const watches: CommonWatch[] = [
     ...(brandResult.data ?? []).map(row => ({
       key: `brand:${row.id}`,
@@ -94,7 +101,7 @@ export async function GET() {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     })),
-    ...(technologyResult.data ?? []).map(row => ({
+    ...technologyRows.map(row => ({
       key: `technology:${row.id}`,
       id: row.id,
       type: "technology" as const,
@@ -128,7 +135,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Tipo de vigilancia inválido." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
-  const normalizedQuery = normalizeQuery(subtype, query)
+  const normalizedQuery = type === "technology" ? strategicSemanticKey(query) : normalizeQuery(subtype, query)
   const now = new Date().toISOString()
 
   if (type === "brand") {
@@ -167,7 +174,16 @@ export async function POST(request: Request) {
   }
 
   const scope = parsed.data.scope ?? "both"
-  const metadata = strategicSearchMetadata(query, scope)
+  const { data: existing, error: existingError } = await auth.supabase
+    .from("intelligence_watches")
+    .select("id,metadata")
+    .eq("user_id", auth.user.id)
+    .eq("watch_type", subtype)
+    .eq("normalized_query", normalizedQuery)
+    .maybeSingle()
+  if (existingError) return watchWriteError("technology", existingError)
+
+  const metadata = mergeStrategicSearchMetadata(existing?.metadata, query, scope)
   const { data, error } = await auth.supabase
     .from("intelligence_watches")
     .upsert({
@@ -184,7 +200,7 @@ export async function POST(request: Request) {
     .select("id,watch_type,query,is_active,last_checked_at,last_reviewed_at,metadata,created_at,updated_at")
     .single()
   if (error) return watchWriteError("technology", error)
-  return NextResponse.json({ watch: normalizeTechnology(data) }, { status: 201, headers: PRIVATE_NO_STORE_HEADERS })
+  return NextResponse.json({ watch: normalizeTechnology(data) }, { status: existing ? 200 : 201, headers: PRIVATE_NO_STORE_HEADERS })
 }
 
 export async function PATCH(request: Request) {
@@ -253,6 +269,12 @@ function normalizeSubtype(type: WatchSource, requested?: string) {
 function normalizeQuery(subtype: string, value: string) {
   const cleaned = value.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase()
   return subtype === "ipc" ? cleaned.replace(/\s+/g, "") : cleaned.replace(/[^A-Z0-9]+/g, " ").trim().replace(/\s+/g, " ")
+}
+
+function isHiddenTechnologyArchive(metadata: unknown) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return false
+  const reason = (metadata as Record<string, unknown>).deactivated_reason
+  return typeof reason === "string" && HIDDEN_TECHNOLOGY_ARCHIVES.has(reason)
 }
 
 function parseKey(value: string): { source: WatchSource; id: string } | null {
