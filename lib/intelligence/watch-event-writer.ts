@@ -1,30 +1,13 @@
 import "server-only"
 
 import type { SupabaseClient } from "@supabase/supabase-js"
+import {
+  mergeIntelligenceWatchEvent,
+  type ExistingWatchEvent,
+  type IntelligenceWatchEventWrite,
+} from "@/lib/intelligence/watch-event-merge"
 
-export type IntelligenceWatchEventWrite = {
-  user_id: string
-  watch_id: string
-  signal_key: string
-  source_key: string
-  event_type: string
-  title: string
-  summary: string | null
-  source_url: string | null
-  occurred_at: string | null
-  relevance: string
-  payload: Record<string, unknown>
-  last_seen_at: string
-  updated_at: string
-}
-
-type ExistingWatchEvent = {
-  user_id: string
-  watch_id: string
-  signal_key: string
-  relevance: string
-  payload: Record<string, unknown> | null
-}
+export type { IntelligenceWatchEventWrite } from "@/lib/intelligence/watch-event-merge"
 
 const BATCH_SIZE = 100
 
@@ -38,7 +21,7 @@ export async function persistIntelligenceWatchEvents(
   for (let offset = 0; offset < input.length; offset += BATCH_SIZE) {
     const batch = input.slice(offset, offset + BATCH_SIZE)
     const existing = await loadExisting(client, batch)
-    const rows = batch.map(row => mergeWithExisting(row, existing.get(eventKey(row))))
+    const rows = batch.map(row => mergeIntelligenceWatchEvent(row, existing.get(eventKey(row))))
     const { data, error } = await client
       .from("intelligence_watch_events")
       .upsert(rows, { onConflict: "user_id,watch_id,signal_key", ignoreDuplicates: false })
@@ -79,46 +62,6 @@ async function loadExisting(client: SupabaseClient, rows: IntelligenceWatchEvent
     map.set(eventKey(normalized), normalized)
   }
   return map
-}
-
-function mergeWithExisting(row: IntelligenceWatchEventWrite, existing?: ExistingWatchEvent) {
-  if (!existing) return row
-
-  const previousPayload = existing.payload ?? {}
-  const incomingPayload = row.payload ?? {}
-  const previousQuality = qualityVersion(previousPayload)
-  const incomingQuality = qualityVersion(incomingPayload)
-  const preservePreviousQuality = Boolean(previousQuality && !incomingQuality)
-
-  return {
-    ...row,
-    relevance: preservePreviousQuality ? existing.relevance : row.relevance,
-    payload: {
-      ...previousPayload,
-      ...incomingPayload,
-      ...(preservePreviousQuality ? researchQualityFields(previousPayload) : {}),
-    },
-  }
-}
-
-function researchQualityFields(payload: Record<string, unknown>) {
-  return {
-    ...(payload.quality_version !== undefined ? { quality_version: payload.quality_version } : {}),
-    ...(payload.relevance_score !== undefined ? { relevance_score: payload.relevance_score } : {}),
-    ...(payload.relevance_factors !== undefined ? { relevance_factors: payload.relevance_factors } : {}),
-    ...(payload.signal_kind !== undefined ? { signal_kind: payload.signal_kind } : {}),
-    ...(payload.concept_matches !== undefined ? { concept_matches: payload.concept_matches } : {}),
-    ...(payload.company_fit_matches !== undefined ? { company_fit_matches: payload.company_fit_matches } : {}),
-    ...(payload.cluster_size !== undefined ? { cluster_size: payload.cluster_size } : {}),
-    ...(payload.cluster_sources !== undefined ? { cluster_sources: payload.cluster_sources } : {}),
-    ...(payload.cluster_titles !== undefined ? { cluster_titles: payload.cluster_titles } : {}),
-    ...(payload.cluster_signal_keys !== undefined ? { cluster_signal_keys: payload.cluster_signal_keys } : {}),
-  }
-}
-
-function qualityVersion(payload: Record<string, unknown>) {
-  const value = payload.quality_version
-  return typeof value === "string" && value.trim() ? value.trim() : null
 }
 
 function eventKey(row: { user_id: string; watch_id: string; signal_key: string }) {
