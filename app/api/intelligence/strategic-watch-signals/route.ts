@@ -2,9 +2,11 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { scanStrategicWatch, type StrategicWatch } from "@/lib/intelligence/strategic-watch-scanner"
+import { scanStrategicWatch, type StrategicCandidateSignal, type StrategicWatch } from "@/lib/intelligence/strategic-watch-scanner"
 import { buildWeeklyBriefContext, type WeeklyBriefContext } from "@/lib/intelligence/weekly-brief"
 import { buildStrategicSearchIntent, readStrategicQueryAliases, readStrategicSearchScope } from "@/lib/intelligence/search-intent"
+import { applyTechnologyResearchQuality } from "@/lib/intelligence/research-quality"
+import { loadResearchProfilesForWatches, researchProfileForWatch } from "@/lib/intelligence/research-context"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -30,8 +32,8 @@ export async function GET() {
   const admin = createAdminClient()
   const active = (watches ?? []) as StrategicWatch[]
   const contextQueries = active.flatMap(watch => {
-    const intent = buildStrategicSearchIntent(watch.query, readStrategicSearchScope(watch.metadata), readStrategicQueryAliases(watch.metadata))
-    return [intent.canonicalQuery, ...intent.aliases]
+    const intent = searchIntentFor(watch)
+    return [intent.canonicalQuery, ...intent.aliases, ...intent.concept.core]
   })
   const contextPromise = buildWeeklyBriefContext(admin)
     .then(context => scopeWeeklyBriefContext(context, contextQueries))
@@ -42,11 +44,18 @@ export async function GET() {
   }
 
   const scanStartedAt = new Date().toISOString()
-  const [groups, context] = await Promise.all([
+  const [groups, context, profiles] = await Promise.all([
     Promise.all(active.map(async watch => ({ watch, signals: await scanStrategicWatch(admin, watch) }))),
     contextPromise,
+    loadResearchProfilesForWatches(admin, active),
   ])
-  const rows = groups.flatMap(({ watch, signals }) => signals.map(signal => ({
+  const qualityNow = new Date(scanStartedAt)
+  const qualifiedGroups = groups.map(({ watch, signals }) => ({
+    watch,
+    signals: qualifySignals(watch, signals, profiles, qualityNow),
+  }))
+
+  const rows = qualifiedGroups.flatMap(({ watch, signals }) => signals.map(signal => ({
     user_id: auth.user.id,
     watch_id: watch.id,
     signal_key: signal.signal_key,
@@ -98,7 +107,27 @@ export async function GET() {
   }
 
   const watchMap = new Map(active.map(watch => [watch.id, watch]))
-  const signals = (history ?? []).map(row => {
+  const historyByWatch = new Map<string, Array<Record<string, unknown>>>()
+  for (const row of history ?? []) {
+    const watchId = String(row.watch_id)
+    const current = historyByWatch.get(watchId) ?? []
+    current.push(row as Record<string, unknown>)
+    historyByWatch.set(watchId, current)
+  }
+
+  const visibleHistory = active.flatMap(watch => {
+    const sourceRows = historyByWatch.get(watch.id) ?? []
+    if (watch.watch_type !== "technology") return sourceRows
+    const originals = new Map(sourceRows.map(row => [String(row.signal_key), row]))
+    const candidates = sourceRows.map(historyCandidate)
+    const qualified = qualifySignals(watch, candidates, profiles, new Date(scanCompletedAt))
+    return qualified.flatMap(candidate => {
+      const original = originals.get(candidate.signal_key)
+      return original ? [{ ...original, relevance: candidate.relevance, payload: candidate.payload }] : []
+    })
+  })
+
+  const signals = visibleHistory.map(row => {
     const watch = watchMap.get(String(row.watch_id))
     const isFirstScan = !watch?.last_checked_at
     const reviewedAt = watch?.last_reviewed_at
@@ -111,6 +140,8 @@ export async function GET() {
     }
   }).sort((a, b) => {
     if (a.is_new !== b.is_new) return a.is_new ? -1 : 1
+    const score = payloadScore(b.payload) - payloadScore(a.payload)
+    if (score) return score
     const relevance = rank(String(b.relevance)) - rank(String(a.relevance))
     if (relevance) return relevance
     return new Date(String(b.first_seen_at)).getTime() - new Date(String(a.first_seen_at)).getTime()
@@ -127,7 +158,17 @@ export async function GET() {
     news_new_count: newSignals.filter(item => item.event_type === "news").length,
   }
 
-  return NextResponse.json({ signals, watches: active.length, summary, context }, { headers: PRIVATE_NO_STORE_HEADERS })
+  return NextResponse.json({
+    signals,
+    watches: active.length,
+    summary,
+    context,
+    research_quality: {
+      version: "research-quality-v1",
+      profile_context_available: profiles.size > 0,
+      visible_evidence: signals.length,
+    },
+  }, { headers: PRIVATE_NO_STORE_HEADERS })
 }
 
 export async function POST(request: Request) {
@@ -153,6 +194,43 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ ok: true, reviewed_at: reviewedAt }, { headers: PRIVATE_NO_STORE_HEADERS })
+}
+
+function qualifySignals(
+  watch: StrategicWatch,
+  signals: StrategicCandidateSignal[],
+  profiles: Awaited<ReturnType<typeof loadResearchProfilesForWatches>>,
+  now: Date,
+) {
+  if (watch.watch_type !== "technology") return signals
+  return applyTechnologyResearchQuality(signals, searchIntentFor(watch), researchProfileForWatch(profiles, watch.metadata), now)
+}
+
+function searchIntentFor(watch: StrategicWatch) {
+  return buildStrategicSearchIntent(watch.query, readStrategicSearchScope(watch.metadata), readStrategicQueryAliases(watch.metadata))
+}
+
+function historyCandidate(row: Record<string, unknown>): StrategicCandidateSignal {
+  const payload = row.payload && typeof row.payload === "object" && !Array.isArray(row.payload)
+    ? row.payload as Record<string, unknown>
+    : {}
+  return {
+    signal_key: String(row.signal_key ?? row.id ?? ""),
+    source_key: String(row.source_key ?? "google_news_rss") as StrategicCandidateSignal["source_key"],
+    event_type: String(row.event_type ?? "news") as StrategicCandidateSignal["event_type"],
+    title: String(row.title ?? "Señal sin título"),
+    summary: typeof row.summary === "string" ? row.summary : null,
+    source_url: typeof row.source_url === "string" ? row.source_url : null,
+    occurred_at: typeof row.occurred_at === "string" ? row.occurred_at : null,
+    relevance: (row.relevance === "alta" || row.relevance === "media" ? row.relevance : "baja") as StrategicCandidateSignal["relevance"],
+    payload,
+  }
+}
+
+function payloadScore(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return 0
+  const score = Number((value as Record<string, unknown>).relevance_score ?? 0)
+  return Number.isFinite(score) ? score : 0
 }
 
 function emptySummary() {
