@@ -12,6 +12,7 @@ import {
 } from "@/lib/intelligence/ingestion-observability"
 import { searchOpenAlexWorks } from "@/lib/intelligence/openalex"
 import { scanStrategicWatch, type StrategicWatch } from "@/lib/intelligence/strategic-watch-scanner"
+import { persistIntelligenceWatchEvents } from "@/lib/intelligence/watch-event-writer"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
   try {
     const { data, error } = await admin
       .from("intelligence_watches")
-      .select("id,user_id,watch_type,query,is_active,created_at,last_checked_at,last_reviewed_at")
+      .select("id,user_id,watch_type,query,is_active,created_at,last_checked_at,last_reviewed_at,metadata")
       .eq("is_active", true)
       .order("updated_at", { ascending: false })
       .limit(50)
@@ -84,12 +85,7 @@ export async function GET(request: Request) {
       updated_at: scanStartedAt,
     })))
 
-    if (rows.length) {
-      const { error: upsertError } = await admin
-        .from("intelligence_watch_events")
-        .upsert(rows, { onConflict: "user_id,watch_id,signal_key", ignoreDuplicates: false })
-      if (upsertError) throw new Error(`Could not persist watch signals: ${upsertError.message}`)
-    }
+    if (rows.length) await persistIntelligenceWatchEvents(admin, rows)
 
     const baselineIds = watches.filter(watch => !watch.last_checked_at).map(watch => watch.id)
     if (baselineIds.length) {

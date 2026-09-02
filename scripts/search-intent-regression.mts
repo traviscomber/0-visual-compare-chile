@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises"
 import { buildStrategicSearchIntent, strategicSemanticKey } from "../lib/intelligence/search-intent.ts"
+import { mergeIntelligenceWatchEvent, type IntelligenceWatchEventWrite } from "../lib/intelligence/watch-event-merge.ts"
 
 function fail(message: string): never {
   console.error(`Search intent regression FAIL: ${message}`)
@@ -33,7 +34,7 @@ const operations = buildStrategicSearchIntent("operational intelligence AI softw
 if (!operations.concept.exclusions.some(value => /emotional intelligence/i.test(value))) fail("operational intelligence must exclude emotional-intelligence ambiguity")
 if (!operations.concept.core.some(value => /decision intelligence/i.test(value))) fail("operational intelligence must include decision-intelligence adjacency")
 
-const [googleNews, watchlist, commonWatches, commonWatchesPage, scanner, technologySignals, technologyRoute, newWatchPage, openalex, qualityRoute, qualitySource] = await Promise.all([
+const [googleNews, watchlist, commonWatches, commonWatchesPage, scanner, technologySignals, technologyRoute, newWatchPage, openalex, qualityRoute, qualitySource, writer, cronWriter, gdeltWriter] = await Promise.all([
   readFile("lib/intelligence/google-news.ts", "utf8"),
   readFile("app/api/intelligence/strategic-watchlist/route.ts", "utf8"),
   readFile("app/api/intelligence/watches/route.ts", "utf8"),
@@ -45,6 +46,9 @@ const [googleNews, watchlist, commonWatches, commonWatchesPage, scanner, technol
   readFile("lib/intelligence/openalex.ts", "utf8"),
   readFile("app/api/intelligence/strategic-watch-signals/route.ts", "utf8"),
   readFile("lib/intelligence/research-quality.ts", "utf8"),
+  readFile("lib/intelligence/watch-event-writer.ts", "utf8"),
+  readFile("app/api/cron/strategic-watches/route.ts", "utf8"),
+  readFile("lib/intelligence/gdelt-watch-fusion.ts", "utf8"),
 ])
 
 for (const needle of ['"es-419"', '"CL"', '"CL:es-419"', '"en-US"', '"US:en"']) requireText(googleNews, needle, "Google News market routing")
@@ -58,7 +62,61 @@ for (const needle of ["videntia_search_scope", "buildTechnologySignals(parsed.da
 for (const needle of ['label="Chile"', 'label="Global"', 'label="Ambos"', "IA / AI", "scope"]) requireText(newWatchPage, needle, "new strategic watch UI")
 
 for (const needle of ["searchOpenAlexDiscovery", "buildOpenAlexDiscoveryOql", 'url.searchParams.set("oql", oql)', "title/abstract has", "Broader title/abstract", "queryOpenAlexWindow"]) requireText(openalex, needle, "OpenAlex split retrieval")
-for (const needle of ["applyTechnologyResearchQuality", "loadResearchProfilesForWatches", "researchProfileForWatch", 'version: "research-quality-v1"', "payloadScore"]) requireText(qualityRoute, needle, "research quality route")
+for (const needle of ["applyTechnologyResearchQuality", "loadResearchProfilesForWatches", "researchProfileForWatch", 'version: "research-quality-v1"', "payloadScore", "persistIntelligenceWatchEvents"]) requireText(qualityRoute, needle, "research quality route")
 for (const needle of ["relevance_score", "relevance_factors", "signal_kind", "company_fit_matches", "cluster_size", "NEWS_CLUSTER_THRESHOLD", "exclusionPenalty"]) requireText(qualitySource, needle, "research quality engine")
 
-console.log("Search intent regression PASS: AI/IA equivalents share one concept identity, concept blocks carry context and exclusions, source scope stays explicit, manual watches inherit organization context, OpenAlex discovery is separated from conservative momentum, and research-quality scoring remains auditable.")
+for (const [source, label] of [[qualityRoute, "interactive strategic signals"], [cronWriter, "strategic cron"], [gdeltWriter, "GDELT watch fusion"]] as const) {
+  requireText(source, "persistIntelligenceWatchEvents", label)
+  if (/\.from\(["']intelligence_watch_events["']\)[\s\S]{0,220}\.upsert\(/.test(source)) fail(`${label} must not upsert intelligence_watch_events directly`)
+}
+requireText(cronWriter, 'last_reviewed_at,metadata")', "strategic cron organization-aware scan")
+requireText(writer, '.from("intelligence_watch_events")', "canonical watch event writer")
+requireText(writer, "mergeIntelligenceWatchEvent", "canonical watch event writer")
+
+const baseRow: IntelligenceWatchEventWrite = {
+  user_id: "00000000-0000-4000-8000-000000000001",
+  watch_id: "00000000-0000-4000-8000-000000000002",
+  signal_key: "openalex:publication:test",
+  source_key: "openalex",
+  event_type: "publication",
+  title: "Enterprise AI agents in production",
+  summary: null,
+  source_url: null,
+  occurred_at: "2026-09-01T00:00:00.000Z",
+  relevance: "media",
+  payload: { retrieval_mode: "raw" },
+  last_seen_at: "2026-09-02T00:00:00.000Z",
+  updated_at: "2026-09-02T00:00:00.000Z",
+}
+
+const enriched = mergeIntelligenceWatchEvent({
+  ...baseRow,
+  relevance: "alta",
+  payload: { ...baseRow.payload, quality_version: "research-quality-v1", relevance_score: 84, signal_kind: "adoption", company_fit_matches: ["Agentes de IA"] },
+})
+const downgradeAttempt = mergeIntelligenceWatchEvent(baseRow, {
+  user_id: enriched.user_id,
+  watch_id: enriched.watch_id,
+  signal_key: enriched.signal_key,
+  relevance: enriched.relevance,
+  payload: enriched.payload,
+})
+if (downgradeAttempt.relevance !== "alta") fail("raw writer must not downgrade enriched relevance")
+if (downgradeAttempt.payload.quality_version !== "research-quality-v1") fail("raw writer must not erase research quality version")
+if (downgradeAttempt.payload.relevance_score !== 84) fail("raw writer must not erase relevance score")
+if (downgradeAttempt.payload.signal_kind !== "adoption") fail("raw writer must not erase signal classification")
+
+const refreshed = mergeIntelligenceWatchEvent({
+  ...baseRow,
+  relevance: "media",
+  payload: { quality_version: "research-quality-v1", relevance_score: 67, signal_kind: "research" },
+}, {
+  user_id: enriched.user_id,
+  watch_id: enriched.watch_id,
+  signal_key: enriched.signal_key,
+  relevance: enriched.relevance,
+  payload: enriched.payload,
+})
+if (refreshed.relevance !== "media" || refreshed.payload.relevance_score !== 67) fail("new quality pass must be allowed to recalibrate prior quality")
+
+console.log("Search intent regression PASS: AI/IA equivalents share one concept identity, source scope stays explicit, Search Intent V2 remains auditable, and every strategic event writer now uses a canonical monotonic persistence path that prevents raw refreshes from erasing research-quality enrichment.")
