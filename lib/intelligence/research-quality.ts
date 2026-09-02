@@ -109,8 +109,10 @@ export function scoreResearchSignal(
   const concept = bestConceptScore(haystack, intent.concept.core)
   const contextMatches = matchingPhrases(haystack, intent.concept.context)
   const exclusionMatches = matchingPhrases(haystack, intent.concept.exclusions)
-  const company = companyFit(haystack, intent, profile)
   const kind = classifySignalKind(signal)
+  const company = companyFitEligible(kind, contextMatches, intent)
+    ? companyFit(haystack, intent, profile)
+    : { score: 0, matches: [] as string[] }
   const source = sourceScore(signal.source_key)
   const geography = geographyScore(signal, haystack, profile)
   const event = eventScore(kind)
@@ -178,6 +180,11 @@ function bestConceptScore(haystack: string, values: string[]) {
     }
   }
   return { score: best, matches: unique(matches).slice(0, 8) }
+}
+
+function companyFitEligible(kind: ResearchSignalKind, contextMatches: string[], intent: StrategicSearchIntent) {
+  if (!intent.concept.context.length || contextMatches.length) return true
+  return ["contract", "adoption", "regulation", "acquisition", "partnership", "launch", "funding", "hiring", "market"].includes(kind)
 }
 
 function companyFit(haystack: string, intent: StrategicSearchIntent, profile: ResearchProfileContext | null) {
