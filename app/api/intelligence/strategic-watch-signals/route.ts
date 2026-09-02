@@ -7,6 +7,7 @@ import { buildWeeklyBriefContext, type WeeklyBriefContext } from "@/lib/intellig
 import { buildStrategicSearchIntent, readStrategicQueryAliases, readStrategicSearchScope } from "@/lib/intelligence/search-intent"
 import { applyTechnologyResearchQuality } from "@/lib/intelligence/research-quality"
 import { loadResearchProfilesForWatches, researchProfileForWatch } from "@/lib/intelligence/research-context"
+import { persistIntelligenceWatchEvents } from "@/lib/intelligence/watch-event-writer"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -88,10 +89,11 @@ export async function GET() {
   })))
 
   if (rows.length) {
-    const { error: upsertError } = await auth.supabase
-      .from("intelligence_watch_events")
-      .upsert(rows, { onConflict: "user_id,watch_id,signal_key", ignoreDuplicates: false })
-    if (upsertError) console.error("[strategic-watch-signals:upsert]", upsertError)
+    try {
+      await persistIntelligenceWatchEvents(auth.supabase, rows)
+    } catch (error) {
+      console.error("[strategic-watch-signals:persist]", error)
+    }
   }
 
   const scanCompletedAt = new Date().toISOString()
