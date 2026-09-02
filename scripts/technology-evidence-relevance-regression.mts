@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises"
 import { isCrossrefQueryRelevant } from "../lib/intelligence/crossref.ts"
+import { shouldRejectMissingResearchContext } from "../lib/intelligence/research-quality-rules.ts"
 import { normalizeTechnologyQuery } from "../lib/intelligence/technology-query.ts"
 
 function fail(message: string): never {
@@ -15,6 +16,7 @@ const openalex = await readFile("lib/intelligence/openalex.ts", "utf8")
 const crossref = await readFile("lib/intelligence/crossref.ts", "utf8")
 const signals = await readFile("lib/intelligence/technology-signals.ts", "utf8")
 const workbench = await readFile("components/intelligence/technology-signals-workbench.tsx", "utf8")
+const researchQuality = await readFile("lib/intelligence/research-quality.ts", "utf8")
 
 if (openalex.includes('sort: "publication_date:desc"')) {
   fail("OpenAlex search must not force publication date ahead of relevance")
@@ -91,6 +93,24 @@ assert(
 )
 
 assert(
+  "controlled research without any intent context must be rejected from the executive radar",
+  shouldRejectMissingResearchContext({ kind: "research", intentContextCount: 8, contextMatchCount: 0 }),
+)
+assert(
+  "research with controlled context evidence must remain eligible",
+  !shouldRejectMissingResearchContext({ kind: "research", intentContextCount: 8, contextMatchCount: 1 }),
+)
+assert(
+  "market/adoption evidence must not be rejected solely for lacking a research context token",
+  !shouldRejectMissingResearchContext({ kind: "adoption", intentContextCount: 8, contextMatchCount: 0 }),
+)
+assert(
+  "fallback research intents without controlled context must preserve current behavior",
+  !shouldRejectMissingResearchContext({ kind: "research", intentContextCount: 0, contextMatchCount: 0 }),
+)
+if (!researchQuality.includes("shouldRejectMissingResearchContext")) fail("research quality engine is not wired to the pure context gate")
+
+assert(
   "unaccented thermal storage must canonicalize to the accented technology",
   normalizeTechnologyQuery("ALMACENAMIENTO TERMICO") === "almacenamiento térmico",
 )
@@ -124,4 +144,4 @@ if (!workbench.includes('key !== "gdelt" && !source.available')) fail("GDELT-onl
 if (!workbench.includes("Noticias temporalmente no disponibles")) fail("GDELT outage is not scoped to the Context section")
 if (!workbench.includes('value={result.momentum.current_publications ?? "—"}')) fail("UI can still render source failure as zero publications")
 
-console.log("Technology evidence relevance regression PASS: executive momentum remains title-led and conservative, broader OQL title/abstract discovery is isolated from the KPI, Crossref rejects weak matches, transient limits retry, and source outages never become false zero activity.")
+console.log("Technology evidence relevance regression PASS: executive momentum remains title-led and conservative, broader OQL title/abstract discovery is isolated from the KPI, controlled research requires context evidence, Crossref rejects weak matches, transient limits retry, and source outages never become false zero activity.")
