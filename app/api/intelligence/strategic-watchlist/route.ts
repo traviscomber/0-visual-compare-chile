@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
-import { strategicSearchMetadata } from "@/lib/intelligence/search-intent"
+import { mergeStrategicSearchMetadata, strategicSemanticKey } from "@/lib/intelligence/search-intent"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-const WATCH_SELECT = "id,watch_type,query,is_active,last_checked_at,last_reviewed_at,metadata,created_at,updated_at"
-const HIDDEN_ARCHIVE_REASONS = new Set(["strategic_profile_reset", "query_precision_refinement"])
+const WATCH_SELECT = "id,watch_type,query,normalized_query,is_active,last_checked_at,last_reviewed_at,metadata,created_at,updated_at"
+const HIDDEN_ARCHIVE_REASONS = new Set(["strategic_profile_reset", "query_precision_refinement", "semantic_duplicate"])
 const SearchScopeSchema = z.enum(["chile", "global", "both"])
 
 const WatchSchema = z.object({
@@ -37,14 +37,7 @@ export async function GET() {
     return NextResponse.json({ error: "No pudimos cargar las vigilancias estratégicas." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
-  const watches = (data ?? []).filter(watch => {
-    const metadata = watch.metadata && typeof watch.metadata === "object" && !Array.isArray(watch.metadata)
-      ? watch.metadata as Record<string, unknown>
-      : {}
-    const archiveReason = typeof metadata.deactivated_reason === "string" ? metadata.deactivated_reason : null
-    return !archiveReason || !HIDDEN_ARCHIVE_REASONS.has(archiveReason)
-  })
-
+  const watches = (data ?? []).filter(watch => !isHiddenArchive(watch.metadata))
   return NextResponse.json({ watches }, { headers: PRIVATE_NO_STORE_HEADERS })
 }
 
@@ -57,8 +50,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Datos de vigilancia estratégica inválidos." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
-  const normalizedQuery = normalize(parsed.data.query)
-  const metadata = strategicSearchMetadata(parsed.data.query, parsed.data.scope)
+  const normalizedQuery = parsed.data.type === "technology"
+    ? strategicSemanticKey(parsed.data.query)
+    : normalize(parsed.data.query)
+  const metadata = mergeStrategicSearchMetadata(null, parsed.data.query, parsed.data.scope)
   const { data, error } = await auth.supabase
     .from("intelligence_watches")
     .insert({
@@ -85,12 +80,13 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "No pudimos confirmar la vigilancia estratégica existente." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
       }
 
+      const mergedMetadata = mergeStrategicSearchMetadata(existing.metadata, parsed.data.query, parsed.data.scope)
       const { data: updated, error: updateError } = await auth.supabase
         .from("intelligence_watches")
         .update({
           query: parsed.data.query,
           is_active: true,
-          metadata,
+          metadata: mergedMetadata,
           last_checked_at: null,
           last_reviewed_at: null,
           updated_at: new Date().toISOString(),
@@ -134,7 +130,7 @@ export async function PATCH(request: Request) {
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
   if (parsed.data.active !== undefined) updates.is_active = parsed.data.active
   if (parsed.data.scope) {
-    updates.metadata = strategicSearchMetadata(existing.query, parsed.data.scope)
+    updates.metadata = mergeStrategicSearchMetadata(existing.metadata, existing.query, parsed.data.scope)
     updates.last_checked_at = null
     updates.last_reviewed_at = null
   }
@@ -171,6 +167,12 @@ export async function DELETE(request: Request) {
   }
 
   return NextResponse.json({ ok: true }, { headers: PRIVATE_NO_STORE_HEADERS })
+}
+
+function isHiddenArchive(metadata: unknown) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return false
+  const reason = (metadata as Record<string, unknown>).deactivated_reason
+  return typeof reason === "string" && HIDDEN_ARCHIVE_REASONS.has(reason)
 }
 
 function normalize(value: string) {
