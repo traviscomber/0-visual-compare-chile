@@ -13,6 +13,10 @@
       "schedule": "25 * * * *"
     },
     {
+      "path": "/api/cron/gdelt-raw-feed",
+      "schedule": "7,22,37,52 * * * *"
+    },
+    {
       "path": "/api/cron/strategic-watches",
       "schedule": "40 * * * *"
     }

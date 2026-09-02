@@ -112,6 +112,9 @@ jobs:
       - name: Technology strategy regression
         run: node scripts/technology-strategy-regression.mts
 
+      - name: GDELT raw canonical regression
+        run: node scripts/gdelt-raw-canonical-regression.mts
+
       - name: TypeScript
         run: pnpm exec tsc --noEmit
 
