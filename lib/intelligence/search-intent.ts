@@ -31,27 +31,38 @@ export function buildStrategicSearchIntent(
 ): StrategicSearchIntent {
   const canonicalQuery = cleanQuery(query)
   const exact = EXACT_BILINGUAL_PATTERNS.find(pattern => pattern.test.test(canonicalQuery))
+  const canonicalLooksSpanish = looksSpanish(canonicalQuery)
 
-  const es = unique([
-    exact?.es,
-    toSpanishVariant(canonicalQuery),
-    ...storedAliases.filter(looksSpanish),
-    canonicalQuery,
-  ]).slice(0, MAX_VARIANTS)
+  const es = exact
+    ? unique([
+        exact.es,
+        ...storedAliases.filter(looksSpanish),
+        canonicalLooksSpanish ? canonicalQuery : undefined,
+      ]).slice(0, MAX_VARIANTS)
+    : unique([
+        toSpanishVariant(canonicalQuery),
+        ...storedAliases.filter(looksSpanish),
+        canonicalLooksSpanish ? canonicalQuery : undefined,
+      ]).slice(0, MAX_VARIANTS)
 
-  const en = unique([
-    exact?.en,
-    toEnglishVariant(canonicalQuery),
-    ...storedAliases.filter(value => !looksSpanish(value)),
-    canonicalQuery,
-  ]).slice(0, MAX_VARIANTS)
+  const en = exact
+    ? unique([
+        exact.en,
+        ...storedAliases.filter(value => !looksSpanish(value)),
+        canonicalLooksSpanish ? undefined : canonicalQuery,
+      ]).slice(0, MAX_VARIANTS)
+    : unique([
+        toEnglishVariant(canonicalQuery),
+        ...storedAliases.filter(value => !looksSpanish(value)),
+        canonicalLooksSpanish ? undefined : canonicalQuery,
+      ]).slice(0, MAX_VARIANTS)
 
   return {
     canonicalQuery,
     scope,
     aliases: unique([...es, ...en]).filter(value => normalizeForComparison(value) !== normalizeForComparison(canonicalQuery)).slice(0, MAX_VARIANTS),
-    chileQueries: es,
-    globalQueries: en,
+    chileQueries: es.length ? es : [canonicalQuery],
+    globalQueries: en.length ? en : [canonicalQuery],
   }
 }
 
@@ -61,7 +72,21 @@ export function strategicSearchMetadata(query: string, scope: StrategicSearchSco
     search_scope: scope,
     query_aliases: intent.aliases,
     normalization_version: "bilingual-es-en-v1",
+    semantic_key: strategicSemanticKey(query),
   }
+}
+
+export function mergeStrategicSearchMetadata(metadata: unknown, query: string, scope: StrategicSearchScope) {
+  const previous = metadata && typeof metadata === "object" && !Array.isArray(metadata)
+    ? metadata as Record<string, unknown>
+    : {}
+  return { ...previous, ...strategicSearchMetadata(query, scope) }
+}
+
+export function strategicSemanticKey(query: string) {
+  const intent = buildStrategicSearchIntent(query, "both")
+  const canonical = intent.globalQueries[0] ?? intent.chileQueries[0] ?? intent.canonicalQuery
+  return normalizeForComparison(canonical)
 }
 
 export function readStrategicSearchScope(metadata: unknown): StrategicSearchScope {
@@ -77,7 +102,7 @@ export function readStrategicQueryAliases(metadata: unknown): string[] {
 }
 
 function toSpanishVariant(query: string) {
-  let value = query
+  const value = query
     .replace(/\bartificial intelligence\b/gi, "inteligencia artificial")
     .replace(/\bAI\b/g, "IA")
     .replace(/\benterprise\b/gi, "empresarial")
@@ -89,7 +114,7 @@ function toSpanishVariant(query: string) {
 }
 
 function toEnglishVariant(query: string) {
-  let value = query
+  const value = query
     .replace(/\binteligencia artificial\b/gi, "artificial intelligence")
     .replace(/\bIA\b/g, "AI")
     .replace(/\bempresarial(?:es)?\b/gi, "enterprise")
