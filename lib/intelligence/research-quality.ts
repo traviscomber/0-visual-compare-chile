@@ -122,7 +122,11 @@ export function scoreResearchSignal(
   const raw = concept.score + contextScore + source + company.score + geography + event + freshness - exclusionPenalty
   const score = Math.max(0, Math.min(100, Math.round(raw)))
   const minimum = signal.source_key === "google_news_rss" ? 48 : 42
-  const keep = concept.score >= 24 && score >= minimum && !(exclusionMatches.length && concept.score < 42)
+  const missingResearchContext = kind === "research" && intent.concept.context.length > 0 && contextMatches.length === 0
+  const keep = concept.score >= 24
+    && score >= minimum
+    && !missingResearchContext
+    && !(exclusionMatches.length && concept.score < 42)
   const relevance: ResearchQualitySignal["relevance"] = score >= 75 ? "alta" : score >= 56 ? "media" : "baja"
 
   return {
