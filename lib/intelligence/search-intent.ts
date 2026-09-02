@@ -71,7 +71,7 @@ export function strategicSearchMetadata(query: string, scope: StrategicSearchSco
   return {
     search_scope: scope,
     query_aliases: intent.aliases,
-    normalization_version: "bilingual-es-en-v2",
+    normalization_version: "bilingual-es-en-v1",
     semantic_key: strategicSemanticKey(query),
   }
 }
