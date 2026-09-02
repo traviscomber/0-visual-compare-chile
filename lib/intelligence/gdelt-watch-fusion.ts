@@ -2,6 +2,7 @@ import "server-only"
 
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { resolveLegalEntityInGleif, type GleifLegalEntityMatch } from "@/lib/intelligence/gleif"
+import { persistIntelligenceWatchEvents } from "@/lib/intelligence/watch-event-writer"
 
 const LOOKBACK_HOURS = 6
 const WATCH_PAGE_SIZE = 100
@@ -37,9 +38,8 @@ export async function fuseGdeltIntoStrategicWatches(admin: SupabaseClient, now =
     const rows = (signalRows ?? []) as GdeltSignalRow[]
     candidates += rows.length
     if (!rows.length) continue
-    const { data: saved, error: saveError } = await admin.from("intelligence_watch_events").upsert(rows.map(row => toWatchEvent(watch, row, gleif, generatedAt)), { onConflict: "user_id,watch_id,signal_key", ignoreDuplicates: false }).select("id")
-    if (saveError) throw new Error(`Could not persist GDELT strategic watch events: ${saveError.message}`)
-    persisted += saved?.length ?? 0
+    const result = await persistIntelligenceWatchEvents(admin, rows.map(row => toWatchEvent(watch, row, gleif, generatedAt)))
+    persisted += result.persisted
   }
   return { watchesScanned: watches.length, candidates, persisted, gleifResolved, generatedAt }
 }
