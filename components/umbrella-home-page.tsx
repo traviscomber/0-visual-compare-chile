@@ -41,10 +41,10 @@ const engine = [
 ] as const
 
 const heroCapabilities = [
-  ["graph", "Knowledge Graph", "Connect complex evidence and expose relationships that drive insight.", "/technologies"],
-  ["agents", "AI Agents", "Research assistants that analyze, reason and accelerate evidence review.", "/technologies"],
-  ["secure", "Secure by Design", "Enterprise controls, traceability and evidence governance across the platform.", "/en/docs"],
-  ["impact", "Real Impact", "Move from search to defensible decisions, monitoring and action.", "#directions"],
+  ["graph", "Knowledge Graph", "Connect complex data and expose relationships that drive insight.", "/technologies"],
+  ["agents", "AI Agents", "Autonomous agents that analyze, reason, and accelerate decisions.", "/technologies"],
+  ["secure", "Secure by Design", "Enterprise-grade security and governance at every layer of the platform.", "/en/docs"],
+  ["impact", "Real Impact", "From insight to action. Deliver measurable results across your organization.", "#directions"],
 ] as const
 
 const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72D4C5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#071119]"
@@ -52,7 +52,7 @@ const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible
 function CapabilityIcon({ type }: { type: (typeof heroCapabilities)[number][0] }) {
   if (type === "graph") {
     return (
-      <span className="relative block h-8 w-8" aria-hidden="true">
+      <span className="relative block h-8 w-8 shrink-0" aria-hidden="true">
         <i className="absolute left-1 top-4 h-px w-7 -rotate-[28deg] bg-[#63D0BF]" />
         <i className="absolute left-1 top-4 h-px w-7 rotate-[28deg] bg-[#63D0BF]" />
         <i className="absolute left-0 top-3 h-2.5 w-2.5 rounded-full border border-[#63D0BF] bg-[#08131A]" />
@@ -64,7 +64,7 @@ function CapabilityIcon({ type }: { type: (typeof heroCapabilities)[number][0] }
 
   if (type === "agents") {
     return (
-      <span className="flex h-8 w-8 items-end gap-1" aria-hidden="true">
+      <span className="flex h-8 w-8 shrink-0 items-end gap-1" aria-hidden="true">
         <i className="h-2 w-1 border border-[#63D0BF]" />
         <i className="h-4 w-1 border border-[#63D0BF]" />
         <i className="h-7 w-1 border border-[#63D0BF]" />
@@ -75,12 +75,12 @@ function CapabilityIcon({ type }: { type: (typeof heroCapabilities)[number][0] }
 
   if (type === "secure") {
     return (
-      <span className="relative block h-8 w-8 border border-[#63D0BF] [clip-path:polygon(50%_0,100%_18%,100%_62%,50%_100%,0_62%,0_18%)]" aria-hidden="true" />
+      <span className="relative block h-8 w-8 shrink-0 border border-[#63D0BF] [clip-path:polygon(50%_0,100%_18%,100%_62%,50%_100%,0_62%,0_18%)]" aria-hidden="true" />
     )
   }
 
   return (
-    <span className="relative block h-8 w-8 rounded-full border border-[#63D0BF]" aria-hidden="true">
+    <span className="relative block h-8 w-8 shrink-0 rounded-full border border-[#63D0BF]" aria-hidden="true">
       <i className="absolute inset-[7px] rounded-full border border-[#63D0BF]" />
       <i className="absolute -right-1 top-0 h-2.5 w-2.5 rounded-full bg-[#63D0BF]" />
     </span>
@@ -133,60 +133,74 @@ function VerticalGeometry({ type }: { type: (typeof verticals)[number]["visual"]
 export function UmbrellaHomePage() {
   return (
     <main className="min-h-screen bg-[#0F2A33] text-white">
-      <section className="relative min-h-[calc(100svh-5rem)] overflow-hidden border-b border-white/10 bg-[#071119]">
+      <section className="relative isolate min-h-[calc(100svh-5rem)] overflow-hidden border-b border-white/10 bg-[#081019] lg:min-h-[860px]">
         <Image
           src="/images/videntia-hero-original.jpg"
-          alt="VIDENTIA geometric intelligence artwork"
+          alt=""
+          aria-hidden="true"
           fill
           priority
           sizes="100vw"
-          className="object-cover object-[68%_center] opacity-90 md:object-center"
+          className="pointer-events-none select-none object-cover object-[72%_center] opacity-100 [filter:saturate(.92)_contrast(1.04)_brightness(1.04)] sm:object-[68%_center] lg:object-center"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,#071119_0%,rgba(7,17,25,0.94)_26%,rgba(7,17,25,0.55)_50%,rgba(7,17,25,0.12)_72%,rgba(7,17,25,0.05)_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,17,25,0.18)_0%,rgba(7,17,25,0.03)_43%,rgba(7,17,25,0.9)_100%)]" />
-        <div className="absolute inset-x-0 bottom-0 h-[44%] bg-[linear-gradient(180deg,transparent,rgba(5,13,19,0.96))]" />
 
-        <div className="relative mx-auto flex min-h-[calc(100svh-5rem)] max-w-[1480px] flex-col px-5 pb-10 pt-[clamp(5rem,12vh,9rem)] lg:px-10">
-          <div className="max-w-[660px]">
-            <p className="flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.18em] text-[#63D0BF] sm:text-[11px]">
-              <span className="h-2 w-2 rounded-full bg-[#63D0BF]" />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(8,16,25,0.99)_0%,rgba(8,16,25,0.96)_24%,rgba(8,16,25,0.72)_43%,rgba(8,16,25,0.16)_64%,rgba(8,16,25,0)_78%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(5,12,19,0.08)_0%,rgba(5,12,19,0)_52%,rgba(5,12,19,0.58)_100%)]" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[30%] bg-[linear-gradient(180deg,transparent,rgba(6,14,21,0.72))]" />
+
+        <div className="relative mx-auto flex min-h-[calc(100svh-5rem)] max-w-[1480px] flex-col px-5 pb-7 pt-[clamp(4.5rem,9vh,7.2rem)] sm:px-7 lg:min-h-[860px] lg:px-10 lg:pb-8 lg:pt-[clamp(6rem,10vh,8rem)]">
+          <div className="max-w-[610px] xl:max-w-[650px]">
+            <p className="flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.19em] text-[#64D2C1] sm:text-[11px]">
+              <span className="h-2 w-2 rounded-full bg-[#64D2C1] shadow-[0_0_14px_rgba(100,210,193,0.6)]" />
               N3URALIA INTELLIGENCE PLATFORM
             </p>
-            <h1 className="mt-7 text-[clamp(3.8rem,7.3vw,7.6rem)] font-light leading-[0.91] tracking-[-0.06em] text-[#F3F1ED]">
-              Surface <span className="text-[#63D0BF]">truth.</span><br />
-              Unlock <span className="text-[#63D0BF]">value.</span>
+
+            <h1 className="mt-7 text-[clamp(3.55rem,6.1vw,6.55rem)] font-light leading-[0.91] tracking-[-0.058em] text-[#F2F2EF] sm:mt-8">
+              Surface <span className="text-[#63C8B9]">truth.</span><br />
+              Unlock <span className="text-[#63C8B9]">value.</span>
             </h1>
-            <p className="mt-8 max-w-[520px] text-[15px] leading-7 text-[#BEC4C4] sm:text-base sm:leading-8">
-              VIDENTIA connects data, people and AI to reveal what matters and act with confidence.
+
+            <p className="mt-7 max-w-[470px] text-[14px] leading-7 text-[#C9CDCC] sm:text-[15px] sm:leading-7">
+              VIDENTIA connects data, people and AI<br className="hidden sm:block" /> to reveal what matters and act with confidence.
             </p>
-            <div className="mt-9 flex flex-wrap gap-3">
-              <Link href="#directions" className={`group inline-flex items-center gap-5 rounded-[5px] bg-[#62BEB2] px-6 py-4 text-sm font-medium text-[#071119] transition-colors hover:bg-[#78D2C6] ${focusRing}`}>
-                Explore Platform <span aria-hidden="true" className="text-xl font-light transition-transform group-hover:translate-x-1">→</span>
+
+            <div className="mt-8 flex flex-wrap items-center gap-3 sm:mt-9">
+              <Link
+                href="#directions"
+                className={`group inline-flex min-h-14 items-center justify-center gap-6 rounded-[6px] bg-[#62BEB2] px-7 text-sm font-medium text-[#071119] shadow-[0_10px_34px_rgba(52,184,166,0.13)] transition-[transform,background-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:bg-[#79D4C8] hover:shadow-[0_14px_40px_rgba(52,184,166,0.2)] ${focusRing}`}
+              >
+                Explore Platform
+                <span aria-hidden="true" className="text-[22px] font-light transition-transform duration-200 group-hover:translate-x-1">→</span>
               </Link>
-              <Link href="#engine" className={`group inline-flex items-center gap-5 rounded-full border border-white/20 bg-[#09151D]/35 px-6 py-4 text-sm text-[#D5D9D8] backdrop-blur-sm transition-colors hover:border-white/35 hover:bg-[#09151D]/65 ${focusRing}`}>
-                Watch Overview <span aria-hidden="true" className="text-[11px]">▷</span>
+              <Link
+                href="#engine"
+                className={`group inline-flex min-h-14 items-center justify-center gap-6 rounded-full border border-[#4A6670]/75 bg-[#09151D]/35 px-7 text-sm text-[#D5D9D8] backdrop-blur-sm transition-[transform,border-color,background-color] duration-200 hover:-translate-y-0.5 hover:border-[#7EB7B0]/70 hover:bg-[#09151D]/58 ${focusRing}`}
+              >
+                Watch Overview
+                <span aria-hidden="true" className="translate-y-px text-[11px] text-[#DCE3E1]">▷</span>
               </Link>
             </div>
           </div>
 
-          <div className="mt-auto pt-16">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {heroCapabilities.map(([type, title, body, href]) => (
+          <div className="mt-auto pt-14 sm:pt-16 lg:pt-20">
+            <div className="grid overflow-hidden rounded-[10px] border border-[#2A4950]/75 bg-[#071119]/58 shadow-[0_22px_70px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:grid-cols-2 xl:grid-cols-4">
+              {heroCapabilities.map(([type, title, body, href], index) => (
                 <Link
                   key={title}
                   href={href}
-                  className={`group min-h-[220px] border border-[#2C5554]/70 bg-[#071119]/74 p-7 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-[#63D0BF]/60 hover:bg-[#091820]/88 ${focusRing}`}
+                  className={`group relative min-h-[190px] border-[#2A4950]/65 p-6 transition-[background-color,transform] duration-200 hover:bg-[#0A1A22]/72 sm:min-h-[200px] sm:p-7 ${index % 2 === 0 ? "sm:border-r" : ""} ${index < 2 ? "border-b xl:border-b-0" : ""} ${index < 3 ? "xl:border-r" : ""} ${focusRing}`}
                 >
                   <div className="flex items-center gap-5">
                     <CapabilityIcon type={type} />
-                    <h2 className="text-base font-normal text-[#8FE0D4]">{title}</h2>
+                    <h2 className="text-[15px] font-normal tracking-[-0.01em] text-[#7DDED1] sm:text-base">{title}</h2>
                   </div>
-                  <p className="mt-5 max-w-[250px] text-sm leading-6 text-[#B8BDBD]">{body}</p>
-                  <span className="mt-8 inline-block text-2xl font-light text-[#63D0BF] transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
+                  <p className="mt-5 max-w-[250px] text-[13px] leading-6 text-[#C0C5C4] sm:text-sm">{body}</p>
+                  <span className="absolute bottom-6 left-6 text-[26px] font-light leading-none text-[#63D0BF] transition-transform duration-200 group-hover:translate-x-1 sm:bottom-7 sm:left-7" aria-hidden="true">→</span>
                 </Link>
               ))}
             </div>
-            <a href="#directions" className={`mx-auto mt-8 flex w-fit flex-col items-center gap-3 text-[10px] tracking-[0.28em] text-[#D7D9D7] ${focusRing}`}>
+
+            <a href="#directions" className={`mx-auto mt-7 flex w-fit flex-col items-center gap-2 text-[9px] font-medium tracking-[0.32em] text-[#D3D6D5] sm:text-[10px] ${focusRing}`}>
               SCROLL TO EXPLORE
               <span className="h-3 w-3 rotate-45 border-b border-r border-[#63D0BF]" aria-hidden="true" />
             </a>
