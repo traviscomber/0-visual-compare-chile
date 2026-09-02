@@ -1,6 +1,6 @@
 import { fetchWithRetry } from "@/lib/intelligence/fetch-with-retry"
 import { normalizeTechnologyQuery } from "@/lib/intelligence/technology-query"
-import type { StrategicSearchIntent } from "@/lib/intelligence/search-intent"
+import { buildStrategicSearchIntent, type StrategicSearchIntent } from "@/lib/intelligence/search-intent"
 
 const OPENALEX_BASE = "https://api.openalex.org"
 const TIMEOUT_MS = 9000
@@ -55,7 +55,8 @@ export async function countOpenAlexWorks(query: string, from: Date, to: Date) {
 }
 
 export async function searchOpenAlexWorks(query: string, from: Date, to: Date, limit = 8): Promise<OpenAlexWorkSignal[]> {
-  return (await queryOpenAlexWindow(query, from, to, limit)).works
+  const intent = buildStrategicSearchIntent(query, "global")
+  return await searchOpenAlexDiscovery(intent, from, to, limit)
 }
 
 export async function searchOpenAlexDiscovery(
@@ -73,7 +74,7 @@ export async function searchOpenAlexDiscovery(
 
 export function buildOpenAlexDiscoveryOql(intent: StrategicSearchIntent, from: Date, to: Date) {
   const core = intent.concept.core.slice(0, 6).map(oqlSearchTerm).filter(Boolean)
-  const context = intent.concept.context.slice(0, 5).map(oqlSearchTerm).filter(Boolean)
+  const context = intent.concept.context.slice(0, 6).map(oqlSearchTerm).filter(Boolean)
   const coreBlock = core.length ? `(${core.join(" or ")})` : oqlSearchTerm(intent.globalQueries[0] ?? intent.canonicalQuery)
   const semanticBlock = context.length
     ? `title/abstract has (${coreBlock} and (${context.join(" or ")}))`
