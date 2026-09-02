@@ -109,8 +109,10 @@ export function scoreResearchSignal(
   const concept = bestConceptScore(haystack, intent.concept.core)
   const contextMatches = matchingPhrases(haystack, intent.concept.context)
   const exclusionMatches = matchingPhrases(haystack, intent.concept.exclusions)
-  const company = companyFit(haystack, profile)
   const kind = classifySignalKind(signal)
+  const company = companyFitEligible(kind, contextMatches, intent)
+    ? companyFit(haystack, intent, profile)
+    : { score: 0, matches: [] as string[] }
   const source = sourceScore(signal.source_key)
   const geography = geographyScore(signal, haystack, profile)
   const event = eventScore(kind)
@@ -180,9 +182,22 @@ function bestConceptScore(haystack: string, values: string[]) {
   return { score: best, matches: unique(matches).slice(0, 8) }
 }
 
-function companyFit(haystack: string, profile: ResearchProfileContext | null) {
+function companyFitEligible(kind: ResearchSignalKind, contextMatches: string[], intent: StrategicSearchIntent) {
+  if (!intent.concept.context.length || contextMatches.length) return true
+  return ["contract", "adoption", "regulation", "acquisition", "partnership", "launch", "funding", "hiring", "market"].includes(kind)
+}
+
+function companyFit(haystack: string, intent: StrategicSearchIntent, profile: ResearchProfileContext | null) {
   if (!profile) return { score: 0, matches: [] as string[] }
   const phrases = [profile.industry, ...profile.offerings, ...profile.capabilities].filter((value): value is string => Boolean(value))
+  const semanticHaystack = normalizeStrategicText([
+    haystack,
+    intent.canonicalQuery,
+    ...intent.aliases,
+    ...intent.concept.core,
+    ...intent.concept.context,
+  ].join(" "))
+  const evidence = new Set(significantTokens(semanticHaystack))
   let score = 0
   const matches: string[] = []
 
@@ -190,8 +205,7 @@ function companyFit(haystack: string, profile: ResearchProfileContext | null) {
     const phrase = normalizeStrategicText(raw)
     const tokens = significantTokens(phrase)
     if (!tokens.length) continue
-    const exact = phrase.length >= 5 && haystack.includes(phrase)
-    const evidence = new Set(significantTokens(haystack))
+    const exact = phrase.length >= 5 && semanticHaystack.includes(phrase)
     const matched = tokens.filter(token => evidence.has(token))
     if (exact || (matched.length >= 2 && matched.length / tokens.length >= 0.5)) {
       matches.push(raw)

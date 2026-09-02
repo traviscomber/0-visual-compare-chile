@@ -64,6 +64,7 @@ for (const needle of ['label="Chile"', 'label="Global"', 'label="Ambos"', "IA / 
 for (const needle of ["searchOpenAlexDiscovery", "buildOpenAlexDiscoveryOql", 'url.searchParams.set("oql", oql)', "title/abstract has", "Broader title/abstract", "queryOpenAlexWindow"]) requireText(openalex, needle, "OpenAlex split retrieval")
 for (const needle of ["applyTechnologyResearchQuality", "loadResearchProfilesForWatches", "researchProfileForWatch", 'version: "research-quality-v1"', "payloadScore", "persistIntelligenceWatchEvents"]) requireText(qualityRoute, needle, "research quality route")
 for (const needle of ["relevance_score", "relevance_factors", "signal_kind", "company_fit_matches", "cluster_size", "NEWS_CLUSTER_THRESHOLD", "exclusionPenalty"]) requireText(qualitySource, needle, "research quality engine")
+for (const needle of ["companyFitEligible", "companyFit(haystack, intent, profile)", "intent.canonicalQuery", "...intent.aliases", "...intent.concept.core", "...intent.concept.context"]) requireText(qualitySource, needle, "bilingual company-fit bridge")
 
 for (const [source, label] of [[qualityRoute, "interactive strategic signals"], [cronWriter, "strategic cron"], [gdeltWriter, "GDELT watch fusion"]] as const) {
   requireText(source, "persistIntelligenceWatchEvents", label)
@@ -119,4 +120,4 @@ const refreshed = mergeIntelligenceWatchEvent({
 })
 if (refreshed.relevance !== "media" || refreshed.payload.relevance_score !== 67) fail("new quality pass must be allowed to recalibrate prior quality")
 
-console.log("Search intent regression PASS: AI/IA equivalents share one concept identity, source scope stays explicit, Search Intent V2 remains auditable, and every strategic event writer now uses a canonical monotonic persistence path that prevents raw refreshes from erasing research-quality enrichment.")
+console.log("Search intent regression PASS: AI/IA equivalents share one concept identity, source scope stays explicit, Search Intent V2 remains auditable, company fit reuses bilingual semantics without compensating for missing research context, and every strategic event writer uses a canonical monotonic persistence path.")
