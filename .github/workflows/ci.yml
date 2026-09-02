@@ -85,6 +85,8 @@ jobs:
         run: node scripts/gdelt-raw-canonical-regression.mts
       - name: GDELT context fusion regression
         run: node scripts/gdelt-context-fusion-regression.mts
+      - name: Strategic onboarding regression
+        run: node scripts/strategic-onboarding-regression.mts
       - name: TypeScript
         run: pnpm exec tsc --noEmit
       - name: Next.js production build
