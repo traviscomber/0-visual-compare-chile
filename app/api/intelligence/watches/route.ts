@@ -7,6 +7,7 @@ import {
   strategicSemanticKey,
   type StrategicSearchScope,
 } from "@/lib/intelligence/search-intent"
+import { getOrCreatePrimaryOrganization } from "@/lib/onboarding/server"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -183,7 +184,11 @@ export async function POST(request: Request) {
     .maybeSingle()
   if (existingError) return watchWriteError("technology", existingError)
 
-  const metadata = mergeStrategicSearchMetadata(existing?.metadata, query, scope)
+  const organization = await getOrCreatePrimaryOrganization(auth.user)
+  const metadata = {
+    ...mergeStrategicSearchMetadata(existing?.metadata, query, scope),
+    organization_id: organization.id,
+  }
   const { data, error } = await auth.supabase
     .from("intelligence_watches")
     .upsert({

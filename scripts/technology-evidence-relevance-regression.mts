@@ -33,14 +33,26 @@ if (openalex.includes("search: query")) {
   fail("OpenAlex technology momentum must not scan full text")
 }
 if (!openalex.includes("technologyFilter(query, from, to)")) {
-  fail("OpenAlex counts and visible evidence must share the same technology filter")
+  fail("OpenAlex counts and visible momentum evidence must share the same conservative technology filter")
 }
-if (!openalex.includes("title-led universe for executive momentum")) {
-  fail("OpenAlex conservative scope invariant is undocumented")
+if (!openalex.includes("keeps the executive momentum KPI title-led")) {
+  fail("OpenAlex conservative momentum invariant is undocumented")
 }
 if (!signals.includes("Señal conservadora")) {
   fail("technology response does not disclose the conservative momentum basis")
 }
+
+for (const needle of [
+  "searchOpenAlexDiscovery",
+  "buildOpenAlexDiscoveryOql",
+  'url.searchParams.set("oql", oql)',
+  "title/abstract has",
+  "Broader title/abstract",
+  "buildStrategicSearchIntent(query, \"global\")",
+]) {
+  if (!openalex.includes(needle)) fail(`OpenAlex discovery layer missing ${needle}`)
+}
+if (openalex.includes("/works?oql")) fail("OQL discovery must execute at the OpenAlex API root, not /works")
 
 if (!crossref.includes("Keep Crossref's relevance ranking")) {
   fail("Crossref relevance-ordering invariant is undocumented")
@@ -112,4 +124,4 @@ if (!workbench.includes('key !== "gdelt" && !source.available')) fail("GDELT-onl
 if (!workbench.includes("Noticias temporalmente no disponibles")) fail("GDELT outage is not scoped to the Context section")
 if (!workbench.includes('value={result.momentum.current_publications ?? "—"}')) fail("UI can still render source failure as zero publications")
 
-console.log("Technology evidence relevance regression PASS: OpenAlex is title-led, accent-normalized, cached for six hours, deduplicated to two window calls, Crossref rejects weak matches, transient limits retry, core-source outages never become false zero activity, and GDELT-only outages stay inside Context.")
+console.log("Technology evidence relevance regression PASS: executive momentum remains title-led and conservative, broader OQL title/abstract discovery is isolated from the KPI, Crossref rejects weak matches, transient limits retry, and source outages never become false zero activity.")
