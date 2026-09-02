@@ -1,4 +1,3 @@
-import Image from "next/image"
 import Link from "next/link"
 import { UmbrellaDemo } from "@/components/umbrella-demo"
 
@@ -130,25 +129,84 @@ function VerticalGeometry({ type }: { type: (typeof verticals)[number]["visual"]
   return <TechnologyGeometry />
 }
 
+function HeroIntelligenceField() {
+  const nodes = [
+    [540, 236, 3], [608, 205, 2], [672, 254, 4], [728, 214, 2], [784, 278, 3], [842, 238, 5],
+    [900, 290, 2], [957, 246, 3], [1018, 304, 4], [1072, 266, 2], [1130, 322, 5], [1190, 278, 3],
+    [1244, 340, 2], [1294, 302, 4], [570, 336, 2], [635, 310, 4], [695, 365, 3], [758, 326, 2],
+    [820, 384, 4], [880, 344, 2], [940, 402, 5], [1004, 360, 3], [1062, 418, 2], [1124, 374, 4],
+    [1186, 430, 3], [1252, 392, 2], [1310, 448, 4], [610, 450, 3], [674, 424, 2], [738, 474, 5],
+    [804, 440, 2], [866, 496, 3], [928, 458, 4], [990, 510, 2], [1050, 470, 5], [1118, 526, 2],
+    [1180, 486, 4], [1244, 544, 3], [1308, 506, 2], [696, 560, 2], [758, 532, 4], [822, 584, 3],
+    [886, 552, 2], [950, 602, 4], [1016, 568, 3], [1080, 620, 2], [1148, 586, 4], [1214, 632, 3],
+  ] as const
+
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+      <div className="absolute inset-0 bg-[#061019]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_31%,rgba(49,151,143,0.22),transparent_24%),radial-gradient(circle_at_66%_58%,rgba(50,118,126,0.18),transparent_31%),radial-gradient(circle_at_18%_22%,rgba(20,64,73,0.25),transparent_28%),linear-gradient(100deg,#061019_0%,#07131d_44%,#081923_100%)]" />
+      <div className="absolute inset-y-0 left-0 w-[58%] bg-[linear-gradient(90deg,rgba(6,16,25,1)_0%,rgba(6,16,25,.98)_52%,rgba(6,16,25,.82)_76%,rgba(6,16,25,0)_100%)]" />
+      <div className="absolute -right-[10%] top-[11%] h-[58%] w-[72%] rounded-[50%] bg-[#1c6c6a]/10 blur-[80px]" />
+      <svg viewBox="0 0 1360 760" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full opacity-95">
+        <defs>
+          <linearGradient id="hero-line" x1="0" x2="1">
+            <stop offset="0%" stopColor="#1f6d70" stopOpacity="0" />
+            <stop offset="30%" stopColor="#3fa69e" stopOpacity=".28" />
+            <stop offset="78%" stopColor="#77d4c7" stopOpacity=".48" />
+            <stop offset="100%" stopColor="#d7d0b8" stopOpacity=".18" />
+          </linearGradient>
+          <linearGradient id="hero-surface" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#0f5c5e" stopOpacity=".06" />
+            <stop offset="62%" stopColor="#2b918a" stopOpacity=".16" />
+            <stop offset="100%" stopColor="#5cc7b8" stopOpacity=".03" />
+          </linearGradient>
+          <radialGradient id="hero-node">
+            <stop offset="0%" stopColor="#dff8ef" stopOpacity=".95" />
+            <stop offset="45%" stopColor="#75d7c8" stopOpacity=".8" />
+            <stop offset="100%" stopColor="#75d7c8" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <path d="M440 378 C520 330 570 368 642 330 S760 286 836 334 S954 420 1030 374 S1162 312 1366 356 L1366 760 L440 760 Z" fill="url(#hero-surface)" />
+        <g fill="none" stroke="url(#hero-line)" strokeWidth="1">
+          <path d="M500 250 L610 205 L672 254 L728 214 L842 238 L900 290 L957 246 L1018 304 L1072 266 L1130 322 L1190 278 L1294 302" />
+          <path d="M520 340 L635 310 L695 365 L758 326 L820 384 L880 344 L940 402 L1004 360 L1062 418 L1124 374 L1186 430 L1252 392 L1360 448" />
+          <path d="M560 454 L674 424 L738 474 L804 440 L866 496 L928 458 L990 510 L1050 470 L1118 526 L1180 486 L1244 544 L1308 506" />
+          <path d="M650 566 L758 532 L822 584 L886 552 L950 602 L1016 568 L1080 620 L1148 586 L1214 632 L1360 590" />
+          <path d="M540 236 L570 336 L610 450 L696 560" />
+          <path d="M608 205 L635 310 L674 424 L758 532" />
+          <path d="M672 254 L695 365 L738 474 L822 584" />
+          <path d="M728 214 L758 326 L804 440 L886 552" />
+          <path d="M784 278 L820 384 L866 496 L950 602" />
+          <path d="M842 238 L880 344 L928 458 L1016 568" />
+          <path d="M900 290 L940 402 L990 510 L1080 620" />
+          <path d="M957 246 L1004 360 L1050 470 L1148 586" />
+          <path d="M1018 304 L1062 418 L1118 526 L1214 632" />
+          <path d="M1072 266 L1124 374 L1180 486 L1244 544" />
+          <path d="M1130 322 L1186 430 L1244 544 L1308 506" />
+          <path d="M1190 278 L1252 392 L1308 506" />
+        </g>
+        <g>
+          {nodes.map(([cx, cy, r], index) => (
+            <g key={`${cx}-${cy}`}>
+              <circle cx={cx} cy={cy} r={r * 3.8} fill="url(#hero-node)" opacity={index % 5 === 0 ? .75 : .38} />
+              <circle cx={cx} cy={cy} r={r} fill={index % 7 === 0 ? "#e7dfce" : "#74d5c7"} opacity={index % 4 === 0 ? .95 : .68} />
+            </g>
+          ))}
+        </g>
+      </svg>
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,11,18,.02)_0%,rgba(4,11,18,0)_45%,rgba(4,11,18,.68)_100%)]" />
+      <div className="absolute inset-0 opacity-[.12] [background-image:linear-gradient(rgba(128,218,204,.12)_1px,transparent_1px),linear-gradient(90deg,rgba(128,218,204,.08)_1px,transparent_1px)] [background-size:72px_72px] [mask-image:linear-gradient(to_right,transparent_0%,transparent_38%,black_64%,black_100%)]" />
+    </div>
+  )
+}
+
 export function UmbrellaHomePage() {
   return (
     <main className="min-h-screen bg-[#0F2A33] text-white">
-      <section className="relative isolate min-h-[calc(100svh-5rem)] overflow-hidden border-b border-white/10 bg-[#081019] lg:min-h-[860px]">
-        <Image
-          src="/images/videntia-hero-original.jpg"
-          alt=""
-          aria-hidden="true"
-          fill
-          priority
-          sizes="100vw"
-          className="pointer-events-none select-none object-cover object-[72%_center] opacity-100 [filter:saturate(.92)_contrast(1.04)_brightness(1.04)] sm:object-[68%_center] lg:object-center"
-        />
+      <section className="relative isolate min-h-[calc(100svh-5rem)] overflow-hidden border-b border-white/10 bg-[#061019] lg:min-h-[860px]">
+        <HeroIntelligenceField />
 
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(8,16,25,0.99)_0%,rgba(8,16,25,0.96)_24%,rgba(8,16,25,0.72)_43%,rgba(8,16,25,0.16)_64%,rgba(8,16,25,0)_78%)]" />
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(5,12,19,0.08)_0%,rgba(5,12,19,0)_52%,rgba(5,12,19,0.58)_100%)]" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[30%] bg-[linear-gradient(180deg,transparent,rgba(6,14,21,0.72))]" />
-
-        <div className="relative mx-auto flex min-h-[calc(100svh-5rem)] max-w-[1480px] flex-col px-5 pb-7 pt-[clamp(4.5rem,9vh,7.2rem)] sm:px-7 lg:min-h-[860px] lg:px-10 lg:pb-8 lg:pt-[clamp(6rem,10vh,8rem)]">
+        <div className="relative z-10 mx-auto flex min-h-[calc(100svh-5rem)] max-w-[1480px] flex-col px-5 pb-7 pt-[clamp(4.5rem,9vh,7.2rem)] sm:px-7 lg:min-h-[860px] lg:px-10 lg:pb-8 lg:pt-[clamp(6rem,10vh,8rem)]">
           <div className="max-w-[610px] xl:max-w-[650px]">
             <p className="flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.19em] text-[#64D2C1] sm:text-[11px]">
               <span className="h-2 w-2 rounded-full bg-[#64D2C1] shadow-[0_0_14px_rgba(100,210,193,0.6)]" />
@@ -174,7 +232,7 @@ export function UmbrellaHomePage() {
               </Link>
               <Link
                 href="#engine"
-                className={`group inline-flex min-h-14 items-center justify-center gap-6 rounded-full border border-[#4A6670]/75 bg-[#09151D]/35 px-7 text-sm text-[#D5D9D8] backdrop-blur-sm transition-[transform,border-color,background-color] duration-200 hover:-translate-y-0.5 hover:border-[#7EB7B0]/70 hover:bg-[#09151D]/58 ${focusRing}`}
+                className={`group inline-flex min-h-14 items-center justify-center gap-6 rounded-[6px] border border-[#4A6670]/75 bg-[#09151D]/35 px-7 text-sm text-[#D5D9D8] backdrop-blur-sm transition-[transform,border-color,background-color] duration-200 hover:-translate-y-0.5 hover:border-[#7EB7B0]/70 hover:bg-[#09151D]/58 ${focusRing}`}
               >
                 Watch Overview
                 <span aria-hidden="true" className="translate-y-px text-[11px] text-[#DCE3E1]">▷</span>
@@ -183,19 +241,19 @@ export function UmbrellaHomePage() {
           </div>
 
           <div className="mt-auto pt-14 sm:pt-16 lg:pt-20">
-            <div className="grid overflow-hidden rounded-[10px] border border-[#2A4950]/75 bg-[#071119]/58 shadow-[0_22px_70px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid overflow-hidden rounded-[10px] border border-[#31535A]/70 bg-[#06141D]/70 shadow-[0_26px_80px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:grid-cols-2 xl:grid-cols-4">
               {heroCapabilities.map(([type, title, body, href], index) => (
                 <Link
                   key={title}
                   href={href}
-                  className={`group relative min-h-[190px] border-[#2A4950]/65 p-6 transition-[background-color,transform] duration-200 hover:bg-[#0A1A22]/72 sm:min-h-[200px] sm:p-7 ${index % 2 === 0 ? "sm:border-r" : ""} ${index < 2 ? "border-b xl:border-b-0" : ""} ${index < 3 ? "xl:border-r" : ""} ${focusRing}`}
+                  className={`group relative min-h-[176px] border-[#31535A]/55 p-6 transition-[background-color,transform] duration-200 hover:bg-[#0B2028]/80 sm:p-7 ${index % 2 === 0 ? "sm:border-r" : ""} ${index < 2 ? "border-b xl:border-b-0" : ""} ${index < 3 ? "xl:border-r" : ""} ${focusRing}`}
                 >
                   <div className="flex items-center gap-5">
                     <CapabilityIcon type={type} />
                     <h2 className="text-[15px] font-normal tracking-[-0.01em] text-[#7DDED1] sm:text-base">{title}</h2>
                   </div>
                   <p className="mt-5 max-w-[250px] text-[13px] leading-6 text-[#C0C5C4] sm:text-sm">{body}</p>
-                  <span className="absolute bottom-6 left-6 text-[26px] font-light leading-none text-[#63D0BF] transition-transform duration-200 group-hover:translate-x-1 sm:bottom-7 sm:left-7" aria-hidden="true">→</span>
+                  <span className="absolute bottom-6 left-6 text-[26px] font-light leading-none text-[#63D0BF] transition-transform duration-200 group-hover:translate-x-1 sm:left-7" aria-hidden="true">→</span>
                 </Link>
               ))}
             </div>
