@@ -9,7 +9,7 @@ function requireText(source: string, needle: string, label: string) {
   if (!source.includes(needle)) fail(`${label} missing ${needle}`)
 }
 
-const [migration, profileApi, analyzerApi, onboardingPage, onboardingUi, appLayout, server, watchlistApi] = await Promise.all([
+const [migration, profileApi, analyzerApi, onboardingPage, onboardingUi, appLayout, server, watchlistApi, watchSignalsApi] = await Promise.all([
   readFile("supabase/migrations/20260902014500_add_organization_intelligence_profiles.sql", "utf8"),
   readFile("app/api/onboarding/profile/route.ts", "utf8"),
   readFile("app/api/onboarding/analyze-site/route.ts", "utf8"),
@@ -18,6 +18,7 @@ const [migration, profileApi, analyzerApi, onboardingPage, onboardingUi, appLayo
   readFile("app/(app)/layout.tsx", "utf8"),
   readFile("lib/onboarding/server.ts", "utf8"),
   readFile("app/api/intelligence/strategic-watchlist/route.ts", "utf8"),
+  readFile("app/api/intelligence/strategic-watch-signals/route.ts", "utf8"),
 ])
 
 for (const needle of [
@@ -85,7 +86,18 @@ for (const needle of [
   "deactivated_reason",
 ]) requireText(watchlistApi, needle, "strategic watchlist archive filtering")
 
+for (const needle of [
+  "const scanCompletedAt = new Date().toISOString()",
+  "last_reviewed_at: scanCompletedAt",
+  "last_checked_at: scanCompletedAt",
+]) requireText(watchSignalsApi, needle, "strategic watch first-scan baseline")
+const upsertIndex = watchSignalsApi.indexOf('.upsert(rows, { onConflict: "user_id,watch_id,signal_key"')
+const completedAtIndex = watchSignalsApi.indexOf("const scanCompletedAt = new Date().toISOString()")
+if (upsertIndex < 0 || completedAtIndex < 0 || completedAtIndex <= upsertIndex) {
+  fail("strategic watch baseline timestamp must be captured after event persistence")
+}
+
 const onboardingSources = [profileApi, analyzerApi, onboardingPage, onboardingUi, server].join("\n")
 if (/n3uralia/i.test(onboardingSources)) fail("onboarding implementation must remain tenant-agnostic")
 
-console.log("Strategic onboarding regression PASS: four-step, organization-scoped, progressive onboarding is tenant-agnostic, server-gated, completion-verified, user-confirmed, archived profile watches stay out of the current radar, and website analysis is bounded against SSRF/prompt injection.")
+console.log("Strategic onboarding regression PASS: four-step, organization-scoped, progressive onboarding is tenant-agnostic, server-gated, completion-verified, user-confirmed, archived profile watches stay out of the current radar, first scans remain baseline instead of new changes, and website analysis is bounded against SSRF/prompt injection.")
