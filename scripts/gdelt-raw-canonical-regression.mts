@@ -1,9 +1,10 @@
 import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 
-const [migration, sync, route, sourceNetwork, vercel] = await Promise.all([
+const [migration, sync, rawFeed, route, sourceNetwork, vercel] = await Promise.all([
   readFile("supabase/migrations/20260901234500_add_gdelt_raw_canonical_ingestion.sql", "utf8"),
   readFile("lib/intelligence/gdelt-raw-sync.ts", "utf8"),
+  readFile("lib/intelligence/gdelt-raw-feed.ts", "utf8"),
   readFile("app/api/cron/gdelt-raw-feed/route.ts", "utf8"),
   readFile("lib/intelligence/source-network.ts", "utf8"),
   readFile("vercel.json", "utf8"),
@@ -28,6 +29,13 @@ assert.match(sync, /artifact_id,global_event_id/, "version writes must be idempo
 const conflictKeys = [...sync.matchAll(/onConflict:\s*"([^"]+)"/g)].map(match => match[1])
 assert.deepEqual(new Set(conflictKeys), new Set(["artifact_id,global_event_id", "global_event_id"]), "only exact artifact/event and GLOBALEVENTID identities may drive canonical upserts")
 assert.ok(conflictKeys.every(key => !key.includes("source_url")), "source URL must never be used as event identity")
+
+assert.match(rawFeed, /FALLBACK_STEPS_MINUTES\s*=\s*\[0,\s*15,\s*30,\s*45,\s*60\]/, "raw readiness must probe bounded prior 15-minute artifacts")
+assert.match(rawFeed, /for \(const fallbackMinutes of FALLBACK_STEPS_MINUTES\)/, "raw readiness must walk the bounded fallback window")
+assert.match(rawFeed, /artifact\.status === 404/, "provider publication races must fall back only on missing artifacts")
+assert.match(rawFeed, /attempts:\s*1/, "readiness candidates must not multiply retry latency")
+assert.match(rawFeed, /fallbackMinutes/, "selected fallback age must remain observable")
+assert.match(rawFeed, /ALLOWED_HOST/, "fallback URLs must retain the provider allowlist")
 
 assert.match(route, /CRON_SECRET/, "canonical cron must require Vercel cron authentication")
 assert.match(route, /syncGdeltRawFeed/, "canonical cron must invoke the canonical sync")
