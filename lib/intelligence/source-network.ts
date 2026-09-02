@@ -19,104 +19,28 @@ export type SourceDefinition = {
 }
 
 export const SOURCE_NETWORK: SourceDefinition[] = [
-  {
-    key: "inapi_open_data",
-    layer: "propiedad_industrial",
-    purpose: "Marcas, solicitudes, titulares, estados, clases de Niza y evidencia oficial de Chile.",
-    automationPolicy: "allowed",
-  },
-  {
-    key: "tdpi",
-    layer: "jurisprudencia",
-    purpose: "Señales procesales y jurisprudencia del Tribunal de Propiedad Industrial.",
-    automationPolicy: "allowed",
-  },
-  {
-    key: "registro_empresas",
-    layer: "empresas",
-    purpose: "Resolución de identidad societaria y RUT de empresas chilenas.",
-    automationPolicy: "allowed",
-  },
-  {
-    key: "cmf",
-    layer: "empresas",
-    purpose: "Condición regulatoria y presencia de entidades fiscalizadas por la CMF.",
-    automationPolicy: "allowed",
-  },
-  {
-    key: "mercado_publico",
-    layer: "mercado",
-    purpose: "Compras públicas, licitaciones y actividad comercial verificable en Chile.",
-    automationPolicy: "credentials_required",
-    credentialEnv: ["CHILECOMPRA_TICKET"],
-  },
-  {
-    key: "openalex",
-    layer: "ciencia_tecnologia",
-    purpose: "Publicaciones, autores, instituciones y dinámica científica para medir evolución tecnológica.",
-    automationPolicy: "allowed",
-    credentialEnv: ["OPENALEX_API_KEY"],
-    note: "La clave es opcional para uso básico y recomendable para operación continua.",
-  },
-  {
-    key: "crossref",
-    layer: "ciencia_tecnologia",
-    purpose: "Metadatos DOI y publicaciones para corroborar actividad científica y tecnológica.",
-    automationPolicy: "allowed",
-    credentialEnv: ["CROSSREF_MAILTO"],
-    note: "CROSSREF_MAILTO no es obligatorio, pero habilita el polite pool recomendado por Crossref.",
-  },
-  {
-    key: "epo_ops",
-    layer: "patentes",
-    purpose: "Datos mundiales de patentes, familias, bibliografía y estado legal mediante EPO OPS.",
-    automationPolicy: "credentials_required",
-    credentialEnv: ["EPO_OPS_CLIENT_ID", "EPO_OPS_CLIENT_SECRET"],
-    note: "Requiere una aplicación registrada en EPO OPS y aceptación de sus términos.",
-  },
-  {
-    key: "gdelt",
-    layer: "noticias",
-    purpose: "GDELT DOC API para búsqueda de artículos y contexto cuando el endpoint esté disponible desde el runtime.",
-    automationPolicy: "allowed",
-    note: "El endpoint DOC permanece desactivado operativamente por timeout desde Vercel; no se usa como fuente canónica.",
-  },
-  {
-    key: "gdelt_raw_feed",
-    layer: "noticias",
-    purpose: "Eventos globales GDELT 2.0 normalizados desde el raw feed oficial, preservando cada observación y su evidencia de origen.",
-    automationPolicy: "allowed",
-    note: "Fuente canónica automatizada por GLOBALEVENTID; el transporte raw se publica aproximadamente cada 15 minutos.",
-  },
-  {
-    key: "wipo_global_brand_db",
-    layer: "propiedad_industrial",
-    purpose: "Referencia internacional de marcas y similitud visual de WIPO.",
-    automationPolicy: "manual_only",
-    note: "WIPO prohíbe consultas automatizadas y scraping de la Global Brand Database; no se usa como conector automático.",
-  },
+  { key: "inapi_open_data", layer: "propiedad_industrial", purpose: "Marcas, solicitudes, titulares, estados, clases de Niza y evidencia oficial de Chile.", automationPolicy: "allowed" },
+  { key: "tdpi", layer: "jurisprudencia", purpose: "Señales procesales y jurisprudencia del Tribunal de Propiedad Industrial.", automationPolicy: "allowed" },
+  { key: "registro_empresas", layer: "empresas", purpose: "Resolución de identidad societaria y RUT de empresas chilenas.", automationPolicy: "allowed" },
+  { key: "cmf", layer: "empresas", purpose: "Condición regulatoria y presencia de entidades fiscalizadas por la CMF.", automationPolicy: "allowed" },
+  { key: "gleif", layer: "empresas", purpose: "Identidad legal internacional mediante LEI y evidencia oficial de GLEIF para entidades resueltas de forma exacta.", automationPolicy: "allowed", note: "El fuzzy search sólo descubre candidatos; VIDENTIA acepta una identidad GLEIF cuando queda una única coincidencia normalizada exacta." },
+  { key: "mercado_publico", layer: "mercado", purpose: "Compras públicas, licitaciones y actividad comercial verificable en Chile.", automationPolicy: "credentials_required", credentialEnv: ["CHILECOMPRA_TICKET"] },
+  { key: "openalex", layer: "ciencia_tecnologia", purpose: "Publicaciones, autores, instituciones y dinámica científica para medir evolución tecnológica.", automationPolicy: "allowed", credentialEnv: ["OPENALEX_API_KEY"], note: "La clave es opcional para uso básico y recomendable para operación continua." },
+  { key: "crossref", layer: "ciencia_tecnologia", purpose: "Metadatos DOI y publicaciones para corroborar actividad científica y tecnológica.", automationPolicy: "allowed", credentialEnv: ["CROSSREF_MAILTO"], note: "CROSSREF_MAILTO no es obligatorio, pero habilita el polite pool recomendado por Crossref." },
+  { key: "epo_ops", layer: "patentes", purpose: "Datos mundiales de patentes, familias, bibliografía y estado legal mediante EPO OPS.", automationPolicy: "credentials_required", credentialEnv: ["EPO_OPS_CLIENT_ID", "EPO_OPS_CLIENT_SECRET"], note: "Requiere una aplicación registrada en EPO OPS y aceptación de sus términos." },
+  { key: "gdelt", layer: "noticias", purpose: "GDELT DOC API para búsqueda de artículos y contexto cuando el endpoint esté disponible desde el runtime.", automationPolicy: "allowed", note: "El endpoint DOC permanece desactivado operativamente por timeout desde Vercel; no se usa como fuente canónica." },
+  { key: "gdelt_raw_feed", layer: "noticias", purpose: "Eventos globales GDELT 2.0 normalizados desde el raw feed oficial, preservando cada observación y su evidencia de origen.", automationPolicy: "allowed", note: "Fuente canónica automatizada por GLOBALEVENTID; el transporte raw se publica aproximadamente cada 15 minutos." },
+  { key: "gdelt_mentions", layer: "noticias", purpose: "Menciones documentales GDELT 2.0 para medir propagación, diversidad de fuentes, confianza y contexto por evento.", automationPolicy: "allowed", note: "Se une a Events por GLOBALEVENTID y al GKG por MentionIdentifier = V2DOCUMENTIDENTIFIER." },
+  { key: "gdelt_gkg", layer: "noticias", purpose: "Global Knowledge Graph 2.1 proyectado a documentos enlazados desde Mentions para extraer organizaciones, personas, temas, lugares y tono.", automationPolicy: "allowed", note: "VIDENTIA no replica todo el GKG: materializa sólo documentos enlazados por evidencia de Mentions y conserva provenance del artifact." },
+  { key: "wipo_global_brand_db", layer: "propiedad_industrial", purpose: "Referencia internacional de marcas y similitud visual de WIPO.", automationPolicy: "manual_only", note: "WIPO prohíbe consultas automatizadas y scraping de la Global Brand Database; no se usa como conector automático." },
 ]
 
 export function runtimeSourceStatus(definition: SourceDefinition) {
-  if (definition.automationPolicy === "manual_only") {
-    return { status: "manual_only" as const, configured: false, missing: [] as string[] }
-  }
-
+  if (definition.automationPolicy === "manual_only") return { status: "manual_only" as const, configured: false, missing: [] as string[] }
   const required = definition.credentialEnv ?? []
   const missing = required.filter(name => !String(process.env[name] ?? "").trim())
-
-  if (definition.key === "openalex" || definition.key === "crossref") {
-    return {
-      status: missing.length ? "ready_basic" as const : "ready" as const,
-      configured: true,
-      missing,
-    }
-  }
-
-  if (definition.automationPolicy === "credentials_required" && missing.length) {
-    return { status: "credentials_required" as const, configured: false, missing }
-  }
-
+  if (definition.key === "openalex" || definition.key === "crossref") return { status: missing.length ? "ready_basic" as const : "ready" as const, configured: true, missing }
+  if (definition.automationPolicy === "credentials_required" && missing.length) return { status: "credentials_required" as const, configured: false, missing }
   return { status: "ready" as const, configured: true, missing }
 }
 
