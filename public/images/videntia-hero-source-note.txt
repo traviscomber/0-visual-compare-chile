@@ -1,1 +1,1 @@
-binary asset replacement pending
+verified: videntia-hero-original.jpg matches uploaded source artwork; no binary replacement required
