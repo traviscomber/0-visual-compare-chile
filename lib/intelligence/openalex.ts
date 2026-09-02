@@ -1,5 +1,6 @@
 import { fetchWithRetry } from "@/lib/intelligence/fetch-with-retry"
 import { normalizeTechnologyQuery } from "@/lib/intelligence/technology-query"
+import type { StrategicSearchIntent } from "@/lib/intelligence/search-intent"
 
 const OPENALEX_BASE = "https://api.openalex.org"
 const TIMEOUT_MS = 9000
@@ -35,9 +36,9 @@ type NextFetchInit = RequestInit & {
 const inFlightOpenAlex = new Map<string, Promise<OpenAlexResponse>>()
 
 export async function queryOpenAlexWindow(query: string, from: Date, to: Date, limit = 8): Promise<OpenAlexWindowSignal> {
-  const payload = await requestOpenAlex({
-    // VIDENTIA uses a title-led universe for executive momentum. Abstract and full-text
-    // mentions are useful context, but they are too permissive to move the KPI itself.
+  const payload = await requestOpenAlexWorks({
+    // VIDENTIA keeps the executive momentum KPI title-led. Broader title/abstract
+    // retrieval is a separate discovery layer and can never inflate this count.
     filter: technologyFilter(query, from, to),
     per_page: String(Math.min(Math.max(limit, 1), 20)),
     select: "id,title,publication_date,doi,cited_by_count,authorships,primary_topic",
@@ -57,10 +58,46 @@ export async function searchOpenAlexWorks(query: string, from: Date, to: Date, l
   return (await queryOpenAlexWindow(query, from, to, limit)).works
 }
 
-async function requestOpenAlex(params: Record<string, string>): Promise<OpenAlexResponse> {
+export async function searchOpenAlexDiscovery(
+  intent: StrategicSearchIntent,
+  from: Date,
+  to: Date,
+  limit = 12,
+): Promise<OpenAlexWorkSignal[]> {
+  const oql = buildOpenAlexDiscoveryOql(intent, from, to)
+  const payload = await requestOpenAlexOql(oql, Math.min(Math.max(limit * 2, 12), 30))
+  return parseOpenAlexWorks(payload.results ?? [])
+    .filter(item => inDateRange(item.date, from, to))
+    .slice(0, Math.min(Math.max(limit, 1), 20))
+}
+
+export function buildOpenAlexDiscoveryOql(intent: StrategicSearchIntent, from: Date, to: Date) {
+  const core = intent.concept.core.slice(0, 6).map(oqlSearchTerm).filter(Boolean)
+  const context = intent.concept.context.slice(0, 5).map(oqlSearchTerm).filter(Boolean)
+  const coreBlock = core.length ? `(${core.join(" or ")})` : oqlSearchTerm(intent.globalQueries[0] ?? intent.canonicalQuery)
+  const semanticBlock = context.length
+    ? `title/abstract has (${coreBlock} and (${context.join(" or ")}))`
+    : `title/abstract has (${coreBlock})`
+  const minYear = from.getUTCFullYear()
+  const maxYear = to.getUTCFullYear()
+  return `works where year >= (${minYear}) and year <= (${maxYear}) and ${semanticBlock}`
+}
+
+async function requestOpenAlexWorks(params: Record<string, string>): Promise<OpenAlexResponse> {
   const url = new URL(`${OPENALEX_BASE}/works`)
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value)
+  return await requestOpenAlexUrl(url)
+}
 
+async function requestOpenAlexOql(oql: string, limit: number): Promise<OpenAlexResponse> {
+  const url = new URL(`${OPENALEX_BASE}/`)
+  url.searchParams.set("oql", oql)
+  url.searchParams.set("per-page", String(limit))
+  url.searchParams.set("select", "id,title,publication_date,doi,cited_by_count,authorships,primary_topic")
+  return await requestOpenAlexUrl(url)
+}
+
+async function requestOpenAlexUrl(url: URL): Promise<OpenAlexResponse> {
   const apiKey = String(process.env.OPENALEX_API_KEY ?? "").trim()
   if (apiKey) url.searchParams.set("api_key", apiKey)
 
@@ -138,6 +175,19 @@ function parseOpenAlexWorks(rows: Array<Record<string, unknown>>): OpenAlexWorkS
 function technologyFilter(query: string, from: Date, to: Date) {
   const safeQuery = normalizeTechnologyQuery(query)
   return `from_publication_date:${dateOnly(from)},to_publication_date:${dateOnly(to)},title.search:${safeQuery}`
+}
+
+function oqlSearchTerm(value: string) {
+  const clean = value.replace(/[\\"]/g, " ").replace(/\s+/g, " ").trim()
+  if (!clean) return ""
+  if (/^[a-z0-9-]+$/i.test(clean)) return clean
+  return `stemmed "${clean}"`
+}
+
+function inDateRange(value: string | null, from: Date, to: Date) {
+  if (!value) return false
+  const time = Date.parse(`${value}T12:00:00Z`)
+  return Number.isFinite(time) && time >= from.getTime() && time <= to.getTime()
 }
 
 function dateOnly(value: Date) { return value.toISOString().slice(0, 10) }
