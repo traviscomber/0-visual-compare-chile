@@ -6,6 +6,7 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 const WATCH_SELECT = "id,watch_type,query,is_active,last_checked_at,last_reviewed_at,metadata,created_at,updated_at"
+const HIDDEN_ARCHIVE_REASONS = new Set(["strategic_profile_reset", "query_precision_refinement"])
 
 const WatchSchema = z.object({
   type: z.enum(["technology", "company", "competitor"]),
@@ -32,7 +33,15 @@ export async function GET() {
     return NextResponse.json({ error: "No pudimos cargar las vigilancias estratégicas." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
-  return NextResponse.json({ watches: data ?? [] }, { headers: PRIVATE_NO_STORE_HEADERS })
+  const watches = (data ?? []).filter(watch => {
+    const metadata = watch.metadata && typeof watch.metadata === "object" && !Array.isArray(watch.metadata)
+      ? watch.metadata as Record<string, unknown>
+      : {}
+    const archiveReason = typeof metadata.deactivated_reason === "string" ? metadata.deactivated_reason : null
+    return !archiveReason || !HIDDEN_ARCHIVE_REASONS.has(archiveReason)
+  })
+
+  return NextResponse.json({ watches }, { headers: PRIVATE_NO_STORE_HEADERS })
 }
 
 export async function POST(request: Request) {
