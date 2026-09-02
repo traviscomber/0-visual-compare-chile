@@ -1,6 +1,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { UmbrellaDemo } from "@/components/umbrella-demo"
+import styles from "./videntia-home-hero.module.css"
 
 const verticals = [
   {
@@ -41,49 +42,76 @@ const engine = [
 ] as const
 
 const heroCapabilities = [
-  ["graph", "Knowledge Graph", "Connect complex data and expose relationships that drive insight.", "/technologies"],
-  ["agents", "AI Agents", "Autonomous agents that analyze, reason, and accelerate decisions.", "/technologies"],
-  ["secure", "Secure by Design", "Enterprise-grade security and governance at every layer of the platform.", "/en/docs"],
-  ["impact", "Real Impact", "From insight to action. Deliver measurable results across your organization.", "#directions"],
+  {
+    type: "graph",
+    title: "Knowledge Graph",
+    body: "Connect complex data and expose relationships that drive insight.",
+    href: "/technologies",
+  },
+  {
+    type: "agents",
+    title: "AI Agents",
+    body: "Autonomous agents that analyze, reason, and accelerate decisions.",
+    href: "/technologies",
+  },
+  {
+    type: "secure",
+    title: "Secure by Design",
+    body: "Enterprise-grade security and governance at every layer of the platform.",
+    href: "/en/docs",
+  },
+  {
+    type: "impact",
+    title: "Real Impact",
+    body: "From insight to action. Deliver measurable results across your organization.",
+    href: "#directions",
+  },
 ] as const
 
-const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72D4C5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#071119]"
+type CapabilityType = (typeof heroCapabilities)[number]["type"]
 
-function CapabilityIcon({ type }: { type: (typeof heroCapabilities)[number][0] }) {
+const focusRing =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72D4C5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#071119]"
+
+function CapabilityIcon({ type }: { type: CapabilityType }) {
   if (type === "graph") {
     return (
-      <span className="relative block h-8 w-8 shrink-0" aria-hidden="true">
-        <i className="absolute left-1 top-4 h-px w-7 -rotate-[28deg] bg-[#63D0BF]" />
-        <i className="absolute left-1 top-4 h-px w-7 rotate-[28deg] bg-[#63D0BF]" />
-        <i className="absolute left-0 top-3 h-2.5 w-2.5 rounded-full border border-[#63D0BF] bg-[#08131A]" />
-        <i className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full border border-[#63D0BF] bg-[#08131A]" />
-        <i className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-[#63D0BF] bg-[#08131A]" />
-      </span>
+      <svg className={styles.capabilityIcon} viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M14 31 24 18l11 8" />
+        <path d="m14 31 17 7 4-12" />
+        <circle cx="12" cy="33" r="5" />
+        <circle cx="25" cy="15" r="5" />
+        <circle cx="37" cy="25" r="5" />
+        <circle cx="32" cy="39" r="5" />
+      </svg>
     )
   }
 
   if (type === "agents") {
     return (
-      <span className="flex h-8 w-8 shrink-0 items-end gap-1" aria-hidden="true">
-        <i className="h-2 w-1 border border-[#63D0BF]" />
-        <i className="h-4 w-1 border border-[#63D0BF]" />
-        <i className="h-7 w-1 border border-[#63D0BF]" />
-        <i className="h-5 w-1 border border-[#63D0BF]" />
-      </span>
+      <svg className={styles.capabilityIcon} viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M8 39V29h6v10" />
+        <path d="M19 39V20h6v19" />
+        <path d="M30 39V12h6v27" />
+        <path d="M41 39V5" />
+      </svg>
     )
   }
 
   if (type === "secure") {
     return (
-      <span className="relative block h-8 w-8 shrink-0 border border-[#63D0BF] [clip-path:polygon(50%_0,100%_18%,100%_62%,50%_100%,0_62%,0_18%)]" aria-hidden="true" />
+      <svg className={styles.capabilityIcon} viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M24 5 39 11v12c0 10-6 16-15 21-9-5-15-11-15-21V11l15-6Z" />
+      </svg>
     )
   }
 
   return (
-    <span className="relative block h-8 w-8 shrink-0 rounded-full border border-[#63D0BF]" aria-hidden="true">
-      <i className="absolute inset-[7px] rounded-full border border-[#63D0BF]" />
-      <i className="absolute -right-1 top-0 h-2.5 w-2.5 rounded-full bg-[#63D0BF]" />
-    </span>
+    <svg className={styles.capabilityIcon} viewBox="0 0 48 48" aria-hidden="true">
+      <circle cx="23" cy="25" r="17" />
+      <circle cx="23" cy="25" r="8" />
+      <circle cx="39" cy="9" r="4" className={styles.impactDot} />
+    </svg>
   )
 }
 
@@ -130,83 +158,74 @@ function VerticalGeometry({ type }: { type: (typeof verticals)[number]["visual"]
   return <TechnologyGeometry />
 }
 
-export function UmbrellaHomePage() {
+function Hero() {
   return (
-    <main className="min-h-screen bg-[#0F2A33] text-white">
-      <section className="relative isolate min-h-[calc(100svh-5rem)] overflow-hidden border-b border-white/10 bg-[#081019] lg:min-h-[860px]">
+    <section className={styles.hero} aria-labelledby="videntia-hero-title">
+      <div className={styles.media} aria-hidden="true">
         <Image
           src="/images/videntia-hero-original.jpg"
           alt=""
-          aria-hidden="true"
-          fill
+          width={2048}
+          height={1061}
           priority
+          unoptimized
           sizes="100vw"
-          className="pointer-events-none select-none object-cover object-[72%_center] opacity-100 [filter:saturate(.92)_contrast(1.04)_brightness(1.04)] sm:object-[68%_center] lg:object-center"
+          className={styles.artwork}
         />
+      </div>
+      <div className={styles.scrim} aria-hidden="true" />
 
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(8,16,25,0.99)_0%,rgba(8,16,25,0.96)_24%,rgba(8,16,25,0.72)_43%,rgba(8,16,25,0.16)_64%,rgba(8,16,25,0)_78%)]" />
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(5,12,19,0.08)_0%,rgba(5,12,19,0)_52%,rgba(5,12,19,0.58)_100%)]" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[30%] bg-[linear-gradient(180deg,transparent,rgba(6,14,21,0.72))]" />
+      <div className={styles.stage}>
+        <div className={styles.copy}>
+          <p className={styles.eyebrow}>
+            <span className={styles.eyebrowDot} aria-hidden="true" />
+            N3URALIA INTELLIGENCE PLATFORM
+          </p>
 
-        <div className="relative mx-auto flex min-h-[calc(100svh-5rem)] max-w-[1480px] flex-col px-5 pb-7 pt-[clamp(4.5rem,9vh,7.2rem)] sm:px-7 lg:min-h-[860px] lg:px-10 lg:pb-8 lg:pt-[clamp(6rem,10vh,8rem)]">
-          <div className="max-w-[610px] xl:max-w-[650px]">
-            <p className="flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.19em] text-[#64D2C1] sm:text-[11px]">
-              <span className="h-2 w-2 rounded-full bg-[#64D2C1] shadow-[0_0_14px_rgba(100,210,193,0.6)]" />
-              N3URALIA INTELLIGENCE PLATFORM
-            </p>
+          <h1 id="videntia-hero-title" className={styles.headline}>
+            <span className={styles.headlineLine}>
+              Surface <strong>truth.</strong>
+            </span>
+            <span className={styles.headlineLine}>
+              Unlock <strong>value.</strong>
+            </span>
+          </h1>
 
-            <h1 className="mt-7 text-[clamp(3.55rem,6.1vw,6.55rem)] font-light leading-[0.91] tracking-[-0.058em] text-[#F2F2EF] sm:mt-8">
-              Surface <span className="text-[#63C8B9]">truth.</span><br />
-              Unlock <span className="text-[#63C8B9]">value.</span>
-            </h1>
+          <p className={styles.summary}>
+            VIDENTIA connects data, people and AI
+            <span className={styles.summaryBreak}> to reveal what matters and act with confidence.</span>
+          </p>
 
-            <p className="mt-7 max-w-[470px] text-[14px] leading-7 text-[#C9CDCC] sm:text-[15px] sm:leading-7">
-              VIDENTIA connects data, people and AI<br className="hidden sm:block" /> to reveal what matters and act with confidence.
-            </p>
-
-            <div className="mt-8 flex flex-wrap items-center gap-3 sm:mt-9">
-              <Link
-                href="#directions"
-                className={`group inline-flex min-h-14 items-center justify-center gap-6 rounded-[6px] bg-[#62BEB2] px-7 text-sm font-medium text-[#071119] shadow-[0_10px_34px_rgba(52,184,166,0.13)] transition-[transform,background-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:bg-[#79D4C8] hover:shadow-[0_14px_40px_rgba(52,184,166,0.2)] ${focusRing}`}
-              >
-                Explore Platform
-                <span aria-hidden="true" className="text-[22px] font-light transition-transform duration-200 group-hover:translate-x-1">→</span>
-              </Link>
-              <Link
-                href="#engine"
-                className={`group inline-flex min-h-14 items-center justify-center gap-6 rounded-full border border-[#4A6670]/75 bg-[#09151D]/35 px-7 text-sm text-[#D5D9D8] backdrop-blur-sm transition-[transform,border-color,background-color] duration-200 hover:-translate-y-0.5 hover:border-[#7EB7B0]/70 hover:bg-[#09151D]/58 ${focusRing}`}
-              >
-                Watch Overview
-                <span aria-hidden="true" className="translate-y-px text-[11px] text-[#DCE3E1]">▷</span>
-              </Link>
-            </div>
-          </div>
-
-          <div className="mt-auto pt-14 sm:pt-16 lg:pt-20">
-            <div className="grid overflow-hidden rounded-[10px] border border-[#2A4950]/75 bg-[#071119]/58 shadow-[0_22px_70px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:grid-cols-2 xl:grid-cols-4">
-              {heroCapabilities.map(([type, title, body, href], index) => (
-                <Link
-                  key={title}
-                  href={href}
-                  className={`group relative min-h-[190px] border-[#2A4950]/65 p-6 transition-[background-color,transform] duration-200 hover:bg-[#0A1A22]/72 sm:min-h-[200px] sm:p-7 ${index % 2 === 0 ? "sm:border-r" : ""} ${index < 2 ? "border-b xl:border-b-0" : ""} ${index < 3 ? "xl:border-r" : ""} ${focusRing}`}
-                >
-                  <div className="flex items-center gap-5">
-                    <CapabilityIcon type={type} />
-                    <h2 className="text-[15px] font-normal tracking-[-0.01em] text-[#7DDED1] sm:text-base">{title}</h2>
-                  </div>
-                  <p className="mt-5 max-w-[250px] text-[13px] leading-6 text-[#C0C5C4] sm:text-sm">{body}</p>
-                  <span className="absolute bottom-6 left-6 text-[26px] font-light leading-none text-[#63D0BF] transition-transform duration-200 group-hover:translate-x-1 sm:bottom-7 sm:left-7" aria-hidden="true">→</span>
-                </Link>
-              ))}
-            </div>
-
-            <a href="#directions" className={`mx-auto mt-7 flex w-fit flex-col items-center gap-2 text-[9px] font-medium tracking-[0.32em] text-[#D3D6D5] sm:text-[10px] ${focusRing}`}>
-              SCROLL TO EXPLORE
-              <span className="h-3 w-3 rotate-45 border-b border-r border-[#63D0BF]" aria-hidden="true" />
-            </a>
+          <div className={styles.actions}>
+            <Link href="#directions" className={`${styles.primaryAction} ${focusRing}`}>
+              <span>Explore Platform</span>
+              <span aria-hidden="true" className={styles.actionArrow}>→</span>
+            </Link>
+            <Link href="#engine" className={`${styles.secondaryAction} ${focusRing}`}>
+              <span>Watch Overview</span>
+              <span aria-hidden="true" className={styles.playIcon}>▷</span>
+            </Link>
           </div>
         </div>
-      </section>
+
+        <div className={styles.capabilityRail} aria-label="VIDENTIA platform capabilities">
+          {heroCapabilities.map((item) => (
+            <Link key={item.title} href={item.href} className={`${styles.capability} ${focusRing}`}>
+              <CapabilityIcon type={item.type} />
+              <h2>{item.title}</h2>
+              <p>{item.body}</p>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+export function UmbrellaHomePage() {
+  return (
+    <main className="min-h-screen bg-[#0F2A33] text-white">
+      <Hero />
 
       <section id="directions" className="scroll-mt-24 px-5 py-24 lg:px-10 lg:py-32">
         <div className="mx-auto max-w-[1480px]">
@@ -265,7 +284,14 @@ export function UmbrellaHomePage() {
             <p className="mt-7 max-w-2xl text-base leading-8 text-[#BDBEBD]">Run a single investigation or ask VIDENTIA to repeat the research automatically and notify you when meaningful changes appear.</p>
           </div>
           <div>
-            <div className="space-y-0 border-y border-[#294047] text-xs tracking-[0.08em] text-[#E7DFCE]">{["ONE-TIME SEARCH", "CREATE A WATCH", "AUTOMATIC RESEARCH", "PERIODIC REPORTS", "TEAM WORKSPACE"].map((item, index) => <div key={item} className="grid grid-cols-[52px_1fr] border-b border-[#294047] py-5 last:border-b-0"><span className="text-[#456E8E]">0{index + 1}</span><span>{item}</span></div>)}</div>
+            <div className="space-y-0 border-y border-[#294047] text-xs tracking-[0.08em] text-[#E7DFCE]">
+              {["ONE-TIME SEARCH", "CREATE A WATCH", "AUTOMATIC RESEARCH", "PERIODIC REPORTS", "TEAM WORKSPACE"].map((item, index) => (
+                <div key={item} className="grid grid-cols-[52px_1fr] border-b border-[#294047] py-5 last:border-b-0">
+                  <span className="text-[#456E8E]">0{index + 1}</span>
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
             <p className="mt-8 text-xl font-light leading-8 text-[#96B5A6]">Would you like VIDENTIA to keep watching this for you?</p>
           </div>
         </div>
@@ -275,15 +301,24 @@ export function UmbrellaHomePage() {
         <div className="mx-auto max-w-[1480px]">
           <h2 className="max-w-5xl text-[clamp(3.4rem,6.2vw,6.5rem)] font-light leading-[0.9] tracking-[-0.06em] text-[#E7DFCE]">What do you need to understand next?</h2>
           <div className="mt-14 grid gap-px bg-[#294047] md:grid-cols-3">
-            {verticals.map((item) => <Link key={item.label} href={item.href} className={`bg-[#0F2A33] p-7 text-xs font-medium tracking-[0.08em] text-white transition-colors hover:bg-[#132F35] sm:p-9 ${focusRing}`}>{item.cta}</Link>)}
+            {verticals.map((item) => (
+              <Link key={item.label} href={item.href} className={`bg-[#0F2A33] p-7 text-xs font-medium tracking-[0.08em] text-white transition-colors hover:bg-[#132F35] sm:p-9 ${focusRing}`}>{item.cta}</Link>
+            ))}
           </div>
         </div>
       </section>
 
       <footer className="border-t border-[#294047] bg-[#091A20] px-5 py-10 lg:px-10">
         <div className="mx-auto flex max-w-[1480px] flex-col justify-between gap-8 sm:flex-row sm:items-end">
-          <div><strong className="text-[15px] font-normal tracking-[0.22em] text-[#E7DFCE]">ViDENTiA</strong><p className="mt-3 max-w-lg text-xs leading-6 text-[#7F918F]">Intelligence for intellectual property and technology. Research and evidence are not automatic legal conclusions.</p></div>
-          <div className="flex flex-wrap gap-5 text-[10px] tracking-[0.08em] text-[#BDBEBD]"><Link href="/trademarks" className={focusRing}>TRADEMARKS</Link><Link href="/patents" className={focusRing}>PATENTS</Link><Link href="/technologies" className={focusRing}>TECHNOLOGIES</Link></div>
+          <div>
+            <strong className="text-[15px] font-normal tracking-[0.22em] text-[#E7DFCE]">ViDENTiA</strong>
+            <p className="mt-3 max-w-lg text-xs leading-6 text-[#7F918F]">Intelligence for intellectual property and technology. Research and evidence are not automatic legal conclusions.</p>
+          </div>
+          <div className="flex flex-wrap gap-5 text-[10px] tracking-[0.08em] text-[#BDBEBD]">
+            <Link href="/trademarks" className={focusRing}>TRADEMARKS</Link>
+            <Link href="/patents" className={focusRing}>PATENTS</Link>
+            <Link href="/technologies" className={focusRing}>TECHNOLOGIES</Link>
+          </div>
         </div>
       </footer>
     </main>
