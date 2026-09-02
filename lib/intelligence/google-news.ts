@@ -60,7 +60,7 @@ export async function searchGoogleNews(
     const isoDate = parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate.toISOString() : null
     rows.push({
       source: "google_news_rss",
-      sourceRecordId: createHash("sha256").update(`${market}|${link}|${title}`).digest("hex").slice(0, 32),
+      sourceRecordId: createHash("sha256").update(`${link}|${title}`).digest("hex").slice(0, 32),
       title,
       date: isoDate,
       url: link,
