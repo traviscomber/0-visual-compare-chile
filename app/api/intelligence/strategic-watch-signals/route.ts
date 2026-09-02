@@ -64,18 +64,22 @@ export async function GET() {
     if (upsertError) console.error("[strategic-watch-signals:upsert]", upsertError)
   }
 
+  // Baseline must be recorded after event persistence. `first_seen_at` is assigned by
+  // Postgres during the upsert, so using scanStartedAt here can make baseline events
+  // look newer than the review timestamp on the next request.
+  const scanCompletedAt = new Date().toISOString()
   const firstScanIds = active.filter(watch => !watch.last_checked_at).map(watch => watch.id)
   if (firstScanIds.length) {
     const { error: baselineError } = await auth.supabase
       .from("intelligence_watches")
-      .update({ last_reviewed_at: scanStartedAt, updated_at: scanStartedAt })
+      .update({ last_reviewed_at: scanCompletedAt, updated_at: scanCompletedAt })
       .in("id", firstScanIds)
     if (baselineError) console.error("[strategic-watch-signals:baseline]", baselineError)
   }
 
   const { error: checkedError } = await auth.supabase
     .from("intelligence_watches")
-    .update({ last_checked_at: scanStartedAt, updated_at: scanStartedAt })
+    .update({ last_checked_at: scanCompletedAt, updated_at: scanCompletedAt })
     .in("id", active.map(item => item.id))
   if (checkedError) console.error("[strategic-watch-signals:checked]", checkedError)
 
