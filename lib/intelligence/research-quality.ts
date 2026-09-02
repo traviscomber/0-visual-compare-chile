@@ -109,7 +109,7 @@ export function scoreResearchSignal(
   const concept = bestConceptScore(haystack, intent.concept.core)
   const contextMatches = matchingPhrases(haystack, intent.concept.context)
   const exclusionMatches = matchingPhrases(haystack, intent.concept.exclusions)
-  const company = companyFit(haystack, profile)
+  const company = companyFit(haystack, intent, profile)
   const kind = classifySignalKind(signal)
   const source = sourceScore(signal.source_key)
   const geography = geographyScore(signal, haystack, profile)
@@ -180,9 +180,17 @@ function bestConceptScore(haystack: string, values: string[]) {
   return { score: best, matches: unique(matches).slice(0, 8) }
 }
 
-function companyFit(haystack: string, profile: ResearchProfileContext | null) {
+function companyFit(haystack: string, intent: StrategicSearchIntent, profile: ResearchProfileContext | null) {
   if (!profile) return { score: 0, matches: [] as string[] }
   const phrases = [profile.industry, ...profile.offerings, ...profile.capabilities].filter((value): value is string => Boolean(value))
+  const semanticHaystack = normalizeStrategicText([
+    haystack,
+    intent.canonicalQuery,
+    ...intent.aliases,
+    ...intent.concept.core,
+    ...intent.concept.context,
+  ].join(" "))
+  const evidence = new Set(significantTokens(semanticHaystack))
   let score = 0
   const matches: string[] = []
 
@@ -190,8 +198,7 @@ function companyFit(haystack: string, profile: ResearchProfileContext | null) {
     const phrase = normalizeStrategicText(raw)
     const tokens = significantTokens(phrase)
     if (!tokens.length) continue
-    const exact = phrase.length >= 5 && haystack.includes(phrase)
-    const evidence = new Set(significantTokens(haystack))
+    const exact = phrase.length >= 5 && semanticHaystack.includes(phrase)
     const matched = tokens.filter(token => evidence.has(token))
     if (exact || (matched.length >= 2 && matched.length / tokens.length >= 0.5)) {
       matches.push(raw)
