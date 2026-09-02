@@ -325,11 +325,7 @@ function StepCompany({
           />
         </div>
       ) : (
-        <div className="mt-8">
-          <button type="button" className="text-sm text-white/45 underline-offset-4 hover:text-white/70 hover:underline" onClick={() => onCompanyName(companyName || " ")}>
-            También puedes continuar sin analizarlo.
-          </button>
-        </div>
+        <p className="mt-8 text-sm leading-6 text-white/35">Si prefieres, continúa y completa los datos más adelante.</p>
       )}
     </div>
   )
