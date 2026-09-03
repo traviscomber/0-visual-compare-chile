@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { LocalizedPatentsPage } from "@/components/localized-patents-page"
 import { PublicPlatformNav } from "@/components/public-platform-nav"
 import { PublicStructuredData } from "@/components/public-structured-data"
+import { PublicSurfaceMotion } from "@/components/public-surface-motion"
 import { VerticalPublicHero } from "@/components/vertical-public-hero"
 
 const description = "Research inventions, prior art and patent activity with traceable evidence and structured review."
@@ -9,26 +10,9 @@ const description = "Research inventions, prior art and patent activity with tra
 export const metadata: Metadata = {
   title: "Patent Intelligence & Prior Art Research",
   description,
-  alternates: {
-    canonical: "/patents",
-    languages: { en: "/patents", "es-CL": "/es/patentes", "x-default": "/patents" },
-  },
-  openGraph: {
-    title: "Patent Intelligence & Prior Art Research | VIDENTIA",
-    description,
-    url: "/patents",
-    siteName: "VIDENTIA",
-    type: "website",
-    locale: "en_US",
-    alternateLocale: ["es_CL"],
-    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "VIDENTIA Patent Intelligence" }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Patent Intelligence & Prior Art Research | VIDENTIA",
-    description,
-    images: ["/opengraph-image"],
-  },
+  alternates: { canonical: "/patents", languages: { en: "/patents", "es-CL": "/es/patentes", "x-default": "/patents" } },
+  openGraph: { title: "Patent Intelligence & Prior Art Research | VIDENTIA", description, url: "/patents", siteName: "VIDENTIA", type: "website", locale: "en_US", alternateLocale: ["es_CL"], images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "VIDENTIA Patent Intelligence" }] },
+  twitter: { card: "summary_large_image", title: "Patent Intelligence & Prior Art Research | VIDENTIA", description, images: ["/opengraph-image"] },
   robots: { index: true, follow: true },
 }
 
@@ -37,7 +21,8 @@ export default function PatentsPage() {
     <>
       <PublicStructuredData page="patents" />
       <PublicPlatformNav active="patents" />
-      <div id="main-content" tabIndex={-1} className="patents-public-page focus:outline-none">
+      <div id="main-content" data-public-surface tabIndex={-1} className="patents-public-page focus:outline-none">
+        <PublicSurfaceMotion variant="patents" />
         <VerticalPublicHero
           eyebrow="PATENT INTELLIGENCE"
           title="Know what exists before you invest."
