@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { PublicPlatformNav } from "@/components/public-platform-nav"
 import { PublicSurfaceMotion } from "@/components/public-surface-motion"
+import { ResourcesMotion } from "@/components/resources-motion"
 import { localePath, type PublicLocale } from "@/lib/marketing-locale"
 
 const endpoints = [
@@ -69,6 +70,7 @@ export function LocalizedDocsPage({ locale }: { locale: PublicLocale }) {
   return (
     <div data-public-surface className="min-h-screen bg-[#071119] text-[#E7DFCE]">
       <PublicSurfaceMotion variant="resources" />
+      <ResourcesMotion />
       <PublicPlatformNav active="resources" locale={locale} />
 
       <main id="main-content" tabIndex={-1} className="focus:outline-none">
