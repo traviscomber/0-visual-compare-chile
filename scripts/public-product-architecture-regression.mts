@@ -172,7 +172,7 @@ for (const [source, label, active] of [
   requireText(source, "PublicPlatformNav", label)
   requireText(source, 'locale="es"', label)
   requireText(source, active, label)
-  requireText(source, "[&>main>nav]:hidden", label)
+  requireText(source, "showChrome={false}", label)
 }
 requireText(enTechnologies, 'technologiesMetadata("en")', "English technology route")
 
