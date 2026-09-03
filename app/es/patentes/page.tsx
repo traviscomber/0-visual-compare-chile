@@ -1,14 +1,16 @@
 import { LocalizedPatentsPage, patentsMetadata } from "@/components/localized-patents-page"
-import { PublicPlatformFooter } from "@/components/public-platform-footer"
 import { PublicPlatformNav } from "@/components/public-platform-nav"
+import { PublicStructuredData } from "@/components/public-structured-data"
 import { PublicSurfaceMotion } from "@/components/public-surface-motion"
 import { VerticalPublicHero } from "@/components/vertical-public-hero"
+import { PublicPlatformFooter } from "@/components/public-platform-footer"
 
 export const metadata = patentsMetadata("es")
 
 export default function SpanishPatentsPage() {
   return (
     <>
+      <PublicStructuredData page="patents-es" />
       <PublicPlatformNav active="patents" locale="es" />
       <div id="main-content" data-public-surface tabIndex={-1} className="patents-public-page focus:outline-none">
         <PublicSurfaceMotion variant="patents" />
