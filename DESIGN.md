@@ -1,7 +1,7 @@
 # VIDENTIA DESIGN MASTER LOCK
 
 Status: ACTIVE — MUST FOLLOW
-Version: 3.1 — complete public system
+Version: 3.2 — complete public system
 Owner: Frida UI/UX Director
 
 This file is the canonical implementation contract for all public VIDENTIA surfaces. If legacy CSS, old components, generated concepts, screenshots, or page-specific styling conflict with this document, this document wins unless the user explicitly changes direction.
@@ -85,23 +85,25 @@ Hero headlines:
 - measure around `12–15ch`;
 - rewrite long copy rather than shrinking it until it fits.
 
-## 6. Brand mark and cube-once rule
+## 6. Brand mark and cube rule
 
-The geometric cube/mark is a brand identifier, not a repeating decorative motif.
+The geometric cube is a primary VIDENTIA hero object on Umbrella Home and a reduced brand cue in navigation. It must not be repeated decoratively within the same home composition.
 
 Locked rule:
-- the cube/mark appears in the VIDENTIA brand identity/navigation;
-- do not repeat a large cube as the hero centerpiece on the same viewport;
-- do not place secondary decorative cubes at section boundaries or lower corners;
-- if a supplied artwork contains the cube, it may be used only when the user explicitly approves that composition for that surface;
-- Home hero should communicate intelligence through evidence, paths, relationships, signals, product logic or operational proof rather than duplicating the logo mark.
+- `/public/images/VidentiaLanding.svg` is the canonical Umbrella Home hero artwork;
+- preserve the large cube and ivory path as the dominant hero visual;
+- the small navigation mark remains allowed because it functions as identity, not as a second hero illustration;
+- do not render another small cube, duplicate `VidentiaLanding.svg`, watermark, thumbnail, or cube/path motif in the lower frame or immediately following section;
+- one dominant cube artwork per Home page composition;
+- never remove the approved large hero cube unless the user explicitly changes the hero direction.
 
-## 7. Source-of-truth vertical artwork
+## 7. Source-of-truth artwork
 
-Approved vertical assets:
-- `/public/images/VidentiaTrademarks.svg`
-- `/public/images/VidentiaPatents.svg`
-- `/public/images/VidentiaTechnologies.svg`
+Approved assets:
+- `/public/images/VidentiaLanding.svg` — Umbrella Home hero
+- `/public/images/VidentiaTrademarks.svg` — Trademarks hero
+- `/public/images/VidentiaPatents.svg` — Patents hero
+- `/public/images/VidentiaTechnologies.svg` — Technologies hero
 
 Rules:
 - preserve original paths, proportions and colors;
@@ -109,24 +111,28 @@ Rules:
 - do not redraw supplied artwork with CSS shapes;
 - no cards, frames, glass panels or decorative containers around hero objects;
 - use intrinsic geometry and `object-contain`;
-- artwork must read as a primary object, not an icon.
-
-`VidentiaLanding.svg` remains a brand/reference asset, but is no longer mandatory as the Home hero because of the cube-once rule.
+- artwork must read as a primary object, not an icon;
+- do not reuse a hero asset as a decorative echo farther down the same page.
 
 ## 8. Umbrella Home hero
 
 Purpose: establish the platform and route visitors toward the three intelligence verticals.
 
+Artwork:
+- use `/images/VidentiaLanding.svg` as the canonical hero visual;
+- keep the large cube and ivory path fully legible;
+- the artwork owns the right side of the composition;
+- no second reduced cube/path instance in the frame or section below.
+
 Composition:
 - deep stage using `#071119 / #091A20`;
 - strong negative space for copy;
 - one dominant proposition;
-- right side should visualize evidence, relationships, search/compare/watch logic or product intelligence without repeating the brand cube;
-- no artificial frame;
+- no artificial frame around the artwork;
 - no generic feature-card cluster inside the hero;
 - restrained atmospheric depth only when it improves hierarchy.
 
-The visual may use code-native lines, nodes, evidence rails, interface fragments or a future 3D intelligence object, provided it is original to VIDENTIA and does not duplicate the logo mark.
+Motion may be added later only if it preserves the supplied form language and has a static SVG fallback.
 
 ## 9. Shared vertical hero system
 
@@ -307,7 +313,8 @@ Hierarchy:
 Visual system:
 - colors remain inside the VIDENTIA palette;
 - no unnecessary frames;
-- no duplicate cube/brand motif in the hero;
+- Home contains the approved large `VidentiaLanding.svg` hero artwork;
+- no secondary decorative cube/path instance appears below the hero;
 - related pages feel like one product family.
 
 Responsive:
@@ -326,6 +333,7 @@ Product truth:
 Technical:
 - one canonical public nav;
 - no hidden legacy assets unnecessarily loaded;
+- exactly one Home hero instance of `VidentiaLanding.svg` is rendered;
 - no relevant console/preload errors;
 - production build green;
 - runtime scan clean for the affected surfaces;
