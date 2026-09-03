@@ -1,19 +1,24 @@
-import Image from "next/image"
 import Link from "next/link"
+
+const evidenceRows = [
+  ["01", "SEARCH", "What exists?"],
+  ["02", "COMPARE", "How related is it?"],
+  ["03", "WATCH", "What changed?"],
+] as const
 
 export function UmbrellaPublicHero() {
   return (
     <section className="relative isolate overflow-hidden border-b border-white/10 bg-[#071119] px-5 sm:px-7 lg:px-10">
       <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_79%_37%,rgba(74,127,116,0.15),transparent_27%),radial-gradient(circle_at_92%_76%,rgba(69,110,142,0.09),transparent_29%),linear-gradient(110deg,#071119_0%,#091A20_52%,#071119_100%)]" />
-        <div className="absolute inset-y-0 left-0 w-[60%] bg-[linear-gradient(90deg,#071119_0%,rgba(7,17,25,.98)_67%,rgba(7,17,25,0)_100%)]" />
-        <div className="absolute inset-0 opacity-[0.07] [background-image:linear-gradient(rgba(183,211,209,.16)_1px,transparent_1px),linear-gradient(90deg,rgba(183,211,209,.10)_1px,transparent_1px)] [background-size:92px_92px] [mask-image:linear-gradient(to_right,transparent_0%,transparent_42%,black_72%,black_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_77%_36%,rgba(74,127,116,0.13),transparent_27%),radial-gradient(circle_at_92%_76%,rgba(69,110,142,0.08),transparent_29%),linear-gradient(110deg,#071119_0%,#091A20_52%,#071119_100%)]" />
+        <div className="absolute inset-y-0 left-0 w-[58%] bg-[linear-gradient(90deg,#071119_0%,rgba(7,17,25,.98)_67%,rgba(7,17,25,0)_100%)]" />
+        <div className="absolute inset-0 opacity-[0.07] [background-image:linear-gradient(rgba(183,211,209,.16)_1px,transparent_1px),linear-gradient(90deg,rgba(183,211,209,.10)_1px,transparent_1px)] [background-size:92px_92px] [mask-image:linear-gradient(to_right,transparent_0%,transparent_38%,black_70%,black_100%)]" />
       </div>
 
-      <div className="relative z-10 mx-auto grid min-h-[calc(100svh-72px)] max-w-[1480px] items-center gap-8 py-10 lg:grid-cols-[minmax(0,0.88fr)_minmax(560px,1.12fr)] lg:gap-[clamp(3rem,6vw,7rem)] lg:py-12">
+      <div className="relative z-10 mx-auto grid min-h-[calc(100svh-72px)] max-w-[1480px] items-center gap-12 py-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(560px,1.1fr)] lg:gap-[clamp(3rem,6vw,7rem)] lg:py-14">
         <div className="max-w-[650px] lg:pb-6">
           <p className="flex items-center gap-3 text-[9px] font-medium uppercase tracking-[0.2em] text-[#96B5A6] sm:text-[10px]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#96B5A6] shadow-[0_0_12px_rgba(150,181,166,.42)]" aria-hidden="true" />
+            <span className="h-1.5 w-1.5 rounded-full bg-[#96B5A6]" aria-hidden="true" />
             N3URALIA INTELLIGENCE PLATFORM
           </p>
 
@@ -35,17 +40,46 @@ export function UmbrellaPublicHero() {
           </div>
         </div>
 
-        <div className="relative flex min-h-[430px] items-center justify-center overflow-visible sm:min-h-[520px] lg:min-h-[690px] lg:justify-end">
-          <div className="pointer-events-none absolute left-[16%] top-[18%] h-[56%] w-[68%] rounded-full bg-[#4A7F74]/10 blur-[78px]" aria-hidden="true" />
-          <Image
-            src="/images/VidentiaLanding.svg"
-            alt="VIDENTIA intelligence platform geometric object"
-            width={1100}
-            height={760}
-            priority
-            sizes="(max-width: 767px) 92vw, (max-width: 1023px) 80vw, 56vw"
-            className="relative z-10 h-auto w-auto max-h-[720px] max-w-full object-contain lg:max-h-[780px]"
-          />
+        <div className="relative min-h-[500px] overflow-hidden border-y border-[#294047] sm:min-h-[560px] lg:min-h-[640px]" aria-label="VIDENTIA intelligence workflow visualization">
+          <div className="absolute inset-0 bg-[#091A20]/35" />
+
+          <div className="absolute left-[8%] top-[11%] text-[9px] font-medium tracking-[0.18em] text-[#7F918F]">OBSERVED EVIDENCE</div>
+          <div className="absolute right-[7%] top-[11%] text-[9px] font-medium tracking-[0.18em] text-[#456E8E]">TRACEABLE LOGIC</div>
+
+          <svg className="absolute inset-0 h-full w-full" viewBox="0 0 760 620" role="img" aria-label="Connected evidence paths showing search, comparison and monitoring relationships">
+            <g fill="none" stroke="#36515A" strokeWidth="1">
+              <path d="M72 160 C210 160 238 228 344 228 S500 158 688 158" />
+              <path d="M72 310 C206 310 230 310 344 310 S516 310 688 310" />
+              <path d="M72 456 C208 456 242 390 344 390 S512 464 688 464" />
+            </g>
+            <g fill="none" stroke="#4A7F74" strokeWidth="1.2">
+              <path d="M150 160 C236 182 252 242 344 242" />
+              <path d="M150 456 C234 432 250 374 344 374" />
+            </g>
+            <g fill="#96B5A6">
+              <circle cx="72" cy="160" r="6" />
+              <circle cx="72" cy="310" r="6" />
+              <circle cx="72" cy="456" r="6" />
+              <circle cx="344" cy="228" r="7" />
+              <circle cx="344" cy="310" r="7" />
+              <circle cx="344" cy="390" r="7" />
+            </g>
+            <g fill="#456E8E">
+              <circle cx="688" cy="158" r="5" />
+              <circle cx="688" cy="310" r="5" />
+              <circle cx="688" cy="464" r="5" />
+            </g>
+          </svg>
+
+          <div className="absolute inset-x-[8%] bottom-[10%] border-t border-[#294047]">
+            {evidenceRows.map(([index, label, question]) => (
+              <div key={label} className="grid grid-cols-[44px_100px_1fr] items-center border-b border-[#294047] py-4 text-[10px] tracking-[0.1em] last:border-b-0">
+                <span className="text-[#456E8E]">{index}</span>
+                <span className="text-[#E7DFCE]">{label}</span>
+                <span className="text-right text-[#7F918F]">{question}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
