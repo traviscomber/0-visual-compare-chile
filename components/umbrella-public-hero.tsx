@@ -35,38 +35,38 @@ export function UmbrellaPublicHero({ locale = "en" }: { locale?: PublicLocale })
   return (
     <section className="relative isolate overflow-hidden border-b border-white/10 bg-[#071119] px-5 sm:px-7 lg:px-10">
       <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_79%_37%,rgba(74,127,116,0.12),transparent_27%),linear-gradient(110deg,#071119_0%,#091A20_56%,#071119_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_79%_37%,rgba(74,127,116,0.10),transparent_27%),linear-gradient(110deg,#071119_0%,#091A20_56%,#071119_100%)]" />
         <div className="absolute inset-y-0 left-0 w-[62%] bg-[linear-gradient(90deg,#071119_0%,rgba(7,17,25,.98)_68%,rgba(7,17,25,0)_100%)]" />
-        <div className="absolute inset-0 opacity-[0.045] [background-image:linear-gradient(rgba(183,211,209,.14)_1px,transparent_1px),linear-gradient(90deg,rgba(183,211,209,.08)_1px,transparent_1px)] [background-size:96px_96px] [mask-image:linear-gradient(to_right,transparent_0%,transparent_48%,black_76%,black_100%)]" />
+        <div className="absolute inset-0 opacity-[0.035] [background-image:linear-gradient(rgba(183,211,209,.14)_1px,transparent_1px),linear-gradient(90deg,rgba(183,211,209,.08)_1px,transparent_1px)] [background-size:96px_96px] [mask-image:linear-gradient(to_right,transparent_0%,transparent_48%,black_76%,black_100%)]" />
       </div>
 
-      <div className="relative z-10 mx-auto grid min-h-[calc(100svh-72px)] max-w-[1480px] items-center gap-8 py-10 lg:grid-cols-[minmax(0,0.88fr)_minmax(560px,1.12fr)] lg:gap-[clamp(3rem,6vw,7rem)] lg:py-12">
+      <div className="relative z-10 mx-auto grid min-h-[calc(100svh-72px)] max-w-[1480px] items-center gap-6 py-10 sm:gap-8 lg:grid-cols-[minmax(0,0.88fr)_minmax(560px,1.12fr)] lg:gap-[clamp(3rem,6vw,7rem)] lg:py-12">
         <div className="max-w-[650px] lg:pb-6">
-          <p className="flex items-center gap-3 text-[9px] font-medium uppercase tracking-[0.2em] text-[#96B5A6] sm:text-[10px]">
+          <p className="flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.17em] text-[#96B5A6] sm:text-[11px]">
             <span className="h-1.5 w-1.5 rounded-full bg-[#96B5A6]" aria-hidden="true" />
             {t.eyebrow}
           </p>
 
-          <h1 className="mt-6 max-w-[9.8ch] text-[clamp(3.45rem,5vw,5.8rem)] font-light leading-[0.92] tracking-[-0.058em] text-[#F1EEE7] [text-wrap:balance]">
+          <h1 className="mt-6 max-w-[10ch] text-[clamp(3rem,12.8vw,5.2rem)] font-light leading-[0.94] tracking-[-0.054em] text-[#F1EEE7] [text-wrap:balance] sm:max-w-[9.8ch] lg:text-[clamp(3.6rem,5vw,5.2rem)]">
             {t.titleA} <span className="text-[#96B5A6]">{t.titleB}</span> {t.titleC} <span className="text-[#96B5A6]">{t.titleD}</span>
           </h1>
 
-          <p className="mt-7 max-w-[540px] text-[15px] leading-7 text-[#BDBEBD] sm:text-[16px] sm:leading-8">
+          <p className="mt-6 max-w-[540px] text-[15px] leading-7 text-[#C4C8C5] sm:mt-7 sm:text-[16px] sm:leading-8">
             {t.body}
           </p>
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="#directions" className="inline-flex min-h-12 items-center border border-[#4A7F74] bg-[#4A7F74] px-5 text-[10px] font-medium tracking-[0.1em] text-white transition-colors duration-200 hover:border-[#5D9388] hover:bg-[#5D9388] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#96B5A6] focus-visible:ring-offset-2 focus-visible:ring-offset-[#071119]">
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <Link href="#directions" className="inline-flex min-h-12 items-center justify-center border border-[#4A7F74] bg-[#4A7F74] px-5 text-[11px] font-medium tracking-[0.075em] text-white transition-colors duration-150 hover:border-[#5D9388] hover:bg-[#5D9388] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#96B5A6] focus-visible:ring-offset-2 focus-visible:ring-offset-[#071119] sm:justify-start">
               {t.explore}
             </Link>
-            <Link href={t.accessHref} className="inline-flex min-h-12 items-center border border-[#36515A] px-5 text-[10px] font-medium tracking-[0.1em] text-[#D6D9D5] transition-colors duration-200 hover:border-[#96B5A6] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#96B5A6] focus-visible:ring-offset-2 focus-visible:ring-offset-[#071119]">
+            <Link href={t.accessHref} className="inline-flex min-h-12 items-center justify-center border border-[#36515A] px-5 text-[11px] font-medium tracking-[0.075em] text-[#D6D9D5] transition-colors duration-150 hover:border-[#96B5A6] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#96B5A6] focus-visible:ring-offset-2 focus-visible:ring-offset-[#071119] sm:justify-start">
               {t.access}
             </Link>
           </div>
         </div>
 
-        <div className="relative flex min-h-[430px] items-center justify-center overflow-visible sm:min-h-[520px] lg:min-h-[690px] lg:justify-end">
-          <div className="pointer-events-none absolute left-[18%] top-[20%] h-[52%] w-[64%] rounded-full bg-[#4A7F74]/8 blur-[78px]" aria-hidden="true" />
+        <div className="relative flex min-h-[350px] items-center justify-center overflow-visible sm:min-h-[500px] lg:min-h-[690px] lg:justify-end">
+          <div className="pointer-events-none absolute left-[18%] top-[20%] h-[52%] w-[64%] rounded-full bg-[#4A7F74]/6 blur-[72px]" aria-hidden="true" />
           <Image
             src="/images/VidentiaLanding.svg"
             alt={t.alt}
