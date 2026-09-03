@@ -119,13 +119,13 @@ export function PublicPlatformNav({ active = "home", locale = "en", sticky = tru
             ))}
           </div>
 
-          <div className="hidden items-center gap-5 md:flex">
+          <div className="hidden items-center gap-5 lg:flex">
             <Link href={switcher.href} className={`text-[11px] font-medium tracking-[0.09em] text-[#96B5A6] ${focusRing}`}>{switcher.label}</Link>
             <Link href={paths.login} className={`hidden text-[11px] font-medium tracking-[0.085em] text-[#C7CCCA] transition-colors duration-150 hover:text-white xl:inline ${focusRing}`} prefetch={false}>{text.login}</Link>
             <Link href={paths.pricing} className={`inline-flex min-h-11 items-center border border-[#4A7F74] px-4 text-[11px] font-medium tracking-[0.075em] text-[#CDE4DE] transition-colors duration-150 hover:border-[#96B5A6] hover:bg-[#0D2028] ${focusRing}`}>{text.access}</Link>
           </div>
 
-          <details className="group relative md:hidden">
+          <details className="group relative lg:hidden">
             <summary className={`flex min-h-11 cursor-pointer list-none items-center border border-[#36515A] px-3.5 text-[10px] font-medium tracking-[0.1em] text-[#E7DFCE] [&::-webkit-details-marker]:hidden ${focusRing}`}>{text.menu}</summary>
             <div className="absolute right-0 top-[calc(100%+12px)] w-[min(84vw,320px)] border border-[#294047] bg-[#071119] p-2 shadow-2xl">
               {primary.map(([section, label, href]) => (
