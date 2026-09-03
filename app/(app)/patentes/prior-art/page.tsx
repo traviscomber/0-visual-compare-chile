@@ -2,18 +2,20 @@
 
 import Link from "next/link"
 import { type FormEvent, useState } from "react"
-import { AlertTriangle, ArrowLeft, ExternalLink, FileSearch, Globe2, Loader2, Search, ShieldCheck } from "lucide-react"
+import { AlertTriangle, ArrowLeft, ExternalLink, FileSearch, Globe2, History, Loader2, Search, ShieldCheck } from "lucide-react"
 import { OperationalHeader, OperationalMetric, OperationalMetricRail, OperationalPage, OperationalPanel, OperationalSectionHeader } from "@/components/app/operational-ui"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
 type PriorityClaim = { country: string | null; number: string; date: string }
-type Candidate = { id: string; applicationNumber: string | null; registrationNumber: string | null; title: string; applicants: string | null; inventors: string | null; status: string | null; country: string | null; filingDate: string | null; registrationDate: string | null; expirationDate: string | null; ipc: string[]; sourceUrl: string | null; lastSyncedAt: string | null; technicalScore: number; reviewLevel: "close_review" | "relevant" | "background"; matchedConcepts: string[]; reasons: string[]; publicationDate: string | null; pctApplicationDate: string | null; pctPublicationDate: string | null; prioritiesRaw: string | null; priorityClaims: PriorityClaim[]; familyCandidate: { key: string; sizeInResult: number } | null; typeName: string | null; subtypeName: string | null }
+type ObservedFieldChange = { field: string; before: string | null; after: string | null }
+type ObservedChange = { eventType: "new_record" | "status_changed" | "registration_added" | "applicant_changed" | "classification_changed" | "title_changed" | "record_updated"; summary: string | null; observedAt: string; sourceDate: string | null; materiality: "alta" | "media" | "baja"; changedFields: string[]; fieldChanges: ObservedFieldChange[]; sourceUrl: string | null }
+type Candidate = { id: string; applicationNumber: string | null; registrationNumber: string | null; title: string; applicants: string | null; inventors: string | null; status: string | null; country: string | null; filingDate: string | null; registrationDate: string | null; expirationDate: string | null; ipc: string[]; sourceUrl: string | null; lastSyncedAt: string | null; technicalScore: number; reviewLevel: "close_review" | "relevant" | "background"; matchedConcepts: string[]; reasons: string[]; publicationDate: string | null; pctApplicationDate: string | null; pctPublicationDate: string | null; prioritiesRaw: string | null; priorityClaims: PriorityClaim[]; familyCandidate: { key: string; sizeInResult: number } | null; typeName: string | null; subtypeName: string | null; observedChangeCount: number; observedChanges: ObservedChange[] }
 type LegalEvent = { jurisdiction: string | null; code: string; description: string | null; date: string | null }
 type GlobalFamily = { source: "epo_ops"; sourceRecordId: string; publication: string; title: string; familyMembers: string[]; jurisdictions: string[]; citations: string[]; legalEvents: LegalEvent[]; retrievedAt: string; url: string }
 type GlobalEvidence = { requested: boolean; source: "EPO OPS"; availability: "not_requested" | "credential_required" | "available" | "degraded"; families: GlobalFamily[]; limitations: string[] }
-type Review = { query: string; ipc: string | null; concepts: string[]; searchStrategy: "full_query" | "concept_fallback" | "hybrid"; candidates: Candidate[]; summary: { total: number; closeReview: number; relevant: number; background: number; familyCandidates: number }; coverage: { source: string; scope: string; limitations: string[]; newestSync: string | null }; globalEvidence: GlobalEvidence; generatedAt: string; durationMs: number }
+type Review = { query: string; ipc: string | null; concepts: string[]; searchStrategy: "full_query" | "concept_fallback" | "hybrid"; candidates: Candidate[]; summary: { total: number; closeReview: number; relevant: number; background: number; familyCandidates: number; candidatesWithObservedChanges: number; observedChanges: number }; coverage: { source: string; scope: string; limitations: string[]; newestSync: string | null; changeObservationSince: string | null }; globalEvidence: GlobalEvidence; generatedAt: string; durationMs: number }
 
 const LEVEL = {
   close_review: { label: "Revisión cercana", className: "bg-[#5A432B] text-[#E8CFAE]" },
@@ -26,6 +28,29 @@ const GLOBAL_STATUS: Record<GlobalEvidence["availability"], string> = {
   credential_required: "Credenciales requeridas",
   available: "Fuente disponible",
   degraded: "Fuente degradada",
+}
+
+const CHANGE_LABEL: Record<ObservedChange["eventType"], string> = {
+  new_record: "Primera observación",
+  status_changed: "Estado actualizado",
+  registration_added: "Registro o concesión incorporado",
+  applicant_changed: "Solicitante o titular actualizado",
+  classification_changed: "Clasificación actualizada",
+  title_changed: "Título actualizado",
+  record_updated: "Expediente actualizado",
+}
+
+const FIELD_LABEL: Record<string, string> = {
+  status: "Estado",
+  applicant: "Solicitante / titular",
+  classification: "Clasificación",
+  title: "Título",
+  registration_number: "Registro",
+  registration_date: "Fecha de registro",
+  publication_date: "Fecha de publicación",
+  filing_date: "Fecha de presentación",
+  country: "País",
+  inventors: "Inventores",
 }
 
 export default function PriorArtPage() {
@@ -58,7 +83,7 @@ export default function PriorArtPage() {
 
   return <OperationalPage>
     <Button asChild variant="ghost" size="sm" className="mb-4 w-fit px-0 text-muted-foreground hover:bg-transparent hover:text-white"><Link href="/patentes"><ArrowLeft className="h-4 w-4" />Volver a Patentes</Link></Button>
-    <OperationalHeader eyebrow="VIDENTIA / Patentes / Prior Art" title="Describe una invención. Revisa qué antecedentes técnicos merecen atención." description={<>La consulta larga se descompone en conceptos técnicos cuando la búsqueda literal no encuentra suficiente evidencia. VIDENTIA separa la evidencia INAPI de la cobertura internacional EPO OPS y no convierte ninguna fuente en una conclusión legal.</>} meta={<><span>INAPI Chile</span><span>Prioridades + PCT</span><span>EPO OPS opcional</span><span>Revisión humana</span></>} />
+    <OperationalHeader eyebrow="VIDENTIA / Patentes / Prior Art" title="Describe una invención. Revisa qué antecedentes técnicos merecen atención." description={<>La consulta larga se descompone en conceptos técnicos cuando la búsqueda literal no encuentra suficiente evidencia. VIDENTIA separa evidencia INAPI, cambios observados y cobertura internacional EPO OPS sin convertir ninguna fuente en una conclusión legal.</>} meta={<><span>INAPI Chile</span><span>Prioridades + PCT</span><span>Cambios observados</span><span>EPO OPS opcional</span><span>Revisión humana</span></>} />
 
     <section className="border-b border-border/80 py-7">
       <OperationalPanel>
@@ -78,7 +103,7 @@ export default function PriorArtPage() {
               <Globe2 className="h-4 w-4" />{includeGlobal ? "EPO OPS activado" : "Activar EPO OPS"}
             </Button>
           </div>
-          <p className="mt-3 text-xs leading-5 text-muted-foreground">No responde “patentable / no patentable”. Recupera candidatos y evidencia observada para revisión técnica y jurídica posterior.</p>
+          <p className="mt-3 text-xs leading-5 text-muted-foreground">No responde “patentable / no patentable”. Recupera candidatos, cambios observados y evidencia de fuente para revisión técnica y jurídica posterior.</p>
         </form>
       </OperationalPanel>
     </section>
@@ -87,7 +112,7 @@ export default function PriorArtPage() {
 
     {review ? <>
       <OperationalMetricRail>
-        <OperationalMetric value={review.summary.total} label="Candidatos" detail={`Estrategia ${strategyLabel(review.searchStrategy)}`} />
+        <OperationalMetric value={review.summary.total} label="Candidatos" detail={`${review.summary.candidatesWithObservedChanges} con cambios observados`} />
         <OperationalMetric value={review.summary.closeReview} label="Revisión cercana" detail="Mayor cobertura de conceptos técnicos" tone={review.summary.closeReview ? "warning" : "neutral"} />
         <OperationalMetric value={review.summary.familyCandidates} label="Familias candidatas" detail="Inferidas desde prioridades INAPI" />
         <OperationalMetric value={review.globalEvidence.families.length} label="Familias EPO" detail={GLOBAL_STATUS[review.globalEvidence.availability]} tone={review.globalEvidence.availability === "degraded" || review.globalEvidence.availability === "credential_required" ? "warning" : review.globalEvidence.availability === "available" ? "success" : "neutral"} />
@@ -95,12 +120,13 @@ export default function PriorArtPage() {
 
       <section className="grid gap-9 py-9 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)] xl:gap-10">
         <div>
-          <OperationalSectionHeader eyebrow="Resultados" title="Potential prior art" meta={`${review.durationMs} ms`} />
+          <OperationalSectionHeader eyebrow="Resultados" title="Potential prior art" meta={`${review.durationMs} ms · ${strategyLabel(review.searchStrategy)} · ${review.summary.observedChanges} cambios observados`} />
           {review.candidates.length ? <div className="mt-5 divide-y divide-border/80 border-y border-border/80">{review.candidates.map((candidate, index) => <CandidateRow key={candidate.id} candidate={candidate} index={index} />)}</div> : <div className="mt-5 border-y border-border/80 py-10"><FileSearch className="h-5 w-5 text-[#96B5A6]" /><p className="mt-4 font-medium text-white">No encontramos candidatos en el corpus observado.</p><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Esto no demuestra ausencia de prior art. Amplía términos, revisa IPC o utiliza cobertura internacional antes de una conclusión.</p></div>}
         </div>
         <aside>
           <OperationalPanel>
             <div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 text-[#96B5A6]" /><div><p className="font-medium text-white">{review.coverage.source}</p><p className="mt-2 text-sm leading-6 text-muted-foreground">{review.coverage.scope}</p></div></div>
+            {review.coverage.changeObservationSince ? <div className="mt-5 border-t border-border/80 pt-4"><p className="text-[10px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]">Change detection</p><p className="mt-2 text-xs leading-5 text-muted-foreground">VIDENTIA conserva diferencias entre snapshots oficiales observados desde {formatDate(review.coverage.changeObservationSince)}. Es una ventana de observación, no la historia completa del expediente.</p></div> : null}
             <div className="mt-6 border-t border-border/80 pt-5"><p className="text-[10px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]">Límites</p><div className="mt-3 space-y-3">{review.coverage.limitations.map(item => <p key={item} className="flex gap-2 text-xs leading-5 text-muted-foreground"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#D6A46F]" />{item}</p>)}</div></div>
             {review.coverage.newestSync ? <p className="mt-5 border-t border-border/80 pt-4 text-[11px] text-muted-foreground">Último sync observado · {formatDate(review.coverage.newestSync)}</p> : null}
           </OperationalPanel>
@@ -136,8 +162,18 @@ function GlobalFamilyRow({ family }: { family: GlobalFamily }) {
 
 function CandidateRow({ candidate, index }: { candidate: Candidate; index: number }) {
   const level = LEVEL[candidate.reviewLevel]
-  return <article className="py-6"><div className="grid gap-5 lg:grid-cols-[48px_minmax(0,1fr)_180px]"><span className="text-[10px] text-[#456E8E]">{String(index + 1).padStart(2, "0")}</span><div><div className="flex flex-wrap items-center gap-2"><Badge className={level.className}>{level.label}</Badge><Badge variant="outline">Score técnico {candidate.technicalScore}</Badge>{candidate.familyCandidate ? <Badge variant="secondary">Familia candidata · {candidate.familyCandidate.sizeInResult}</Badge> : null}</div><h3 className="mt-3 text-base font-medium leading-7 text-white">{candidate.title}</h3><p className="mt-1 text-xs text-muted-foreground">{candidate.applicants || "Solicitante no informado"}</p><div className="mt-4 flex flex-wrap gap-2">{candidate.ipc.slice(0, 6).map(code => <Badge key={code} variant="outline">IPC {code}</Badge>)}</div><div className="mt-4 space-y-1">{candidate.reasons.map(reason => <p key={reason} className="text-xs leading-5 text-[#BDBEBD]">• {reason}</p>)}</div>{candidate.priorityClaims.length ? <div className="mt-4 border-l-2 border-[#456E8E] pl-3"><p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">Prioridades observadas</p>{candidate.priorityClaims.slice(0, 4).map(claim => <p key={`${claim.country}:${claim.number}:${claim.date}`} className="mt-1 text-xs text-muted-foreground">{claim.country ? `${claim.country} · ` : ""}{claim.number} · {claim.date}</p>)}</div> : null}</div><div className="text-xs leading-6 text-muted-foreground"><p>{candidate.applicationNumber ? `Solicitud ${candidate.applicationNumber}` : "Sin número"}</p><p>{candidate.country || "País no informado"}</p><p>{candidate.filingDate ? `Presentada ${candidate.filingDate}` : "Fecha no informada"}</p><p>{candidate.status || "Estado no informado"}</p>{candidate.pctApplicationDate ? <p>PCT · {candidate.pctApplicationDate}</p> : null}{candidate.sourceUrl ? <Button asChild variant="ghost" size="sm" className="mt-3 px-0"><a href={candidate.sourceUrl} target="_blank" rel="noreferrer">Fuente <ExternalLink className="h-3.5 w-3.5" /></a></Button> : null}</div></div></article>
+  return <article className="py-6"><div className="grid gap-5 lg:grid-cols-[48px_minmax(0,1fr)_180px]"><span className="text-[10px] text-[#456E8E]">{String(index + 1).padStart(2, "0")}</span><div><div className="flex flex-wrap items-center gap-2"><Badge className={level.className}>{level.label}</Badge><Badge variant="outline">Score técnico {candidate.technicalScore}</Badge>{candidate.familyCandidate ? <Badge variant="secondary">Familia candidata · {candidate.familyCandidate.sizeInResult}</Badge> : null}{candidate.observedChangeCount ? <Badge variant="outline">{candidate.observedChangeCount} cambio{candidate.observedChangeCount === 1 ? "" : "s"} observado{candidate.observedChangeCount === 1 ? "" : "s"}</Badge> : null}</div><h3 className="mt-3 text-base font-medium leading-7 text-white">{candidate.title}</h3><p className="mt-1 text-xs text-muted-foreground">{candidate.applicants || "Solicitante no informado"}</p><div className="mt-4 flex flex-wrap gap-2">{candidate.ipc.slice(0, 6).map(code => <Badge key={code} variant="outline">IPC {code}</Badge>)}</div><div className="mt-4 space-y-1">{candidate.reasons.map(reason => <p key={reason} className="text-xs leading-5 text-[#BDBEBD]">• {reason}</p>)}</div>{candidate.priorityClaims.length ? <div className="mt-4 border-l-2 border-[#456E8E] pl-3"><p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">Prioridades observadas</p>{candidate.priorityClaims.slice(0, 4).map(claim => <p key={`${claim.country}:${claim.number}:${claim.date}`} className="mt-1 text-xs text-muted-foreground">{claim.country ? `${claim.country} · ` : ""}{claim.number} · {claim.date}</p>)}</div> : null}{candidate.observedChanges.length ? <ObservedChanges changes={candidate.observedChanges} total={candidate.observedChangeCount} /> : null}</div><div className="text-xs leading-6 text-muted-foreground"><p>{candidate.applicationNumber ? `Solicitud ${candidate.applicationNumber}` : "Sin número"}</p><p>{candidate.country || "País no informado"}</p><p>{candidate.filingDate ? `Presentada ${candidate.filingDate}` : "Fecha no informada"}</p><p>{candidate.status || "Estado no informado"}</p>{candidate.pctApplicationDate ? <p>PCT · {candidate.pctApplicationDate}</p> : null}{candidate.sourceUrl ? <Button asChild variant="ghost" size="sm" className="mt-3 px-0"><a href={candidate.sourceUrl} target="_blank" rel="noreferrer">Fuente <ExternalLink className="h-3.5 w-3.5" /></a></Button> : null}</div></div></article>
+}
+
+function ObservedChanges({ changes, total }: { changes: ObservedChange[]; total: number }) {
+  return <div className="mt-5 border-l-2 border-[#4A7F74] pl-3">
+    <div className="flex items-center gap-2"><History className="h-3.5 w-3.5 text-[#96B5A6]" /><p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">Cambios observados en fuente</p></div>
+    <p className="mt-1 text-[11px] leading-5 text-muted-foreground">Diferencias detectadas entre snapshots INAPI desde el baseline de VIDENTIA. No es la historia jurídica completa.</p>
+    <div className="mt-3 space-y-3">{changes.slice(0, 3).map((change, index) => <div key={`${change.observedAt}:${change.eventType}:${index}`} className="border-t border-border/70 pt-3 first:border-t-0 first:pt-0"><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-medium text-white">{CHANGE_LABEL[change.eventType]}</p><span className="text-[10px] text-muted-foreground">Observado {formatDateTime(change.observedAt)}</span></div>{change.summary ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{change.summary}</p> : null}{change.eventType !== "new_record" && change.fieldChanges.length ? <div className="mt-2 space-y-1">{change.fieldChanges.slice(0, 2).map(field => <p key={`${change.observedAt}:${field.field}`} className="text-[11px] leading-5 text-[#BDBEBD]"><span className="text-muted-foreground">{FIELD_LABEL[field.field] || field.field}:</span> {field.before || "—"} → {field.after || "—"}</p>)}</div> : null}</div>)}</div>
+    {total > 3 ? <p className="mt-3 text-[10px] text-muted-foreground">Mostrando 3 de {total} cambios observados.</p> : null}
+  </div>
 }
 
 function strategyLabel(value: Review["searchStrategy"]) { return value === "concept_fallback" ? "por conceptos" : value === "hybrid" ? "híbrida" : "consulta completa" }
 function formatDate(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("es-CL", { dateStyle: "medium" }).format(date) }
+function formatDateTime(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("es-CL", { dateStyle: "medium", timeStyle: "short" }).format(date) }
