@@ -23,13 +23,15 @@ for(const needle of [
   "priorityClaimsMatch",
   "priorityNumberVariants",
   "globalFamilyLinkedCandidates",
+  "priorityClaimsForGlobal",
+  "searchEpoPatentFamiliesForReview(query, priorityClaims, 3)",
+  "La recuperación global prioriza números de prioridad observados en los candidatos INAPI",
   "Vínculo EPO por prioridad observada:",
   "Los vínculos INAPI ↔ EPO se declaran sólo cuando una prioridad observada coincide por país, fecha y variante normalizada del número",
   'if (score >= 65) return "close_review"',
   'source: "INAPI Chile"',
   "loadGlobalPatentEvidence",
   "hasEpoOpsCredentials",
-  "searchEpoPatentFamilies(query, 3)",
   'availability: "credential_required"',
   "intelligence_source_events",
   'source_key", "inapi_open_data"',
@@ -59,6 +61,14 @@ for(const needle of [
   "/rest-services/family/publication/docdb/",
   "/biblio,legal",
   "EpoPriorityClaim",
+  "EpoPrioritySearchClaim",
+  "searchEpoPatentFamiliesForReview",
+  "searchEpoPublications",
+  "buildPrioritySearchTerms",
+  'pr any ${cqlTerm(priorityTerms.join(" "))}',
+  'ta=${cqlTerm(query)}',
+  "uniquePriorityResults.length < requested",
+  "hydrateFamilies",
   "parseFamilyMembers",
   "parsePriorityClaims",
   "parseCitations",
@@ -133,4 +143,4 @@ for(const needle of [
   "Crear reporte",
 ])requireText(page,needle,"prior-art UI")
 
-console.log("Patent prior-art regression PASS: local evidence remains canonical, observed INAPI snapshot changes are traceable, EPO family priority coverage and deterministic INAPI-to-EPO links are visible in the UI, report handoff preserves global evidence intent, and no missing link or legal event is presented as a legal conclusion.")
+console.log("Patent prior-art regression PASS: local evidence remains canonical, EPO retrieval uses a bounded priority-first search with title/abstract fallback and no extra family hydration beyond the configured limit, observed INAPI snapshot changes remain traceable, deterministic INAPI-to-EPO links stay auditable, and missing global matches are not presented as legal conclusions.")

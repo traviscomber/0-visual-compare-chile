@@ -1,7 +1,7 @@
 import "server-only"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { searchPatentsLocal, type PatentSearchHit } from "@/lib/inapi/patent-search"
-import { hasEpoOpsCredentials, searchEpoPatentFamilies, type EpoFamilySignal, type EpoPriorityClaim } from "@/lib/intelligence/epo-ops"
+import { hasEpoOpsCredentials, searchEpoPatentFamiliesForReview, type EpoFamilySignal, type EpoPriorityClaim } from "@/lib/intelligence/epo-ops"
 
 const STOPWORDS = new Set([
   "para","como","sobre","entre","desde","hasta","bajo","alto","baja","sistema","metodo","método","proceso","dispositivo","aparato","equipo","mediante","with","from","into","using","system","method","process","device","apparatus","equipment","low","high","the","and","for","that","this","una","uno","unos","unas","del","las","los","que","con","por","sin","sus","una","un",
@@ -107,7 +107,6 @@ export async function buildPatentPriorArtReview(
 ): Promise<PriorArtReview> {
   const trimmed = query.trim()
   const concepts = extractTechnicalConcepts(trimmed)
-  const globalEvidencePromise = loadGlobalPatentEvidence(trimmed, Boolean(options.includeGlobal))
   const full = await searchPatentsLocal(trimmed, ipc ?? null, Math.min(limit, 50))
   const merged = new Map<string, { hit: PatentSearchHit; conceptHits: Set<string>; fullHit: boolean }>()
 
@@ -207,7 +206,8 @@ export async function buildPatentPriorArtReview(
     }))
 
   const strategy: PriorArtReview["searchStrategy"] = full.hits.length === 0 ? "concept_fallback" : shouldFallback ? "hybrid" : "full_query"
-  const globalEvidence = await globalEvidencePromise
+  const priorityClaimsForGlobal = candidatesBeforeGlobal.flatMap(item => item.priorityClaims)
+  const globalEvidence = await loadGlobalPatentEvidence(trimmed, Boolean(options.includeGlobal), priorityClaimsForGlobal)
   const candidates: PriorArtCandidate[] = candidatesBeforeGlobal.map(item => {
     const globalFamilyMatches = matchGlobalFamilies(item.priorityClaims, globalEvidence.families)
     return {
@@ -257,9 +257,10 @@ export async function buildPatentPriorArtReview(
   }
 }
 
-async function loadGlobalPatentEvidence(query: string, requested: boolean): Promise<GlobalPatentEvidence> {
+async function loadGlobalPatentEvidence(query: string, requested: boolean, priorityClaims: PriorityClaim[]): Promise<GlobalPatentEvidence> {
   const commonLimitations = [
     "EPO OPS aporta evidencia bibliográfica, familias simples, prioridades, citas observadas y eventos jurídicos de fuente; no una conclusión legal.",
+    "La recuperación global prioriza números de prioridad observados en los candidatos INAPI y completa el cupo con title/abstract cuando corresponde; sigue siendo una revisión acotada, no una búsqueda exhaustiva.",
     "La ausencia de resultados o eventos en la respuesta no equivale a ausencia de derechos, citas o actividad en una jurisdicción.",
   ]
 
@@ -284,7 +285,7 @@ async function loadGlobalPatentEvidence(query: string, requested: boolean): Prom
   }
 
   try {
-    const families = await searchEpoPatentFamilies(query, 3)
+    const families = await searchEpoPatentFamiliesForReview(query, priorityClaims, 3)
     return {
       requested: true,
       source: "EPO OPS",
