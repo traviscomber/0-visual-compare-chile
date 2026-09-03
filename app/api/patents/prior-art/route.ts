@@ -40,6 +40,8 @@ export async function GET(request: Request) {
         candidates: review.summary.total,
         close_review: review.summary.closeReview,
         strategy: review.searchStrategy,
+        candidates_with_observed_changes: review.summary.candidatesWithObservedChanges,
+        observed_change_events: review.summary.observedChanges,
         global_requested: parsed.data.includeGlobal,
         global_availability: review.globalEvidence.availability,
         global_families: review.globalEvidence.families.length,
