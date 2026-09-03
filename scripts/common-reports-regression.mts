@@ -43,6 +43,17 @@ for (const needle of [
   "reportDiff(payload, previous?.source_snapshot",
   "Baseline creado para",
   "p_series_id: parsed.data.seriesId ?? previous?.series_id ?? null",
+  "includeGlobal: z.boolean().default(false)",
+  "buildPatentReport(parsed.data.query, parsed.data.ipc || null, parsed.data.includeGlobal)",
+  "buildPatentPriorArtReview(query, ipc, 30, { includeGlobal })",
+  'kind: "patent_family"',
+  'source: "EPO OPS"',
+  "evidenceCoverage: family.evidenceCoverage",
+  "globalEvidence: {",
+  "requested: review.globalEvidence.requested",
+  "availability: review.globalEvidence.availability",
+  "legalEvents: family.legalEvents",
+  "Familias EPO observadas:",
 ]) requireText(route, needle, "reports API")
 
 for (const forbidden of ["createAdminClient", "SUPABASE_SERVICE_ROLE_KEY", "whatChanged: z.", "evidence: z.", "recommendedReview: z."]) {
@@ -59,6 +70,11 @@ for (const needle of [
   "El servidor reconstruye el reporte; el navegador no entrega conclusiones libres.",
   '(["brand","patent","technology"] as Vertical[])',
   'href="/reportes/evaluaciones"',
+  "includeGlobal",
+  "Evidencia internacional EPO OPS",
+  "EPO OPS incluido",
+  "families, jurisdicciones, citas, eventos jurídicos observados y el estado de cobertura de la fuente",
+  "No se infiere estado jurídico actual.",
 ]) requireText(page, needle, "reports UI")
 
 for (const needle of [
@@ -67,4 +83,4 @@ for (const needle of [
   "Evaluaciones persistidas",
 ]) requireText(evaluations, needle, "legacy evaluations surface")
 
-console.log("Common reports regression PASS: Brand/Patent/Technology use one immutable versioned snapshot model, authenticated RLS, server-derived evidence and an honest five-section report contract.")
+console.log("Common reports regression PASS: Brand/Patent/Technology use one immutable versioned snapshot model, authenticated RLS, server-derived evidence, and Patent snapshots can explicitly preserve EPO family/jurisdiction/citation/legal-event evidence with source coverage semantics and no inferred current legal status.")

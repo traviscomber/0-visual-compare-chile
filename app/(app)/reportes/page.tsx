@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
-import { Archive, FilePlus2, FileText, Loader2, RefreshCw, ShieldCheck } from "lucide-react"
+import { Archive, FilePlus2, FileText, Globe2, Loader2, RefreshCw, ShieldCheck } from "lucide-react"
 import { OperationalHeader, OperationalMetric, OperationalMetricRail, OperationalPage, OperationalPanel, OperationalSectionHeader } from "@/components/app/operational-ui"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -21,6 +21,7 @@ export default function ReportsPage(){
   const [mode,setMode]=useState<Vertical>("patent")
   const [subject,setSubject]=useState("")
   const [ipc,setIpc]=useState("")
+  const [includeGlobal,setIncludeGlobal]=useState(false)
   const [windowDays,setWindowDays]=useState(180)
   const [comparisonId,setComparisonId]=useState("")
   const [showCreate,setShowCreate]=useState(false)
@@ -40,9 +41,9 @@ export default function ReportsPage(){
   }
 
   useEffect(()=>{
-    const params=new URLSearchParams(window.location.search);const requested=params.get("create");const requestedSubject=params.get("subject")?.trim();const requestedIpc=params.get("ipc")?.trim()
+    const params=new URLSearchParams(window.location.search);const requested=params.get("create");const requestedSubject=params.get("subject")?.trim();const requestedIpc=params.get("ipc")?.trim();const requestedGlobal=params.get("global")==="1"
     if(requested==="brand"||requested==="patent"||requested==="technology"){setMode(requested);setShowCreate(true)}
-    if(requestedSubject)setSubject(requestedSubject.slice(0,240));if(requestedIpc)setIpc(requestedIpc.slice(0,16).toUpperCase())
+    if(requestedSubject)setSubject(requestedSubject.slice(0,240));if(requestedIpc)setIpc(requestedIpc.slice(0,16).toUpperCase());if(requested==="patent"&&requestedGlobal)setIncludeGlobal(true)
     void load()
   },[])
 
@@ -58,7 +59,7 @@ export default function ReportsPage(){
       body={vertical:"brand",comparisonId}
     }else if(mode==="patent"){
       if(subject.trim().length<3){setError("Describe la invención o tecnología.");return}
-      body={vertical:"patent",query:subject.trim(),ipc:ipc.trim()||null}
+      body={vertical:"patent",query:subject.trim(),ipc:ipc.trim()||null,includeGlobal}
     }else{
       if(subject.trim().length<2){setError("Indica la tecnología a analizar.");return}
       body={vertical:"technology",query:subject.trim(),windowDays}
@@ -82,7 +83,7 @@ export default function ReportsPage(){
     </OperationalMetricRail>
 
     {showCreate?<section className="border-b border-border/80 py-7"><OperationalPanel><OperationalSectionHeader eyebrow="Generar snapshot" title="Elige la evidencia canónica" meta="El servidor reconstruye el reporte; el navegador no entrega conclusiones libres."/><div className="mt-5 grid grid-cols-3 gap-1 bg-[#0F2A33] p-1 sm:w-[480px]">{(["brand","patent","technology"] as Vertical[]).map(item=><button key={item} type="button" onClick={()=>setMode(item)} className={`min-h-10 px-3 text-xs font-medium ${mode===item?"bg-[#173B37] text-white":"text-muted-foreground hover:text-white"}`}>{VERTICAL_LABEL[item]}</button>)}</div>
-      {mode==="brand"?<div className="mt-5"><select value={comparisonId} onChange={event=>setComparisonId(event.target.value)} className="h-11 w-full max-w-3xl rounded-[9px] border border-input bg-background px-3 text-sm text-white outline-none focus-visible:ring-2 focus-visible:ring-ring/50"><option value="">Selecciona una evaluación persistida</option>{comparisons.map(item=><option key={item.id} value={item.id}>{brandName(item)||"Marca evaluada"} · {item.classification||"sin clasificación"} · {formatDate(item.created_at)}</option>)}</select>{!comparisons.length?<p className="mt-3 text-xs text-muted-foreground">No encontramos evaluaciones de marca recientes. Crea una desde Marcas antes de generar este snapshot.</p>:null}</div>:mode==="patent"?<div className="mt-5 grid gap-3 lg:grid-cols-[1fr_180px]"><Input value={subject} onChange={event=>setSubject(event.target.value)} maxLength={240} placeholder="Describe una invención o tecnología"/><Input value={ipc} onChange={event=>setIpc(event.target.value.toUpperCase())} maxLength={16} placeholder="IPC opcional"/></div>:<div className="mt-5 grid gap-3 lg:grid-cols-[1fr_180px]"><Input value={subject} onChange={event=>setSubject(event.target.value)} maxLength={160} placeholder="Ej. nanoburbujas en acuicultura"/><select value={windowDays} onChange={event=>setWindowDays(Number(event.target.value))} className="h-10 rounded-[9px] border border-input bg-background px-3 text-sm text-white"><option value={90}>90 días</option><option value={180}>180 días</option><option value={365}>365 días</option></select></div>}
+      {mode==="brand"?<div className="mt-5"><select value={comparisonId} onChange={event=>setComparisonId(event.target.value)} className="h-11 w-full max-w-3xl rounded-[9px] border border-input bg-background px-3 text-sm text-white outline-none focus-visible:ring-2 focus-visible:ring-ring/50"><option value="">Selecciona una evaluación persistida</option>{comparisons.map(item=><option key={item.id} value={item.id}>{brandName(item)||"Marca evaluada"} · {item.classification||"sin clasificación"} · {formatDate(item.created_at)}</option>)}</select>{!comparisons.length?<p className="mt-3 text-xs text-muted-foreground">No encontramos evaluaciones de marca recientes. Crea una desde Marcas antes de generar este snapshot.</p>:null}</div>:mode==="patent"?<div className="mt-5"><div className="grid gap-3 lg:grid-cols-[1fr_180px]"><Input value={subject} onChange={event=>setSubject(event.target.value)} maxLength={240} placeholder="Describe una invención o tecnología"/><Input value={ipc} onChange={event=>setIpc(event.target.value.toUpperCase())} maxLength={16} placeholder="IPC opcional"/></div><div className="mt-4 flex flex-col gap-3 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-between"><div className="max-w-2xl"><p className="text-xs font-medium text-white">Evidencia internacional EPO OPS</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Si la activas, el snapshot conserva families, jurisdicciones, citas, eventos jurídicos observados y el estado de cobertura de la fuente. No se infiere estado jurídico actual.</p></div><Button type="button" variant={includeGlobal?"secondary":"outline"} size="sm" aria-pressed={includeGlobal} onClick={()=>setIncludeGlobal(value=>!value)} className="shrink-0"><Globe2 className="h-4 w-4"/>{includeGlobal?"EPO OPS incluido":"Incluir EPO OPS"}</Button></div></div>:<div className="mt-5 grid gap-3 lg:grid-cols-[1fr_180px]"><Input value={subject} onChange={event=>setSubject(event.target.value)} maxLength={160} placeholder="Ej. nanoburbujas en acuicultura"/><select value={windowDays} onChange={event=>setWindowDays(Number(event.target.value))} className="h-10 rounded-[9px] border border-input bg-background px-3 text-sm text-white"><option value={90}>90 días</option><option value={180}>180 días</option><option value={365}>365 días</option></select></div>}
       <div className="mt-5 flex items-center justify-between gap-4"><p className="max-w-2xl text-xs leading-5 text-muted-foreground">Si ya existe una serie para el mismo tema y vertical, VIDENTIA crea la siguiente versión y compara el nuevo snapshot contra el anterior.</p><Button onClick={()=>void createReport()} disabled={creating}>{creating?<Loader2 className="h-4 w-4 animate-spin"/>:<FileText className="h-4 w-4"/>}Generar reporte</Button></div></OperationalPanel></section>:null}
 
     {error?<div role="alert" className="mt-6 bg-[#3A2525] p-4 text-sm text-[#E8AAA3]">{error}</div>:null}
@@ -95,6 +96,6 @@ export default function ReportsPage(){
 
 function ReportCard({report}:{report:Report}){return <OperationalPanel><div className="flex flex-col justify-between gap-4 border-b border-border/80 pb-5 sm:flex-row sm:items-start"><div><div className="flex flex-wrap gap-2"><Badge variant="outline">{VERTICAL_LABEL[report.vertical]}</Badge><Badge variant="secondary">v{report.version}</Badge>{report.period_start||report.period_end?<Badge variant="secondary">{report.period_start||"…"} → {report.period_end||"…"}</Badge>:null}</div><h2 className="mt-3 text-xl font-light tracking-[-0.03em] text-[#E7DFCE]">{report.title}</h2><p className="mt-1 text-xs text-muted-foreground">{formatDate(report.created_at)} · serie {report.series_id.slice(0,8)}</p></div><RefreshCw className="h-4 w-4 text-[#456E8E]"/></div><div className="mt-5 grid gap-6 lg:grid-cols-5"><ReportSection number="01" title="Qué cambió" items={report.what_changed}/><ReportSection number="02" title="Qué importa" items={report.what_matters}/><ReportSection number="03" title="Evidencia" items={report.evidence} evidence/><ReportSection number="04" title="Revisión" items={report.recommended_review}/><ReportSection number="05" title="Watch next" items={report.watch_next}/></div></OperationalPanel>}
 function ReportSection({number,title,items,evidence=false}:{number:string;title:string;items:unknown[];evidence?:boolean}){return <section><p className="text-[10px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]">{number} / {title}</p><div className="mt-3 space-y-2">{items.slice(0,evidence?4:5).map((item,index)=><p key={index} className="text-xs leading-5 text-muted-foreground">{evidence?evidenceText(item):typeof item==="string"?item:JSON.stringify(item)}</p>)}{items.length===0?<p className="text-xs text-muted-foreground">Sin elementos en este corte.</p>:null}{items.length>(evidence?4:5)?<p className="text-[10px] text-[#456E8E]">+{items.length-(evidence?4:5)} adicionales</p>:null}</div></section>}
-function evidenceText(value:unknown){if(!value||typeof value!=="object")return String(value);const item=value as Record<string,unknown>;return [item.title,item.applicationNumber,item.source].filter(Boolean).map(String).join(" · ")||"Evidencia persistida"}
+function evidenceText(value:unknown){if(!value||typeof value!=="object")return String(value);const item=value as Record<string,unknown>;return [item.title,item.applicationNumber,item.publication,item.source].filter(Boolean).map(String).join(" · ")||"Evidencia persistida"}
 function brandName(item:Comparison){const context=item.brand_context&&typeof item.brand_context==="object"&&!Array.isArray(item.brand_context)?item.brand_context as Record<string,unknown>:{};return typeof context.marca==="string"?context.marca:""}
 function formatDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?value:new Intl.DateTimeFormat("es-CL",{dateStyle:"medium",timeStyle:"short"}).format(date)}
