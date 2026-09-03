@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  quality:
+  regressions:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -89,6 +89,25 @@ jobs:
         run: node scripts/gdelt-context-fusion-regression.mts
       - name: Strategic onboarding regression
         run: node scripts/strategic-onboarding-regression.mts
+
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: TypeScript
         run: pnpm exec tsc --noEmit
       - name: Next.js production build

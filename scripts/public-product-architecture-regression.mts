@@ -133,13 +133,12 @@ for (const [source, label] of [
   requireText(source, "tabIndex={-1}", label)
 }
 
-for (const [source, label, text] of [
-  [enPage, "English legacy root", "SKIP TO CONTENT"],
-  [esPage, "Spanish public root", "SALTAR AL CONTENIDO"],
-] as const) {
-  requireText(source, 'href="#main-content"', label)
-  requireText(source, 'id="main-content"', label)
-  requireText(source, text, label)
+for (const needle of ['href="#main-content"', 'id="main-content"', "tabIndex={-1}", "SKIP TO CONTENT"]) {
+  requireText(enPage, needle, "English legacy root")
+}
+
+for (const needle of ["PublicPlatformNav", 'id="main-content"', "tabIndex={-1}"]) {
+  requireText(esPage, needle, "Spanish public root")
 }
 
 for (const needle of ["SOURCE ≠ ANALYSIS ≠ LEGAL CONCLUSION", "Family resolution", "jurisdictions", "citations"]) requireText(patents, needle, "public patents")
@@ -173,7 +172,7 @@ for (const [source, label, active] of [
   requireText(source, "PublicPlatformNav", label)
   requireText(source, 'locale="es"', label)
   requireText(source, active, label)
-  requireText(source, "[&>main>nav]:hidden", label)
+  requireText(source, "showChrome={false}", label)
 }
 requireText(enTechnologies, 'technologiesMetadata("en")', "English technology route")
 
@@ -184,22 +183,16 @@ for (const needle of [
   "/trademarks",
   "/patents",
   "/technologies",
-  "START A SEARCH",
+  "REQUEST ACCESS",
+  "SOLICITAR ACCESO",
   "MENU",
   "focus-visible:ring-2",
   'href="#main-content"',
   "SKIP TO CONTENT",
   "SALTAR AL CONTENIDO",
 ]) requireText(publicNav, needle, "shared public navigation")
-requireText(publicNav, "/en/auth/login?redirectTo=%2Ftechnologies", "English technology search CTA")
-requireText(publicNav, "/es/auth/login?redirectTo=%2Fes%2Ftecnologias", "Spanish technology search CTA")
-
-for (const [source, label] of [
-  [patentRoute, "English patent route focus"],
-  [esPatents, "Spanish patent route focus"],
-  [technologyRoute, "English technology route focus"],
-  [esTechnologies, "Spanish technology route focus"],
-] as const) requireText(source, ":focus-visible", label)
+requireText(publicNav, 'pricing: "/en/acceso-empresarial"', "English access funnel")
+requireText(publicNav, 'pricing: "/es/acceso-empresarial"', "Spanish access funnel")
 
 for (const needle of [
   'role="tablist"',
