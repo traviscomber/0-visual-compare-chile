@@ -1,4 +1,5 @@
 import { LocalizedTechnologiesPage, technologiesMetadata } from "@/components/localized-technologies-page"
+import { PublicPlatformFooter } from "@/components/public-platform-footer"
 import { PublicPlatformNav } from "@/components/public-platform-nav"
 import { PublicSurfaceMotion } from "@/components/public-surface-motion"
 import { TechnologyMotion } from "@/components/technology-motion"
@@ -25,6 +26,7 @@ export default function SpanishTechnologiesPage() {
         />
         <LocalizedTechnologiesPage locale="es" showChrome={false} />
       </div>
+      <PublicPlatformFooter locale="es" />
     </>
   )
 }
