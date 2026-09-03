@@ -71,6 +71,8 @@ jobs:
         run: node scripts/portal-common-watches-regression.mts
       - name: Patent prior-art regression
         run: node scripts/patent-prior-art-regression.mts
+      - name: WIPO patent watch regression
+        run: node scripts/wipo-patent-watch-regression.mts
       - name: Common intelligence reports regression
         run: node scripts/common-reports-regression.mts
       - name: Positioning regression
