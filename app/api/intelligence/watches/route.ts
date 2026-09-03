@@ -165,9 +165,10 @@ export async function POST(request: Request) {
         watch_type: subtype,
         query,
         normalized_query: normalizedQuery,
+        source_type: "inapi_open_data",
         is_active: true,
         updated_at: now,
-      }, { onConflict: "user_id,watch_type,normalized_query" })
+      }, { onConflict: "user_id,watch_type,normalized_query,source_type" })
       .select("id,watch_type,query,is_active,last_checked_at,created_at,updated_at")
       .single()
     if (error) return watchWriteError("patent", error)
