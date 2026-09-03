@@ -1,6 +1,7 @@
 import "server-only"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { searchPatentsLocal, type PatentSearchHit } from "@/lib/inapi/patent-search"
+import { hasEpoOpsCredentials, searchEpoPatentFamilies, type EpoFamilySignal } from "@/lib/intelligence/epo-ops"
 
 const STOPWORDS = new Set([
   "para","como","sobre","entre","desde","hasta","bajo","alto","baja","sistema","metodo","método","proceso","dispositivo","aparato","equipo","mediante","with","from","into","using","system","method","process","device","apparatus","equipment","low","high","the","and","for","that","this","una","uno","unos","unas","del","las","los","que","con","por","sin","sus","una","un",
@@ -8,6 +9,15 @@ const STOPWORDS = new Set([
 
 export type PriorityClaim = { country: string | null; number: string; date: string }
 export type PatentReviewLevel = "close_review" | "relevant" | "background"
+export type GlobalEvidenceAvailability = "not_requested" | "credential_required" | "available" | "degraded"
+
+export type GlobalPatentEvidence = {
+  requested: boolean
+  source: "EPO OPS"
+  availability: GlobalEvidenceAvailability
+  families: EpoFamilySignal[]
+  limitations: string[]
+}
 
 export type PriorArtCandidate = PatentSearchHit & {
   technicalScore: number
@@ -32,6 +42,7 @@ export type PriorArtReview = {
   candidates: PriorArtCandidate[]
   summary: { total: number; closeReview: number; relevant: number; background: number; familyCandidates: number }
   coverage: { source: "INAPI Chile"; scope: string; limitations: string[]; newestSync: string | null }
+  globalEvidence: GlobalPatentEvidence
   generatedAt: string
 }
 
@@ -45,9 +56,15 @@ type DetailRow = {
   subtype_name: string | null
 }
 
-export async function buildPatentPriorArtReview(query: string, ipc?: string | null, limit = 30): Promise<PriorArtReview> {
+export async function buildPatentPriorArtReview(
+  query: string,
+  ipc?: string | null,
+  limit = 30,
+  options: { includeGlobal?: boolean } = {},
+): Promise<PriorArtReview> {
   const trimmed = query.trim()
   const concepts = extractTechnicalConcepts(trimmed)
+  const globalEvidencePromise = loadGlobalPatentEvidence(trimmed, Boolean(options.includeGlobal))
   const full = await searchPatentsLocal(trimmed, ipc ?? null, Math.min(limit, 50))
   const merged = new Map<string, { hit: PatentSearchHit; conceptHits: Set<string>; fullHit: boolean }>()
 
@@ -121,6 +138,7 @@ export async function buildPatentPriorArtReview(query: string, ipc?: string | nu
 
   const strategy: PriorArtReview["searchStrategy"] = full.hits.length === 0 ? "concept_fallback" : shouldFallback ? "hybrid" : "full_query"
   const newestSync = [...new Set(candidates.map(item => item.lastSyncedAt).filter((value): value is string => Boolean(value)))].sort().at(-1) ?? full.newestSync
+  const globalEvidence = await globalEvidencePromise
 
   return {
     query: trimmed,
@@ -140,13 +158,63 @@ export async function buildPatentPriorArtReview(query: string, ipc?: string | nu
       scope: "Antecedentes observados en el corpus sincronizado de solicitudes y registros de patentes en Chile.",
       limitations: [
         "Una coincidencia es un candidato de prior art para revisión, no una conclusión sobre novedad o actividad inventiva.",
-        "Los grupos de familia se infieren sólo desde prioridades observadas en INAPI y no sustituyen una familia global consolidada.",
-        "FTO y patentability requieren cobertura internacional, estado jurídico y revisión profesional adicionales.",
-        "Citations no se muestran mientras no exista una fuente canónica verificable integrada.",
+        "Los grupos de familia locales se infieren desde prioridades observadas en INAPI y no sustituyen una familia global consolidada.",
+        "Los eventos jurídicos EPO se presentan como eventos de fuente; no se sintetizan como estado jurídico consolidado.",
+        "Las citas y familias EPO aparecen sólo cuando se solicita cobertura global y la fuente responde.",
+        "Un resultado vacío no demuestra ausencia de prior art, familia, citas, derechos activos ni eventos jurídicos.",
+        "FTO y patentability requieren cobertura suficiente por jurisdicción y revisión profesional adicional.",
       ],
       newestSync,
     },
+    globalEvidence,
     generatedAt: new Date().toISOString(),
+  }
+}
+
+async function loadGlobalPatentEvidence(query: string, requested: boolean): Promise<GlobalPatentEvidence> {
+  const commonLimitations = [
+    "EPO OPS aporta evidencia bibliográfica, familias simples, citas observadas y eventos jurídicos de fuente; no una conclusión legal.",
+    "La ausencia de resultados o eventos en la respuesta no equivale a ausencia de derechos, citas o actividad en una jurisdicción.",
+  ]
+
+  if (!requested) {
+    return {
+      requested: false,
+      source: "EPO OPS",
+      availability: "not_requested",
+      families: [],
+      limitations: ["La consulta internacional no fue enviada a EPO OPS."],
+    }
+  }
+
+  if (!hasEpoOpsCredentials()) {
+    return {
+      requested: true,
+      source: "EPO OPS",
+      availability: "credential_required",
+      families: [],
+      limitations: ["EPO OPS requiere credenciales configuradas para activar cobertura internacional.", ...commonLimitations],
+    }
+  }
+
+  try {
+    const families = await searchEpoPatentFamilies(query, 3)
+    return {
+      requested: true,
+      source: "EPO OPS",
+      availability: "available",
+      families,
+      limitations: commonLimitations,
+    }
+  } catch (error) {
+    console.error("[patent-prior-art] EPO OPS enrichment failed", error instanceof Error ? error.message : String(error))
+    return {
+      requested: true,
+      source: "EPO OPS",
+      availability: "degraded",
+      families: [],
+      limitations: ["EPO OPS no respondió de forma utilizable en esta revisión; la evidencia INAPI permanece disponible.", ...commonLimitations],
+    }
   }
 }
 

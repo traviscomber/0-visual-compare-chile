@@ -8,6 +8,13 @@ const TIMEOUT_MS = 15_000
 
 let tokenCache: { accessToken: string; expiresAt: number } | null = null
 
+export type EpoLegalEvent = {
+  jurisdiction: string | null
+  code: string
+  description: string | null
+  date: string | null
+}
+
 export type EpoFamilySignal = {
   source: "epo_ops"
   sourceRecordId: string
@@ -15,6 +22,9 @@ export type EpoFamilySignal = {
   title: string
   familyMembers: string[]
   jurisdictions: string[]
+  citations: string[]
+  legalEvents: EpoLegalEvent[]
+  retrievedAt: string
   url: string
 }
 
@@ -28,7 +38,7 @@ export async function searchEpoPatentFamilies(query: string, limit = 5): Promise
   const token = await getAccessToken()
   const search = new URL(SEARCH_URL)
   search.searchParams.set("q", `ta=${cqlTerm(query)}`)
-  const requested = Math.min(Math.max(Math.trunc(limit), 1), 10)
+  const requested = Math.min(Math.max(Math.trunc(limit), 1), 5)
 
   const response = await fetchWithRetry(search, {
     cache: "no-store",
@@ -45,9 +55,17 @@ export async function searchEpoPatentFamilies(query: string, limit = 5): Promise
   const publications = parseBiblioSearch(xml).slice(0, requested)
 
   const families: EpoFamilySignal[] = []
-  for (const item of publications.slice(0, 5)) {
-    const familyMembers = await fetchSimpleFamily(item.epodoc, token)
-    const members = familyMembers.length ? familyMembers : [item.epodoc]
+  for (const item of publications) {
+    let evidence: FamilyEvidence
+    try {
+      evidence = await fetchFamilyEvidence(item.epodoc, token)
+    } catch (error) {
+      console.warn("[epo-ops] family evidence degraded", item.epodoc, error instanceof Error ? error.message : String(error))
+      const familyMembers = await fetchSimpleFamily(item.epodoc, token).catch(() => [])
+      evidence = { familyMembers, citations: [], legalEvents: [] }
+    }
+
+    const members = unique([item.epodoc, ...evidence.familyMembers])
     families.push({
       source: "epo_ops",
       sourceRecordId: item.epodoc,
@@ -55,6 +73,9 @@ export async function searchEpoPatentFamilies(query: string, limit = 5): Promise
       title: item.title || `Global patent family ${item.epodoc}`,
       familyMembers: members,
       jurisdictions: unique(members.map(member => member.slice(0, 2)).filter(value => /^[A-Z]{2}$/.test(value))),
+      citations: evidence.citations.filter(citation => !members.includes(citation)).slice(0, 20),
+      legalEvents: evidence.legalEvents.slice(0, 20),
+      retrievedAt: new Date().toISOString(),
       url: `https://worldwide.espacenet.com/patent/search?q=pn%3D${encodeURIComponent(item.epodoc)}`,
     })
   }
@@ -89,6 +110,37 @@ async function getAccessToken() {
   const expiresIn = Math.max(120, Number(payload.expires_in ?? 1200))
   tokenCache = { accessToken, expiresAt: Date.now() + expiresIn * 1000 }
   return accessToken
+}
+
+type FamilyEvidence = {
+  familyMembers: string[]
+  citations: string[]
+  legalEvents: EpoLegalEvent[]
+}
+
+async function fetchFamilyEvidence(epodoc: string, token: string): Promise<FamilyEvidence> {
+  const docdb = toDocdbReference(epodoc)
+  const url = `${EPO_BASE}/rest-services/family/publication/docdb/${encodeURIComponent(docdb)}/biblio,legal`
+  const response = await fetchWithRetry(url, {
+    cache: "no-store",
+    headers: {
+      Accept: "application/ops+xml",
+      Authorization: `Bearer ${token}`,
+      "User-Agent": "VIDENTIA/1.0",
+    },
+  }, { attempts: 3, baseDelayMs: 750, timeoutMs: TIMEOUT_MS })
+
+  if (!response.ok) {
+    if (response.status === 404) return { familyMembers: [], citations: [], legalEvents: [] }
+    throw new Error(`EPO OPS family evidence respondió ${response.status}`)
+  }
+
+  const xml = await response.text()
+  return {
+    familyMembers: parseFamilyMembers(xml),
+    citations: parseCitations(xml),
+    legalEvents: parseLegalEvents(xml),
+  }
 }
 
 async function fetchSimpleFamily(epodoc: string, token: string) {
@@ -126,6 +178,41 @@ function parseBiblioSearch(xml: string) {
   return dedupeBy(results, item => item.epodoc)
 }
 
+function parseFamilyMembers(xml: string) {
+  const members: string[] = []
+  for (const block of tagBlocks(xml, "ops:family-member")) {
+    const publication = firstBlock(block, "publication-reference")
+    if (!publication) continue
+    const [reference] = parsePublicationReferences(publication)
+    if (reference) members.push(reference)
+  }
+  return unique(members)
+}
+
+function parseCitations(xml: string) {
+  const citations: string[] = []
+  for (const block of tagBlocks(xml, "references-cited")) citations.push(...parsePublicationReferences(block))
+  return unique(citations)
+}
+
+function parseLegalEvents(xml: string): EpoLegalEvent[] {
+  const events: EpoLegalEvent[] = []
+  const legalPattern = /<ops:legal\b([^>]*)>([\s\S]*?)<\/ops:legal>/gi
+  for (const match of xml.matchAll(legalPattern)) {
+    const attrs = match[1] ?? ""
+    const body = match[2] ?? ""
+    const code = attribute(attrs, "code")
+    if (!code) continue
+    events.push({
+      jurisdiction: firstTagText(body, "ops:L001EP"),
+      code,
+      description: attribute(attrs, "desc"),
+      date: normalizeDate(firstTagText(body, "ops:L007EP")),
+    })
+  }
+  return dedupeBy(events, event => `${event.jurisdiction ?? ""}:${event.code}:${event.date ?? ""}:${event.description ?? ""}`)
+}
+
 function parsePublicationReferences(xml: string) {
   const refs: string[] = []
   const documentPattern = /<document-id\b[^>]*document-id-type=["'](?:docdb|epodoc)["'][^>]*>([\s\S]*?)<\/document-id>/gi
@@ -140,15 +227,34 @@ function parsePublicationReferences(xml: string) {
   return unique(refs)
 }
 
+function toDocdbReference(epodoc: string) {
+  const normalized = epodoc.trim().toUpperCase()
+  const match = normalized.match(/^([A-Z]{2})([A-Z0-9]+?)(?:\.([A-Z][A-Z0-9]?))?$/)
+  if (!match) throw new Error(`Unsupported EPO publication reference: ${epodoc}`)
+  return `${match[1]}.${match[2]}${match[3] ? `.${match[3]}` : ""}`
+}
+
 function cqlTerm(value: string) {
   const normalized = value.replace(/[\u0000-\u001f]/g, " ").replace(/\\/g, "\\\\").replace(/"/g, '\\"').trim()
   if (!normalized) throw new Error("EPO OPS query is empty")
   return `"${normalized.slice(0, 160)}"`
 }
 
+function tagBlocks(xml: string, tag: string) {
+  const escaped = tag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  const optionalPrefix = tag.includes(":") ? escaped : `(?:[A-Za-z0-9_-]+:)?${escaped}`
+  const pattern = new RegExp(`<${optionalPrefix}\\b[^>]*>[\\s\\S]*?<\\/${optionalPrefix}>`, "gi")
+  return [...xml.matchAll(pattern)].map(match => match[0])
+}
+
+function firstBlock(xml: string, tag: string) {
+  return tagBlocks(xml, tag)[0] ?? null
+}
+
 function firstTagText(xml: string, tag: string) {
   const escaped = tag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-  const match = xml.match(new RegExp(`<${escaped}\\b[^>]*>([\\s\\S]*?)<\\/${escaped}>`, "i"))
+  const optionalPrefix = tag.includes(":") ? escaped : `(?:[A-Za-z0-9_-]+:)?${escaped}`
+  const match = xml.match(new RegExp(`<${optionalPrefix}\\b[^>]*>([\\s\\S]*?)<\\/${optionalPrefix}>`, "i"))
   return match?.[1] ? decodeXml(stripTags(match[1])).trim() || null : null
 }
 
@@ -156,6 +262,13 @@ function attribute(attrs: string, name: string) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
   const match = attrs.match(new RegExp(`${escaped}=["']([^"']+)["']`, "i"))
   return match?.[1] ? decodeXml(match[1]).trim() || null : null
+}
+
+function normalizeDate(value: string | null) {
+  if (!value) return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value
+  if (/^\d{8}$/.test(value)) return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`
+  return value
 }
 
 function stripTags(value: string) { return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ") }
