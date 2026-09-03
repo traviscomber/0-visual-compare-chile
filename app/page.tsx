@@ -37,11 +37,9 @@ export default function RootPage() {
     <>
       <PublicStructuredData page="home" />
       <PublicPlatformNav active="home" />
-      <div id="main-content" tabIndex={-1} className="focus:outline-none [&>div>main>section:first-child]:hidden">
+      <div id="main-content" tabIndex={-1} className="focus:outline-none">
         <UmbrellaPublicHero />
-        <div>
-          <UmbrellaHomePage />
-        </div>
+        <UmbrellaHomePage />
       </div>
     </>
   )
