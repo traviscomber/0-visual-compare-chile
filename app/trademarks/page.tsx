@@ -37,7 +37,7 @@ export default function TrademarksPage() {
     <>
       <PublicStructuredData page="trademarks" />
       <PublicPlatformNav active="trademarks" />
-      <div id="main-content" tabIndex={-1} className="trademarks-public-page focus:outline-none [&_.px-nav]:hidden [&_.px-hero]:hidden">
+      <div id="main-content" tabIndex={-1} className="trademarks-public-page focus:outline-none">
         <VerticalPublicHero
           eyebrow="TRADEMARK INTELLIGENCE"
           title="Know the brand landscape before you file."
@@ -48,7 +48,7 @@ export default function TrademarksPage() {
           imageAlt="VIDENTIA trademark intelligence object"
           imageClassName="max-h-[610px] lg:max-h-[670px]"
         />
-        <LocalizedLandingPage locale="en" />
+        <LocalizedLandingPage locale="en" showChrome={false} />
       </div>
     </>
   )
