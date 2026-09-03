@@ -21,7 +21,6 @@ const copy = {
     contract: "02. CONTRATO API",
     contractTitle: "Rutas claras. Evidencia trazable.",
     contractBody: "Las operaciones protegidas usan API key, cuota y medición. La búsqueda web interna no forma parte de este contrato público.",
-    footer: "VIDENTIA · API empresarial para Chile",
     capabilityItems: [
       ["BÚSQUEDA MARCARIA", "Nombre, Niza y Viena con filtros verificables."],
       ["INGESTA DE IMÁGENES", "Procesamiento técnico y deduplicación por hash."],
@@ -45,7 +44,6 @@ const copy = {
     contract: "02. API CONTRACT",
     contractTitle: "Clear routes. Traceable evidence.",
     contractBody: "Protected operations use API keys, quotas and usage metering. VIDENTIA's internal web search is not part of this public contract.",
-    footer: "VIDENTIA · Enterprise API for Chile",
     capabilityItems: [
       ["TRADEMARK SEARCH", "Name, Nice and Vienna with verifiable filters."],
       ["IMAGE INGESTION", "Technical processing and hash-based deduplication."],
@@ -138,13 +136,6 @@ export function LocalizedDocsPage({ locale }: { locale: PublicLocale }) {
           </div>
         </section>
       </main>
-
-      <footer className="border-t border-[#294047] bg-[#071119] px-5 py-8 sm:px-7 lg:px-10">
-        <div className="mx-auto flex max-w-[1480px] flex-col gap-3 text-[11px] text-[#7F918F] sm:flex-row sm:items-center sm:justify-between">
-          <span>{t.footer}</span>
-          <span>{locale === "es" ? "Desarrollado por N3uralia" : "Developed by N3uralia"}</span>
-        </div>
-      </footer>
     </div>
   )
 }
