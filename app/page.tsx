@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { UmbrellaHomePage } from "@/components/umbrella-home-page"
+import { UmbrellaPublicHero } from "@/components/umbrella-public-hero"
 import { PublicPlatformNav } from "@/components/public-platform-nav"
 import { PublicStructuredData } from "@/components/public-structured-data"
 
@@ -35,9 +36,12 @@ export default function RootPage() {
   return (
     <>
       <PublicStructuredData page="home" />
-      <PublicPlatformNav />
-      <div id="main-content" tabIndex={-1} className="focus:outline-none">
-        <UmbrellaHomePage />
+      <PublicPlatformNav active="home" />
+      <div id="main-content" tabIndex={-1} className="focus:outline-none [&>div>main>section:first-child]:hidden">
+        <UmbrellaPublicHero />
+        <div>
+          <UmbrellaHomePage />
+        </div>
       </div>
     </>
   )
