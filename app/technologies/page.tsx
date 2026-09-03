@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { LocalizedTechnologiesPage } from "@/components/localized-technologies-page"
+import { PublicPlatformFooter } from "@/components/public-platform-footer"
 import { PublicPlatformNav } from "@/components/public-platform-nav"
 import { PublicStructuredData } from "@/components/public-structured-data"
 import { PublicSurfaceMotion } from "@/components/public-surface-motion"
@@ -37,6 +38,7 @@ export default function TechnologiesPage() {
         />
         <LocalizedTechnologiesPage locale="en" showChrome={false} />
       </div>
+      <PublicPlatformFooter locale="en" />
     </>
   )
 }
