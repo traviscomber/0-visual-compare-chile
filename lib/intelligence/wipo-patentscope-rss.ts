@@ -132,14 +132,23 @@ function cleanText(value: string | null) {
 
 function stripMarkup(value: string) { return value.replace(/<[^>]+>/g, " ") }
 function decodeEntities(value: string) {
-  return value
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
+  return value.replace(/&(amp|lt|gt|quot|apos|#39|#\d+|#x[0-9a-f]+);/gi, match => {
+    const token = match.slice(1, -1).toLowerCase()
+    if (token === "amp") return "&"
+    if (token === "lt") return "<"
+    if (token === "gt") return ">"
+    if (token === "quot") return '"'
+    if (token === "apos" || token === "#39") return "'"
+    if (token.startsWith("#x")) {
+      const codePoint = Number.parseInt(token.slice(2), 16)
+      return Number.isInteger(codePoint) && codePoint >= 0 && codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : match
+    }
+    if (token.startsWith("#")) {
+      const codePoint = Number.parseInt(token.slice(1), 10)
+      return Number.isInteger(codePoint) && codePoint >= 0 && codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : match
+    }
+    return match
+  })
 }
 
 function dateOnly(value: string | null) {
