@@ -56,8 +56,8 @@ export async function POST(request: Request) {
       source_url: feed.feedUrl,
       source_status: "available",
       source_last_error: null,
-      source_last_checked_at: now,
-      last_checked_at: now,
+      source_last_checked_at: null,
+      last_checked_at: null,
       is_active: true,
       updated_at: now,
     }
