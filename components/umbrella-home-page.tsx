@@ -1,97 +1,136 @@
 import Link from "next/link"
 import { UmbrellaDemo } from "@/components/umbrella-demo"
+import type { PublicLocale } from "@/lib/marketing-locale"
 
-const verticals = [
-  { index: "01", label: "TRADEMARKS", question: "Can I use and protect this brand?", body: "Search names, logos and official records before registration—or continuously monitor registered trademarks for new conflicts and unauthorized use.", cta: "CHECK A TRADEMARK", href: "/trademarks", visual: "trademark" },
-  { index: "02", label: "PATENTS", question: "Does this invention already exist?", body: "Search prior art, compare patent families, review technical relevance and monitor competitors, inventors or specific technologies.", cta: "CHECK AN INVENTION", href: "/patents", visual: "patent" },
-  { index: "03", label: "TECHNOLOGIES", question: "Where is this technology moving?", body: "Track R&D, patents, research, companies and industry developments to identify meaningful signals before they become obvious.", cta: "TRACK A TECHNOLOGY", href: "/technologies", visual: "technology" },
-] as const
-
-const engine = [
-  { index: "01", title: "SEARCH", body: "What exists?", evidence: "OBSERVED EVIDENCE" },
-  { index: "02", title: "COMPARE", body: "How related is it?", evidence: "RELATIONSHIPS" },
-  { index: "03", title: "EVALUATE", body: "Why does it matter?", evidence: "RELEVANCE" },
-  { index: "04", title: "WATCH", body: "What changed?", evidence: "CHANGE SIGNALS" },
-  { index: "05", title: "REPORT", body: "What requires attention?", evidence: "DECISION RECORD" },
-] as const
-
-const watchStages = [
-  { index: "01", title: "ONE-TIME SEARCH", body: "Establish a documented evidence baseline." },
-  { index: "02", title: "CREATE A WATCH", body: "Define what should be checked again." },
-  { index: "03", title: "AUTOMATIC RESEARCH", body: "Repeat the same evidence workflow over time." },
-  { index: "04", title: "PERIODIC REPORTS", body: "Surface meaningful changes for review." },
-  { index: "05", title: "TEAM WORKSPACE", body: "Keep findings, context and decisions together." },
-] as const
-
-const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72D4C5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#071119]"
-
-const verticalArtworkPosition = {
-  trademark: "left center",
-  patent: "center center",
-  technology: "right center",
+const content = {
+  en: {
+    start: "01. START HERE",
+    startTitle: "Choose the question you need to answer.",
+    startBody: "VIDENTIA routes each investigation by evidence type. Start with the question, then move into the right search, analysis and monitoring workflow.",
+    verticals: [
+      { index: "01", label: "TRADEMARKS", question: "Can I use and protect this brand?", body: "Search names, logos and official records before filing, then monitor relevant conflicts and changes.", cta: "CHECK A TRADEMARK", href: "/trademarks" },
+      { index: "02", label: "PATENTS", question: "Does this invention already exist?", body: "Search prior art, review technical relationships and monitor applicants, inventors or technologies.", cta: "CHECK AN INVENTION", href: "/patents" },
+      { index: "03", label: "TECHNOLOGIES", question: "Where is this technology moving?", body: "Track research, patent activity, companies and public signals to identify meaningful movement early.", cta: "TRACK A TECHNOLOGY", href: "/technologies" },
+    ],
+    engineEyebrow: "02. ONE INTELLIGENCE ENGINE",
+    engineTitle: "Search once—or keep watching.",
+    engineBody: "The same evidence logic moves from discovery to comparison, evaluation, monitoring and reporting—without turning observed records into automatic conclusions.",
+    engine: [
+      ["01", "SEARCH", "What exists?", "OBSERVED EVIDENCE"],
+      ["02", "COMPARE", "How related is it?", "RELATIONSHIPS"],
+      ["03", "EVALUATE", "Why does it matter?", "RELEVANCE"],
+      ["04", "WATCH", "What changed?", "CHANGE SIGNALS"],
+      ["05", "REPORT", "What requires attention?", "DECISION RECORD"],
+    ],
+    engineFootA: "ONE QUERY · SHARED EVIDENCE MODEL",
+    engineFootB: "SEARCH → CONTINUOUS INTELLIGENCE",
+    logicEyebrow: "03. SEE THE LOGIC",
+    logicTitle: "Different questions. The same intelligence logic.",
+    logicBody: "Switch verticals to see the evidence dimensions VIDENTIA organizes before you enter the corresponding product workflow.",
+    watchEyebrow: "04. CONTINUOUS INTELLIGENCE",
+    watchTitle: "One search can become a watch.",
+    watchBody: "Run a single investigation or ask VIDENTIA to repeat the research and surface meaningful changes for review.",
+    watchAccent: "From a point-in-time answer to an evidence trail that keeps moving.",
+    watchLabel: "ILLUSTRATIVE WORKFLOW",
+    watchCycle: "WATCH CYCLE",
+    watchStages: [
+      ["01", "ONE-TIME SEARCH", "Establish a documented evidence baseline.", "BASELINE"],
+      ["02", "CREATE A WATCH", "Define what should be checked again.", "REPEAT"],
+      ["03", "AUTOMATIC RESEARCH", "Repeat the same evidence workflow over time.", "REPEAT"],
+      ["04", "PERIODIC REPORTS", "Surface meaningful changes for review.", "REPEAT"],
+      ["05", "TEAM WORKSPACE", "Keep findings, context and decisions together.", "CONTEXT"],
+    ],
+    final: "What do you need to understand next?",
+  },
+  es: {
+    start: "01. EMPIEZA AQUÍ",
+    startTitle: "Elige la pregunta que necesitas responder.",
+    startBody: "VIDENTIA dirige cada investigación según el tipo de evidencia. Empieza por la pregunta y entra al flujo correcto de búsqueda, análisis y monitoreo.",
+    verticals: [
+      { index: "01", label: "MARCAS", question: "¿Puedo usar y proteger esta marca?", body: "Busca nombres, logos y antecedentes oficiales antes de presentar, y luego monitorea conflictos y cambios relevantes.", cta: "REVISAR UNA MARCA", href: "/es/marcas" },
+      { index: "02", label: "PATENTES", question: "¿Esta invención ya existe?", body: "Busca estado del arte, revisa relaciones técnicas y monitorea solicitantes, inventores o tecnologías.", cta: "REVISAR UNA INVENCIÓN", href: "/es/patentes" },
+      { index: "03", label: "TECNOLOGÍAS", question: "¿Hacia dónde se mueve esta tecnología?", body: "Sigue investigación, actividad de patentes, empresas y señales públicas para detectar movimiento significativo temprano.", cta: "SEGUIR UNA TECNOLOGÍA", href: "/es/tecnologias" },
+    ],
+    engineEyebrow: "02. UN SOLO MOTOR DE INTELIGENCIA",
+    engineTitle: "Busca una vez—or sigue vigilando.",
+    engineBody: "La misma lógica de evidencia pasa de descubrir a comparar, evaluar, monitorear y reportar—sin convertir registros observados en conclusiones automáticas.",
+    engine: [
+      ["01", "BUSCAR", "¿Qué existe?", "EVIDENCIA OBSERVADA"],
+      ["02", "COMPARAR", "¿Qué tan relacionado está?", "RELACIONES"],
+      ["03", "EVALUAR", "¿Por qué importa?", "RELEVANCIA"],
+      ["04", "VIGILAR", "¿Qué cambió?", "SEÑALES DE CAMBIO"],
+      ["05", "REPORTAR", "¿Qué requiere atención?", "REGISTRO DE DECISIÓN"],
+    ],
+    engineFootA: "UNA CONSULTA · MODELO DE EVIDENCIA COMPARTIDO",
+    engineFootB: "BÚSQUEDA → INTELIGENCIA CONTINUA",
+    logicEyebrow: "03. VE LA LÓGICA",
+    logicTitle: "Preguntas distintas. La misma lógica de inteligencia.",
+    logicBody: "Cambia de vertical para ver las dimensiones de evidencia que VIDENTIA organiza antes de entrar al flujo correspondiente.",
+    watchEyebrow: "04. INTELIGENCIA CONTINUA",
+    watchTitle: "Una búsqueda puede convertirse en vigilancia.",
+    watchBody: "Haz una investigación puntual o pide a VIDENTIA repetirla y mostrar cambios significativos para revisión.",
+    watchAccent: "De una respuesta puntual a una trazabilidad de evidencia que sigue avanzando.",
+    watchLabel: "FLUJO ILUSTRATIVO",
+    watchCycle: "CICLO DE VIGILANCIA",
+    watchStages: [
+      ["01", "BÚSQUEDA PUNTUAL", "Establece una línea base documentada de evidencia.", "BASE"],
+      ["02", "CREAR VIGILANCIA", "Define qué debe volver a revisarse.", "REPETIR"],
+      ["03", "INVESTIGACIÓN AUTOMÁTICA", "Repite el mismo flujo de evidencia en el tiempo.", "REPETIR"],
+      ["04", "REPORTES PERIÓDICOS", "Muestra cambios significativos para revisión.", "REPETIR"],
+      ["05", "ESPACIO DE EQUIPO", "Mantén hallazgos, contexto y decisiones juntos.", "CONTEXTO"],
+    ],
+    final: "¿Qué necesitas entender ahora?",
+  },
 } as const
 
-function VerticalGeometry({ type }: { type: (typeof verticals)[number]["visual"] }) {
-  return (
-    <div className="flex h-52 w-full items-center justify-center md:justify-end" aria-hidden="true">
-      <div
-        className="h-44 w-44 shrink-0 lg:h-48 lg:w-48"
-        style={{
-          backgroundImage: "url('/VidentiaVerticalsIcons.svg')",
-          backgroundRepeat: "no-repeat",
-          backgroundSize: "auto 100%",
-          backgroundPosition: verticalArtworkPosition[type],
-        }}
-      />
-    </div>
-  )
-}
+const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#96B5A6] focus-visible:ring-offset-2 focus-visible:ring-offset-[#071119]"
 
-function IntelligenceEngineRail() {
+function IntelligenceEngineRail({ locale }: { locale: PublicLocale }) {
+  const t = content[locale]
   return (
-    <div className="relative mt-16 border-y border-[#294047] bg-[#071119]/30">
-      <div className="pointer-events-none absolute bottom-0 left-[27px] top-0 w-px bg-[#36515A] lg:bottom-auto lg:left-[10%] lg:right-[10%] lg:top-[72px] lg:h-px lg:w-auto" aria-hidden="true" />
+    <div className="relative mt-14 border-y border-[#294047]">
+      <div className="pointer-events-none absolute bottom-0 left-[27px] top-0 w-px bg-[#36515A] lg:bottom-auto lg:left-[10%] lg:right-[10%] lg:top-[66px] lg:h-px lg:w-auto" aria-hidden="true" />
       <div className="grid lg:grid-cols-5">
-        {engine.map((step, stepIndex) => (
-          <article key={step.title} className="group relative min-h-[190px] border-b border-[#294047] py-7 pl-16 pr-6 last:border-b-0 lg:min-h-[300px] lg:border-b-0 lg:border-r lg:px-7 lg:py-8 lg:last:border-r-0">
-            <div className="absolute left-[20px] top-[31px] z-10 h-[15px] w-[15px] border border-[#729A90] bg-[#091A20] transition-colors group-hover:bg-[#96B5A6] lg:left-1/2 lg:top-[65px] lg:-translate-x-1/2 lg:rotate-45" aria-hidden="true" />
-            {stepIndex < engine.length - 1 ? <span className="absolute left-[27px] top-[46px] hidden h-[40px] w-px bg-gradient-to-b from-[#729A90] to-[#36515A] lg:hidden" aria-hidden="true" /> : null}
-            <span className="text-[10px] tracking-[0.14em] text-[#456E8E]">{step.index}</span>
-            <div className="lg:mt-[94px]">
-              <p className="mt-5 text-[9px] font-medium tracking-[0.18em] text-[#729A90] lg:mt-0">{step.evidence}</p>
-              <h3 className="mt-4 text-sm font-medium tracking-[0.13em] text-[#F1EEE7]">{step.title}</h3>
-              <p className="mt-3 max-w-[220px] text-base font-light leading-7 text-[#BDBEBD]">{step.body}</p>
+        {t.engine.map(([index, title, body, evidence]) => (
+          <article key={index} className="group relative min-h-[168px] border-b border-[#294047] py-7 pl-16 pr-6 last:border-b-0 lg:min-h-[252px] lg:border-b-0 lg:border-r lg:px-7 lg:py-7 lg:last:border-r-0">
+            <span className="absolute left-[20px] top-[29px] z-10 h-[15px] w-[15px] border border-[#729A90] bg-[#091A20] transition-colors duration-200 group-hover:border-[#96B5A6] group-hover:bg-[#96B5A6] lg:left-1/2 lg:top-[59px] lg:-translate-x-1/2 lg:rotate-45" aria-hidden="true" />
+            <span className="text-[10px] tracking-[0.14em] text-[#456E8E]">{index}</span>
+            <div className="lg:mt-[76px]">
+              <p className="mt-4 text-[9px] font-medium tracking-[0.17em] text-[#729A90] lg:mt-0">{evidence}</p>
+              <h3 className="mt-3 text-[12px] font-medium tracking-[0.12em] text-[#F1EEE7]">{title}</h3>
+              <p className="mt-3 max-w-[220px] text-[15px] font-light leading-6 text-[#BDBEBD]">{body}</p>
             </div>
           </article>
         ))}
       </div>
-      <div className="flex flex-col gap-3 border-t border-[#294047] px-6 py-5 text-[9px] tracking-[0.14em] text-[#738180] sm:flex-row sm:items-center sm:justify-between lg:px-8">
-        <span>ONE QUERY · SHARED EVIDENCE MODEL</span>
-        <span className="text-[#96B5A6]">SEARCH → CONTINUOUS INTELLIGENCE</span>
+      <div className="flex flex-col gap-2 border-t border-[#294047] px-6 py-4 text-[9px] tracking-[0.13em] text-[#738180] sm:flex-row sm:items-center sm:justify-between lg:px-8">
+        <span>{t.engineFootA}</span>
+        <span className="text-[#96B5A6]">{t.engineFootB}</span>
       </div>
     </div>
   )
 }
 
-function WatchTimeline() {
+function WatchTimeline({ locale }: { locale: PublicLocale }) {
+  const t = content[locale]
   return (
-    <div className="border-y border-[#294047] bg-[#071119]/35">
+    <div className="border-y border-[#294047]">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#294047] px-6 py-4">
-        <span className="text-[9px] font-medium tracking-[0.16em] text-[#96B5A6]">ILLUSTRATIVE WORKFLOW</span>
-        <span className="flex items-center gap-2 text-[9px] tracking-[0.13em] text-[#738180]"><span className="h-1.5 w-1.5 rounded-full bg-[#96B5A6]" aria-hidden="true" /> WATCH CYCLE</span>
+        <span className="text-[9px] font-medium tracking-[0.16em] text-[#96B5A6]">{t.watchLabel}</span>
+        <span className="flex items-center gap-2 text-[9px] tracking-[0.13em] text-[#738180]"><span className="h-1.5 w-1.5 rounded-full bg-[#96B5A6]" aria-hidden="true" /> {t.watchCycle}</span>
       </div>
       <div className="relative">
         <div className="pointer-events-none absolute bottom-7 left-[39px] top-7 w-px bg-[#36515A]" aria-hidden="true" />
-        {watchStages.map((stage, index) => (
-          <div key={stage.title} className="group relative grid grid-cols-[80px_1fr] border-b border-[#294047] px-0 py-0 last:border-b-0 sm:grid-cols-[92px_1fr_auto]">
-            <div className="relative flex min-h-[104px] items-center justify-center border-r border-[#294047]">
-              <span className="relative z-10 flex h-7 w-7 items-center justify-center border border-[#456E8E] bg-[#091A20] text-[9px] text-[#729A90] transition-colors group-hover:border-[#96B5A6] group-hover:text-[#E7DFCE]">{stage.index}</span>
+        {t.watchStages.map(([index, title, body, state]) => (
+          <div key={index} className="group relative grid grid-cols-[80px_1fr] border-b border-[#294047] last:border-b-0 sm:grid-cols-[92px_1fr_auto]">
+            <div className="relative flex min-h-[96px] items-center justify-center border-r border-[#294047]">
+              <span className="relative z-10 flex h-7 w-7 items-center justify-center border border-[#456E8E] bg-[#091A20] text-[9px] text-[#729A90] transition-colors duration-200 group-hover:border-[#96B5A6] group-hover:text-[#E7DFCE]">{index}</span>
             </div>
-            <div className="flex min-h-[104px] flex-col justify-center px-5 py-5 sm:px-7">
-              <h3 className="text-[11px] font-medium tracking-[0.12em] text-[#E7DFCE]">{stage.title}</h3>
-              <p className="mt-2 max-w-xl text-sm leading-6 text-[#9EAAA8]">{stage.body}</p>
+            <div className="flex min-h-[96px] flex-col justify-center px-5 py-5 sm:px-7">
+              <h3 className="text-[11px] font-medium tracking-[0.12em] text-[#E7DFCE]">{title}</h3>
+              <p className="mt-2 max-w-xl text-sm leading-6 text-[#9EAAA8]">{body}</p>
             </div>
-            <div className="hidden min-h-[104px] items-center border-l border-[#294047] px-6 text-[9px] tracking-[0.12em] text-[#456E8E] sm:flex">{index === 0 ? "BASELINE" : index === watchStages.length - 1 ? "CONTEXT" : "REPEAT"}</div>
+            <div className="hidden min-h-[96px] items-center border-l border-[#294047] px-6 text-[9px] tracking-[0.12em] text-[#456E8E] sm:flex">{state}</div>
           </div>
         ))}
       </div>
@@ -99,105 +138,85 @@ function WatchTimeline() {
   )
 }
 
-export function UmbrellaHomePage() {
+export function UmbrellaHomePage({ locale = "en" }: { locale?: PublicLocale }) {
+  const t = content[locale]
+
   return (
     <main className="min-h-screen bg-[#0F2A33] text-white">
-      <section id="directions" className="scroll-mt-24 px-5 py-24 lg:px-10 lg:py-32">
+      <section id="directions" className="scroll-mt-24 px-5 py-20 sm:px-7 lg:px-10 lg:py-28">
         <div className="mx-auto max-w-[1480px]">
-          <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#96B5A6]">01. START HERE</p>
-          <h2 className="mt-5 max-w-4xl text-[clamp(3rem,5.4vw,5.8rem)] font-light leading-[0.94] tracking-[-0.055em] text-[#E7DFCE]">Choose the question you need to answer.</h2>
-          <p className="mt-6 max-w-2xl text-sm leading-7 text-[#9EAAA8]">VIDENTIA routes the investigation by evidence type first. Select a vertical to move into the appropriate search, analysis and monitoring workflow.</p>
-          <div className="mt-16 border-y border-[#294047]">
-            {verticals.map((item) => (
-              <article key={item.label} className="grid gap-8 border-b border-[#294047] py-10 last:border-b-0 md:grid-cols-[70px_1fr_280px] md:items-center lg:grid-cols-[80px_1fr_330px]">
-                <span className="self-start text-[10px] tracking-[0.12em] text-[#456E8E]">{item.index}</span>
+          <div className="grid gap-7 lg:grid-cols-[1fr_0.62fr] lg:items-end">
+            <div>
+              <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#96B5A6]">{t.start}</p>
+              <h2 className="mt-5 max-w-[12ch] text-[clamp(2.8rem,4.8vw,5rem)] font-light leading-[0.95] tracking-[-0.052em] text-[#E7DFCE]">{t.startTitle}</h2>
+            </div>
+            <p className="max-w-xl text-sm leading-7 text-[#9EAAA8] lg:pb-1">{t.startBody}</p>
+          </div>
+
+          <div className="mt-14 border-y border-[#294047]">
+            {t.verticals.map((item) => (
+              <article key={item.index} className="group grid gap-6 border-b border-[#294047] py-8 last:border-b-0 md:grid-cols-[70px_1fr_auto] md:items-center lg:py-10">
+                <span className="self-start text-[10px] tracking-[0.12em] text-[#456E8E] md:self-center">{item.index}</span>
                 <div>
                   <p className="text-[10px] font-medium tracking-[0.16em] text-[#96B5A6]">{item.label}</p>
-                  <h3 className="mt-4 max-w-3xl text-3xl font-light leading-tight tracking-[-0.035em] text-[#E7DFCE] sm:text-4xl">{item.question}</h3>
-                  <p className="mt-5 max-w-2xl text-sm leading-7 text-[#BDBEBD]">{item.body}</p>
-                  <Link href={item.href} className={`mt-7 inline-block text-xs font-medium tracking-[0.08em] text-white underline decoration-[#4A7F74] underline-offset-8 ${focusRing}`}>{item.cta}</Link>
+                  <h3 className="mt-3 max-w-3xl text-[clamp(1.9rem,3vw,3rem)] font-light leading-[1.02] tracking-[-0.035em] text-[#E7DFCE]">{item.question}</h3>
+                  <p className="mt-4 max-w-2xl text-sm leading-7 text-[#AEB7B5]">{item.body}</p>
                 </div>
-                <VerticalGeometry type={item.visual} />
+                <Link href={item.href} className={`inline-flex min-h-11 items-center border-b border-[#4A7F74] text-[10px] font-medium tracking-[0.09em] text-white transition-colors duration-200 hover:border-[#96B5A6] hover:text-[#96B5A6] ${focusRing}`}>{item.cta}</Link>
               </article>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="engine" className="scroll-mt-24 border-y border-[#294047] bg-[#091A20] px-5 py-24 lg:px-10 lg:py-32">
+      <section id="engine" className="scroll-mt-24 border-y border-[#294047] bg-[#091A20] px-5 py-20 sm:px-7 lg:px-10 lg:py-28">
         <div className="mx-auto max-w-[1480px]">
-          <div className="grid gap-8 lg:grid-cols-[1fr_0.62fr] lg:items-end">
+          <div className="grid gap-7 lg:grid-cols-[1fr_0.62fr] lg:items-end">
             <div>
-              <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#96B5A6]">02. ONE INTELLIGENCE ENGINE</p>
-              <h2 className="mt-5 max-w-4xl text-[clamp(3rem,5.4vw,5.8rem)] font-light leading-[0.94] tracking-[-0.055em] text-[#E7DFCE]">Search once—or keep watching.</h2>
+              <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#96B5A6]">{t.engineEyebrow}</p>
+              <h2 className="mt-5 max-w-[12ch] text-[clamp(2.8rem,4.8vw,5rem)] font-light leading-[0.95] tracking-[-0.052em] text-[#E7DFCE]">{t.engineTitle}</h2>
             </div>
-            <p className="max-w-xl text-sm leading-7 text-[#9EAAA8] lg:pb-2">The same evidence logic carries a question from discovery to comparison, evaluation, monitoring and reporting—without turning observed records into automatic conclusions.</p>
+            <p className="max-w-xl text-sm leading-7 text-[#9EAAA8] lg:pb-1">{t.engineBody}</p>
           </div>
-          <IntelligenceEngineRail />
+          <IntelligenceEngineRail locale={locale} />
         </div>
       </section>
 
-      <section className="px-5 py-24 lg:px-10 lg:py-32">
-        <div className="mx-auto grid max-w-[1480px] gap-14 lg:grid-cols-[0.85fr_1.15fr]">
-          <div>
-            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#96B5A6]">03. SEE THE LOGIC</p>
-            <h2 className="mt-5 max-w-3xl text-[clamp(3rem,5vw,5.4rem)] font-light leading-[0.94] tracking-[-0.055em] text-[#E7DFCE]">Different questions. The same intelligence logic.</h2>
-            <p className="mt-6 max-w-2xl text-sm leading-7 text-[#9EAAA8]">Switch between verticals to see which evidence dimensions VIDENTIA organizes before you open the corresponding product experience.</p>
-          </div>
-          <UmbrellaDemo />
-        </div>
-      </section>
-
-      <section className="border-y border-[#294047] bg-[#091A20] px-5 py-24 lg:px-10 lg:py-32">
-        <div className="mx-auto grid max-w-[1480px] gap-14 lg:grid-cols-[0.78fr_1.22fr] lg:items-start lg:gap-20">
+      <section className="px-5 py-20 sm:px-7 lg:px-10 lg:py-28">
+        <div className="mx-auto grid max-w-[1480px] gap-12 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
           <div className="lg:sticky lg:top-28">
-            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#96B5A6]">04. CONTINUOUS INTELLIGENCE</p>
-            <h2 className="mt-5 max-w-[10ch] text-[clamp(3rem,5.2vw,5.6rem)] font-light leading-[0.94] tracking-[-0.055em] text-[#E7DFCE]">One search can become a watch.</h2>
-            <p className="mt-7 max-w-xl text-base leading-8 text-[#BDBEBD]">Run a single investigation or ask VIDENTIA to repeat the research automatically and notify you when meaningful changes appear.</p>
-            <p className="mt-9 max-w-lg text-xl font-light leading-8 text-[#96B5A6]">From a point-in-time answer to an evidence trail that keeps moving.</p>
+            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#96B5A6]">{t.logicEyebrow}</p>
+            <h2 className="mt-5 max-w-[10.5ch] text-[clamp(2.8rem,4.6vw,4.8rem)] font-light leading-[0.95] tracking-[-0.052em] text-[#E7DFCE]">{t.logicTitle}</h2>
+            <p className="mt-6 max-w-xl text-sm leading-7 text-[#9EAAA8]">{t.logicBody}</p>
           </div>
-          <WatchTimeline />
+          <UmbrellaDemo locale={locale} />
         </div>
       </section>
 
-      <section className="px-5 py-28 lg:px-10 lg:py-36">
+      <section className="border-y border-[#294047] bg-[#091A20] px-5 py-20 sm:px-7 lg:px-10 lg:py-28">
+        <div className="mx-auto grid max-w-[1480px] gap-12 lg:grid-cols-[0.75fr_1.25fr] lg:items-start lg:gap-20">
+          <div className="lg:sticky lg:top-28">
+            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#96B5A6]">{t.watchEyebrow}</p>
+            <h2 className="mt-5 max-w-[10ch] text-[clamp(2.8rem,4.8vw,5rem)] font-light leading-[0.95] tracking-[-0.052em] text-[#E7DFCE]">{t.watchTitle}</h2>
+            <p className="mt-6 max-w-xl text-[15px] leading-7 text-[#BDBEBD]">{t.watchBody}</p>
+            <p className="mt-8 max-w-lg text-lg font-light leading-8 text-[#96B5A6]">{t.watchAccent}</p>
+          </div>
+          <WatchTimeline locale={locale} />
+        </div>
+      </section>
+
+      <section className="px-5 py-24 sm:px-7 lg:px-10 lg:py-32">
         <div className="mx-auto max-w-[1480px]">
-          <h2 className="max-w-5xl text-[clamp(3.4rem,6.2vw,6.5rem)] font-light leading-[0.9] tracking-[-0.06em] text-[#E7DFCE]">What do you need to understand next?</h2>
-          <div className="mt-14 grid gap-px bg-[#294047] md:grid-cols-3">
-            {verticals.map((item) => <Link key={item.label} href={item.href} className={`bg-[#0F2A33] p-7 text-xs font-medium tracking-[0.08em] text-white transition-colors hover:bg-[#132F35] sm:p-9 ${focusRing}`}>{item.cta}</Link>)}
+          <h2 className="max-w-[12ch] text-[clamp(3.1rem,5.5vw,5.8rem)] font-light leading-[0.92] tracking-[-0.056em] text-[#E7DFCE]">{t.final}</h2>
+          <div className="mt-12 border-y border-[#294047] md:grid md:grid-cols-3">
+            {t.verticals.map((item) => (
+              <Link key={item.index} href={item.href} className={`group flex min-h-24 items-center justify-between border-b border-[#294047] py-6 text-[10px] font-medium tracking-[0.09em] text-white transition-colors duration-200 last:border-b-0 hover:text-[#96B5A6] md:border-b-0 md:border-r md:px-7 md:last:border-r-0 ${focusRing}`}>
+                <span>{item.cta}</span><span aria-hidden="true" className="text-[#456E8E] transition-transform duration-200 group-hover:translate-x-1">→</span>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
-
-      <footer className="border-t border-[#294047] bg-[#071119] px-5 py-12 lg:px-10 lg:py-16">
-        <div className="mx-auto grid max-w-[1480px] gap-12 lg:grid-cols-[1.5fr_0.75fr_0.75fr] lg:gap-20">
-          <div>
-            <strong className="text-[16px] font-normal tracking-[0.24em] text-[#E7DFCE]">ViDENTiA</strong>
-            <p className="mt-4 max-w-lg text-xs leading-6 text-[#7F918F]">Intelligence for intellectual property and technology. Research and evidence are not automatic legal conclusions.</p>
-            <p className="mt-8 text-[9px] font-medium tracking-[0.16em] text-[#456E8E]">POWERED BY N3URALIA</p>
-          </div>
-          <div>
-            <p className="text-[9px] font-medium tracking-[0.16em] text-[#729A90]">INTELLIGENCE</p>
-            <nav className="mt-5 flex flex-col items-start gap-4 text-[10px] tracking-[0.09em] text-[#BDBEBD]" aria-label="Intelligence links">
-              <Link href="/trademarks" className={focusRing}>TRADEMARKS</Link>
-              <Link href="/patents" className={focusRing}>PATENTS</Link>
-              <Link href="/technologies" className={focusRing}>TECHNOLOGIES</Link>
-            </nav>
-          </div>
-          <div>
-            <p className="text-[9px] font-medium tracking-[0.16em] text-[#729A90]">PLATFORM</p>
-            <nav className="mt-5 flex flex-col items-start gap-4 text-[10px] tracking-[0.09em] text-[#BDBEBD]" aria-label="Platform links">
-              <Link href="/en/docs" className={focusRing}>RESOURCES</Link>
-              <Link href="/en/acceso-empresarial" className={focusRing}>REQUEST ACCESS</Link>
-              <Link href="/en/auth/login" prefetch={false} className={focusRing}>LOG IN</Link>
-            </nav>
-          </div>
-        </div>
-        <div className="mx-auto mt-12 flex max-w-[1480px] flex-col gap-3 border-t border-[#294047] pt-6 text-[9px] tracking-[0.12em] text-[#536563] sm:flex-row sm:items-center sm:justify-between">
-          <span>VIDENTIA · IP & TECHNOLOGY INTELLIGENCE</span>
-          <span>TRACEABLE EVIDENCE · HUMAN REVIEW</span>
-        </div>
-      </footer>
     </main>
   )
 }
