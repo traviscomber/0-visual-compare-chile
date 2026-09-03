@@ -58,6 +58,13 @@ for(const needle of [
   "jurisdictions",
   "citations",
   "legalEvents",
+  "evidenceCoverage",
+  'family: "family_endpoint"',
+  'family: "equivalents_fallback"',
+  'family: "source_not_found"',
+  'family: "unavailable"',
+  'citations: "unavailable"',
+  'legalEvents: "unavailable"',
   "retrievedAt",
 ])requireText(epo,needle,"EPO OPS evidence client")
 
@@ -97,4 +104,4 @@ for(const needle of [
   "Crear reporte",
 ])requireText(page,needle,"prior-art UI")
 
-console.log("Patent prior-art regression PASS: local evidence remains canonical, observed INAPI snapshot changes are traceable without being misrepresented as complete legal history, global EPO OPS coverage is explicit opt-in, and the UI preserves source and legal limits.")
+console.log("Patent prior-art regression PASS: local evidence remains canonical, observed INAPI snapshot changes are traceable without being misrepresented as complete legal history, global EPO OPS family/citation/legal-event evidence preserves explicit source-coverage state under fallback or degradation, and the UI preserves source and legal limits.")
