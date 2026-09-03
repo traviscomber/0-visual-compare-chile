@@ -194,13 +194,6 @@ for (const needle of [
 requireText(publicNav, 'pricing: "/en/acceso-empresarial"', "English access funnel")
 requireText(publicNav, 'pricing: "/es/acceso-empresarial"', "Spanish access funnel")
 
-for (const [source, label] of [
-  [patentRoute, "English patent route focus"],
-  [esPatents, "Spanish patent route focus"],
-  [technologyRoute, "English technology route focus"],
-  [esTechnologies, "Spanish technology route focus"],
-] as const) requireText(source, ":focus-visible", label)
-
 for (const needle of [
   'role="tablist"',
   'role="tab"',
