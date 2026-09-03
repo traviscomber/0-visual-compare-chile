@@ -183,15 +183,16 @@ for (const needle of [
   "/trademarks",
   "/patents",
   "/technologies",
-  "START A SEARCH",
+  "REQUEST ACCESS",
+  "SOLICITAR ACCESO",
   "MENU",
   "focus-visible:ring-2",
   'href="#main-content"',
   "SKIP TO CONTENT",
   "SALTAR AL CONTENIDO",
 ]) requireText(publicNav, needle, "shared public navigation")
-requireText(publicNav, "/en/auth/login?redirectTo=%2Ftechnologies", "English technology search CTA")
-requireText(publicNav, "/es/auth/login?redirectTo=%2Fes%2Ftecnologias", "Spanish technology search CTA")
+requireText(publicNav, 'pricing: "/en/acceso-empresarial"', "English access funnel")
+requireText(publicNav, 'pricing: "/es/acceso-empresarial"', "Spanish access funnel")
 
 for (const [source, label] of [
   [patentRoute, "English patent route focus"],
