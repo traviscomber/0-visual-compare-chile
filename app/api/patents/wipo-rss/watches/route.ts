@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { fetchWipoPatentScopeRss, validateWipoPatentScopeRssUrl } from "@/lib/intelligence/wipo-patentscope-rss"
+import { scanWipoPatentWatch, type WipoPatentWatchRow } from "@/lib/intelligence/wipo-patent-watch-scan"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
+export const maxDuration = 60
 
 const CreateSchema = z.object({
   type: z.enum(["company", "ipc"]).default("company"),
@@ -72,6 +75,54 @@ export async function POST(request: Request) {
     console.error("[patents:wipo-rss-watches:post]", error)
     return NextResponse.json({ error: error instanceof Error ? error.message : "No pudimos crear el watch WIPO." }, { status: 422, headers: PRIVATE_NO_STORE_HEADERS })
   }
+}
+
+export async function PUT() {
+  const auth = await requireUser()
+  if (!auth.ok) return auth.response
+
+  const admin = createAdminClient()
+  const scanAt = new Date().toISOString()
+  const { data, error } = await admin.from("patent_watches")
+    .select("id,user_id,query,source_url,source_last_checked_at")
+    .eq("user_id", auth.user.id)
+    .eq("source_type", "wipo_patentscope_rss")
+    .eq("is_active", true)
+    .not("source_url", "is", null)
+    .order("source_last_checked_at", { ascending: true, nullsFirst: true })
+    .limit(10)
+  if (error) return NextResponse.json({ error: "No pudimos preparar la actualización WIPO." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
+
+  const watches = (data ?? []) as WipoPatentWatchRow[]
+  const results = []
+  for (let index = 0; index < watches.length; index += 4) {
+    const batch = watches.slice(index, index + 4)
+    const batchResults = await Promise.all(batch.map(watch => scanWipoPatentWatch(admin, watch, scanAt)))
+    results.push(...batchResults)
+  }
+
+  const failed = results.filter(item => !item.ok)
+  await auth.supabase.from("usage_logs").insert({
+    user_id: auth.user.id,
+    organization_id: null,
+    action: "patent.wipo_rss_manual_refresh",
+    metadata: {
+      watches: watches.length,
+      fetched: results.reduce((sum, item) => sum + item.fetched, 0),
+      inserted: results.reduce((sum, item) => sum + item.inserted, 0),
+      failed: failed.length,
+    },
+  })
+
+  return NextResponse.json({
+    ok: failed.length === 0,
+    watches: watches.length,
+    fetched: results.reduce((sum, item) => sum + item.fetched, 0),
+    inserted: results.reduce((sum, item) => sum + item.inserted, 0),
+    failed: failed.length,
+    results,
+    scannedAt: scanAt,
+  }, { status: failed.length ? 207 : 200, headers: PRIVATE_NO_STORE_HEADERS })
 }
 
 export async function PATCH(request: Request) {
