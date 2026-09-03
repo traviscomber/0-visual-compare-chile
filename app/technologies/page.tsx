@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { LocalizedTechnologiesPage } from "@/components/localized-technologies-page"
 import { PublicPlatformNav } from "@/components/public-platform-nav"
 import { PublicStructuredData } from "@/components/public-structured-data"
+import { PublicSurfaceMotion } from "@/components/public-surface-motion"
 import { VerticalPublicHero } from "@/components/vertical-public-hero"
 
 const description = "Track R&D, patents, research, companies and technology signals with traceable intelligence."
@@ -9,26 +10,9 @@ const description = "Track R&D, patents, research, companies and technology sign
 export const metadata: Metadata = {
   title: "Technology & R&D Intelligence",
   description,
-  alternates: {
-    canonical: "/technologies",
-    languages: { en: "/technologies", "es-CL": "/es/tecnologias", "x-default": "/technologies" },
-  },
-  openGraph: {
-    title: "Technology & R&D Intelligence | VIDENTIA",
-    description,
-    url: "/technologies",
-    siteName: "VIDENTIA",
-    type: "website",
-    locale: "en_US",
-    alternateLocale: ["es_CL"],
-    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "VIDENTIA Technology Intelligence" }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Technology & R&D Intelligence | VIDENTIA",
-    description,
-    images: ["/opengraph-image"],
-  },
+  alternates: { canonical: "/technologies", languages: { en: "/technologies", "es-CL": "/es/tecnologias", "x-default": "/technologies" } },
+  openGraph: { title: "Technology & R&D Intelligence | VIDENTIA", description, url: "/technologies", siteName: "VIDENTIA", type: "website", locale: "en_US", alternateLocale: ["es_CL"], images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "VIDENTIA Technology Intelligence" }] },
+  twitter: { card: "summary_large_image", title: "Technology & R&D Intelligence | VIDENTIA", description, images: ["/opengraph-image"] },
   robots: { index: true, follow: true },
 }
 
@@ -37,7 +21,8 @@ export default function TechnologiesPage() {
     <>
       <PublicStructuredData page="technologies" />
       <PublicPlatformNav active="technologies" />
-      <div id="main-content" tabIndex={-1} className="technologies-public-page focus:outline-none">
+      <div id="main-content" data-public-surface tabIndex={-1} className="technologies-public-page focus:outline-none">
+        <PublicSurfaceMotion variant="technologies" />
         <VerticalPublicHero
           eyebrow="TECHNOLOGY INTELLIGENCE"
           title="See where technology is moving."
