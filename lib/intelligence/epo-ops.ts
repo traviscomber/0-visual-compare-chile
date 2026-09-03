@@ -22,6 +22,12 @@ export type EpoPriorityClaim = {
   date: string | null
 }
 
+export type EpoPrioritySearchClaim = {
+  country: string | null
+  number: string
+  date: string | null
+}
+
 export type EpoEvidenceCoverage = {
   family: "family_endpoint" | "equivalents_fallback" | "source_not_found" | "unavailable"
   priorities: "family_endpoint" | "source_not_found" | "unavailable"
@@ -44,17 +50,47 @@ export type EpoFamilySignal = {
   url: string
 }
 
+type SearchPublication = { epodoc: string; title: string | null }
+
 export function hasEpoOpsCredentials() {
   return Boolean(readCredential("EPO_OPS_CONSUMER_KEY") && readCredential("EPO_OPS_CONSUMER_SECRET"))
 }
 
 export async function searchEpoPatentFamilies(query: string, limit = 5): Promise<EpoFamilySignal[]> {
   if (!hasEpoOpsCredentials()) return []
+  const token = await getAccessToken()
+  const requested = normalizeSearchLimit(limit)
+  const publications = await searchEpoPublications(`ta=${cqlTerm(query)}`, requested, token)
+  return hydrateFamilies(publications.slice(0, requested), token)
+}
+
+export async function searchEpoPatentFamiliesForReview(
+  query: string,
+  priorityClaims: EpoPrioritySearchClaim[],
+  limit = 3,
+): Promise<EpoFamilySignal[]> {
+  if (!hasEpoOpsCredentials()) return []
 
   const token = await getAccessToken()
+  const requested = normalizeSearchLimit(limit)
+  const publications: SearchPublication[] = []
+  const priorityTerms = buildPrioritySearchTerms(priorityClaims).slice(0, 10)
+
+  if (priorityTerms.length) {
+    publications.push(...await searchEpoPublications(`pr any ${cqlTerm(priorityTerms.join(" "))}`, requested, token))
+  }
+
+  const uniquePriorityResults = dedupeBy(publications, item => item.epodoc)
+  if (uniquePriorityResults.length < requested) {
+    publications.push(...await searchEpoPublications(`ta=${cqlTerm(query)}`, requested, token))
+  }
+
+  return hydrateFamilies(dedupeBy(publications, item => item.epodoc).slice(0, requested), token)
+}
+
+async function searchEpoPublications(cql: string, requested: number, token: string): Promise<SearchPublication[]> {
   const search = new URL(SEARCH_URL)
-  search.searchParams.set("q", `ta=${cqlTerm(query)}`)
-  const requested = Math.min(Math.max(Math.trunc(limit), 1), 5)
+  search.searchParams.set("q", cql)
 
   const response = await fetchWithRetry(search, {
     cache: "no-store",
@@ -67,10 +103,12 @@ export async function searchEpoPatentFamilies(query: string, limit = 5): Promise
   }, { attempts: 3, baseDelayMs: 750, timeoutMs: TIMEOUT_MS })
 
   if (!response.ok) throw new Error(`EPO OPS search respondió ${response.status}`)
-  const xml = await response.text()
-  const publications = parseBiblioSearch(xml).slice(0, requested)
+  return parseBiblioSearch(await response.text()).slice(0, requested)
+}
 
+async function hydrateFamilies(publications: SearchPublication[], token: string): Promise<EpoFamilySignal[]> {
   const families: EpoFamilySignal[] = []
+
   for (const item of publications) {
     let evidence: FamilyEvidence
     try {
@@ -312,6 +350,29 @@ function parsePublicationReferences(xml: string) {
   return unique(refs)
 }
 
+function buildPrioritySearchTerms(claims: EpoPrioritySearchClaim[]) {
+  const terms: string[] = []
+  for (const claim of claims) {
+    const country = claim.country?.trim().toUpperCase() ?? ""
+    if (!/^[A-Z]{2}$/.test(country)) continue
+    const normalized = claim.number.toUpperCase().replace(/[^A-Z0-9]/g, "")
+    if (!normalized) continue
+
+    terms.push(`${country}${normalized}`)
+
+    const year = claim.date?.match(/^(\d{4})-/)?.[1] ?? null
+    if (!year || normalized.includes(year)) continue
+    const shortYear = year.slice(2)
+    if (normalized.startsWith(shortYear) && normalized.length > 2) terms.push(`${country}${year}${normalized.slice(2)}`)
+    else terms.push(`${country}${year}${normalized}`)
+  }
+  return unique(terms).slice(0, 10)
+}
+
+function normalizeSearchLimit(limit: number) {
+  return Math.min(Math.max(Math.trunc(limit), 1), 5)
+}
+
 function toDocdbReference(epodoc: string) {
   const normalized = epodoc.trim().toUpperCase()
   const match = normalized.match(/^([A-Z]{2})([A-Z0-9]+?)(?:\.([A-Z][A-Z0-9]?))?$/)
@@ -322,7 +383,7 @@ function toDocdbReference(epodoc: string) {
 function cqlTerm(value: string) {
   const normalized = value.replace(/[\u0000-\u001f]/g, " ").replace(/\\/g, "\\\\").replace(/"/g, '\\"').trim()
   if (!normalized) throw new Error("EPO OPS query is empty")
-  return `"${normalized.slice(0, 160)}"`
+  return `"${normalized.slice(0, 320)}"`
 }
 
 function tagBlocks(xml: string, tag: string) {
