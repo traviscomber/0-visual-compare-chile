@@ -2,6 +2,7 @@ import "server-only"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { searchPatentsLocal, type PatentSearchHit } from "@/lib/inapi/patent-search"
 import { hasEpoOpsCredentials, searchEpoPatentFamiliesForReview, type EpoFamilySignal, type EpoPriorityClaim } from "@/lib/intelligence/epo-ops"
+import { loadPatentLiteratureEvidence, type PatentLiteratureEvidence } from "@/lib/intelligence/patent-literature"
 
 const STOPWORDS = new Set([
   "para","como","sobre","entre","desde","hasta","bajo","alto","baja","sistema","metodo","método","proceso","dispositivo","aparato","equipo","mediante","with","from","into","using","system","method","process","device","apparatus","equipment","low","high","the","and","for","that","this","una","uno","unos","unas","del","las","los","que","con","por","sin","sus","una","un",
@@ -69,9 +70,10 @@ export type PriorArtReview = {
   concepts: string[]
   searchStrategy: "full_query" | "concept_fallback" | "hybrid"
   candidates: PriorArtCandidate[]
-  summary: { total: number; closeReview: number; relevant: number; background: number; familyCandidates: number; candidatesWithObservedChanges: number; observedChanges: number; globalFamilyLinkedCandidates: number }
+  summary: { total: number; closeReview: number; relevant: number; background: number; familyCandidates: number; candidatesWithObservedChanges: number; observedChanges: number; globalFamilyLinkedCandidates: number; literatureWorks: number }
   coverage: { source: "INAPI Chile"; scope: string; limitations: string[]; newestSync: string | null; changeObservationSince: string | null }
   globalEvidence: GlobalPatentEvidence
+  literatureEvidence: PatentLiteratureEvidence
   generatedAt: string
 }
 
@@ -103,7 +105,7 @@ export async function buildPatentPriorArtReview(
   query: string,
   ipc?: string | null,
   limit = 30,
-  options: { includeGlobal?: boolean } = {},
+  options: { includeGlobal?: boolean; includeLiterature?: boolean } = {},
 ): Promise<PriorArtReview> {
   const trimmed = query.trim()
   const concepts = extractTechnicalConcepts(trimmed)
@@ -207,7 +209,10 @@ export async function buildPatentPriorArtReview(
 
   const strategy: PriorArtReview["searchStrategy"] = full.hits.length === 0 ? "concept_fallback" : shouldFallback ? "hybrid" : "full_query"
   const priorityClaimsForGlobal = candidatesBeforeGlobal.flatMap(item => item.priorityClaims)
-  const globalEvidence = await loadGlobalPatentEvidence(trimmed, Boolean(options.includeGlobal), priorityClaimsForGlobal)
+  const [globalEvidence, literatureEvidence] = await Promise.all([
+    loadGlobalPatentEvidence(trimmed, Boolean(options.includeGlobal), priorityClaimsForGlobal),
+    loadPatentLiteratureEvidence(trimmed, Boolean(options.includeLiterature), 10),
+  ])
   const candidates: PriorArtCandidate[] = candidatesBeforeGlobal.map(item => {
     const globalFamilyMatches = matchGlobalFamilies(item.priorityClaims, globalEvidence.families)
     return {
@@ -235,6 +240,7 @@ export async function buildPatentPriorArtReview(
       candidatesWithObservedChanges: candidates.filter(item => item.observedChangeCount > 0).length,
       observedChanges: candidates.reduce((sum, item) => sum + item.observedChangeCount, 0),
       globalFamilyLinkedCandidates: candidates.filter(item => item.globalFamilyMatches.length > 0).length,
+      literatureWorks: literatureEvidence.works.length,
     },
     coverage: {
       source: "INAPI Chile",
@@ -253,6 +259,7 @@ export async function buildPatentPriorArtReview(
       changeObservationSince,
     },
     globalEvidence,
+    literatureEvidence,
     generatedAt: new Date().toISOString(),
   }
 }
