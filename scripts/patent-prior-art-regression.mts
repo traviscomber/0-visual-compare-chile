@@ -98,10 +98,16 @@ for(const needle of [
   "Activar EPO OPS",
   "esta consulta técnica también se envía a EPO OPS",
   'aria-pressed={includeGlobal}',
+  "evidenceCoverage",
+  "Cobertura de evidencia",
+  "Jurisdicciones observadas",
+  "Último evento observado",
+  "Cobertura de eventos jurídicos no disponible",
   "Citas observadas",
   "Eventos jurídicos observados",
+  "No se infiere estado jurídico actual a partir de estos eventos",
   "Esto no demuestra ausencia de prior art",
   "Crear reporte",
 ])requireText(page,needle,"prior-art UI")
 
-console.log("Patent prior-art regression PASS: local evidence remains canonical, observed INAPI snapshot changes are traceable without being misrepresented as complete legal history, global EPO OPS family/citation/legal-event evidence preserves explicit source-coverage state under fallback or degradation, and the UI preserves source and legal limits.")
+console.log("Patent prior-art regression PASS: local evidence remains canonical, observed INAPI snapshot changes are traceable without being misrepresented as complete legal history, global EPO OPS family/citation/legal-event evidence preserves explicit source-coverage state, the UI groups observed family evidence by jurisdiction, and no observed legal event is presented as current legal status.")

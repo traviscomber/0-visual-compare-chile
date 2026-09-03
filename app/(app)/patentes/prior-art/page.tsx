@@ -13,7 +13,12 @@ type ObservedFieldChange = { field: string; before: string | null; after: string
 type ObservedChange = { eventType: "new_record" | "status_changed" | "registration_added" | "applicant_changed" | "classification_changed" | "title_changed" | "record_updated"; summary: string | null; observedAt: string; sourceDate: string | null; materiality: "alta" | "media" | "baja"; changedFields: string[]; fieldChanges: ObservedFieldChange[]; sourceUrl: string | null }
 type Candidate = { id: string; applicationNumber: string | null; registrationNumber: string | null; title: string; applicants: string | null; inventors: string | null; status: string | null; country: string | null; filingDate: string | null; registrationDate: string | null; expirationDate: string | null; ipc: string[]; sourceUrl: string | null; lastSyncedAt: string | null; technicalScore: number; reviewLevel: "close_review" | "relevant" | "background"; matchedConcepts: string[]; reasons: string[]; publicationDate: string | null; pctApplicationDate: string | null; pctPublicationDate: string | null; prioritiesRaw: string | null; priorityClaims: PriorityClaim[]; familyCandidate: { key: string; sizeInResult: number } | null; typeName: string | null; subtypeName: string | null; observedChangeCount: number; observedChanges: ObservedChange[] }
 type LegalEvent = { jurisdiction: string | null; code: string; description: string | null; date: string | null }
-type GlobalFamily = { source: "epo_ops"; sourceRecordId: string; publication: string; title: string; familyMembers: string[]; jurisdictions: string[]; citations: string[]; legalEvents: LegalEvent[]; retrievedAt: string; url: string }
+type EvidenceCoverage = {
+  family: "family_endpoint" | "equivalents_fallback" | "source_not_found" | "unavailable"
+  citations: "family_endpoint" | "source_not_found" | "unavailable"
+  legalEvents: "family_endpoint" | "source_not_found" | "unavailable"
+}
+type GlobalFamily = { source: "epo_ops"; sourceRecordId: string; publication: string; title: string; familyMembers: string[]; jurisdictions: string[]; citations: string[]; legalEvents: LegalEvent[]; evidenceCoverage: EvidenceCoverage; retrievedAt: string; url: string }
 type GlobalEvidence = { requested: boolean; source: "EPO OPS"; availability: "not_requested" | "credential_required" | "available" | "degraded"; families: GlobalFamily[]; limitations: string[] }
 type Review = { query: string; ipc: string | null; concepts: string[]; searchStrategy: "full_query" | "concept_fallback" | "hybrid"; candidates: Candidate[]; summary: { total: number; closeReview: number; relevant: number; background: number; familyCandidates: number; candidatesWithObservedChanges: number; observedChanges: number }; coverage: { source: string; scope: string; limitations: string[]; newestSync: string | null; changeObservationSince: string | null }; globalEvidence: GlobalEvidence; generatedAt: string; durationMs: number }
 
@@ -29,6 +34,13 @@ const GLOBAL_STATUS: Record<GlobalEvidence["availability"], string> = {
   available: "Fuente disponible",
   degraded: "Fuente degradada",
 }
+
+const COVERAGE_LABEL = {
+  family_endpoint: "Observado en family endpoint",
+  equivalents_fallback: "Familia por fallback equivalents",
+  source_not_found: "No encontrado en la fuente",
+  unavailable: "Cobertura no disponible",
+} as const
 
 const CHANGE_LABEL: Record<ObservedChange["eventType"], string> = {
   new_record: "Primera observación",
@@ -151,13 +163,39 @@ function GlobalEvidencePanel({ evidence }: { evidence: GlobalEvidence }) {
 }
 
 function GlobalFamilyRow({ family }: { family: GlobalFamily }) {
-  return <article className="py-4">
+  const jurisdictions = jurisdictionEvidence(family)
+  const legalEvents = sortLegalEvents(family.legalEvents)
+
+  return <article className="py-5">
     <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">{family.publication}</p><p className="mt-1 text-sm font-medium leading-5 text-white">{family.title}</p></div><a href={family.url} target="_blank" rel="noreferrer" aria-label={`Abrir ${family.publication} en Espacenet`} className="text-muted-foreground transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#96B5A6]"><ExternalLink className="h-4 w-4" /></a></div>
-    <p className="mt-3 text-xs text-muted-foreground">{family.familyMembers.length} miembros · {family.jurisdictions.length} jurisdicciones · {family.citations.length} citas · {family.legalEvents.length} eventos jurídicos</p>
-    {family.jurisdictions.length ? <div className="mt-3 flex flex-wrap gap-1.5">{family.jurisdictions.slice(0, 10).map(code => <Badge key={code} variant="outline">{code}</Badge>)}</div> : null}
-    {family.citations.length ? <div className="mt-3"><p className="text-[10px] uppercase tracking-[0.12em] text-[#96B5A6]">Citas observadas</p><p className="mt-1 text-[11px] leading-5 text-muted-foreground">{family.citations.slice(0, 6).join(" · ")}{family.citations.length > 6 ? ` · +${family.citations.length - 6}` : ""}</p></div> : null}
-    {family.legalEvents.length ? <div className="mt-3"><p className="text-[10px] uppercase tracking-[0.12em] text-[#96B5A6]">Eventos jurídicos observados</p><div className="mt-1 space-y-1">{family.legalEvents.slice(0, 3).map((event, index) => <p key={`${event.jurisdiction}:${event.code}:${event.date}:${index}`} className="text-[11px] leading-5 text-muted-foreground">{event.jurisdiction ? `${event.jurisdiction} · ` : ""}{event.code}{event.date ? ` · ${event.date}` : ""}{event.description ? ` · ${event.description}` : ""}</p>)}</div></div> : null}
+    <p className="mt-3 text-xs text-muted-foreground">{family.familyMembers.length} miembros · {family.jurisdictions.length} jurisdicciones · {family.citations.length} citas · {family.legalEvents.length} eventos jurídicos observados</p>
+
+    <div className="mt-4 border-y border-border/70 py-3">
+      <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">Cobertura de evidencia</p>
+      <div className="mt-2 grid gap-2 sm:grid-cols-3">
+        <CoverageCell label="Familia" value={COVERAGE_LABEL[family.evidenceCoverage.family]} warning={family.evidenceCoverage.family === "unavailable"} />
+        <CoverageCell label="Citas" value={COVERAGE_LABEL[family.evidenceCoverage.citations]} warning={family.evidenceCoverage.citations === "unavailable"} />
+        <CoverageCell label="Eventos" value={COVERAGE_LABEL[family.evidenceCoverage.legalEvents]} warning={family.evidenceCoverage.legalEvents === "unavailable"} />
+      </div>
+    </div>
+
+    {jurisdictions.length ? <div className="mt-4">
+      <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">Jurisdicciones observadas</p>
+      <div className="mt-2 divide-y divide-border/70 border-y border-border/70">{jurisdictions.slice(0, 10).map(item => <div key={item.code} className="grid gap-1 py-2.5 sm:grid-cols-[48px_1fr]">
+        <span className="text-xs font-medium text-white">{item.code}</span>
+        <div><p className="text-[11px] leading-5 text-[#BDBEBD]">{item.members.length} miembro{item.members.length === 1 ? "" : "s"} de familia · {item.events.length} evento{item.events.length === 1 ? "" : "s"} observado{item.events.length === 1 ? "" : "s"}</p><p className="text-[10px] leading-5 text-muted-foreground">{jurisdictionLegalSummary(item.latestEvent, family.evidenceCoverage.legalEvents)}</p></div>
+      </div>)}</div>
+    </div> : <p className="mt-4 text-[11px] leading-5 text-muted-foreground">No hay jurisdicciones derivables de los miembros recuperados en esta respuesta.</p>}
+
+    {family.citations.length ? <div className="mt-4"><p className="text-[10px] uppercase tracking-[0.12em] text-[#96B5A6]">Citas observadas</p><p className="mt-1 text-[11px] leading-5 text-muted-foreground">{family.citations.slice(0, 6).join(" · ")}{family.citations.length > 6 ? ` · +${family.citations.length - 6}` : ""}</p></div> : <p className="mt-4 text-[11px] leading-5 text-muted-foreground">{citationCoverageSummary(family.evidenceCoverage.citations)}</p>}
+
+    {legalEvents.length ? <div className="mt-4"><p className="text-[10px] uppercase tracking-[0.12em] text-[#96B5A6]">Eventos jurídicos observados</p><div className="mt-1 space-y-1">{legalEvents.slice(0, 4).map((event, index) => <p key={`${event.jurisdiction}:${event.code}:${event.date}:${index}`} className="text-[11px] leading-5 text-muted-foreground">{event.jurisdiction ? `${event.jurisdiction} · ` : ""}{event.code}{event.date ? ` · ${event.date}` : ""}{event.description ? ` · ${event.description}` : ""}</p>)}</div></div> : null}
+    <p className="mt-3 text-[10px] leading-5 text-[#D6A46F]">No se infiere estado jurídico actual a partir de estos eventos. Se muestra sólo evidencia observada en la respuesta EPO OPS.</p>
   </article>
+}
+
+function CoverageCell({ label, value, warning = false }: { label: string; value: string; warning?: boolean }) {
+  return <div><p className="text-[9px] uppercase tracking-[0.1em] text-muted-foreground">{label}</p><p className={`mt-1 text-[10px] leading-4 ${warning ? "text-[#D6A46F]" : "text-[#BDBEBD]"}`}>{value}</p></div>
 }
 
 function CandidateRow({ candidate, index }: { candidate: Candidate; index: number }) {
@@ -172,6 +210,43 @@ function ObservedChanges({ changes, total }: { changes: ObservedChange[]; total:
     <div className="mt-3 space-y-3">{changes.slice(0, 3).map((change, index) => <div key={`${change.observedAt}:${change.eventType}:${index}`} className="border-t border-border/70 pt-3 first:border-t-0 first:pt-0"><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-medium text-white">{CHANGE_LABEL[change.eventType]}</p><span className="text-[10px] text-muted-foreground">Observado {formatDateTime(change.observedAt)}</span></div>{change.summary ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{change.summary}</p> : null}{change.eventType !== "new_record" && change.fieldChanges.length ? <div className="mt-2 space-y-1">{change.fieldChanges.slice(0, 2).map(field => <p key={`${change.observedAt}:${field.field}`} className="text-[11px] leading-5 text-[#BDBEBD]"><span className="text-muted-foreground">{FIELD_LABEL[field.field] || field.field}:</span> {field.before || "—"} → {field.after || "—"}</p>)}</div> : null}</div>)}</div>
     {total > 3 ? <p className="mt-3 text-[10px] text-muted-foreground">Mostrando 3 de {total} cambios observados.</p> : null}
   </div>
+}
+
+function jurisdictionEvidence(family: GlobalFamily) {
+  const byCode = new Map<string, { code: string; members: string[]; events: LegalEvent[]; latestEvent: LegalEvent | null }>()
+  for (const member of family.familyMembers) {
+    const code = member.slice(0, 2).toUpperCase()
+    if (!/^[A-Z]{2}$/.test(code)) continue
+    const current = byCode.get(code) ?? { code, members: [], events: [], latestEvent: null }
+    current.members.push(member)
+    byCode.set(code, current)
+  }
+  for (const event of sortLegalEvents(family.legalEvents)) {
+    const code = event.jurisdiction?.trim().toUpperCase()
+    if (!code || !/^[A-Z]{2}$/.test(code)) continue
+    const current = byCode.get(code) ?? { code, members: [], events: [], latestEvent: null }
+    current.events.push(event)
+    if (!current.latestEvent) current.latestEvent = event
+    byCode.set(code, current)
+  }
+  return [...byCode.values()].sort((a, b) => b.events.length - a.events.length || b.members.length - a.members.length || a.code.localeCompare(b.code))
+}
+
+function jurisdictionLegalSummary(event: LegalEvent | null, coverage: EvidenceCoverage["legalEvents"]) {
+  if (event) return `Último evento observado · ${event.date || "fecha no informada"} · ${event.code}`
+  if (coverage === "family_endpoint") return "Sin evento jurídico observado en esta respuesta EPO"
+  if (coverage === "source_not_found") return "Endpoint de familia sin eventos observables para esta publicación"
+  return "Cobertura de eventos jurídicos no disponible"
+}
+
+function citationCoverageSummary(coverage: EvidenceCoverage["citations"]) {
+  if (coverage === "family_endpoint") return "Sin citas observadas en esta respuesta EPO."
+  if (coverage === "source_not_found") return "El endpoint de familia no devolvió citas para esta publicación."
+  return "Cobertura de citas no disponible para esta familia."
+}
+
+function sortLegalEvents(events: LegalEvent[]) {
+  return [...events].sort((a, b) => (b.date || "").localeCompare(a.date || "") || (a.jurisdiction || "").localeCompare(b.jurisdiction || "") || a.code.localeCompare(b.code))
 }
 
 function strategyLabel(value: Review["searchStrategy"]) { return value === "concept_fallback" ? "por conceptos" : value === "hybrid" ? "híbrida" : "consulta completa" }
