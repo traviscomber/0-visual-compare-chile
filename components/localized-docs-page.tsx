@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { PublicPlatformNav } from "@/components/public-platform-nav"
+import { PublicSurfaceMotion } from "@/components/public-surface-motion"
 import { localePath, type PublicLocale } from "@/lib/marketing-locale"
 
 const endpoints = [
@@ -66,7 +67,8 @@ export function LocalizedDocsPage({ locale }: { locale: PublicLocale }) {
   const t = copy[locale]
 
   return (
-    <div className="min-h-screen bg-[#071119] text-[#E7DFCE]">
+    <div data-public-surface className="min-h-screen bg-[#071119] text-[#E7DFCE]">
+      <PublicSurfaceMotion variant="resources" />
       <PublicPlatformNav active="resources" locale={locale} />
 
       <main id="main-content" tabIndex={-1} className="focus:outline-none">
@@ -79,20 +81,14 @@ export function LocalizedDocsPage({ locale }: { locale: PublicLocale }) {
           <div className="relative mx-auto grid max-w-[1480px] gap-14 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
             <div>
               <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#96B5A6]">{t.tagline}</p>
-              <h1 className="mt-6 max-w-[12ch] text-[clamp(3.2rem,5.4vw,4.85rem)] font-light leading-[0.94] tracking-[-0.055em] text-[#E7DFCE] [text-wrap:balance]">
-                {t.title}
-              </h1>
+              <h1 className="mt-6 max-w-[12ch] text-[clamp(3.2rem,5.4vw,4.85rem)] font-light leading-[0.94] tracking-[-0.055em] text-[#E7DFCE] [text-wrap:balance]">{t.title}</h1>
             </div>
 
             <div className="max-w-[620px] lg:justify-self-end lg:pb-1">
               <p className="text-[15px] leading-7 text-[#BDBEBD] sm:text-base sm:leading-8">{t.body}</p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link href={localePath(locale, "/acceso-empresarial")} className={`inline-flex min-h-12 items-center border border-[#4A7F74] bg-[#4A7F74] px-5 text-[10px] font-medium tracking-[0.1em] text-white transition-colors hover:border-[#5D9388] hover:bg-[#5D9388] ${focusRing}`}>
-                  {t.enterprise}
-                </Link>
-                <Link href={localePath(locale, "/demo")} className={`inline-flex min-h-12 items-center border border-[#36515A] px-5 text-[10px] font-medium tracking-[0.1em] text-[#D6D9D5] transition-colors hover:border-[#96B5A6] hover:text-white ${focusRing}`}>
-                  {t.demo}
-                </Link>
+                <Link href={localePath(locale, "/acceso-empresarial")} className={`inline-flex min-h-12 items-center border border-[#4A7F74] bg-[#4A7F74] px-5 text-[10px] font-medium tracking-[0.1em] text-white transition-colors hover:border-[#5D9388] hover:bg-[#5D9388] ${focusRing}`}>{t.enterprise}</Link>
+                <Link href={localePath(locale, "/demo")} className={`inline-flex min-h-12 items-center border border-[#36515A] px-5 text-[10px] font-medium tracking-[0.1em] text-[#D6D9D5] transition-colors hover:border-[#96B5A6] hover:text-white ${focusRing}`}>{t.demo}</Link>
               </div>
             </div>
           </div>
@@ -118,9 +114,7 @@ export function LocalizedDocsPage({ locale }: { locale: PublicLocale }) {
             <div className="grid gap-8 border-b border-[#294047] pb-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
               <div>
                 <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#96B5A6]">{t.contract}</p>
-                <h2 className="mt-5 max-w-[12ch] text-[clamp(2.6rem,4.6vw,4.5rem)] font-light leading-[0.96] tracking-[-0.05em] text-[#E7DFCE]">
-                  {t.contractTitle}
-                </h2>
+                <h2 className="mt-5 max-w-[12ch] text-[clamp(2.6rem,4.6vw,4.5rem)] font-light leading-[0.96] tracking-[-0.05em] text-[#E7DFCE]">{t.contractTitle}</h2>
               </div>
               <p className="max-w-2xl text-[15px] leading-7 text-[#AEB7B5] lg:justify-self-end sm:text-base sm:leading-8">{t.contractBody}</p>
             </div>
