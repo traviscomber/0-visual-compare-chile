@@ -57,7 +57,7 @@ export async function POST(request: Request) {
       source_status: "available",
       source_last_error: null,
       source_last_checked_at: null,
-      last_checked_at: null,
+      last_checked_at: now,
       is_active: true,
       updated_at: now,
     }
