@@ -17,13 +17,14 @@ window.addEventListener("message", event => {
   if(message.type === "VIDENTIA_WIPO_CONNECT"){
     const query = typeof message.query === "string" ? message.query.trim() : ""
     const watchType = message.watchType === "ipc" ? "ipc" : "company"
-    if(query.length < 2) return
-    chrome.runtime.sendMessage({type:"START_WIPO_CONNECT",query,watchType}, response => {
+    const nonce = typeof message.nonce === "string" ? message.nonce.trim() : ""
+    if(query.length < 2 || nonce.length < 20 || nonce.length > 100) return
+    chrome.runtime.sendMessage({type:"START_WIPO_CONNECT",query,watchType,nonce}, response => {
       if(chrome.runtime.lastError || !response?.ok){
-        window.postMessage({source:SOURCE,type:"VIDENTIA_WIPO_ERROR",message:response?.error || "No pudimos iniciar la conexión con WIPO."}, window.location.origin)
+        window.postMessage({source:SOURCE,type:"VIDENTIA_WIPO_ERROR",nonce,message:response?.error || "No pudimos iniciar la conexión con WIPO."}, window.location.origin)
         return
       }
-      window.postMessage({source:SOURCE,type:"VIDENTIA_WIPO_STARTED"}, window.location.origin)
+      window.postMessage({source:SOURCE,type:"VIDENTIA_WIPO_STARTED",nonce}, window.location.origin)
     })
   }
 })
