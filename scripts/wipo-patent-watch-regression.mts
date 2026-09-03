@@ -19,8 +19,9 @@ const [client,preview,watches,cron,page,signals,commonWatches,legacyAlerts,migra
 
 for(const needle of ["validateWipoPatentScopeRssUrl","https:","patentscope.wipo.int","url.username || url.password","response.url","MAX_BYTES","<!DOCTYPE|<!ENTITY","WIPO PATENTSCOPE RSS","sourceRecordId","publicationNumber","availability: \"available\""])requireText(client,needle,"WIPO RSS client")
 for(const needle of ["requireUser()","fetchWipoPatentScopeRss","patent.wipo_rss_preview","availability: \"degraded\"","no demuestra ausencia de patentes o derechos"])requireText(preview,needle,"preview API")
-for(const needle of ["requireUser()","source_type",'"wipo_patentscope_rss"',"source_url","source_status","fetchWipoPatentScopeRss","baseline: \"existing_items_will_be_marked_reviewed\""])requireText(watches,needle,"WIPO watches API")
-for(const needle of ["CRON_SECRET","createAdminClient","fetchWipoPatentScopeRss","wipo_publication_observed","read_at: baseline ? scanAt : null","source_record_id","source_status: \"degraded\"","source_status: \"available\""])requireText(cron,needle,"WIPO cron")
+for(const needle of ["requireUser()","source_type",'"wipo_patentscope_rss"',"source_url","source_status","fetchWipoPatentScopeRss","source_last_checked_at: null","last_checked_at: now","baseline: \"existing_items_will_be_marked_reviewed\""])requireText(watches,needle,"WIPO watches API")
+if(watches.includes("source_last_checked_at: now"))fail("new or recreated WIPO watches must remain source-uncheckpointed until the cron establishes the baseline")
+for(const needle of ["CRON_SECRET","createAdminClient","fetchWipoPatentScopeRss","const baseline = !watch.source_last_checked_at","wipo_publication_observed","read_at: baseline ? scanAt : null","source_record_id","source_status: \"degraded\"","source_status: \"available\""])requireText(cron,needle,"WIPO cron")
 for(const needle of ["PATENTSCOPE como fuente internacional observable","Private Query desmarcado","Validar RSS","Polling cada 6 h","No usa cookies de tu sesión","Sin inferencia jurídica"])requireText(page,needle,"WIPO UI")
 for(const needle of ["wipo_patentscope_rss","WIPO · PATENTSCOPE RSS","source_url","source_date"])requireText(signals,needle,"common signals")
 for(const needle of ['source_type: "inapi_open_data"','onConflict: "user_id,watch_type,normalized_query,source_type"'])requireText(commonWatches,needle,"common patent watch writes")
@@ -30,4 +31,4 @@ if(migration.includes("drop constraint if exists patent_watches_user_id_watch_ty
 requireText(cleanup,"drop constraint if exists patent_watches_user_id_watch_type_normalized_query_key","post-deploy cleanup migration")
 requireText(vercel,"/api/cron/wipo-patent-watches","Vercel cron")
 
-console.log("WIPO patent watch regression PASS: PATENTSCOPE integrates through official public saved-query RSS with bounded host validation, explicit provenance, baseline suppression, staged source-aware schema rollout, degraded-source semantics and no browser-session scraping or legal-status inference.")
+console.log("WIPO patent watch regression PASS: PATENTSCOPE integrates through official public saved-query RSS with bounded host validation, explicit provenance, first-poll baseline suppression, staged source-aware schema rollout, degraded-source semantics and no browser-session scraping or legal-status inference.")
