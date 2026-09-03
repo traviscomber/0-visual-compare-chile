@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { LocalizedLandingPage } from "@/components/locked-trademark-landing"
+import { PublicPlatformFooter } from "@/components/public-platform-footer"
 import { PublicPlatformNav } from "@/components/public-platform-nav"
 import { PublicStructuredData } from "@/components/public-structured-data"
 import { PublicSurfaceMotion } from "@/components/public-surface-motion"
@@ -35,6 +36,7 @@ export default function TrademarksPage() {
         />
         <LocalizedLandingPage locale="en" showChrome={false} />
       </div>
+      <PublicPlatformFooter locale="en" />
     </>
   )
 }
