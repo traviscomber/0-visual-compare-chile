@@ -8,6 +8,10 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      { source: "/en", destination: "/", permanent: true },
+      { source: "/en/patents", destination: "/patents", permanent: true },
+      { source: "/en/technologies", destination: "/technologies", permanent: true },
+      { source: "/en/trademarks", destination: "/trademarks", permanent: true },
       {
         source: "/contacto",
         has: [
