@@ -3,12 +3,13 @@ import { readFile } from "node:fs/promises"
 function fail(message:string):never{console.error(`Patent prior-art regression FAIL: ${message}`);process.exit(1)}
 function requireText(source:string,needle:string,label:string){if(!source.includes(needle))fail(`${label} missing ${needle}`)}
 
-const [builder,epo,route,page,recorder]=await Promise.all([
+const [builder,epo,route,page,recorder,externalVerification]=await Promise.all([
   readFile("lib/intelligence/patent-prior-art.ts","utf8"),
   readFile("lib/intelligence/epo-ops.ts","utf8"),
   readFile("app/api/patents/prior-art/route.ts","utf8"),
   readFile("app/(app)/patentes/prior-art/page.tsx","utf8"),
   readFile("lib/intelligence/source-change-recorder.ts","utf8"),
+  readFile("components/app/patent-external-verification.tsx","utf8"),
 ])
 
 for(const needle of [
@@ -138,9 +139,26 @@ for(const needle of [
   "Citas observadas",
   "Eventos jurídicos observados",
   "No se infiere estado jurídico actual a partir de estos eventos",
+  "PatentExternalVerification",
+  "applicationNumber={candidate.applicationNumber}",
+  "priorityClaims={candidate.priorityClaims}",
   'review.globalEvidence.requested ? "&global=1" : ""',
   "Esto no demuestra ausencia de prior art",
   "Crear reporte",
 ])requireText(page,needle,"prior-art UI")
 
-console.log("Patent prior-art regression PASS: local evidence remains canonical, EPO retrieval uses a bounded priority-first search with title/abstract fallback and no extra family hydration beyond the configured limit, observed INAPI snapshot changes remain traceable, deterministic INAPI-to-EPO links stay auditable, and missing global matches are not presented as legal conclusions.")
+for(const needle of [
+  "Verificación internacional",
+  "Google Patents",
+  "PATENTSCOPE",
+  "Espacenet",
+  "patents.google.com",
+  "patentscope.wipo.int",
+  "worldwide.espacenet.com",
+  "ALLNUM:",
+  "Apertura manual; VIDENTIA no automatiza ni scrapea estas interfaces.",
+  "primaryPriority",
+  "applicationNumber",
+])requireText(externalVerification,needle,"external patent verification")
+
+console.log("Patent prior-art regression PASS: local evidence remains canonical, EPO retrieval uses a bounded priority-first search with title/abstract fallback, observed INAPI changes and deterministic EPO links remain traceable, and compliant manual verification links expose Google Patents, PATENTSCOPE and Espacenet without automated scraping or unsupported legal conclusions.")
