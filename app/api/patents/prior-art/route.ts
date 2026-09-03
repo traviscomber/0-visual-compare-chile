@@ -11,6 +11,7 @@ const QuerySchema = z.object({
   ipc: z.string().trim().max(16).optional(),
   limit: z.coerce.number().int().min(5).max(50).default(30),
   includeGlobal: z.enum(["0", "1"]).default("0").transform(value => value === "1"),
+  includeLiterature: z.enum(["0", "1"]).default("0").transform(value => value === "1"),
 })
 
 export async function GET(request: Request) {
@@ -23,13 +24,17 @@ export async function GET(request: Request) {
     ipc: url.searchParams.get("ipc") || undefined,
     limit: url.searchParams.get("limit") ?? 30,
     includeGlobal: url.searchParams.get("global") === "1" ? "1" : "0",
+    includeLiterature: url.searchParams.get("literature") === "1" ? "1" : "0",
   })
   if (!parsed.success) return NextResponse.json({ error: "Consulta de prior art inválida." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
   if (parsed.data.ipc && !/^[A-HY]\d{0,2}[A-Z]?\d*(?:\/\d*)?$/i.test(parsed.data.ipc)) return NextResponse.json({ error: "Prefijo IPC inválido." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
 
   const startedAt = Date.now()
   try {
-    const review = await buildPatentPriorArtReview(parsed.data.q, parsed.data.ipc || null, parsed.data.limit, { includeGlobal: parsed.data.includeGlobal })
+    const review = await buildPatentPriorArtReview(parsed.data.q, parsed.data.ipc || null, parsed.data.limit, {
+      includeGlobal: parsed.data.includeGlobal,
+      includeLiterature: parsed.data.includeLiterature,
+    })
     await auth.supabase.from("usage_logs").insert({
       user_id: auth.user.id,
       organization_id: null,
@@ -46,6 +51,9 @@ export async function GET(request: Request) {
         global_availability: review.globalEvidence.availability,
         global_families: review.globalEvidence.families.length,
         global_family_linked_candidates: review.summary.globalFamilyLinkedCandidates,
+        literature_requested: parsed.data.includeLiterature,
+        literature_availability: review.literatureEvidence.availability,
+        literature_works: review.summary.literatureWorks,
         duration_ms: Date.now() - startedAt,
       },
     })

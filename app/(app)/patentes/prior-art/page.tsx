@@ -5,6 +5,7 @@ import { type FormEvent, useState } from "react"
 import { AlertTriangle, ArrowLeft, ExternalLink, FileSearch, Globe2, History, Loader2, Search, ShieldCheck } from "lucide-react"
 import { OperationalHeader, OperationalMetric, OperationalMetricRail, OperationalPage, OperationalPanel, OperationalSectionHeader } from "@/components/app/operational-ui"
 import { PatentExternalVerification } from "@/components/app/patent-external-verification"
+import { PatentLiteratureEvidencePanel, type PatentLiteratureEvidence } from "@/components/app/patent-literature-evidence"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,7 +25,7 @@ type ObservedChange = { eventType: "new_record" | "status_changed" | "registrati
 type Candidate = { id: string; applicationNumber: string | null; registrationNumber: string | null; title: string; applicants: string | null; inventors: string | null; status: string | null; country: string | null; filingDate: string | null; registrationDate: string | null; expirationDate: string | null; ipc: string[]; sourceUrl: string | null; lastSyncedAt: string | null; technicalScore: number; reviewLevel: "close_review" | "relevant" | "background"; matchedConcepts: string[]; reasons: string[]; publicationDate: string | null; pctApplicationDate: string | null; pctPublicationDate: string | null; prioritiesRaw: string | null; priorityClaims: PriorityClaim[]; familyCandidate: { key: string; sizeInResult: number } | null; globalFamilyMatches: GlobalFamilyMatch[]; typeName: string | null; subtypeName: string | null; observedChangeCount: number; observedChanges: ObservedChange[] }
 type GlobalFamily = { source: "epo_ops"; sourceRecordId: string; publication: string; title: string; familyMembers: string[]; jurisdictions: string[]; priorityClaims: EpoPriorityClaim[]; citations: string[]; legalEvents: LegalEvent[]; evidenceCoverage: EvidenceCoverage; retrievedAt: string; url: string }
 type GlobalEvidence = { requested: boolean; source: "EPO OPS"; availability: "not_requested" | "credential_required" | "available" | "degraded"; families: GlobalFamily[]; limitations: string[] }
-type Review = { query: string; ipc: string | null; concepts: string[]; searchStrategy: "full_query" | "concept_fallback" | "hybrid"; candidates: Candidate[]; summary: { total: number; closeReview: number; relevant: number; background: number; familyCandidates: number; candidatesWithObservedChanges: number; observedChanges: number; globalFamilyLinkedCandidates: number }; coverage: { source: string; scope: string; limitations: string[]; newestSync: string | null; changeObservationSince: string | null }; globalEvidence: GlobalEvidence; generatedAt: string; durationMs: number }
+type Review = { query: string; ipc: string | null; concepts: string[]; searchStrategy: "full_query" | "concept_fallback" | "hybrid"; candidates: Candidate[]; summary: { total: number; closeReview: number; relevant: number; background: number; familyCandidates: number; candidatesWithObservedChanges: number; observedChanges: number; globalFamilyLinkedCandidates: number; literatureWorks: number }; coverage: { source: string; scope: string; limitations: string[]; newestSync: string | null; changeObservationSince: string | null }; globalEvidence: GlobalEvidence; literatureEvidence: PatentLiteratureEvidence; generatedAt: string; durationMs: number }
 
 const LEVEL = {
   close_review: { label: "Revisión cercana", className: "bg-[#5A432B] text-[#E8CFAE]" },
@@ -37,6 +38,13 @@ const GLOBAL_STATUS: Record<GlobalEvidence["availability"], string> = {
   credential_required: "Credenciales requeridas",
   available: "Fuente disponible",
   degraded: "Fuente degradada",
+}
+
+const LITERATURE_STATUS: Record<PatentLiteratureEvidence["availability"], string> = {
+  not_requested: "No solicitada",
+  available: "OpenAlex + Crossref",
+  partial: "Cobertura parcial",
+  degraded: "Fuentes degradadas",
 }
 
 const COVERAGE_LABEL = {
@@ -73,6 +81,7 @@ export default function PriorArtPage() {
   const [query, setQuery] = useState("Sistema de nanoburbujas de bajo consumo para oxigenar estanques de acuicultura")
   const [ipc, setIpc] = useState("")
   const [includeGlobal, setIncludeGlobal] = useState(false)
+  const [includeLiterature, setIncludeLiterature] = useState(true)
   const [review, setReview] = useState<Review | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -83,7 +92,7 @@ export default function PriorArtPage() {
     setLoading(true)
     setError(null)
     try {
-      const params = new URLSearchParams({ q: query.trim(), limit: "30", global: includeGlobal ? "1" : "0" })
+      const params = new URLSearchParams({ q: query.trim(), limit: "30", global: includeGlobal ? "1" : "0", literature: includeLiterature ? "1" : "0" })
       if (ipc.trim()) params.set("ipc", ipc.trim().toUpperCase())
       const response = await fetch(`/api/patents/prior-art?${params}`, { cache: "no-store" })
       const payload = await response.json().catch(() => ({}))
@@ -99,7 +108,7 @@ export default function PriorArtPage() {
 
   return <OperationalPage>
     <Button asChild variant="ghost" size="sm" className="mb-4 w-fit px-0 text-muted-foreground hover:bg-transparent hover:text-white"><Link href="/patentes"><ArrowLeft className="h-4 w-4" />Volver a Patentes</Link></Button>
-    <OperationalHeader eyebrow="VIDENTIA / Patentes / Prior Art" title="Describe una invención. Revisa qué antecedentes técnicos merecen atención." description={<>La consulta larga se descompone en conceptos técnicos cuando la búsqueda literal no encuentra suficiente evidencia. VIDENTIA separa evidencia INAPI, cambios observados y cobertura internacional EPO OPS sin convertir ninguna fuente en una conclusión legal.</>} meta={<><span>INAPI Chile</span><span>Prioridades + PCT</span><span>Cambios observados</span><span>EPO OPS opcional</span><span>Revisión humana</span></>} />
+    <OperationalHeader eyebrow="VIDENTIA / Patentes / Prior Art" title="Describe una invención. Revisa qué antecedentes técnicos merecen atención." description={<>La consulta larga se descompone en conceptos técnicos cuando la búsqueda literal no encuentra suficiente evidencia. VIDENTIA separa patentes INAPI, literatura científica indexada y cobertura internacional EPO OPS sin convertir ninguna fuente en una conclusión legal.</>} meta={<><span>INAPI Chile</span><span>OpenAlex + Crossref</span><span>Prioridades + PCT</span><span>Cambios observados</span><span>EPO OPS opcional</span><span>Revisión humana</span></>} />
 
     <section className="border-b border-border/80 py-7">
       <OperationalPanel>
@@ -110,16 +119,27 @@ export default function PriorArtPage() {
             <Input value={ipc} onChange={event => setIpc(event.target.value.toUpperCase())} maxLength={16} placeholder="IPC opcional" aria-label="IPC opcional" />
             <Button disabled={loading || query.trim().length < 3}>{loading ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" /> : <Search className="h-4 w-4" />}{loading ? "Buscando" : "Revisar prior art"}</Button>
           </div>
-          <div className="mt-4 flex flex-col gap-3 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-xs font-medium text-white">Cobertura internacional</p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">Si la activas, esta consulta técnica también se envía a EPO OPS para recuperar familias, prioridades, jurisdicciones, citas y eventos jurídicos observados.</p>
+          <div className="mt-4 grid gap-3 border-t border-border/70 pt-4 lg:grid-cols-2">
+            <div className="flex flex-col gap-3 border-b border-border/60 pb-4 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-5">
+              <div className="max-w-2xl">
+                <p className="text-xs font-medium text-white">Literatura científica</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">Cruza la consulta con OpenAlex y Crossref para recuperar literatura técnica no-patente indexada con DOI, autores, fecha y provenance.</p>
+              </div>
+              <Button type="button" variant={includeLiterature ? "secondary" : "outline"} size="sm" aria-pressed={includeLiterature} onClick={() => setIncludeLiterature(current => !current)} className="w-fit shrink-0">
+                <FileSearch className="h-4 w-4" />{includeLiterature ? "Literatura activada" : "Activar literatura"}
+              </Button>
             </div>
-            <Button type="button" variant={includeGlobal ? "secondary" : "outline"} size="sm" aria-pressed={includeGlobal} onClick={() => setIncludeGlobal(current => !current)} className="shrink-0">
-              <Globe2 className="h-4 w-4" />{includeGlobal ? "EPO OPS activado" : "Activar EPO OPS"}
-            </Button>
+            <div className="flex flex-col gap-3 lg:pl-2">
+              <div className="max-w-2xl">
+                <p className="text-xs font-medium text-white">Cobertura internacional</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">Si la activas, esta consulta técnica también se envía a EPO OPS para recuperar familias, prioridades, jurisdicciones, citas y eventos jurídicos observados.</p>
+              </div>
+              <Button type="button" variant={includeGlobal ? "secondary" : "outline"} size="sm" aria-pressed={includeGlobal} onClick={() => setIncludeGlobal(current => !current)} className="w-fit shrink-0">
+                <Globe2 className="h-4 w-4" />{includeGlobal ? "EPO OPS activado" : "Activar EPO OPS"}
+              </Button>
+            </div>
           </div>
-          <p className="mt-3 text-xs leading-5 text-muted-foreground">No responde “patentable / no patentable”. Recupera candidatos, cambios observados y evidencia de fuente para revisión técnica y jurídica posterior.</p>
+          <p className="mt-4 text-xs leading-5 text-muted-foreground">No responde “patentable / no patentable”. Recupera candidatos de patente, cambios observados, literatura no-patente y evidencia de fuente para revisión técnica y jurídica posterior.</p>
         </form>
       </OperationalPanel>
     </section>
@@ -130,14 +150,14 @@ export default function PriorArtPage() {
       <OperationalMetricRail>
         <OperationalMetric value={review.summary.total} label="Candidatos" detail={`${review.summary.candidatesWithObservedChanges} con cambios observados`} />
         <OperationalMetric value={review.summary.closeReview} label="Revisión cercana" detail="Mayor cobertura de conceptos técnicos" tone={review.summary.closeReview ? "warning" : "neutral"} />
-        <OperationalMetric value={review.summary.globalFamilyLinkedCandidates} label="Vínculos EPO" detail={`${review.summary.familyCandidates} familias locales candidatas`} tone={review.summary.globalFamilyLinkedCandidates ? "success" : "neutral"} />
+        <OperationalMetric value={review.summary.literatureWorks} label="Literatura NPL" detail={LITERATURE_STATUS[review.literatureEvidence.availability]} tone={review.literatureEvidence.availability === "partial" || review.literatureEvidence.availability === "degraded" ? "warning" : review.literatureEvidence.availability === "available" && review.summary.literatureWorks ? "success" : "neutral"} />
         <OperationalMetric value={review.globalEvidence.families.length} label="Familias EPO" detail={GLOBAL_STATUS[review.globalEvidence.availability]} tone={review.globalEvidence.availability === "degraded" || review.globalEvidence.availability === "credential_required" ? "warning" : review.globalEvidence.availability === "available" ? "success" : "neutral"} />
       </OperationalMetricRail>
 
       <section className="grid gap-9 py-9 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)] xl:gap-10">
         <div>
           <OperationalSectionHeader eyebrow="Resultados" title="Potential prior art" meta={`${review.durationMs} ms · ${strategyLabel(review.searchStrategy)} · ${review.summary.observedChanges} cambios observados`} />
-          {review.candidates.length ? <div className="mt-5 divide-y divide-border/80 border-y border-border/80">{review.candidates.map((candidate, index) => <CandidateRow key={candidate.id} candidate={candidate} index={index} />)}</div> : <div className="mt-5 border-y border-border/80 py-10"><FileSearch className="h-5 w-5 text-[#96B5A6]" /><p className="mt-4 font-medium text-white">No encontramos candidatos en el corpus observado.</p><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Esto no demuestra ausencia de prior art. Amplía términos, revisa IPC o utiliza cobertura internacional antes de una conclusión.</p></div>}
+          {review.candidates.length ? <div className="mt-5 divide-y divide-border/80 border-y border-border/80">{review.candidates.map((candidate, index) => <CandidateRow key={candidate.id} candidate={candidate} index={index} />)}</div> : <div className="mt-5 border-y border-border/80 py-10"><FileSearch className="h-5 w-5 text-[#96B5A6]" /><p className="mt-4 font-medium text-white">No encontramos candidatos en el corpus observado.</p><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Esto no demuestra ausencia de prior art. Amplía términos, revisa IPC o utiliza literatura científica y cobertura internacional antes de una conclusión.</p></div>}
         </div>
         <aside>
           <OperationalPanel>
@@ -146,8 +166,9 @@ export default function PriorArtPage() {
             <div className="mt-6 border-t border-border/80 pt-5"><p className="text-[10px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]">Límites</p><div className="mt-3 space-y-3">{review.coverage.limitations.map(item => <p key={item} className="flex gap-2 text-xs leading-5 text-muted-foreground"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#D6A46F]" />{item}</p>)}</div></div>
             {review.coverage.newestSync ? <p className="mt-5 border-t border-border/80 pt-4 text-[11px] text-muted-foreground">Último sync observado · {formatDate(review.coverage.newestSync)}</p> : null}
           </OperationalPanel>
+          <PatentLiteratureEvidencePanel evidence={review.literatureEvidence} />
           <GlobalEvidencePanel evidence={review.globalEvidence} />
-          <OperationalPanel className="mt-4"><p className="text-[10px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]">Siguiente paso</p><p className="mt-3 text-sm font-medium text-white">Guarda esta evidencia en un reporte común.</p><p className="mt-2 text-xs leading-5 text-muted-foreground">El reporte conserva la consulta, candidatos, vínculos de familia, límites y fecha como snapshot versionado.</p><Button asChild size="sm" className="mt-4"><Link href={`/reportes?create=patent&subject=${encodeURIComponent(review.query)}${review.ipc ? `&ipc=${encodeURIComponent(review.ipc)}` : ""}${review.globalEvidence.requested ? "&global=1" : ""}`}>Crear reporte</Link></Button></OperationalPanel>
+          <OperationalPanel className="mt-4"><p className="text-[10px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]">Siguiente paso</p><p className="mt-3 text-sm font-medium text-white">Guarda la evidencia patentaria en un reporte común.</p><p className="mt-2 text-xs leading-5 text-muted-foreground">El reporte actual conserva consulta, candidatos, vínculos de familia, límites y fecha como snapshot versionado. La literatura científica se mantiene visible en esta revisión hasta incorporar su snapshot dedicado.</p><Button asChild size="sm" className="mt-4"><Link href={`/reportes?create=patent&subject=${encodeURIComponent(review.query)}${review.ipc ? `&ipc=${encodeURIComponent(review.ipc)}` : ""}${review.globalEvidence.requested ? "&global=1" : ""}`}>Crear reporte</Link></Button></OperationalPanel>
         </aside>
       </section>
     </> : !loading ? <section className="py-10"><p className="max-w-2xl text-sm leading-7 text-muted-foreground">Empieza con una descripción completa. Si la frase literal no encuentra antecedentes, VIDENTIA extrae conceptos técnicos y los combina sin inventar sinónimos ni traducciones.</p></section> : null}
