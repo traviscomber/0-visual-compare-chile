@@ -48,11 +48,16 @@ for (const needle of [
   "buildPatentPriorArtReview(query, ipc, 30, { includeGlobal })",
   'kind: "patent_family"',
   'source: "EPO OPS"',
+  "globalFamilyMatches: item.globalFamilyMatches",
+  "priorityClaims: family.priorityClaims",
   "evidenceCoverage: family.evidenceCoverage",
+  "globalFamilyLinkedCandidates: review.summary.globalFamilyLinkedCandidates",
   "globalEvidence: {",
   "requested: review.globalEvidence.requested",
   "availability: review.globalEvidence.availability",
   "legalEvents: family.legalEvents",
+  "vinculado${review.summary.globalFamilyLinkedCandidates === 1 ? \"\" : \"s\"} por prioridad observada",
+  "Candidatos vinculados por prioridad:",
   "Familias EPO observadas:",
 ]) requireText(route, needle, "reports API")
 
@@ -83,4 +88,4 @@ for (const needle of [
   "Evaluaciones persistidas",
 ]) requireText(evaluations, needle, "legacy evaluations surface")
 
-console.log("Common reports regression PASS: Brand/Patent/Technology use one immutable versioned snapshot model, authenticated RLS, server-derived evidence, and Patent snapshots can explicitly preserve EPO family/jurisdiction/citation/legal-event evidence with source coverage semantics and no inferred current legal status.")
+console.log("Common reports regression PASS: Brand/Patent/Technology use one immutable versioned snapshot model, authenticated RLS and server-derived evidence; Patent snapshots preserve EPO families, priority claims, deterministic INAPI-to-EPO family links, jurisdiction/citation/legal-event coverage, and no inferred current legal status.")
