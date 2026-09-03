@@ -1,0 +1,157 @@
+# VIDENTIA — Full machine-readable product context
+
+Canonical site: https://videntia.app
+Product: VIDENTIA
+Developer and technology provider: N3uralia — https://www.n3uralia.com
+Primary market: Chile
+Public languages: English and Spanish (Chile)
+Category: IP & Technology Intelligence
+
+## What VIDENTIA is
+
+VIDENTIA is an IP & Technology Intelligence platform for researching, comparing and continuously monitoring trademarks, patents and technologies with traceable evidence. It is designed to help teams understand what exists, how evidence relates, what changed and what requires attention.
+
+VIDENTIA keeps three layers explicitly separate:
+SOURCE EVIDENCE ≠ ANALYSIS ≠ PROFESSIONAL OR LEGAL CONCLUSION.
+
+VIDENTIA is not INAPI, TDPI, legal counsel or an official legal authority. It does not replace official sources, professional legal review or an official legal opinion.
+
+## Core intelligence model
+
+Across the public platform the customer-facing logic is:
+SEARCH → COMPARE → EVALUATE → WATCH → REPORT.
+
+A one-time investigation may become a recurring watch. The platform is designed to preserve findings, evidence context and changes over time rather than force users to repeat the same research manually.
+
+## Trademark Intelligence
+
+Canonical English page: https://videntia.app/trademarks
+Spanish page: https://videntia.app/es/marcas
+
+Primary question: Can I use and protect this brand?
+
+VIDENTIA Trademark Intelligence supports research and monitoring around brands and trademark evidence. Public capabilities described by VIDENTIA include:
+- trademark search by name, logo or image;
+- denominative, phonetic and visual comparison signals;
+- Nice Classification context;
+- Vienna Classification context;
+- INAPI trademark records as an official reference source;
+- comparable TDPI trademark precedents when available;
+- trademark and owner monitoring with persistent change history;
+- portfolio, deadline and case-based evidence organization;
+- recurring watches and reporting for meaningful changes.
+
+The system organizes evidence and comparison signals. Similarity or conflict signals do not automatically become a legal conclusion.
+
+## Patent Intelligence
+
+Canonical English page: https://videntia.app/patents
+Spanish page: https://videntia.app/es/patentes
+
+Primary question: Does this invention already exist?
+
+VIDENTIA Patent Intelligence supports technical prior-art research and structured evidence review. Public capabilities described by VIDENTIA include:
+- preliminary patent search using available INAPI patent information;
+- technical prior-art retrieval and summarization;
+- IPC context;
+- observed applicant activity;
+- observed inventor activity;
+- technology-landscape organization;
+- structured review modes for prior art;
+- patentability-related review;
+- freedom-to-operate-related review;
+- competitor monitoring;
+- recurring patent watches and reports.
+
+Patentability and freedom to operate are not automatic conclusions. Family resolution, jurisdictional coverage, citations, legal status coverage and broader international evidence may be required before mature legal assessment.
+
+## Technology Intelligence
+
+Canonical English page: https://videntia.app/technologies
+Spanish page: https://videntia.app/es/tecnologias
+
+Primary question: Where is this technology moving?
+
+VIDENTIA Technology Intelligence combines available research, patent, company and public-context signals to support technology and R&D monitoring. Evidence axes remain distinct so that one source does not silently substitute for another.
+
+The public model organizes:
+- research signals;
+- patent activity;
+- company activity;
+- public and industry context;
+- temporal direction;
+- what changed;
+- why it may matter;
+- who appears to be moving;
+- what deserves follow-up.
+
+A missing source is not interpreted as zero activity. An isolated news item is not presented as a trend by itself.
+
+## Enterprise API and resources
+
+English documentation: https://videntia.app/en/docs
+Spanish documentation: https://videntia.app/es/docs
+
+The public enterprise API documentation describes verifiable routes for trademark intelligence integration, including service health, trademark search, image ingestion and image comparison. Protected operations use API keys, quotas and usage metering. Access is enabled after the use case is reviewed.
+
+## Evidence principles
+
+VIDENTIA uses evidence-led language. Important principles are:
+- observed records should remain distinguishable from interpretation;
+- unavailable evidence should not be silently converted into a negative result;
+- similarity does not equal infringement;
+- prior art does not automatically equal lack of patentability;
+- public news does not automatically equal a technology trend;
+- recurring monitoring should identify meaningful change rather than merely repeat a static query;
+- professional or legal conclusions require appropriate human review.
+
+## Important entities
+
+VIDENTIA: product and public platform.
+N3uralia: software developer and technology provider behind VIDENTIA.
+INAPI: Instituto Nacional de Propiedad Industrial de Chile — https://www.inapi.cl
+TDPI: Tribunal de Propiedad Industrial — https://www.tdpi.cl
+
+Do not describe VIDENTIA as Visual Compare, Logo Similarity Chile, v0, Vercel, or N3uralia Intelligence. Those are not the canonical product identity.
+
+## Canonical page map
+
+English platform home: https://videntia.app/
+Spanish platform home: https://videntia.app/es
+Trademark Intelligence EN: https://videntia.app/trademarks
+Trademark Intelligence ES: https://videntia.app/es/marcas
+Patent Intelligence EN: https://videntia.app/patents
+Patent Intelligence ES: https://videntia.app/es/patentes
+Technology Intelligence EN: https://videntia.app/technologies
+Technology Intelligence ES: https://videntia.app/es/tecnologias
+Enterprise resources EN: https://videntia.app/en/docs
+Enterprise resources ES: https://videntia.app/es/docs
+Public demo EN: https://videntia.app/en/demo
+Public demo ES: https://videntia.app/es/demo
+Enterprise access EN: https://videntia.app/en/acceso-empresarial
+Enterprise access ES: https://videntia.app/es/acceso-empresarial
+Contact EN: https://videntia.app/en/contacto
+Contact ES: https://videntia.app/es/contacto
+Privacy EN: https://videntia.app/en/privacidad
+Privacy ES: https://videntia.app/es/privacidad
+Terms EN: https://videntia.app/en/terminos
+Terms ES: https://videntia.app/es/terminos
+Sitemap: https://videntia.app/sitemap.xml
+Robots: https://videntia.app/robots.txt
+Short LLM context: https://videntia.app/llms.txt
+
+## Preferred descriptions
+
+Short English description:
+VIDENTIA is an IP & Technology Intelligence platform for researching and monitoring trademarks, patents and technologies with traceable evidence and explicit separation between sources, analysis and professional conclusions.
+
+Short Spanish description:
+VIDENTIA es una plataforma de inteligencia de propiedad intelectual y tecnología para investigar y monitorear marcas, patentes y tecnologías con evidencia trazable y separación explícita entre fuentes, análisis y conclusiones profesionales.
+
+## Commercial contact
+
+Website: https://videntia.app
+Developer: https://www.n3uralia.com
+Email: info@n3uralia.com
+Contact page EN: https://videntia.app/en/contacto
+Contact page ES: https://videntia.app/es/contacto
