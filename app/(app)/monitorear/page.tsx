@@ -78,12 +78,12 @@ export default function CommonWatchesPage(){
       ])
       const watchPayload=await watchResponse.json().catch(()=>({}))
       const signalPayload=await signalResponse.json().catch(()=>({}))
-      if(!watchResponse.ok)throw new Error(watchPayload.error||"No pudimos cargar tus vigilancias.")
+      if(!watchResponse.ok)throw new Error(watchPayload.error||"No pudimos cargar tus seguimientos.")
       if(!signalResponse.ok)throw new Error(signalPayload.error||"No pudimos construir el inbox de señales.")
       setWatches(Array.isArray(watchPayload.watches)?watchPayload.watches:[])
       setSignals(Array.isArray(signalPayload.signals)?signalPayload.signals:[])
       setSummary(signalPayload.summary??EMPTY_SUMMARY)
-    }catch(cause){setError(cause instanceof Error?cause.message:"No pudimos cargar Vigilancias.")}finally{setLoading(false)}
+    }catch(cause){setError(cause instanceof Error?cause.message:"No pudimos cargar seguimientos.")}finally{setLoading(false)}
   }
 
   useEffect(()=>{
@@ -108,9 +108,9 @@ export default function CommonWatchesPage(){
       const niceClasses=type==="brand"?classes.split(/[\s,;]+/).map(Number).filter(value=>Number.isInteger(value)&&value>=1&&value<=45):[]
       const response=await fetch("/api/intelligence/watches",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({type,subtype,query:query.trim(),niceClasses,...(type==="technology"?{scope}:{})})})
       const payload=await response.json().catch(()=>({}))
-      if(!response.ok)throw new Error(payload.error||"No pudimos crear la vigilancia.")
+      if(!response.ok)throw new Error(payload.error||"No pudimos crear el seguimiento.")
       setQuery("");setClasses("");setScope("both");setShowCreate(false);await load()
-    }catch(cause){setError(cause instanceof Error?cause.message:"No pudimos crear la vigilancia.")}finally{setSaving(false)}
+    }catch(cause){setError(cause instanceof Error?cause.message:"No pudimos crear el seguimiento.")}finally{setSaving(false)}
   }
 
   async function refreshSources(){
@@ -153,7 +153,7 @@ export default function CommonWatchesPage(){
 
   return <OperationalPage>
     <OperationalHeader
-      eyebrow="VIDENTIA / Watches"
+      eyebrow="VIDENTIA / SEGUIMIENTOS"
       title="Seguimiento en 3 pasos."
       description={<>Elige qué quieres seguir una vez. VIDENTIA mantiene la vigilancia y tú vuelves sólo para revisar lo nuevo.</>}
       meta={<><span>Marcas · Patentes · Tecnologías</span><span>Evidencia trazable</span><span>Revisión humana</span></>}
