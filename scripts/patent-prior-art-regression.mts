@@ -92,6 +92,7 @@ for(const needle of [
   "observed_change_events",
   "global_requested",
   "global_availability",
+  "global_family_linked_candidates",
 ])requireText(route,needle,"prior-art API")
 if(route.includes("createAdminClient")||route.includes("SUPABASE_SERVICE_ROLE_KEY"))fail("route must authenticate user and delegate server-only enrichment; it must not expose service-role handling")
 
@@ -120,7 +121,7 @@ for(const needle of [
   "Eventos jurídicos observados",
   "No se infiere estado jurídico actual a partir de estos eventos",
   "Esto no demuestra ausencia de prior art",
-  "Create report".replace("Create report","Crear reporte"),
+  "Crear reporte",
 ])requireText(page,needle,"prior-art UI")
 
-console.log("Patent prior-art regression PASS: local evidence remains canonical, observed INAPI snapshot changes are traceable, EPO family priorities carry explicit coverage, INAPI candidates link to retrieved EPO families only through deterministic observed-priority matches, and no missing link or legal event is presented as a legal conclusion.")
+console.log("Patent prior-art regression PASS: local evidence remains canonical, observed INAPI snapshot changes are traceable, EPO family priorities carry explicit coverage, INAPI candidates link to retrieved EPO families only through deterministic observed-priority matches, linkage telemetry is preserved, and no missing link or legal event is presented as a legal conclusion.")
