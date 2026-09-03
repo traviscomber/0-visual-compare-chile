@@ -15,8 +15,10 @@ for(const needle of [
   '{href:"/investigar",label:"Marcas"',
   '{href:"/patentes",label:"Patentes"',
   '{href:"/tecnologias",label:"Tecnologías"',
-  '{href:"/monitorear",label:"Watches"',
+  '{href:"/monitorear",label:"Seguimientos"',
   '{href:"/reportes",label:"Reportes"',
+  'Crear seguimiento',
+  'Marcas · Patentes · Tecnologías<br/>Busca una vez — o mantén el seguimiento.',
   '["/dashboard","/investigar","/patentes","/tecnologias"]',
   'label:"Tecnologías",icon:Activity,aliases:["/empresas","/espacios","/brechas","/oportunidades"]',
 ])requireText(nav,needle,"portal navigation")
@@ -28,11 +30,14 @@ for(const forbidden of [
   'href:"/oportunidades",label:',
   'href:"/portfolio",label:',
   'href:"/casos",label:',
-])if(nav.includes(forbidden))fail(`internal module must not remain a top-level navigation item: ${forbidden}`)
+  'label:"Watches"',
+  '>Crear watch</',
+])if(nav.includes(forbidden))fail(`internal module or stale terminology must not remain in top-level navigation: ${forbidden}`)
 
 for(const needle of [
   'fetch("/api/intelligence/watches"',
   'fetch("/api/intelligence/watches/signals"',
+  'eyebrow="VIDENTIA / SEGUIMIENTOS"',
   'Seguimiento en 3 pasos.',
   'Elige qué seguir',
   'VIDENTIA vigila',
@@ -42,6 +47,8 @@ for(const needle of [
   'B · Criterio',
   'C · Activar',
   'Activar seguimiento',
+  'No pudimos cargar tus seguimientos.',
+  'No pudimos crear el seguimiento.',
   'href="#novedades"',
   'PASO 3 / NOVEDADES',
   'Marcar revisadas',
@@ -56,6 +63,12 @@ for(const needle of [
   'href="/monitorear/estrategico"',
   'href="/patentes/alertas"',
 ])requireText(page,needle,"common watch workspace")
+
+for(const forbidden of [
+  'eyebrow="VIDENTIA / Watches"',
+  'No pudimos cargar tus vigilancias.',
+  'No pudimos crear la vigilancia.',
+])if(page.includes(forbidden))fail(`stale monitoring terminology must not remain user-facing: ${forbidden}`)
 
 for(const needle of [
   'from("trademark_watches")',
@@ -83,4 +96,4 @@ for(const [source,label] of [[watchesApi,"watch API"],[signalsApi,"signal API"]]
   if(source.includes("createAdminClient")||source.includes("SUPABASE_SERVICE_ROLE_KEY"))fail(`${label} must remain behind authenticated RLS, not service role`)
 }
 
-console.log("Portal/Common Watches regression PASS: the common monitoring workspace is locked to a simple 1-2-3 journey (choose, VIDENTIA watches, review changes), with A-B-C creation, six-destination IA, contextual deep tools, scoped Chile/Global/Both technology searches, and authenticated RLS facades preserved without a destructive migration.")
+console.log("Portal/Common Watches regression PASS: user-facing monitoring terminology is consistently Seguimientos, the workspace remains a simple 1-2-3 journey (choose, VIDENTIA watches, review changes), with A-B-C creation, six-destination IA, contextual deep tools, scoped Chile/Global/Both technology searches, and authenticated RLS facades preserved without a destructive migration.")
