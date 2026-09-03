@@ -78,7 +78,7 @@ function BrandMark() {
         <span className="absolute left-0 top-1 h-5 w-5 bg-[#315D58] [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)]" />
         <span className="absolute bottom-0 left-[13px] h-7 w-[7px] skew-y-[-30deg] bg-[#E7DFCE]" />
       </span>
-      <span className="block text-[16px] font-medium tracking-[0.24em] text-[#F1EEE7] sm:text-[17px]">VIDENTIA</span>
+      <span className="block text-[16px] font-medium tracking-[0.22em] text-[#F1EEE7] sm:text-[17px]">VIDENTIA</span>
     </span>
   )
 }
@@ -96,7 +96,7 @@ export function PublicPlatformNav({ active = "home", locale = "en", sticky = tru
 
   return (
     <>
-      <a href="#main-content" className={`fixed left-3 top-3 z-[80] -translate-y-24 bg-[#E7DFCE] px-4 py-3 text-[10px] font-medium tracking-[0.08em] text-[#091A20] transition-transform focus:translate-y-0 ${focusRing}`}>
+      <a href="#main-content" className={`fixed left-3 top-3 z-[80] -translate-y-24 bg-[#E7DFCE] px-4 py-3 text-[11px] font-medium tracking-[0.07em] text-[#091A20] transition-transform focus:translate-y-0 ${focusRing}`}>
         {text.skip}
       </a>
 
@@ -112,7 +112,7 @@ export function PublicPlatformNav({ active = "home", locale = "en", sticky = tru
                 key={section}
                 href={href}
                 aria-current={active === section ? "page" : undefined}
-                className={`relative py-2 text-[10px] font-medium tracking-[0.1em] transition-colors ${focusRing} ${active === section ? "text-[#F2F0EA] after:absolute after:inset-x-0 after:-bottom-[19px] after:h-px after:bg-[#96B5A6]" : "text-[#AEB7B5] hover:text-white"}`}
+                className={`relative py-2 text-[11px] font-medium tracking-[0.085em] transition-colors duration-150 ${focusRing} ${active === section ? "text-[#F2F0EA] after:absolute after:inset-x-0 after:-bottom-[19px] after:h-px after:bg-[#96B5A6]" : "text-[#AEB7B5] hover:text-white"}`}
               >
                 {label}
               </Link>
@@ -120,20 +120,20 @@ export function PublicPlatformNav({ active = "home", locale = "en", sticky = tru
           </div>
 
           <div className="hidden items-center gap-5 md:flex">
-            <Link href={switcher.href} className={`text-[10px] font-medium tracking-[0.11em] text-[#96B5A6] ${focusRing}`}>{switcher.label}</Link>
-            <Link href={paths.login} className={`hidden text-[10px] font-medium tracking-[0.1em] text-[#C7CCCA] hover:text-white xl:inline ${focusRing}`} prefetch={false}>{text.login}</Link>
-            <Link href={paths.pricing} className={`inline-flex min-h-10 items-center border border-[#4A7F74] px-4 text-[10px] font-medium tracking-[0.09em] text-[#CDE4DE] transition-colors hover:border-[#96B5A6] hover:bg-[#0D2028] ${focusRing}`}>{text.access}</Link>
+            <Link href={switcher.href} className={`text-[11px] font-medium tracking-[0.09em] text-[#96B5A6] ${focusRing}`}>{switcher.label}</Link>
+            <Link href={paths.login} className={`hidden text-[11px] font-medium tracking-[0.085em] text-[#C7CCCA] transition-colors duration-150 hover:text-white xl:inline ${focusRing}`} prefetch={false}>{text.login}</Link>
+            <Link href={paths.pricing} className={`inline-flex min-h-11 items-center border border-[#4A7F74] px-4 text-[11px] font-medium tracking-[0.075em] text-[#CDE4DE] transition-colors duration-150 hover:border-[#96B5A6] hover:bg-[#0D2028] ${focusRing}`}>{text.access}</Link>
           </div>
 
           <details className="group relative md:hidden">
-            <summary className={`cursor-pointer list-none border border-[#36515A] px-3.5 py-2.5 text-[9px] font-medium tracking-[0.12em] text-[#E7DFCE] [&::-webkit-details-marker]:hidden ${focusRing}`}>{text.menu}</summary>
+            <summary className={`flex min-h-11 cursor-pointer list-none items-center border border-[#36515A] px-3.5 text-[10px] font-medium tracking-[0.1em] text-[#E7DFCE] [&::-webkit-details-marker]:hidden ${focusRing}`}>{text.menu}</summary>
             <div className="absolute right-0 top-[calc(100%+12px)] w-[min(84vw,320px)] border border-[#294047] bg-[#071119] p-2 shadow-2xl">
               {primary.map(([section, label, href]) => (
-                <Link key={section} href={href} aria-current={active === section ? "page" : undefined} className={`block border-b border-white/10 px-4 py-4 text-[11px] tracking-[0.08em] ${focusRing} ${active === section ? "text-white" : "text-[#BDBEBD]"}`}>{label}</Link>
+                <Link key={section} href={href} aria-current={active === section ? "page" : undefined} className={`block min-h-11 border-b border-white/10 px-4 py-4 text-[12px] tracking-[0.07em] ${focusRing} ${active === section ? "border-l-2 border-l-[#96B5A6] text-white" : "text-[#BDBEBD]"}`}>{label}</Link>
               ))}
-              <Link href={paths.login} className={`block border-b border-white/10 px-4 py-4 text-[11px] tracking-[0.08em] text-[#BDBEBD] ${focusRing}`} prefetch={false}>{text.login}</Link>
-              <Link href={paths.pricing} className={`block border-b border-white/10 px-4 py-4 text-[11px] tracking-[0.08em] text-[#96B5A6] ${focusRing}`}>{text.access}</Link>
-              <Link href={switcher.href} className={`block px-4 py-4 text-[11px] tracking-[0.08em] text-[#96B5A6] ${focusRing}`}>{switcher.label}</Link>
+              <Link href={paths.login} className={`block min-h-11 border-b border-white/10 px-4 py-4 text-[12px] tracking-[0.07em] text-[#BDBEBD] ${focusRing}`} prefetch={false}>{text.login}</Link>
+              <Link href={paths.pricing} className={`block min-h-11 border-b border-white/10 px-4 py-4 text-[12px] tracking-[0.07em] text-[#96B5A6] ${focusRing}`}>{text.access}</Link>
+              <Link href={switcher.href} className={`block min-h-11 px-4 py-4 text-[12px] tracking-[0.07em] text-[#96B5A6] ${focusRing}`}>{switcher.label}</Link>
             </div>
           </details>
         </div>
