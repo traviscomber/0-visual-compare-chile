@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { LocalizedLandingPage } from "@/components/localized-landing-page"
+import { PublicPlatformFooter } from "@/components/public-platform-footer"
 
 export const metadata: Metadata = {
   title: "VIDENTIA | Inteligencia de propiedad intelectual y tecnología",
@@ -26,6 +27,7 @@ export default async function SpanishPublicPage({ params }: { params: Promise<{ 
       <div id="main-content" tabIndex={-1} className="focus:outline-none">
         <LocalizedLandingPage locale="es" />
       </div>
+      <PublicPlatformFooter locale="es" />
     </>
   )
 }
