@@ -1,4 +1,5 @@
 import { LocalizedPatentsPage, patentsMetadata } from "@/components/localized-patents-page"
+import { PublicPlatformFooter } from "@/components/public-platform-footer"
 import { PublicPlatformNav } from "@/components/public-platform-nav"
 import { PublicSurfaceMotion } from "@/components/public-surface-motion"
 import { VerticalPublicHero } from "@/components/vertical-public-hero"
@@ -23,6 +24,7 @@ export default function SpanishPatentsPage() {
         />
         <LocalizedPatentsPage locale="es" showChrome={false} />
       </div>
+      <PublicPlatformFooter locale="es" />
     </>
   )
 }
