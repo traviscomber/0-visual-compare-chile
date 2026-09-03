@@ -2,6 +2,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, BellRing, BriefcaseBusiness, Building2, CalendarClock, ChevronDown, CircleDot, Database, FileSearch, FileText, Radar, Scale, Search, ShieldCheck, Users } from "lucide-react"
 import { HomeMotion } from "@/components/home-motion"
+import { TrademarkMotion } from "@/components/trademark-motion"
 import { landingCopy, localePath, type PublicLocale } from "@/lib/marketing-locale"
 
 const trustIcons = [ShieldCheck, Database, CircleDot, BellRing] as const
@@ -19,6 +20,7 @@ export function LocalizedLandingPage({ locale, showChrome = true }: { locale: Pu
   return (
     <main className="px-home">
       <HomeMotion />
+      <TrademarkMotion />
 
       {showChrome && <>
         <nav className="px-nav" aria-label={copy.navAria}>
