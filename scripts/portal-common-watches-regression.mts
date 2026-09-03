@@ -33,8 +33,19 @@ for(const forbidden of [
 for(const needle of [
   'fetch("/api/intelligence/watches"',
   'fetch("/api/intelligence/watches/signals"',
-  'Brands · Patents · Technologies',
-  'Una sola bandeja para todo lo que decides seguir.',
+  'Seguimiento en 3 pasos.',
+  'Elige qué seguir',
+  'VIDENTIA vigila',
+  'Revisa novedades',
+  'PASO 1 / NUEVO SEGUIMIENTO',
+  'A · Tipo',
+  'B · Criterio',
+  'C · Activar',
+  'Activar seguimiento',
+  'href="#novedades"',
+  'PASO 3 / NOVEDADES',
+  'Marcar revisadas',
+  'PASO 2',
   '(["brand","patent","technology"] as WatchType[])',
   'SUBTYPE_OPTIONS',
   'aria-label="Dónde buscar"',
@@ -72,4 +83,4 @@ for(const [source,label] of [[watchesApi,"watch API"],[signalsApi,"signal API"]]
   if(source.includes("createAdminClient")||source.includes("SUPABASE_SERVICE_ROLE_KEY"))fail(`${label} must remain behind authenticated RLS, not service role`)
 }
 
-console.log("Portal/Common Watches regression PASS: six-destination IA is locked, deep tools remain contextual, and brand/patent/technology watches plus scoped Chile/Global/Both technology searches are normalized through authenticated RLS facades without a destructive migration.")
+console.log("Portal/Common Watches regression PASS: the common monitoring workspace is locked to a simple 1-2-3 journey (choose, VIDENTIA watches, review changes), with A-B-C creation, six-destination IA, contextual deep tools, scoped Chile/Global/Both technology searches, and authenticated RLS facades preserved without a destructive migration.")
