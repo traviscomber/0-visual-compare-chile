@@ -15,6 +15,12 @@ export type EpoLegalEvent = {
   date: string | null
 }
 
+export type EpoEvidenceCoverage = {
+  family: "family_endpoint" | "equivalents_fallback" | "source_not_found" | "unavailable"
+  citations: "family_endpoint" | "source_not_found" | "unavailable"
+  legalEvents: "family_endpoint" | "source_not_found" | "unavailable"
+}
+
 export type EpoFamilySignal = {
   source: "epo_ops"
   sourceRecordId: string
@@ -24,6 +30,7 @@ export type EpoFamilySignal = {
   jurisdictions: string[]
   citations: string[]
   legalEvents: EpoLegalEvent[]
+  evidenceCoverage: EpoEvidenceCoverage
   retrievedAt: string
   url: string
 }
@@ -61,8 +68,30 @@ export async function searchEpoPatentFamilies(query: string, limit = 5): Promise
       evidence = await fetchFamilyEvidence(item.epodoc, token)
     } catch (error) {
       console.warn("[epo-ops] family evidence degraded", item.epodoc, error instanceof Error ? error.message : String(error))
-      const familyMembers = await fetchSimpleFamily(item.epodoc, token).catch(() => [])
-      evidence = { familyMembers, citations: [], legalEvents: [] }
+      try {
+        const familyMembers = await fetchSimpleFamily(item.epodoc, token)
+        evidence = {
+          familyMembers,
+          citations: [],
+          legalEvents: [],
+          evidenceCoverage: {
+            family: "equivalents_fallback",
+            citations: "unavailable",
+            legalEvents: "unavailable",
+          },
+        }
+      } catch {
+        evidence = {
+          familyMembers: [],
+          citations: [],
+          legalEvents: [],
+          evidenceCoverage: {
+            family: "unavailable",
+            citations: "unavailable",
+            legalEvents: "unavailable",
+          },
+        }
+      }
     }
 
     const members = unique([item.epodoc, ...evidence.familyMembers])
@@ -75,6 +104,7 @@ export async function searchEpoPatentFamilies(query: string, limit = 5): Promise
       jurisdictions: unique(members.map(member => member.slice(0, 2)).filter(value => /^[A-Z]{2}$/.test(value))),
       citations: evidence.citations.filter(citation => !members.includes(citation)).slice(0, 20),
       legalEvents: evidence.legalEvents.slice(0, 20),
+      evidenceCoverage: evidence.evidenceCoverage,
       retrievedAt: new Date().toISOString(),
       url: `https://worldwide.espacenet.com/patent/search?q=pn%3D${encodeURIComponent(item.epodoc)}`,
     })
@@ -116,6 +146,7 @@ type FamilyEvidence = {
   familyMembers: string[]
   citations: string[]
   legalEvents: EpoLegalEvent[]
+  evidenceCoverage: EpoEvidenceCoverage
 }
 
 async function fetchFamilyEvidence(epodoc: string, token: string): Promise<FamilyEvidence> {
@@ -131,7 +162,18 @@ async function fetchFamilyEvidence(epodoc: string, token: string): Promise<Famil
   }, { attempts: 3, baseDelayMs: 750, timeoutMs: TIMEOUT_MS })
 
   if (!response.ok) {
-    if (response.status === 404) return { familyMembers: [], citations: [], legalEvents: [] }
+    if (response.status === 404) {
+      return {
+        familyMembers: [],
+        citations: [],
+        legalEvents: [],
+        evidenceCoverage: {
+          family: "source_not_found",
+          citations: "source_not_found",
+          legalEvents: "source_not_found",
+        },
+      }
+    }
     throw new Error(`EPO OPS family evidence respondió ${response.status}`)
   }
 
@@ -140,6 +182,11 @@ async function fetchFamilyEvidence(epodoc: string, token: string): Promise<Famil
     familyMembers: parseFamilyMembers(xml),
     citations: parseCitations(xml),
     legalEvents: parseLegalEvents(xml),
+    evidenceCoverage: {
+      family: "family_endpoint",
+      citations: "family_endpoint",
+      legalEvents: "family_endpoint",
+    },
   }
 }
 
