@@ -1,6 +1,7 @@
 import { LocalizedTechnologiesPage, technologiesMetadata } from "@/components/localized-technologies-page"
 import { PublicPlatformFooter } from "@/components/public-platform-footer"
 import { PublicPlatformNav } from "@/components/public-platform-nav"
+import { PublicStructuredData } from "@/components/public-structured-data"
 import { PublicSurfaceMotion } from "@/components/public-surface-motion"
 import { TechnologyMotion } from "@/components/technology-motion"
 import { VerticalPublicHero } from "@/components/vertical-public-hero"
@@ -10,6 +11,7 @@ export const metadata = technologiesMetadata("es")
 export default function SpanishTechnologiesPage() {
   return (
     <>
+      <PublicStructuredData page="technologies-es" />
       <PublicPlatformNav active="technologies" locale="es" />
       <div id="main-content" data-public-surface tabIndex={-1} className="technologies-public-page focus:outline-none">
         <PublicSurfaceMotion variant="technologies" />
