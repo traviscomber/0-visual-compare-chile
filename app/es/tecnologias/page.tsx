@@ -1,6 +1,7 @@
 import { LocalizedTechnologiesPage, technologiesMetadata } from "@/components/localized-technologies-page"
 import { PublicPlatformNav } from "@/components/public-platform-nav"
 import { PublicSurfaceMotion } from "@/components/public-surface-motion"
+import { TechnologyMotion } from "@/components/technology-motion"
 import { VerticalPublicHero } from "@/components/vertical-public-hero"
 
 export const metadata = technologiesMetadata("es")
@@ -11,6 +12,7 @@ export default function SpanishTechnologiesPage() {
       <PublicPlatformNav active="technologies" locale="es" />
       <div id="main-content" data-public-surface tabIndex={-1} className="technologies-public-page focus:outline-none">
         <PublicSurfaceMotion variant="technologies" />
+        <TechnologyMotion />
         <VerticalPublicHero
           eyebrow="INTELIGENCIA TECNOLÓGICA"
           title="Mira hacia dónde se mueve la tecnología."
