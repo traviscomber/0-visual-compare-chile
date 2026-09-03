@@ -45,6 +45,7 @@ export async function GET(request: Request) {
         global_requested: parsed.data.includeGlobal,
         global_availability: review.globalEvidence.availability,
         global_families: review.globalEvidence.families.length,
+        global_family_linked_candidates: review.summary.globalFamilyLinkedCandidates,
         duration_ms: Date.now() - startedAt,
       },
     })
