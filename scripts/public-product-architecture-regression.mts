@@ -133,13 +133,12 @@ for (const [source, label] of [
   requireText(source, "tabIndex={-1}", label)
 }
 
-for (const [source, label] of [
-  [enPage, "English legacy root"],
-  [esPage, "Spanish public root"],
-] as const) {
-  requireText(source, "PublicPlatformNav", label)
-  requireText(source, 'id="main-content"', label)
-  requireText(source, "tabIndex={-1}", label)
+for (const needle of ['href="#main-content"', 'id="main-content"', "tabIndex={-1}", "SKIP TO CONTENT"]) {
+  requireText(enPage, needle, "English legacy root")
+}
+
+for (const needle of ["PublicPlatformNav", 'id="main-content"', "tabIndex={-1}"]) {
+  requireText(esPage, needle, "Spanish public root")
 }
 
 for (const needle of ["SOURCE ≠ ANALYSIS ≠ LEGAL CONCLUSION", "Family resolution", "jurisdictions", "citations"]) requireText(patents, needle, "public patents")
