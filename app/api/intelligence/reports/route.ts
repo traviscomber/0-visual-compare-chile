@@ -11,7 +11,7 @@ export const maxDuration = 60
 
 const CreateSchema = z.discriminatedUnion("vertical", [
   z.object({ vertical: z.literal("brand"), comparisonId: z.string().uuid(), organizationId: z.string().uuid().nullable().optional(), seriesId: z.string().uuid().nullable().optional() }),
-  z.object({ vertical: z.literal("patent"), query: z.string().trim().min(3).max(240), ipc: z.string().trim().max(16).nullable().optional(), organizationId: z.string().uuid().nullable().optional(), seriesId: z.string().uuid().nullable().optional() }),
+  z.object({ vertical: z.literal("patent"), query: z.string().trim().min(3).max(240), ipc: z.string().trim().max(16).nullable().optional(), includeGlobal: z.boolean().default(false), organizationId: z.string().uuid().nullable().optional(), seriesId: z.string().uuid().nullable().optional() }),
   z.object({ vertical: z.literal("technology"), query: z.string().trim().min(2).max(160), windowDays: z.number().int().min(30).max(730).default(180), organizationId: z.string().uuid().nullable().optional(), seriesId: z.string().uuid().nullable().optional() }),
 ])
 
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     const payload = parsed.data.vertical === "brand"
       ? await buildBrandReport(auth, parsed.data.comparisonId)
       : parsed.data.vertical === "patent"
-        ? await buildPatentReport(parsed.data.query, parsed.data.ipc || null)
+        ? await buildPatentReport(parsed.data.query, parsed.data.ipc || null, parsed.data.includeGlobal)
         : await buildTechnologyReport(parsed.data.query, parsed.data.windowDays)
 
     const previous = await findPrevious(auth.supabase, payload.vertical, payload.subject, parsed.data.organizationId ?? null)
@@ -149,10 +149,48 @@ async function buildBrandReport(auth: Extract<Awaited<ReturnType<typeof requireU
   }
 }
 
-async function buildPatentReport(query: string, ipc: string | null): Promise<ReportPayload> {
-  const review = await buildPatentPriorArtReview(query, ipc, 30)
-  const evidence = review.candidates.slice(0, 25).map(item => ({ kind: "patent_record", source: "INAPI Chile", sourceRecordId: item.id, applicationNumber: item.applicationNumber, title: item.title, applicant: item.applicants, status: item.status, country: item.country, ipc: item.ipc, filingDate: item.filingDate, priorities: item.priorityClaims, familyCandidate: item.familyCandidate, technicalScore: item.technicalScore, reviewLevel: item.reviewLevel, reasons: item.reasons, sourceUrl: item.sourceUrl }))
+async function buildPatentReport(query: string, ipc: string | null, includeGlobal: boolean): Promise<ReportPayload> {
+  const review = await buildPatentPriorArtReview(query, ipc, 30, { includeGlobal })
+  const localEvidence = review.candidates.slice(0, 25).map(item => ({
+    kind: "patent_record",
+    source: "INAPI Chile",
+    sourceRecordId: item.id,
+    applicationNumber: item.applicationNumber,
+    title: item.title,
+    applicant: item.applicants,
+    status: item.status,
+    country: item.country,
+    ipc: item.ipc,
+    filingDate: item.filingDate,
+    priorities: item.priorityClaims,
+    familyCandidate: item.familyCandidate,
+    technicalScore: item.technicalScore,
+    reviewLevel: item.reviewLevel,
+    reasons: item.reasons,
+    observedChangeCount: item.observedChangeCount,
+    observedChanges: item.observedChanges,
+    sourceUrl: item.sourceUrl,
+  }))
+  const globalEvidence = review.globalEvidence.families.slice(0, 10).map(family => ({
+    kind: "patent_family",
+    source: "EPO OPS",
+    sourceRecordId: family.sourceRecordId,
+    publication: family.publication,
+    title: family.title,
+    familyMembers: family.familyMembers,
+    jurisdictions: family.jurisdictions,
+    citations: family.citations,
+    legalEvents: family.legalEvents,
+    evidenceCoverage: family.evidenceCoverage,
+    retrievedAt: family.retrievedAt,
+    sourceUrl: family.url,
+  }))
+  const evidence = [...localEvidence, ...globalEvidence]
   const close = review.candidates.filter(item => item.reviewLevel === "close_review")
+  const globalSummary = includeGlobal
+    ? `Cobertura EPO OPS: ${review.globalEvidence.availability}; ${review.globalEvidence.families.length} familia${review.globalEvidence.families.length === 1 ? "" : "s"} observada${review.globalEvidence.families.length === 1 ? "" : "s"}.`
+    : "Cobertura EPO OPS no solicitada para este snapshot."
+
   return {
     vertical: "patent",
     subject: review.query,
@@ -163,11 +201,42 @@ async function buildPatentReport(query: string, ipc: string | null): Promise<Rep
     whatMatters: [
       `${review.summary.total} candidatos observados; ${review.summary.closeReview} requieren revisión cercana según cobertura de conceptos técnicos.`,
       review.coverage.scope,
+      globalSummary,
     ],
     evidence,
     recommendedReview: close.length ? close.slice(0, 8).map(item => `Revisar ${item.applicationNumber || item.id}: ${item.title}`) : ["No cerrar una conclusión de novedad con este corpus; ampliar cobertura y revisar IPC/prioridades."],
-    watchNext: [`Crear watch de patente/IPC para “${review.query}”.`, ...review.coverage.limitations.slice(0, 2)],
-    sourceSnapshot: { kind: "patent_prior_art", query: review.query, ipc: review.ipc, strategy: review.searchStrategy, candidateIds: review.candidates.map(item => item.id), closeReview: review.summary.closeReview, relevant: review.summary.relevant, familyCandidates: review.summary.familyCandidates, newestSync: review.coverage.newestSync },
+    watchNext: [`Crear watch de patente/IPC para “${review.query}”.`, ...review.coverage.limitations.slice(0, 2), ...review.globalEvidence.limitations.slice(0, 1)],
+    sourceSnapshot: {
+      kind: "patent_prior_art",
+      query: review.query,
+      ipc: review.ipc,
+      strategy: review.searchStrategy,
+      candidateIds: review.candidates.map(item => item.id),
+      closeReview: review.summary.closeReview,
+      relevant: review.summary.relevant,
+      familyCandidates: review.summary.familyCandidates,
+      candidatesWithObservedChanges: review.summary.candidatesWithObservedChanges,
+      observedChanges: review.summary.observedChanges,
+      changeObservationSince: review.coverage.changeObservationSince,
+      newestSync: review.coverage.newestSync,
+      globalEvidence: {
+        requested: review.globalEvidence.requested,
+        availability: review.globalEvidence.availability,
+        limitations: review.globalEvidence.limitations,
+        families: review.globalEvidence.families.map(family => ({
+          sourceRecordId: family.sourceRecordId,
+          publication: family.publication,
+          title: family.title,
+          familyMembers: family.familyMembers,
+          jurisdictions: family.jurisdictions,
+          citations: family.citations,
+          legalEvents: family.legalEvents,
+          evidenceCoverage: family.evidenceCoverage,
+          retrievedAt: family.retrievedAt,
+          url: family.url,
+        })),
+      },
+    },
   }
 }
 
@@ -216,7 +285,18 @@ function reportDiff(current: ReportPayload, previous?: Record<string, unknown>):
     const added = [...nowIds].filter(id => !oldIds.has(id)).length
     const removed = [...oldIds].filter(id => !nowIds.has(id)).length
     const closeDelta = Number(current.sourceSnapshot.closeReview || 0) - Number(previous.closeReview || 0)
-    return [`${added} candidato${added === 1 ? "" : "s"} nuevo${added === 1 ? "" : "s"}; ${removed} dejó${removed === 1 ? "" : "aron"} de aparecer en el corte actual.`, `Cambio en revisión cercana: ${closeDelta >= 0 ? "+" : ""}${closeDelta}.`]
+    const nowGlobal = asObject(current.sourceSnapshot.globalEvidence)
+    const oldGlobal = asObject(previous.globalEvidence)
+    const nowFamilies = new Set(asArray(nowGlobal.families).map(value => text(asObject(value).sourceRecordId)).filter(Boolean))
+    const oldFamilies = new Set(asArray(oldGlobal.families).map(value => text(asObject(value).sourceRecordId)).filter(Boolean))
+    const addedFamilies = [...nowFamilies].filter(id => !oldFamilies.has(id)).length
+    const removedFamilies = [...oldFamilies].filter(id => !nowFamilies.has(id)).length
+    const globalChanged = Boolean(nowGlobal.requested || oldGlobal.requested)
+    return [
+      `${added} candidato${added === 1 ? "" : "s"} nuevo${added === 1 ? "" : "s"}; ${removed} dejó${removed === 1 ? "" : "aron"} de aparecer en el corte actual.`,
+      `Cambio en revisión cercana: ${closeDelta >= 0 ? "+" : ""}${closeDelta}.`,
+      ...(globalChanged ? [`Familias EPO observadas: +${addedFamilies} nuevas; -${removedFamilies} respecto del snapshot anterior. Cobertura actual: ${String(nowGlobal.availability || "no solicitada")}.`] : []),
+    ]
   }
   if (current.vertical === "technology") {
     return [`Tendencia: ${String(previous.trend || "sin base")} → ${String(current.sourceSnapshot.trend || "sin base")}.`, `Patentes recientes: ${Number(previous.recentPatents || 0)} → ${Number(current.sourceSnapshot.recentPatents || 0)}; publicaciones: ${Number(previous.currentPublications || 0)} → ${Number(current.sourceSnapshot.currentPublications || 0)}.`]
