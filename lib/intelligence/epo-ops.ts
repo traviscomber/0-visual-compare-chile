@@ -15,8 +15,16 @@ export type EpoLegalEvent = {
   date: string | null
 }
 
+export type EpoPriorityClaim = {
+  country: string
+  number: string
+  kind: string | null
+  date: string | null
+}
+
 export type EpoEvidenceCoverage = {
   family: "family_endpoint" | "equivalents_fallback" | "source_not_found" | "unavailable"
+  priorities: "family_endpoint" | "source_not_found" | "unavailable"
   citations: "family_endpoint" | "source_not_found" | "unavailable"
   legalEvents: "family_endpoint" | "source_not_found" | "unavailable"
 }
@@ -28,6 +36,7 @@ export type EpoFamilySignal = {
   title: string
   familyMembers: string[]
   jurisdictions: string[]
+  priorityClaims: EpoPriorityClaim[]
   citations: string[]
   legalEvents: EpoLegalEvent[]
   evidenceCoverage: EpoEvidenceCoverage
@@ -72,10 +81,12 @@ export async function searchEpoPatentFamilies(query: string, limit = 5): Promise
         const familyMembers = await fetchSimpleFamily(item.epodoc, token)
         evidence = {
           familyMembers,
+          priorityClaims: [],
           citations: [],
           legalEvents: [],
           evidenceCoverage: {
             family: "equivalents_fallback",
+            priorities: "unavailable",
             citations: "unavailable",
             legalEvents: "unavailable",
           },
@@ -83,10 +94,12 @@ export async function searchEpoPatentFamilies(query: string, limit = 5): Promise
       } catch {
         evidence = {
           familyMembers: [],
+          priorityClaims: [],
           citations: [],
           legalEvents: [],
           evidenceCoverage: {
             family: "unavailable",
+            priorities: "unavailable",
             citations: "unavailable",
             legalEvents: "unavailable",
           },
@@ -102,6 +115,7 @@ export async function searchEpoPatentFamilies(query: string, limit = 5): Promise
       title: item.title || `Global patent family ${item.epodoc}`,
       familyMembers: members,
       jurisdictions: unique(members.map(member => member.slice(0, 2)).filter(value => /^[A-Z]{2}$/.test(value))),
+      priorityClaims: evidence.priorityClaims.slice(0, 30),
       citations: evidence.citations.filter(citation => !members.includes(citation)).slice(0, 20),
       legalEvents: evidence.legalEvents.slice(0, 20),
       evidenceCoverage: evidence.evidenceCoverage,
@@ -144,6 +158,7 @@ async function getAccessToken() {
 
 type FamilyEvidence = {
   familyMembers: string[]
+  priorityClaims: EpoPriorityClaim[]
   citations: string[]
   legalEvents: EpoLegalEvent[]
   evidenceCoverage: EpoEvidenceCoverage
@@ -165,10 +180,12 @@ async function fetchFamilyEvidence(epodoc: string, token: string): Promise<Famil
     if (response.status === 404) {
       return {
         familyMembers: [],
+        priorityClaims: [],
         citations: [],
         legalEvents: [],
         evidenceCoverage: {
           family: "source_not_found",
+          priorities: "source_not_found",
           citations: "source_not_found",
           legalEvents: "source_not_found",
         },
@@ -180,10 +197,12 @@ async function fetchFamilyEvidence(epodoc: string, token: string): Promise<Famil
   const xml = await response.text()
   return {
     familyMembers: parseFamilyMembers(xml),
+    priorityClaims: parsePriorityClaims(xml),
     citations: parseCitations(xml),
     legalEvents: parseLegalEvents(xml),
     evidenceCoverage: {
       family: "family_endpoint",
+      priorities: "family_endpoint",
       citations: "family_endpoint",
       legalEvents: "family_endpoint",
     },
@@ -234,6 +253,25 @@ function parseFamilyMembers(xml: string) {
     if (reference) members.push(reference)
   }
   return unique(members)
+}
+
+function parsePriorityClaims(xml: string): EpoPriorityClaim[] {
+  const claims: EpoPriorityClaim[] = []
+  for (const block of tagBlocks(xml, "priority-claim")) {
+    const documentIds = tagBlocks(block, "document-id")
+    const document = documentIds.find(item => /document-id-type=["']docdb["']/i.test(item)) ?? documentIds[0]
+    if (!document) continue
+    const country = firstTagText(document, "country")?.toUpperCase()
+    const number = firstTagText(document, "doc-number")
+    if (!country || !number) continue
+    claims.push({
+      country,
+      number,
+      kind: firstTagText(document, "kind"),
+      date: normalizeDate(firstTagText(document, "date")),
+    })
+  }
+  return dedupeBy(claims, claim => `${claim.country}:${claim.number}:${claim.kind ?? ""}:${claim.date ?? ""}`)
 }
 
 function parseCitations(xml: string) {

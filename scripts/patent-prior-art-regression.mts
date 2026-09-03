@@ -18,6 +18,13 @@ for(const needle of [
   "parsePriorityClaims",
   "pctApplicationDate",
   "familyCandidate",
+  "globalFamilyMatches",
+  "matchGlobalFamilies",
+  "priorityClaimsMatch",
+  "priorityNumberVariants",
+  "globalFamilyLinkedCandidates",
+  "Vínculo EPO por prioridad observada:",
+  "Los vínculos INAPI ↔ EPO se declaran sólo cuando una prioridad observada coincide por país, fecha y variante normalizada del número",
   'if (score >= 65) return "close_review"',
   'source: "INAPI Chile"',
   "loadGlobalPatentEvidence",
@@ -51,15 +58,21 @@ for(const needle of [
 for(const needle of [
   "/rest-services/family/publication/docdb/",
   "/biblio,legal",
+  "EpoPriorityClaim",
   "parseFamilyMembers",
+  "parsePriorityClaims",
   "parseCitations",
   "parseLegalEvents",
   "familyMembers",
   "jurisdictions",
+  "priorityClaims",
   "citations",
   "legalEvents",
   "evidenceCoverage",
   'family: "family_endpoint"',
+  'priorities: "family_endpoint"',
+  'priorities: "source_not_found"',
+  'priorities: "unavailable"',
   'family: "equivalents_fallback"',
   'family: "source_not_found"',
   'family: "unavailable"',
@@ -79,6 +92,7 @@ for(const needle of [
   "observed_change_events",
   "global_requested",
   "global_availability",
+  "global_family_linked_candidates",
 ])requireText(route,needle,"prior-art API")
 if(route.includes("createAdminClient")||route.includes("SUPABASE_SERVICE_ROLE_KEY"))fail("route must authenticate user and delegate server-only enrichment; it must not expose service-role handling")
 
@@ -110,4 +124,4 @@ for(const needle of [
   "Crear reporte",
 ])requireText(page,needle,"prior-art UI")
 
-console.log("Patent prior-art regression PASS: local evidence remains canonical, observed INAPI snapshot changes are traceable without being misrepresented as complete legal history, global EPO OPS family/citation/legal-event evidence preserves explicit source-coverage state, the UI groups observed family evidence by jurisdiction, and no observed legal event is presented as current legal status.")
+console.log("Patent prior-art regression PASS: local evidence remains canonical, observed INAPI snapshot changes are traceable, EPO family priorities carry explicit coverage, INAPI candidates link to retrieved EPO families only through deterministic observed-priority matches, linkage telemetry is preserved, and no missing link or legal event is presented as a legal conclusion.")

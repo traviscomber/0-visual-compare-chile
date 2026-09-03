@@ -1,7 +1,7 @@
 import "server-only"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { searchPatentsLocal, type PatentSearchHit } from "@/lib/inapi/patent-search"
-import { hasEpoOpsCredentials, searchEpoPatentFamilies, type EpoFamilySignal } from "@/lib/intelligence/epo-ops"
+import { hasEpoOpsCredentials, searchEpoPatentFamilies, type EpoFamilySignal, type EpoPriorityClaim } from "@/lib/intelligence/epo-ops"
 
 const STOPWORDS = new Set([
   "para","como","sobre","entre","desde","hasta","bajo","alto","baja","sistema","metodo","método","proceso","dispositivo","aparato","equipo","mediante","with","from","into","using","system","method","process","device","apparatus","equipment","low","high","the","and","for","that","this","una","uno","unos","unas","del","las","los","que","con","por","sin","sus","una","un",
@@ -29,6 +29,14 @@ export type ObservedPatentChange = {
   sourceUrl: string | null
 }
 
+export type GlobalFamilyMatch = {
+  sourceRecordId: string
+  publication: string
+  matchedPriorities: Array<{ country: string; localNumber: string; epoNumber: string; date: string }>
+  jurisdictions: string[]
+  evidenceCoverage: EpoFamilySignal["evidenceCoverage"]
+}
+
 export type GlobalPatentEvidence = {
   requested: boolean
   source: "EPO OPS"
@@ -48,6 +56,7 @@ export type PriorArtCandidate = PatentSearchHit & {
   prioritiesRaw: string | null
   priorityClaims: PriorityClaim[]
   familyCandidate: { key: string; sizeInResult: number } | null
+  globalFamilyMatches: GlobalFamilyMatch[]
   typeName: string | null
   subtypeName: string | null
   observedChangeCount: number
@@ -60,7 +69,7 @@ export type PriorArtReview = {
   concepts: string[]
   searchStrategy: "full_query" | "concept_fallback" | "hybrid"
   candidates: PriorArtCandidate[]
-  summary: { total: number; closeReview: number; relevant: number; background: number; familyCandidates: number; candidatesWithObservedChanges: number; observedChanges: number }
+  summary: { total: number; closeReview: number; relevant: number; background: number; familyCandidates: number; candidatesWithObservedChanges: number; observedChanges: number; globalFamilyLinkedCandidates: number }
   coverage: { source: "INAPI Chile"; scope: string; limitations: string[]; newestSync: string | null; changeObservationSince: string | null }
   globalEvidence: GlobalPatentEvidence
   generatedAt: string
@@ -189,7 +198,7 @@ export async function buildPatentPriorArtReview(
   const familyCounts = new Map<string, number>()
   for (const item of preliminary) if (item.familyKey) familyCounts.set(item.familyKey, (familyCounts.get(item.familyKey) ?? 0) + 1)
 
-  const candidates: PriorArtCandidate[] = preliminary
+  const candidatesBeforeGlobal = preliminary
     .sort((a, b) => b.technicalScore - a.technicalScore || (b.filingDate ?? "").localeCompare(a.filingDate ?? ""))
     .slice(0, Math.max(1, Math.min(limit, 50)))
     .map(({ familyKey, ...item }) => ({
@@ -198,8 +207,18 @@ export async function buildPatentPriorArtReview(
     }))
 
   const strategy: PriorArtReview["searchStrategy"] = full.hits.length === 0 ? "concept_fallback" : shouldFallback ? "hybrid" : "full_query"
-  const newestSync = [...new Set(candidates.map(item => item.lastSyncedAt).filter((value): value is string => Boolean(value)))].sort().at(-1) ?? full.newestSync
   const globalEvidence = await globalEvidencePromise
+  const candidates: PriorArtCandidate[] = candidatesBeforeGlobal.map(item => {
+    const globalFamilyMatches = matchGlobalFamilies(item.priorityClaims, globalEvidence.families)
+    return {
+      ...item,
+      globalFamilyMatches,
+      reasons: globalFamilyMatches.length
+        ? [...item.reasons, `Vínculo EPO por prioridad observada: ${globalFamilyMatches.map(match => match.publication).slice(0, 3).join(", ")}`]
+        : item.reasons,
+    }
+  })
+  const newestSync = [...new Set(candidates.map(item => item.lastSyncedAt).filter((value): value is string => Boolean(value)))].sort().at(-1) ?? full.newestSync
 
   return {
     query: trimmed,
@@ -215,6 +234,7 @@ export async function buildPatentPriorArtReview(
       familyCandidates: new Set(candidates.map(item => item.familyCandidate?.key).filter(Boolean)).size,
       candidatesWithObservedChanges: candidates.filter(item => item.observedChangeCount > 0).length,
       observedChanges: candidates.reduce((sum, item) => sum + item.observedChangeCount, 0),
+      globalFamilyLinkedCandidates: candidates.filter(item => item.globalFamilyMatches.length > 0).length,
     },
     coverage: {
       source: "INAPI Chile",
@@ -223,6 +243,7 @@ export async function buildPatentPriorArtReview(
         "Una coincidencia es un candidato de prior art para revisión, no una conclusión sobre novedad o actividad inventiva.",
         "Los cambios observados comparan snapshots sucesivos del dataset oficial desde que VIDENTIA inicializó su baseline; no reconstruyen la historia completa del expediente.",
         "Los grupos de familia locales se infieren desde prioridades observadas en INAPI y no sustituyen una familia global consolidada.",
+        "Los vínculos INAPI ↔ EPO se declaran sólo cuando una prioridad observada coincide por país, fecha y variante normalizada del número dentro de las familias EPO recuperadas; la ausencia de vínculo no demuestra ausencia de familia global.",
         "Los eventos jurídicos EPO se presentan como eventos de fuente; no se sintetizan como estado jurídico consolidado.",
         "Las citas y familias EPO aparecen sólo cuando se solicita cobertura global y la fuente responde.",
         "Un resultado vacío no demuestra ausencia de prior art, familia, citas, derechos activos ni eventos jurídicos.",
@@ -238,7 +259,7 @@ export async function buildPatentPriorArtReview(
 
 async function loadGlobalPatentEvidence(query: string, requested: boolean): Promise<GlobalPatentEvidence> {
   const commonLimitations = [
-    "EPO OPS aporta evidencia bibliográfica, familias simples, citas observadas y eventos jurídicos de fuente; no una conclusión legal.",
+    "EPO OPS aporta evidencia bibliográfica, familias simples, prioridades, citas observadas y eventos jurídicos de fuente; no una conclusión legal.",
     "La ausencia de resultados o eventos en la respuesta no equivale a ausencia de derechos, citas o actividad en una jurisdicción.",
   ]
 
@@ -336,6 +357,66 @@ export function parsePriorityClaims(value: string | null): PriorityClaim[] {
     claims.push({ country, number, date: `${year}-${month}-${day}` })
   }
   return claims.sort((a, b) => a.date.localeCompare(b.date) || a.number.localeCompare(b.number))
+}
+
+function matchGlobalFamilies(localClaims: PriorityClaim[], families: EpoFamilySignal[]): GlobalFamilyMatch[] {
+  if (!localClaims.length || !families.length) return []
+  const matches: GlobalFamilyMatch[] = []
+
+  for (const family of families) {
+    if (family.evidenceCoverage.priorities !== "family_endpoint" || !family.priorityClaims.length) continue
+    const matchedPriorities: GlobalFamilyMatch["matchedPriorities"] = []
+    for (const local of localClaims) {
+      if (!local.country) continue
+      for (const epo of family.priorityClaims) {
+        if (!priorityClaimsMatch(local, epo)) continue
+        matchedPriorities.push({ country: local.country, localNumber: local.number, epoNumber: epo.number, date: local.date })
+        break
+      }
+    }
+    if (!matchedPriorities.length) continue
+    matches.push({
+      sourceRecordId: family.sourceRecordId,
+      publication: family.publication,
+      matchedPriorities,
+      jurisdictions: family.jurisdictions,
+      evidenceCoverage: family.evidenceCoverage,
+    })
+  }
+
+  return matches.sort((a, b) => b.matchedPriorities.length - a.matchedPriorities.length || a.publication.localeCompare(b.publication))
+}
+
+function priorityClaimsMatch(local: PriorityClaim, epo: EpoPriorityClaim) {
+  if (!local.country || local.country.toUpperCase() !== epo.country.toUpperCase()) return false
+  if (epo.date && local.date !== epo.date) return false
+  const localVariants = priorityNumberVariants(local.country, local.number, local.date)
+  const epoVariants = priorityNumberVariants(epo.country, epo.number, epo.date)
+  return [...localVariants].some(value => epoVariants.has(value))
+}
+
+function priorityNumberVariants(country: string, number: string, date: string | null) {
+  const result = new Set<string>()
+  const normalized = normalizePriorityNumber(number)
+  const digits = number.replace(/\D/g, "")
+  if (normalized) result.add(normalized)
+  if (digits) result.add(digits)
+
+  const slashParts = number.split("/")
+  if (slashParts.length > 1) {
+    const serial = slashParts.at(-1)?.replace(/\D/g, "") ?? ""
+    if (serial) {
+      result.add(serial)
+      if (country.toUpperCase() === "US" && date && /^\d{4}-/.test(date)) result.add(`${serial}${date.slice(2, 4)}`)
+    }
+  }
+
+  if (/\.\d\s*$/.test(number)) {
+    const withoutCheckDigit = number.replace(/\.\d\s*$/, "").replace(/\D/g, "")
+    if (withoutCheckDigit) result.add(withoutCheckDigit)
+  }
+
+  return result
 }
 
 function normalizeText(value: string) {
