@@ -1,6 +1,5 @@
 import Link from "next/link"
-import { ArrowRight, Fingerprint, ImageIcon, Search, ShieldCheck } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { PublicPlatformNav } from "@/components/public-platform-nav"
 import { localePath, type PublicLocale } from "@/lib/marketing-locale"
 
 const endpoints = [
@@ -12,22 +11,146 @@ const endpoints = [
 
 const copy = {
   es: {
-    tagline: "API EMPRESARIAL · CHILE", title: "Integra inteligencia marcaria sin depender de la interfaz.", body: "Documentación técnica para equipos que necesitan integrar búsqueda, imágenes y comparación marcaria en sistemas empresariales. El acceso API se define después de revisar el caso de uso.", enterprise: "Solicitar acceso empresarial", demo: "Probar VIDENTIA", capabilities: "CAPACIDADES VERIFICADAS", contract: "CONTRATO API", contractTitle: "Rutas disponibles para integración empresarial.", contractBody: "Las operaciones protegidas usan API key, cuota y medición. La búsqueda web interna no forma parte de este contrato público.", footer: "VIDENTIA · API empresarial para Chile", capabilityItems: [["Búsqueda marcaria", "Nombre, Niza y Viena con filtros verificables."], ["Ingesta de imágenes", "Procesamiento técnico y deduplicación por hash."], ["Comparación", "Similitud, OCR, EXIF, ELA y señales forenses disponibles."], ["Control comercial", "API key, cuotas y registro de consumo en operaciones protegidas."]], descriptions: ["Estado del servicio y frescura de sincronizaciones INAPI.", "Búsqueda comercial de marcas por nombre, Niza o Viena, con filtros, cuota y medición de uso.", "Ingesta de una imagen real con SHA-256, pHash, metadatos y deduplicación.", "Compara dos imágenes previamente incorporadas y devuelve señales técnicas y contexto disponible."],
+    tagline: "ENTERPRISE API · CHILE",
+    title: "Conecta VIDENTIA con tus sistemas.",
+    body: "Integra búsqueda marcaria, imágenes y comparación con rutas empresariales verificables. El acceso API se habilita después de revisar el caso de uso.",
+    enterprise: "SOLICITAR ACCESO",
+    demo: "PROBAR VIDENTIA",
+    capabilities: "01. CAPACIDADES VERIFICADAS",
+    contract: "02. CONTRATO API",
+    contractTitle: "Rutas claras. Evidencia trazable.",
+    contractBody: "Las operaciones protegidas usan API key, cuota y medición. La búsqueda web interna no forma parte de este contrato público.",
+    footer: "VIDENTIA · API empresarial para Chile",
+    capabilityItems: [
+      ["BÚSQUEDA MARCARIA", "Nombre, Niza y Viena con filtros verificables."],
+      ["INGESTA DE IMÁGENES", "Procesamiento técnico y deduplicación por hash."],
+      ["COMPARACIÓN", "Similitud, OCR, EXIF, ELA y señales forenses disponibles."],
+      ["CONTROL COMERCIAL", "API key, cuotas y registro de consumo en operaciones protegidas."],
+    ],
+    descriptions: [
+      "Estado del servicio y frescura de sincronizaciones INAPI.",
+      "Búsqueda comercial de marcas por nombre, Niza o Viena, con filtros, cuota y medición de uso.",
+      "Ingesta de una imagen real con SHA-256, pHash, metadatos y deduplicación.",
+      "Compara dos imágenes previamente incorporadas y devuelve señales técnicas y contexto disponible.",
+    ],
   },
   en: {
-    tagline: "ENTERPRISE API · CHILE", title: "Integrate trademark intelligence without depending on the interface.", body: "Technical documentation for teams integrating trademark search, images and comparison into enterprise systems. API access is defined after reviewing the use case.", enterprise: "Request enterprise access", demo: "Try VIDENTIA", capabilities: "VERIFIED CAPABILITIES", contract: "API CONTRACT", contractTitle: "Routes available for enterprise integration.", contractBody: "Protected operations use API keys, quotas and usage metering. VIDENTIA's internal web search is not part of this public contract.", footer: "VIDENTIA · Enterprise API for Chile", capabilityItems: [["Trademark search", "Name, Nice and Vienna with verifiable filters."], ["Image ingestion", "Technical processing and hash-based deduplication."], ["Comparison", "Similarity, OCR, EXIF, ELA and available forensic signals."], ["Commercial controls", "API keys, quotas and consumption records for protected operations."]], descriptions: ["Service status and INAPI synchronization freshness.", "Commercial trademark search by name, Nice or Vienna with filters, quota and usage metering.", "Ingest a real image with SHA-256, pHash, metadata and deduplication.", "Compare two previously ingested images and return technical signals and available context."],
+    tagline: "ENTERPRISE API · CHILE",
+    title: "Connect VIDENTIA to your systems.",
+    body: "Integrate trademark search, image ingestion and comparison through verifiable enterprise routes. API access is enabled after the use case is reviewed.",
+    enterprise: "REQUEST ACCESS",
+    demo: "TRY VIDENTIA",
+    capabilities: "01. VERIFIED CAPABILITIES",
+    contract: "02. API CONTRACT",
+    contractTitle: "Clear routes. Traceable evidence.",
+    contractBody: "Protected operations use API keys, quotas and usage metering. VIDENTIA's internal web search is not part of this public contract.",
+    footer: "VIDENTIA · Enterprise API for Chile",
+    capabilityItems: [
+      ["TRADEMARK SEARCH", "Name, Nice and Vienna with verifiable filters."],
+      ["IMAGE INGESTION", "Technical processing and hash-based deduplication."],
+      ["COMPARISON", "Similarity, OCR, EXIF, ELA and available forensic signals."],
+      ["COMMERCIAL CONTROL", "API keys, quotas and consumption records for protected operations."],
+    ],
+    descriptions: [
+      "Service status and INAPI synchronization freshness.",
+      "Commercial trademark search by name, Nice or Vienna with filters, quota and usage metering.",
+      "Ingest a real image with SHA-256, pHash, metadata and deduplication.",
+      "Compare two previously ingested images and return technical signals and available context.",
+    ],
   },
 } as const
 
-const icons = [Search, ImageIcon, Fingerprint, ShieldCheck] as const
+const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#96B5A6] focus-visible:ring-offset-2 focus-visible:ring-offset-[#071119]"
 
 export function LocalizedDocsPage({ locale }: { locale: PublicLocale }) {
   const t = copy[locale]
-  return <main className="min-h-screen bg-[#F7F8F6] text-[#111827]">
-    <nav className="sticky top-0 z-50 border-b border-black/10 bg-[#F7F8F6]/95"><div className="mx-auto flex h-[72px] max-w-[1480px] items-center justify-between px-5 lg:px-10"><Link href={localePath(locale)} className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-[10px] bg-[#111827] text-sm font-semibold text-white">V</span><span><span className="block text-[15px] font-semibold tracking-[0.16em]">VIDENTIA</span><span className="mt-1 block text-[9px] uppercase tracking-[0.18em] text-[#475569]">by N3uralia</span></span></Link><Button asChild className="h-10 rounded-lg bg-[#111827] px-5 text-white shadow-none hover:bg-[#273244]"><Link href={localePath(locale, "/acceso-empresarial")}>{t.enterprise}</Link></Button></div></nav>
-    <section className="border-b border-black/10 px-5 py-20 lg:px-10 lg:py-28"><div className="mx-auto grid max-w-[1480px] gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-end"><div><p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#0F766E]">{t.tagline}</p><h1 className="mt-6 max-w-4xl text-[clamp(3rem,6vw,6.2rem)] font-normal leading-[0.95] tracking-[-0.055em]">{t.title}</h1></div><div className="max-w-2xl lg:justify-self-end"><p className="text-lg leading-8 text-[#667085]">{t.body}</p><div className="mt-7 flex gap-3"><Button asChild className="h-11 gap-2 rounded-lg bg-[#0F766E] px-5 text-white shadow-none hover:bg-[#134E4A]"><Link href={localePath(locale, "/acceso-empresarial")}>{t.enterprise}<ArrowRight className="h-4 w-4" /></Link></Button><Button asChild variant="outline" className="h-11 rounded-lg border-black/15 bg-transparent px-5"><Link href={localePath(locale, "/demo")}>{t.demo}</Link></Button></div></div></div></section>
-    <section className="bg-[#111827] px-5 py-20 text-white lg:px-10 lg:py-24"><div className="mx-auto max-w-[1480px]"><p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#63C7B8]">{t.capabilities}</p><div className="mt-10 grid border-y border-white/15 md:grid-cols-2 lg:grid-cols-4">{t.capabilityItems.map(([title, text], index) => { const Icon = icons[index]; return <article key={title} className={`py-8 lg:px-7 ${index > 0 ? "lg:border-l lg:border-white/15" : ""}`}><Icon className="h-5 w-5 text-[#63C7B8]" /><h2 className="mt-7 text-lg font-medium">{title}</h2><p className="mt-3 text-sm leading-6 text-slate-400">{text}</p></article> })}</div></div></section>
-    <section className="px-5 py-20 lg:px-10 lg:py-28"><div className="mx-auto max-w-[1480px]"><div className="grid gap-8 border-b border-black/10 pb-10 lg:grid-cols-[0.7fr_1.3fr] lg:items-end"><div><p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#0F766E]">{t.contract}</p><h2 className="mt-4 text-[clamp(2.3rem,4vw,4.5rem)] font-normal leading-[1.02] tracking-[-0.045em]">{t.contractTitle}</h2></div><p className="max-w-2xl text-lg leading-8 text-[#667085] lg:justify-self-end">{t.contractBody}</p></div><div className="divide-y divide-black/10 border-b border-black/10">{endpoints.map((item, index) => <article key={item[1]} className="grid gap-6 py-8 lg:grid-cols-[70px_1fr_1.2fr]"><span className="font-mono text-[11px] text-[#0F766E]">0{index + 1}</span><div><div className="flex items-center gap-2"><span className="rounded-md bg-[#111827] px-2.5 py-1 font-mono text-[11px] font-semibold text-white">{item[0]}</span><span className="text-xs text-[#667085]">{item[2]}</span></div><h3 className="mt-4 font-mono text-lg font-semibold">{item[1]}</h3><p className="mt-3 text-sm leading-6 text-[#667085]">{t.descriptions[index]}</p></div><pre tabIndex={0} className="overflow-x-auto rounded-xl border border-black/10 bg-[#EEF1EE] p-4 text-xs leading-6 text-[#344054]"><code>{item[3]}</code></pre></article>)}</div></div></section>
-    <footer className="border-t border-black/10 px-5 py-8 lg:px-10"><div className="mx-auto flex max-w-[1480px] flex-col gap-3 text-xs text-[#667085] sm:flex-row sm:items-center sm:justify-between"><span>{t.footer}</span><span>{locale === "es" ? "Un desarrollo de N3uralia" : "Developed by N3uralia"}</span></div></footer>
-  </main>
+
+  return (
+    <div className="min-h-screen bg-[#071119] text-[#E7DFCE]">
+      <PublicPlatformNav active="resources" locale={locale} />
+
+      <main id="main-content" tabIndex={-1} className="focus:outline-none">
+        <section className="relative overflow-hidden border-b border-[#294047] bg-[#071119] px-5 py-20 sm:px-7 lg:px-10 lg:py-24">
+          <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_32%,rgba(74,127,116,0.14),transparent_30%),linear-gradient(115deg,#071119_0%,#091A20_58%,#071119_100%)]" />
+            <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(183,211,209,.15)_1px,transparent_1px),linear-gradient(90deg,rgba(183,211,209,.08)_1px,transparent_1px)] [background-size:88px_88px] [mask-image:linear-gradient(to_right,transparent_0%,transparent_38%,black_72%,black_100%)]" />
+          </div>
+
+          <div className="relative mx-auto grid max-w-[1480px] gap-14 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+            <div>
+              <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#96B5A6]">{t.tagline}</p>
+              <h1 className="mt-6 max-w-[12ch] text-[clamp(3.2rem,5.4vw,4.85rem)] font-light leading-[0.94] tracking-[-0.055em] text-[#E7DFCE] [text-wrap:balance]">
+                {t.title}
+              </h1>
+            </div>
+
+            <div className="max-w-[620px] lg:justify-self-end lg:pb-1">
+              <p className="text-[15px] leading-7 text-[#BDBEBD] sm:text-base sm:leading-8">{t.body}</p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link href={localePath(locale, "/acceso-empresarial")} className={`inline-flex min-h-12 items-center border border-[#4A7F74] bg-[#4A7F74] px-5 text-[10px] font-medium tracking-[0.1em] text-white transition-colors hover:border-[#5D9388] hover:bg-[#5D9388] ${focusRing}`}>
+                  {t.enterprise}
+                </Link>
+                <Link href={localePath(locale, "/demo")} className={`inline-flex min-h-12 items-center border border-[#36515A] px-5 text-[10px] font-medium tracking-[0.1em] text-[#D6D9D5] transition-colors hover:border-[#96B5A6] hover:text-white ${focusRing}`}>
+                  {t.demo}
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-[#294047] bg-[#0F2A33] px-5 py-20 sm:px-7 lg:px-10 lg:py-24">
+          <div className="mx-auto max-w-[1480px]">
+            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#96B5A6]">{t.capabilities}</p>
+            <div className="mt-10 border-y border-[#36515A]">
+              {t.capabilityItems.map(([title, text], index) => (
+                <article key={title} className="grid gap-5 border-b border-[#36515A] py-7 last:border-b-0 md:grid-cols-[72px_0.8fr_1.2fr] md:items-start lg:py-8">
+                  <span className="font-mono text-[10px] tracking-[0.12em] text-[#456E8E]">0{index + 1}</span>
+                  <h2 className="text-[12px] font-medium tracking-[0.12em] text-[#E7DFCE]">{title}</h2>
+                  <p className="max-w-2xl text-sm leading-7 text-[#AEB7B5]">{text}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-[#091A20] px-5 py-20 sm:px-7 lg:px-10 lg:py-28">
+          <div className="mx-auto max-w-[1480px]">
+            <div className="grid gap-8 border-b border-[#294047] pb-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+              <div>
+                <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#96B5A6]">{t.contract}</p>
+                <h2 className="mt-5 max-w-[12ch] text-[clamp(2.6rem,4.6vw,4.5rem)] font-light leading-[0.96] tracking-[-0.05em] text-[#E7DFCE]">
+                  {t.contractTitle}
+                </h2>
+              </div>
+              <p className="max-w-2xl text-[15px] leading-7 text-[#AEB7B5] lg:justify-self-end sm:text-base sm:leading-8">{t.contractBody}</p>
+            </div>
+
+            <div className="divide-y divide-[#294047] border-b border-[#294047]">
+              {endpoints.map((item, index) => (
+                <article key={item[1]} className="grid gap-7 py-8 lg:grid-cols-[70px_0.9fr_1.25fr] lg:items-start lg:py-9">
+                  <span className="font-mono text-[10px] tracking-[0.12em] text-[#456E8E]">0{index + 1}</span>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="border border-[#4A7F74] bg-[#13272D] px-2.5 py-1 font-mono text-[10px] font-semibold tracking-[0.08em] text-[#B7D3D1]">{item[0]}</span>
+                      <span className="text-[11px] text-[#7F918F]">{item[2]}</span>
+                    </div>
+                    <h3 className="mt-5 break-all font-mono text-base font-medium text-[#E7DFCE]">{item[1]}</h3>
+                    <p className="mt-4 max-w-xl text-sm leading-7 text-[#9EAAA8]">{t.descriptions[index]}</p>
+                  </div>
+                  <pre tabIndex={0} className={`overflow-x-auto border border-[#294047] bg-[#071119] p-5 font-mono text-xs leading-6 text-[#B7D3D1] ${focusRing}`}><code>{item[3]}</code></pre>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-[#294047] bg-[#071119] px-5 py-8 sm:px-7 lg:px-10">
+        <div className="mx-auto flex max-w-[1480px] flex-col gap-3 text-[11px] text-[#7F918F] sm:flex-row sm:items-center sm:justify-between">
+          <span>{t.footer}</span>
+          <span>{locale === "es" ? "Desarrollado por N3uralia" : "Developed by N3uralia"}</span>
+        </div>
+      </footer>
+    </div>
+  )
 }
