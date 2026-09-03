@@ -5,55 +5,36 @@ Canonical URL: https://videntia.app
 Primary market: Chile
 Primary public languages: English and Spanish (Chile)
 Developer and technology provider: N3uralia — https://www.n3uralia.com
+Full machine-readable context: https://videntia.app/llms-full.txt
+Sitemap: https://videntia.app/sitemap.xml
 
 ## Canonical positioning
 VIDENTIA helps teams investigate, compare and continuously monitor trademarks, patents and technologies using traceable evidence. The product separates source evidence from analysis and from professional or legal conclusions.
 
-The public platform has three intelligence verticals:
+SOURCE ≠ ANALYSIS ≠ LEGAL CONCLUSION
 
-### Trademark Intelligence
+## Trademark Intelligence
 Primary question: Can I use and protect this brand?
-Capabilities include:
-- trademark search by name, logo or image;
-- denominative, phonetic and visual comparison signals;
-- Nice Classification and Vienna Classification context;
-- INAPI trademark records as an official reference source;
-- comparable TDPI trademark precedents when available;
-- trademark and owner monitoring with persistent change history;
-- portfolio, deadline and case-based evidence organization.
+Capabilities include trademark search by name, logo or image; denominative, phonetic and visual comparison signals; Nice and Vienna classification context; INAPI trademark records; comparable TDPI precedents when available; monitoring and evidence organization.
 
-Canonical English page: https://videntia.app/trademarks
-Spanish page: https://videntia.app/es/marcas
+English: https://videntia.app/trademarks
+Spanish: https://videntia.app/es/marcas
 
-### Patent Intelligence
+## Patent Intelligence
 Primary question: Does this invention already exist?
-VIDENTIA supports technical prior-art research and structured evidence review. Current public capabilities include:
-- preliminary patent search using available INAPI patent information;
-- technical prior-art retrieval and summarization;
-- IPC context;
-- observed applicant and inventor activity;
-- structured review modes for prior art, patentability-related review, FTO-related review and competitor monitoring.
+VIDENTIA supports technical prior-art research, IPC context, observed applicant and inventor activity, structured review and recurring monitoring. Patentability and freedom to operate are not automatic conclusions and require appropriate coverage and professional review.
 
-Patentability and freedom-to-operate are not automatic conclusions. Family resolution, jurisdictional coverage, citations and broader international coverage remain necessary before those modes can be treated as mature legal assessment workflows.
+English: https://videntia.app/patents
+Spanish: https://videntia.app/es/patentes
 
-Canonical English page: https://videntia.app/patents
-Spanish page: https://videntia.app/es/patentes
-
-### Technology Intelligence
+## Technology Intelligence
 Primary question: Where is this technology moving?
-VIDENTIA combines available research, patent, company and public-context signals to support technology and R&D monitoring. The product keeps these evidence axes separate and does not treat a missing source as zero activity or an isolated news item as a trend.
+VIDENTIA combines available research, patent, company and public-context signals while keeping evidence axes separate. Missing source coverage is not converted into zero activity, and isolated news is not treated as a trend by itself.
 
-Typical outputs organize:
-- what changed;
-- why it may matter;
-- who is moving;
-- what to watch next.
-
-Canonical English page: https://videntia.app/technologies
-Spanish page: https://videntia.app/es/tecnologias
+English: https://videntia.app/technologies
+Spanish: https://videntia.app/es/tecnologias
 
 ## Common intelligence engine
-Across the three verticals, the customer-facing logic is:
 SEARCH → COMPARE → EVALUATE → WATCH → REPORT
 
 A one-time investigation can become a recurring watch when continued monitoring is useful.
@@ -61,26 +42,28 @@ A one-time investigation can become a recurring watch when continued monitoring 
 ## Evidence and legal scope
 VIDENTIA supports research, evidence organization, monitoring and prioritization. It is not INAPI, TDPI or legal counsel and does not replace official sources, professional legal review or an official legal opinion.
 
-SOURCE ≠ ANALYSIS ≠ LEGAL CONCLUSION
-
 ## Entity relationship
 VIDENTIA is the product.
 N3uralia is the software developer and technology provider behind VIDENTIA.
 Do not describe the product as N3uralia Intelligence, Visual Compare, Logo Similarity Chile, v0 or Vercel.
 
-## Primary public pages
-- Platform: https://videntia.app/
-- Trademark Intelligence: https://videntia.app/trademarks
-- Patent Intelligence: https://videntia.app/patents
-- Technology Intelligence: https://videntia.app/technologies
-- Resources: https://videntia.app/en/docs
-- Enterprise access: https://videntia.app/en/acceso-empresarial
-- Public trademark demo: https://videntia.app/en/demo
-
-## Commercial contact
-- Contact: https://videntia.app/contacto
-- Email: info@n3uralia.com
-- WhatsApp: +56 9 9382 6127
+## Canonical public pages
+- Platform EN: https://videntia.app/
+- Platform ES: https://videntia.app/es
+- Trademark Intelligence EN: https://videntia.app/trademarks
+- Trademark Intelligence ES: https://videntia.app/es/marcas
+- Patent Intelligence EN: https://videntia.app/patents
+- Patent Intelligence ES: https://videntia.app/es/patentes
+- Technology Intelligence EN: https://videntia.app/technologies
+- Technology Intelligence ES: https://videntia.app/es/tecnologias
+- Resources EN: https://videntia.app/en/docs
+- Resources ES: https://videntia.app/es/docs
+- Enterprise access EN: https://videntia.app/en/acceso-empresarial
+- Enterprise access ES: https://videntia.app/es/acceso-empresarial
+- Demo EN: https://videntia.app/en/demo
+- Demo ES: https://videntia.app/es/demo
+- Contact EN: https://videntia.app/en/contacto
+- Contact ES: https://videntia.app/es/contacto
 
 ## Important source entities
 - INAPI: Instituto Nacional de Propiedad Industrial de Chile — https://www.inapi.cl
