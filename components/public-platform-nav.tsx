@@ -1,6 +1,6 @@
 import Link from "next/link"
 
-type PublicSection = "home" | "trademarks" | "patents" | "technologies"
+type PublicSection = "home" | "trademarks" | "patents" | "technologies" | "resources"
 type PublicNavLocale = "en" | "es"
 
 type PublicPlatformNavProps = {
@@ -35,7 +35,6 @@ const labels = {
     trademarks: "TRADEMARKS",
     patents: "PATENTS",
     technologies: "TECHNOLOGIES",
-    pricing: "PRICING",
     resources: "RESOURCES",
     login: "LOG IN",
     access: "REQUEST ACCESS",
@@ -46,7 +45,6 @@ const labels = {
     trademarks: "MARCAS",
     patents: "PATENTES",
     technologies: "TECNOLOGÍAS",
-    pricing: "PLANES",
     resources: "RECURSOS",
     login: "INGRESAR",
     access: "SOLICITAR ACCESO",
@@ -62,12 +60,14 @@ function languageSwitch(active: PublicSection, locale: PublicNavLocale) {
     if (active === "trademarks") return { href: "/es/marcas", label: "ES" }
     if (active === "patents") return { href: "/es/patentes", label: "ES" }
     if (active === "technologies") return { href: "/es/tecnologias", label: "ES" }
+    if (active === "resources") return { href: "/es/docs", label: "ES" }
     return { href: "/es", label: "ES" }
   }
 
   if (active === "trademarks") return { href: "/trademarks", label: "EN" }
   if (active === "patents") return { href: "/patents", label: "EN" }
   if (active === "technologies") return { href: "/technologies", label: "EN" }
+  if (active === "resources") return { href: "/en/docs", label: "EN" }
   return { href: "/", label: "EN" }
 }
 
@@ -87,10 +87,11 @@ export function PublicPlatformNav({ active = "home", locale = "en", sticky = tru
   const paths = sectionPaths[locale]
   const text = labels[locale]
   const switcher = languageSwitch(active, locale)
-  const verticals = [
+  const primary = [
     ["trademarks", text.trademarks, paths.trademarks],
     ["patents", text.patents, paths.patents],
     ["technologies", text.technologies, paths.technologies],
+    ["resources", text.resources, paths.resources],
   ] as const
 
   return (
@@ -106,7 +107,7 @@ export function PublicPlatformNav({ active = "home", locale = "en", sticky = tru
           </Link>
 
           <div className="hidden items-center gap-7 lg:flex xl:gap-9">
-            {verticals.map(([section, label, href]) => (
+            {primary.map(([section, label, href]) => (
               <Link
                 key={section}
                 href={href}
@@ -116,7 +117,6 @@ export function PublicPlatformNav({ active = "home", locale = "en", sticky = tru
                 {label}
               </Link>
             ))}
-            <Link href={paths.resources} className={`text-[10px] font-medium tracking-[0.1em] text-[#AEB7B5] transition-colors hover:text-white ${focusRing}`}>{text.resources}</Link>
           </div>
 
           <div className="hidden items-center gap-5 md:flex">
@@ -128,10 +128,9 @@ export function PublicPlatformNav({ active = "home", locale = "en", sticky = tru
           <details className="group relative md:hidden">
             <summary className={`cursor-pointer list-none border border-[#36515A] px-3.5 py-2.5 text-[9px] font-medium tracking-[0.12em] text-[#E7DFCE] [&::-webkit-details-marker]:hidden ${focusRing}`}>{text.menu}</summary>
             <div className="absolute right-0 top-[calc(100%+12px)] w-[min(84vw,320px)] border border-[#294047] bg-[#071119] p-2 shadow-2xl">
-              {verticals.map(([section, label, href]) => (
+              {primary.map(([section, label, href]) => (
                 <Link key={section} href={href} aria-current={active === section ? "page" : undefined} className={`block border-b border-white/10 px-4 py-4 text-[11px] tracking-[0.08em] ${focusRing} ${active === section ? "text-white" : "text-[#BDBEBD]"}`}>{label}</Link>
               ))}
-              <Link href={paths.resources} className={`block border-b border-white/10 px-4 py-4 text-[11px] tracking-[0.08em] text-[#BDBEBD] ${focusRing}`}>{text.resources}</Link>
               <Link href={paths.login} className={`block border-b border-white/10 px-4 py-4 text-[11px] tracking-[0.08em] text-[#BDBEBD] ${focusRing}`} prefetch={false}>{text.login}</Link>
               <Link href={paths.pricing} className={`block border-b border-white/10 px-4 py-4 text-[11px] tracking-[0.08em] text-[#96B5A6] ${focusRing}`}>{text.access}</Link>
               <Link href={switcher.href} className={`block px-4 py-4 text-[11px] tracking-[0.08em] text-[#96B5A6] ${focusRing}`}>{switcher.label}</Link>
