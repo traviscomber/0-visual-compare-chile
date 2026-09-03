@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { LocalizedDocsPage } from "@/components/localized-docs-page"
+import { PublicPlatformFooter } from "@/components/public-platform-footer"
 
 export const metadata: Metadata = {
   title: "Enterprise API",
@@ -23,5 +24,5 @@ export const metadata: Metadata = {
 }
 
 export default function EnglishDocsPage() {
-  return <LocalizedDocsPage locale="en" />
+  return <><LocalizedDocsPage locale="en" /><PublicPlatformFooter locale="en" /></>
 }
