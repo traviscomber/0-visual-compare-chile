@@ -3,11 +3,12 @@ import { readFile } from "node:fs/promises"
 function fail(message:string):never{console.error(`Patent prior-art regression FAIL: ${message}`);process.exit(1)}
 function requireText(source:string,needle:string,label:string){if(!source.includes(needle))fail(`${label} missing ${needle}`)}
 
-const [builder,epo,route,page]=await Promise.all([
+const [builder,epo,route,page,recorder]=await Promise.all([
   readFile("lib/intelligence/patent-prior-art.ts","utf8"),
   readFile("lib/intelligence/epo-ops.ts","utf8"),
   readFile("app/api/patents/prior-art/route.ts","utf8"),
   readFile("app/(app)/patentes/prior-art/page.tsx","utf8"),
+  readFile("lib/intelligence/source-change-recorder.ts","utf8"),
 ])
 
 for(const needle of [
@@ -23,9 +24,29 @@ for(const needle of [
   "hasEpoOpsCredentials",
   "searchEpoPatentFamilies(query, 3)",
   'availability: "credential_required"',
+  "intelligence_source_events",
+  'source_key", "inapi_open_data"',
+  'entity_type", "patent"',
+  "observedChangeCount",
+  "observedChanges",
+  "fieldChanges",
+  "changeObservationSince",
+  "Los cambios observados comparan snapshots sucesivos del dataset oficial",
   "Los eventos jurídicos EPO se presentan como eventos de fuente",
   "Un resultado vacío no demuestra ausencia de prior art, familia, citas, derechos activos ni eventos jurídicos.",
 ])requireText(builder,needle,"prior-art builder")
+
+for(const needle of [
+  "status_changed",
+  "registration_added",
+  "applicant_changed",
+  "classification_changed",
+  "title_changed",
+  "before_snapshot",
+  "after_snapshot",
+  "observed_at",
+  "materiality",
+])requireText(recorder,needle,"source change recorder")
 
 for(const needle of [
   "/rest-services/family/publication/docdb/",
@@ -47,6 +68,8 @@ for(const needle of [
   "Consulta de prior art inválida.",
   'includeGlobal: z.enum(["0", "1"])',
   'url.searchParams.get("global") === "1"',
+  "candidates_with_observed_changes",
+  "observed_change_events",
   "global_requested",
   "global_availability",
 ])requireText(route,needle,"prior-art API")
@@ -57,6 +80,13 @@ for(const needle of [
   "Potential prior art",
   "Revisión cercana",
   "Familias candidatas",
+  "Cambios observados",
+  "Cambios observados en fuente",
+  "Diferencias detectadas entre snapshots INAPI desde el baseline de VIDENTIA. No es la historia jurídica completa.",
+  "VIDENTIA conserva diferencias entre snapshots oficiales observados desde",
+  "Primera observación",
+  "Estado actualizado",
+  "Solicitante o titular actualizado",
   "No responde “patentable / no patentable”",
   "Activar EPO OPS",
   "esta consulta técnica también se envía a EPO OPS",
@@ -67,4 +97,4 @@ for(const needle of [
   "Crear reporte",
 ])requireText(page,needle,"prior-art UI")
 
-console.log("Patent prior-art regression PASS: local evidence remains canonical, global EPO OPS coverage is explicit opt-in, family/jurisdiction/citation/legal-event evidence degrades safely, and the UI preserves legal limits and source transparency.")
+console.log("Patent prior-art regression PASS: local evidence remains canonical, observed INAPI snapshot changes are traceable without being misrepresented as complete legal history, global EPO OPS coverage is explicit opt-in, and the UI preserves source and legal limits.")
