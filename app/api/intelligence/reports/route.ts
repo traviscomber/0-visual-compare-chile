@@ -164,6 +164,7 @@ async function buildPatentReport(query: string, ipc: string | null, includeGloba
     filingDate: item.filingDate,
     priorities: item.priorityClaims,
     familyCandidate: item.familyCandidate,
+    globalFamilyMatches: item.globalFamilyMatches,
     technicalScore: item.technicalScore,
     reviewLevel: item.reviewLevel,
     reasons: item.reasons,
@@ -179,6 +180,7 @@ async function buildPatentReport(query: string, ipc: string | null, includeGloba
     title: family.title,
     familyMembers: family.familyMembers,
     jurisdictions: family.jurisdictions,
+    priorityClaims: family.priorityClaims,
     citations: family.citations,
     legalEvents: family.legalEvents,
     evidenceCoverage: family.evidenceCoverage,
@@ -188,7 +190,7 @@ async function buildPatentReport(query: string, ipc: string | null, includeGloba
   const evidence = [...localEvidence, ...globalEvidence]
   const close = review.candidates.filter(item => item.reviewLevel === "close_review")
   const globalSummary = includeGlobal
-    ? `Cobertura EPO OPS: ${review.globalEvidence.availability}; ${review.globalEvidence.families.length} familia${review.globalEvidence.families.length === 1 ? "" : "s"} observada${review.globalEvidence.families.length === 1 ? "" : "s"}.`
+    ? `Cobertura EPO OPS: ${review.globalEvidence.availability}; ${review.globalEvidence.families.length} familia${review.globalEvidence.families.length === 1 ? "" : "s"} observada${review.globalEvidence.families.length === 1 ? "" : "s"}; ${review.summary.globalFamilyLinkedCandidates} candidato${review.summary.globalFamilyLinkedCandidates === 1 ? "" : "s"} vinculado${review.summary.globalFamilyLinkedCandidates === 1 ? "" : "s"} por prioridad observada.`
     : "Cobertura EPO OPS no solicitada para este snapshot."
 
   return {
@@ -215,6 +217,7 @@ async function buildPatentReport(query: string, ipc: string | null, includeGloba
       closeReview: review.summary.closeReview,
       relevant: review.summary.relevant,
       familyCandidates: review.summary.familyCandidates,
+      globalFamilyLinkedCandidates: review.summary.globalFamilyLinkedCandidates,
       candidatesWithObservedChanges: review.summary.candidatesWithObservedChanges,
       observedChanges: review.summary.observedChanges,
       changeObservationSince: review.coverage.changeObservationSince,
@@ -229,6 +232,7 @@ async function buildPatentReport(query: string, ipc: string | null, includeGloba
           title: family.title,
           familyMembers: family.familyMembers,
           jurisdictions: family.jurisdictions,
+          priorityClaims: family.priorityClaims,
           citations: family.citations,
           legalEvents: family.legalEvents,
           evidenceCoverage: family.evidenceCoverage,
@@ -292,10 +296,11 @@ function reportDiff(current: ReportPayload, previous?: Record<string, unknown>):
     const addedFamilies = [...nowFamilies].filter(id => !oldFamilies.has(id)).length
     const removedFamilies = [...oldFamilies].filter(id => !nowFamilies.has(id)).length
     const globalChanged = Boolean(nowGlobal.requested || oldGlobal.requested)
+    const linkedDelta = Number(current.sourceSnapshot.globalFamilyLinkedCandidates || 0) - Number(previous.globalFamilyLinkedCandidates || 0)
     return [
       `${added} candidato${added === 1 ? "" : "s"} nuevo${added === 1 ? "" : "s"}; ${removed} dejó${removed === 1 ? "" : "aron"} de aparecer en el corte actual.`,
       `Cambio en revisión cercana: ${closeDelta >= 0 ? "+" : ""}${closeDelta}.`,
-      ...(globalChanged ? [`Familias EPO observadas: +${addedFamilies} nuevas; -${removedFamilies} respecto del snapshot anterior. Cobertura actual: ${String(nowGlobal.availability || "no solicitada")}.`] : []),
+      ...(globalChanged ? [`Familias EPO observadas: +${addedFamilies} nuevas; -${removedFamilies} respecto del snapshot anterior. Cobertura actual: ${String(nowGlobal.availability || "no solicitada")}. Candidatos vinculados por prioridad: ${linkedDelta >= 0 ? "+" : ""}${linkedDelta}.`] : []),
     ]
   }
   if (current.vertical === "technology") {
