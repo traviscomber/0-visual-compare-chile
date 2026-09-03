@@ -33,51 +33,48 @@ export const metadata: Metadata = {
 
 const trademarkHeroStyles = `
 nav[aria-label="Primary navigation"] > div {
-  height: 88px !important;
-}
-
-nav[aria-label="Primary navigation"] > div > a:first-child > span:first-child {
-  transform: scale(1.08);
-  transform-origin: left center;
+  height: 80px !important;
 }
 
 @media (min-width: 1024px) {
   nav[aria-label="Primary navigation"] > div > div {
-    gap: 1.65rem !important;
-    font-size: 11px !important;
+    gap: 1.5rem !important;
+    font-size: 10px !important;
   }
 }
 
 .trademarks-public-page .px-hero {
-  min-height: calc(100svh - 88px) !important;
+  min-height: calc(100svh - 80px) !important;
   display: flex !important;
   align-items: center !important;
-  padding-top: 56px !important;
-  padding-bottom: 64px !important;
+  padding-top: 52px !important;
+  padding-bottom: 60px !important;
 }
 
 .trademarks-public-page .px-hero-grid {
   width: 100% !important;
-  grid-template-columns: minmax(0, .92fr) minmax(460px, 1.08fr) !important;
-  gap: clamp(3rem, 6vw, 7rem) !important;
+  grid-template-columns: minmax(0, .9fr) minmax(520px, 1.1fr) !important;
+  gap: clamp(3rem, 5vw, 6rem) !important;
   align-items: center !important;
 }
 
 .trademarks-public-page .px-hero-copy h1 {
-  max-width: 9ch !important;
-  font-size: clamp(4.15rem, 5.45vw, 5.75rem) !important;
-  line-height: .92 !important;
-  letter-spacing: -.058em !important;
+  max-width: 14ch !important;
+  font-size: clamp(3.35rem, 4.35vw, 4.8rem) !important;
+  line-height: .94 !important;
+  letter-spacing: -.052em !important;
+  text-wrap: balance !important;
 }
 
 .trademarks-public-page .px-lead {
-  max-width: 620px !important;
+  max-width: 600px !important;
+  margin-top: 1.65rem !important;
   font-size: 15px !important;
-  line-height: 1.85 !important;
+  line-height: 1.75 !important;
 }
 
 .trademarks-public-page .px-hero-visual {
-  min-height: 620px !important;
+  min-height: 580px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -94,9 +91,9 @@ nav[aria-label="Primary navigation"] > div > a:first-child > span:first-child {
 .trademarks-public-page .px-hero-art {
   position: relative !important;
   inset: auto !important;
-  width: min(94%, 680px) !important;
-  height: min(72vh, 610px) !important;
-  min-height: 480px !important;
+  width: min(100%, 620px) !important;
+  height: min(70vh, 580px) !important;
+  min-height: 500px !important;
   border: 0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -112,34 +109,45 @@ nav[aria-label="Primary navigation"] > div > a:first-child > span:first-child {
 }
 
 @media (max-width: 1023px) {
-  nav[aria-label="Primary navigation"] > div {
-    height: 80px !important;
-  }
-
   .trademarks-public-page .px-hero {
     min-height: auto !important;
-    padding-top: 52px !important;
+    padding-top: 48px !important;
     padding-bottom: 56px !important;
   }
 
   .trademarks-public-page .px-hero-grid {
     grid-template-columns: 1fr !important;
-    gap: 48px !important;
+    gap: 36px !important;
   }
 
   .trademarks-public-page .px-hero-copy h1 {
-    max-width: 10ch !important;
-    font-size: clamp(3.5rem, 10vw, 5.2rem) !important;
+    max-width: 14ch !important;
+    font-size: clamp(3rem, 8vw, 4.35rem) !important;
   }
 
   .trademarks-public-page .px-hero-visual {
-    min-height: 470px !important;
+    min-height: 500px !important;
   }
 
   .trademarks-public-page .px-hero-art {
-    width: min(100%, 620px) !important;
-    height: 470px !important;
+    width: min(100%, 540px) !important;
+    height: 500px !important;
     min-height: 0 !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .trademarks-public-page .px-hero-copy h1 {
+    max-width: 13ch !important;
+    font-size: clamp(2.65rem, 12.5vw, 3.65rem) !important;
+  }
+
+  .trademarks-public-page .px-hero-visual {
+    min-height: 400px !important;
+  }
+
+  .trademarks-public-page .px-hero-art {
+    height: 400px !important;
   }
 }
 `
