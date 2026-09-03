@@ -3,13 +3,15 @@ import { readFile } from "node:fs/promises"
 function fail(message:string):never{console.error(`Patent prior-art regression FAIL: ${message}`);process.exit(1)}
 function requireText(source:string,needle:string,label:string){if(!source.includes(needle))fail(`${label} missing ${needle}`)}
 
-const [builder,epo,route,page,recorder,externalVerification]=await Promise.all([
+const [builder,epo,route,page,recorder,externalVerification,literature,literaturePanel]=await Promise.all([
   readFile("lib/intelligence/patent-prior-art.ts","utf8"),
   readFile("lib/intelligence/epo-ops.ts","utf8"),
   readFile("app/api/patents/prior-art/route.ts","utf8"),
   readFile("app/(app)/patentes/prior-art/page.tsx","utf8"),
   readFile("lib/intelligence/source-change-recorder.ts","utf8"),
   readFile("components/app/patent-external-verification.tsx","utf8"),
+  readFile("lib/intelligence/patent-literature.ts","utf8"),
+  readFile("components/app/patent-literature-evidence.tsx","utf8"),
 ])
 
 for(const needle of [
@@ -32,6 +34,10 @@ for(const needle of [
   'if (score >= 65) return "close_review"',
   'source: "INAPI Chile"',
   "loadGlobalPatentEvidence",
+  "loadPatentLiteratureEvidence",
+  "includeLiterature",
+  "literatureEvidence",
+  "literatureWorks",
   "hasEpoOpsCredentials",
   'availability: "credential_required"',
   "intelligence_source_events",
@@ -45,6 +51,20 @@ for(const needle of [
   "Los eventos jurídicos EPO se presentan como eventos de fuente",
   "Un resultado vacío no demuestra ausencia de prior art, familia, citas, derechos activos ni eventos jurídicos.",
 ])requireText(builder,needle,"prior-art builder")
+
+for(const needle of [
+  "searchOpenAlexWorks",
+  "searchCrossrefWorks",
+  "Promise.allSettled",
+  'LiteratureEvidenceAvailability = "not_requested" | "available" | "partial" | "degraded"',
+  "literatureKey",
+  "normalizeDoi",
+  "mergeLiterature",
+  "La literatura científica es evidencia técnica no-patente potencial",
+  "Un resultado vacío no demuestra ausencia de literatura técnica anterior.",
+  'source: "openalex"',
+  'source: "crossref"',
+])requireText(literature,needle,"scientific literature evidence")
 
 for(const needle of [
   "status_changed",
@@ -98,12 +118,17 @@ for(const needle of [
   "patent.prior_art_review",
   "Consulta de prior art inválida.",
   'includeGlobal: z.enum(["0", "1"])',
+  'includeLiterature: z.enum(["0", "1"])',
   'url.searchParams.get("global") === "1"',
+  'url.searchParams.get("literature") === "1"',
   "candidates_with_observed_changes",
   "observed_change_events",
   "global_requested",
   "global_availability",
   "global_family_linked_candidates",
+  "literature_requested",
+  "literature_availability",
+  "literature_works",
 ])requireText(route,needle,"prior-art API")
 if(route.includes("createAdminClient")||route.includes("SUPABASE_SERVICE_ROLE_KEY"))fail("route must authenticate user and delegate server-only enrichment; it must not expose service-role handling")
 
@@ -111,8 +136,15 @@ for(const needle of [
   "Sistema de nanoburbujas de bajo consumo para oxigenar estanques de acuicultura",
   "Potential prior art",
   "Revisión cercana",
-  "Vínculos EPO",
-  "globalFamilyLinkedCandidates",
+  "Literatura NPL",
+  "OpenAlex + Crossref",
+  "includeLiterature",
+  'literature: includeLiterature ? "1" : "0"',
+  'aria-pressed={includeLiterature}',
+  "PatentLiteratureEvidencePanel",
+  "review.literatureEvidence",
+  "literatureWorks",
+  "literatura técnica no-patente indexada",
   "globalFamilyMatches",
   "EPO link",
   "Familia EPO vinculada por prioridad",
@@ -148,6 +180,18 @@ for(const needle of [
 ])requireText(page,needle,"prior-art UI")
 
 for(const needle of [
+  "Literatura científica · non-patent literature",
+  "OpenAlex",
+  "Crossref",
+  "Cobertura parcial",
+  "Fuentes degradadas",
+  "Fecha bibliográfica no disponible",
+  "DOI ·",
+  "citas indexadas",
+  "Esto no demuestra ausencia de literatura técnica anterior.",
+])requireText(literaturePanel,needle,"literature evidence UI")
+
+for(const needle of [
   "Verificación internacional",
   "Google Patents",
   "PATENTSCOPE",
@@ -161,4 +205,4 @@ for(const needle of [
   "applicationNumber",
 ])requireText(externalVerification,needle,"external patent verification")
 
-console.log("Patent prior-art regression PASS: local evidence remains canonical, EPO retrieval uses a bounded priority-first search with title/abstract fallback, observed INAPI changes and deterministic EPO links remain traceable, and compliant manual verification links expose Google Patents, PATENTSCOPE and Espacenet without automated scraping or unsupported legal conclusions.")
+console.log("Patent prior-art regression PASS: local INAPI evidence remains canonical, optional OpenAlex/Crossref non-patent literature is traceable and explicitly non-conclusive, EPO retrieval remains bounded and priority-first, observed INAPI changes and deterministic EPO links remain auditable, and manual verification links avoid automated scraping or unsupported legal conclusions.")
