@@ -37,7 +37,7 @@ export default function PatentsPage() {
     <>
       <PublicStructuredData page="patents" />
       <PublicPlatformNav active="patents" />
-      <div id="main-content" tabIndex={-1} className="patents-public-page focus:outline-none [&>main>nav]:hidden [&>main>section:first-of-type]:hidden">
+      <div id="main-content" tabIndex={-1} className="patents-public-page focus:outline-none">
         <VerticalPublicHero
           eyebrow="PATENT INTELLIGENCE"
           title="Know what exists before you invest."
@@ -48,7 +48,7 @@ export default function PatentsPage() {
           imageAlt="VIDENTIA patent intelligence object"
           imageClassName="max-h-[610px] lg:max-h-[650px]"
         />
-        <LocalizedPatentsPage locale="en" />
+        <LocalizedPatentsPage locale="en" showChrome={false} />
       </div>
     </>
   )
