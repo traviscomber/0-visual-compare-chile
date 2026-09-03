@@ -37,7 +37,7 @@ export default function TechnologiesPage() {
     <>
       <PublicStructuredData page="technologies" />
       <PublicPlatformNav active="technologies" />
-      <div id="main-content" tabIndex={-1} className="technologies-public-page focus:outline-none [&>main>nav]:hidden [&>main>section:first-of-type]:hidden">
+      <div id="main-content" tabIndex={-1} className="technologies-public-page focus:outline-none">
         <VerticalPublicHero
           eyebrow="TECHNOLOGY INTELLIGENCE"
           title="See where technology is moving."
@@ -48,7 +48,7 @@ export default function TechnologiesPage() {
           imageAlt="VIDENTIA technology intelligence object"
           imageClassName="max-h-[660px] lg:max-h-[720px]"
         />
-        <LocalizedTechnologiesPage locale="en" />
+        <LocalizedTechnologiesPage locale="en" showChrome={false} />
       </div>
     </>
   )
