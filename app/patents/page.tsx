@@ -39,58 +39,56 @@ const patentPublicFixes = `
 }
 
 nav[aria-label="Primary navigation"] > div {
-  height: 88px !important;
-}
-
-nav[aria-label="Primary navigation"] > div > a:first-child > span:first-child {
-  transform: scale(1.08);
-  transform-origin: left center;
+  height: 80px !important;
 }
 
 @media (min-width: 1024px) {
   nav[aria-label="Primary navigation"] > div > div {
-    gap: 1.65rem !important;
-    font-size: 11px !important;
+    gap: 1.5rem !important;
+    font-size: 10px !important;
   }
 }
 
 .patents-public-page > main > section:first-of-type {
-  min-height: calc(100svh - 88px);
+  min-height: calc(100svh - 80px);
   display: flex;
   align-items: center;
-  padding-top: 64px !important;
-  padding-bottom: 72px !important;
+  padding-top: 56px !important;
+  padding-bottom: 64px !important;
 }
 
 .patents-public-page > main > section:first-of-type > div {
   width: 100%;
-  grid-template-columns: minmax(0, .92fr) minmax(460px, 1.08fr) !important;
-  gap: clamp(3rem, 6vw, 7rem) !important;
+  grid-template-columns: minmax(0, .88fr) minmax(520px, 1.12fr) !important;
+  gap: clamp(3rem, 5vw, 6rem) !important;
   align-items: center !important;
 }
 
+/* Cap headline height. On laptop/desktop this should read as 3–4 lines, never 6–7. */
 .patents-public-page > main > section:first-of-type h1 {
-  max-width: 8.8ch !important;
-  font-size: clamp(4.15rem, 5.55vw, 5.8rem) !important;
-  line-height: .92 !important;
-  letter-spacing: -.058em !important;
+  max-width: 15ch !important;
+  font-size: clamp(3.35rem, 4.35vw, 4.75rem) !important;
+  line-height: .94 !important;
+  letter-spacing: -.052em !important;
+  text-wrap: balance !important;
 }
 
 .patents-public-page > main > section:first-of-type > div > div:first-child > p:nth-of-type(2) {
-  max-width: 620px !important;
+  max-width: 610px !important;
+  margin-top: 1.65rem !important;
   font-size: 15px !important;
-  line-height: 1.85 !important;
+  line-height: 1.75 !important;
 }
 
 .patents-public-page > main > section:first-of-type > div > div:last-child {
   position: relative;
-  min-height: 620px !important;
+  min-height: 590px !important;
   padding: 0 !important;
   background-color: transparent !important;
   background-image: url('/images/VidentiaPatents.svg') !important;
   background-repeat: no-repeat !important;
-  background-position: 50% 42% !important;
-  background-size: min(88%, 650px) auto !important;
+  background-position: 50% 38% !important;
+  background-size: min(92%, 620px) auto !important;
   border: 0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -102,46 +100,57 @@ nav[aria-label="Primary navigation"] > div > a:first-child > span:first-child {
 
 .patents-public-page > main > section:first-of-type > div > div:last-child > div:last-child {
   position: absolute;
-  left: 7%;
-  bottom: 10px;
-  max-width: 520px;
+  left: 50%;
+  bottom: 8px;
+  width: min(100% - 48px, 540px);
+  transform: translateX(-50%);
+}
+
+.patents-public-page > main > section:first-of-type > div > div:last-child > div:last-child p:first-child {
+  font-size: 9px !important;
+  letter-spacing: .14em !important;
 }
 
 .patents-public-page > main > section:first-of-type > div > div:last-child > div:last-child p:last-child {
-  font-size: clamp(1.35rem, 1.65vw, 1.8rem) !important;
+  margin-top: .7rem !important;
+  max-width: 30rem !important;
+  font-size: clamp(1.2rem, 1.45vw, 1.55rem) !important;
   line-height: 1.35 !important;
 }
 
 @media (max-width: 1023px) {
-  nav[aria-label="Primary navigation"] > div {
-    height: 80px !important;
-  }
-
   .patents-public-page > main > section:first-of-type {
     min-height: auto;
-    padding-top: 56px !important;
-    padding-bottom: 64px !important;
+    padding-top: 48px !important;
+    padding-bottom: 56px !important;
   }
 
   .patents-public-page > main > section:first-of-type > div {
     grid-template-columns: 1fr !important;
-    gap: 48px !important;
+    gap: 36px !important;
   }
 
   .patents-public-page > main > section:first-of-type h1 {
-    max-width: 10ch !important;
-    font-size: clamp(3.5rem, 10vw, 5.2rem) !important;
+    max-width: 15ch !important;
+    font-size: clamp(3rem, 8vw, 4.4rem) !important;
   }
 
   .patents-public-page > main > section:first-of-type > div > div:last-child {
-    min-height: 470px !important;
+    min-height: 500px !important;
     background-position: center 38% !important;
-    background-size: min(92%, 560px) auto !important;
+    background-size: min(82vw, 520px) auto !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .patents-public-page > main > section:first-of-type h1 {
+    max-width: 13ch !important;
+    font-size: clamp(2.65rem, 12.5vw, 3.65rem) !important;
   }
 
-  .patents-public-page > main > section:first-of-type > div > div:last-child > div:last-child {
-    left: 0;
-    bottom: 0;
+  .patents-public-page > main > section:first-of-type > div > div:last-child {
+    min-height: 420px !important;
+    background-size: min(84vw, 390px) auto !important;
   }
 }
 
