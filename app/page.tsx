@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { UmbrellaHomePage } from "@/components/umbrella-home-page"
 import { UmbrellaMotion } from "@/components/umbrella-motion"
 import { UmbrellaPublicHero } from "@/components/umbrella-public-hero"
+import { PublicPlatformFooter } from "@/components/public-platform-footer"
 import { PublicPlatformNav } from "@/components/public-platform-nav"
 import { PublicStructuredData } from "@/components/public-structured-data"
 
@@ -42,6 +43,7 @@ export default function RootPage() {
         <UmbrellaPublicHero />
         <UmbrellaHomePage />
       </div>
+      <PublicPlatformFooter locale="en" />
       <UmbrellaMotion />
     </>
   )
