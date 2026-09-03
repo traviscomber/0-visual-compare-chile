@@ -10,6 +10,24 @@ const STOPWORDS = new Set([
 export type PriorityClaim = { country: string | null; number: string; date: string }
 export type PatentReviewLevel = "close_review" | "relevant" | "background"
 export type GlobalEvidenceAvailability = "not_requested" | "credential_required" | "available" | "degraded"
+export type ObservedPatentChangeType = "new_record" | "status_changed" | "registration_added" | "applicant_changed" | "classification_changed" | "title_changed" | "record_updated"
+
+export type ObservedPatentFieldChange = {
+  field: string
+  before: string | null
+  after: string | null
+}
+
+export type ObservedPatentChange = {
+  eventType: ObservedPatentChangeType
+  summary: string | null
+  observedAt: string
+  sourceDate: string | null
+  materiality: "alta" | "media" | "baja"
+  changedFields: string[]
+  fieldChanges: ObservedPatentFieldChange[]
+  sourceUrl: string | null
+}
 
 export type GlobalPatentEvidence = {
   requested: boolean
@@ -32,6 +50,8 @@ export type PriorArtCandidate = PatentSearchHit & {
   familyCandidate: { key: string; sizeInResult: number } | null
   typeName: string | null
   subtypeName: string | null
+  observedChangeCount: number
+  observedChanges: ObservedPatentChange[]
 }
 
 export type PriorArtReview = {
@@ -40,20 +60,34 @@ export type PriorArtReview = {
   concepts: string[]
   searchStrategy: "full_query" | "concept_fallback" | "hybrid"
   candidates: PriorArtCandidate[]
-  summary: { total: number; closeReview: number; relevant: number; background: number; familyCandidates: number }
-  coverage: { source: "INAPI Chile"; scope: string; limitations: string[]; newestSync: string | null }
+  summary: { total: number; closeReview: number; relevant: number; background: number; familyCandidates: number; candidatesWithObservedChanges: number; observedChanges: number }
+  coverage: { source: "INAPI Chile"; scope: string; limitations: string[]; newestSync: string | null; changeObservationSince: string | null }
   globalEvidence: GlobalPatentEvidence
   generatedAt: string
 }
 
 type DetailRow = {
   id: string
+  source_record_id: string
   publication_date: string | null
   pct_application_date: string | null
   pct_publication_date: string | null
   priorities: string | null
   type_name: string | null
   subtype_name: string | null
+}
+
+type SourceEventRow = {
+  source_record_id: string
+  event_type: ObservedPatentChangeType
+  summary: string | null
+  observed_at: string
+  source_date: string | null
+  materiality: "alta" | "media" | "baja"
+  changed_fields: string[] | null
+  before_snapshot: Record<string, unknown> | null
+  after_snapshot: Record<string, unknown> | null
+  source_url: string | null
 }
 
 export async function buildPatentPriorArtReview(
@@ -85,14 +119,38 @@ export async function buildPatentPriorArtReview(
 
   const ids = [...merged.keys()]
   const details = new Map<string, DetailRow>()
+  const observedChangesBySource = new Map<string, ObservedPatentChange[]>()
+  let changeObservationSince: string | null = null
+
   if (ids.length) {
     const admin = createAdminClient()
     const { data, error } = await admin
       .from("patent_records")
-      .select("id,publication_date,pct_application_date,pct_publication_date,priorities,type_name,subtype_name")
+      .select("id,source_record_id,publication_date,pct_application_date,pct_publication_date,priorities,type_name,subtype_name")
       .in("id", ids)
     if (error) throw new Error(`Patent detail enrichment failed: ${error.message}`)
     for (const row of (data ?? []) as DetailRow[]) details.set(row.id, row)
+
+    const sourceRecordIds = [...new Set([...details.values()].map(row => row.source_record_id).filter(Boolean))]
+    if (sourceRecordIds.length) {
+      const { data: changeRows, error: changeError } = await admin
+        .from("intelligence_source_events")
+        .select("source_record_id,event_type,summary,observed_at,source_date,materiality,changed_fields,before_snapshot,after_snapshot,source_url")
+        .eq("source_key", "inapi_open_data")
+        .eq("entity_type", "patent")
+        .in("source_record_id", sourceRecordIds)
+        .order("observed_at", { ascending: false })
+        .limit(500)
+
+      if (changeError) throw new Error(`Patent observed-change enrichment failed: ${changeError.message}`)
+      for (const row of (changeRows ?? []) as SourceEventRow[]) {
+        const event = normalizeObservedChange(row)
+        const current = observedChangesBySource.get(row.source_record_id) ?? []
+        current.push(event)
+        observedChangesBySource.set(row.source_record_id, current)
+        if (!changeObservationSince || row.observed_at < changeObservationSince) changeObservationSince = row.observed_at
+      }
+    }
   }
 
   const preliminary = [...merged.values()].map(({ hit, conceptHits, fullHit }) => {
@@ -107,6 +165,7 @@ export async function buildPatentPriorArtReview(
     const priorityClaims = parsePriorityClaims(detail?.priorities ?? null)
     const familyKey = priorityClaims[0] ? `${priorityClaims[0].country ?? "XX"}:${normalizePriorityNumber(priorityClaims[0].number)}` : null
     const reasons = buildReasons({ matchedConcepts, ipc, ipcCodes: hit.ipc, priorityClaims, pctApplicationDate: detail?.pct_application_date ?? null, status: hit.status })
+    const observedChanges = detail?.source_record_id ? observedChangesBySource.get(detail.source_record_id) ?? [] : []
 
     return {
       ...hit,
@@ -122,6 +181,8 @@ export async function buildPatentPriorArtReview(
       familyKey,
       typeName: detail?.type_name ?? null,
       subtypeName: detail?.subtype_name ?? null,
+      observedChangeCount: observedChanges.length,
+      observedChanges: observedChanges.slice(0, 5),
     }
   }).filter(item => item.matchedConcepts.length > 0 || item.technicalScore >= 30)
 
@@ -152,12 +213,15 @@ export async function buildPatentPriorArtReview(
       relevant: candidates.filter(item => item.reviewLevel === "relevant").length,
       background: candidates.filter(item => item.reviewLevel === "background").length,
       familyCandidates: new Set(candidates.map(item => item.familyCandidate?.key).filter(Boolean)).size,
+      candidatesWithObservedChanges: candidates.filter(item => item.observedChangeCount > 0).length,
+      observedChanges: candidates.reduce((sum, item) => sum + item.observedChangeCount, 0),
     },
     coverage: {
       source: "INAPI Chile",
       scope: "Antecedentes observados en el corpus sincronizado de solicitudes y registros de patentes en Chile.",
       limitations: [
         "Una coincidencia es un candidato de prior art para revisión, no una conclusión sobre novedad o actividad inventiva.",
+        "Los cambios observados comparan snapshots sucesivos del dataset oficial desde que VIDENTIA inicializó su baseline; no reconstruyen la historia completa del expediente.",
         "Los grupos de familia locales se infieren desde prioridades observadas en INAPI y no sustituyen una familia global consolidada.",
         "Los eventos jurídicos EPO se presentan como eventos de fuente; no se sintetizan como estado jurídico consolidado.",
         "Las citas y familias EPO aparecen sólo cuando se solicita cobertura global y la fuente responde.",
@@ -165,6 +229,7 @@ export async function buildPatentPriorArtReview(
         "FTO y patentability requieren cobertura suficiente por jurisdicción y revisión profesional adicional.",
       ],
       newestSync,
+      changeObservationSince,
     },
     globalEvidence,
     generatedAt: new Date().toISOString(),
@@ -216,6 +281,33 @@ async function loadGlobalPatentEvidence(query: string, requested: boolean): Prom
       limitations: ["EPO OPS no respondió de forma utilizable en esta revisión; la evidencia INAPI permanece disponible.", ...commonLimitations],
     }
   }
+}
+
+function normalizeObservedChange(row: SourceEventRow): ObservedPatentChange {
+  const changedFields = Array.isArray(row.changed_fields) ? row.changed_fields.slice(0, 10) : []
+  const before = row.before_snapshot ?? {}
+  const after = row.after_snapshot ?? {}
+  return {
+    eventType: row.event_type,
+    summary: row.summary,
+    observedAt: row.observed_at,
+    sourceDate: row.source_date,
+    materiality: row.materiality,
+    changedFields,
+    fieldChanges: changedFields.slice(0, 5).map(field => ({
+      field,
+      before: observedValue(before[field]),
+      after: observedValue(after[field]),
+    })),
+    sourceUrl: row.source_url,
+  }
+}
+
+function observedValue(value: unknown): string | null {
+  if (value === null || value === undefined || value === "") return null
+  if (Array.isArray(value)) return value.map(item => String(item)).join(", ").slice(0, 240) || null
+  if (typeof value === "object") return JSON.stringify(value).slice(0, 240)
+  return String(value).slice(0, 240)
 }
 
 export function extractTechnicalConcepts(value: string) {
