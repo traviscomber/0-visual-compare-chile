@@ -16,8 +16,6 @@ const pairs: Pair[] = [
   { en: "/technologies", es: "/es/tecnologias", priority: 0.92, changeFrequency: "weekly" },
   { en: "/en/docs", es: "/es/docs", priority: 0.82, changeFrequency: "monthly" },
   { en: "/en/demo", es: "/es/demo", priority: 0.8, changeFrequency: "weekly" },
-  { en: "/en/acceso-empresarial", es: "/es/acceso-empresarial", priority: 0.72, changeFrequency: "monthly" },
-  { en: "/en/contacto", es: "/es/contacto", priority: 0.62, changeFrequency: "monthly" },
   { en: "/en/privacidad", es: "/es/privacidad", priority: 0.35, changeFrequency: "yearly" },
   { en: "/en/terminos", es: "/es/terminos", priority: 0.35, changeFrequency: "yearly" },
 ]
