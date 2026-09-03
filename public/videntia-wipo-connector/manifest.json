@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "VIDENTIA WIPO Connector",
+  "version": "0.1.0",
+  "description": "Conecta búsquedas guardadas de WIPO PATENTSCOPE con VIDENTIA sin copiar RSS manualmente.",
+  "permissions": ["storage", "tabs", "webRequest"],
+  "host_permissions": [
+    "https://patentscope.wipo.int/*",
+    "https://videntia.app/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://videntia.app/*"],
+      "js": ["videntia.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://patentscope.wipo.int/search/*"],
+      "js": ["wipo.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
