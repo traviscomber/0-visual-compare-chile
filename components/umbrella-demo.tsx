@@ -55,8 +55,8 @@ export function UmbrellaDemo({ locale = "en" }: { locale?: PublicLocale }) {
 
   return (
     <div className="border-y border-[#294047] bg-[#091A20]">
-      <div className="flex flex-col gap-4 border-b border-[#294047] px-6 py-5 sm:flex-row sm:items-end sm:justify-between sm:px-8">
-        <div className="flex flex-wrap gap-5 text-[10px] font-medium tracking-[0.1em] text-[#96B5A6]" role="tablist" aria-label="VIDENTIA demo vertical">
+      <div className="flex flex-col gap-4 border-b border-[#294047] px-5 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-8 sm:py-5">
+        <div className="flex flex-wrap gap-x-5 gap-y-1 text-[11px] font-medium tracking-[0.08em] text-[#96B5A6]" role="tablist" aria-label="VIDENTIA demo vertical">
           {demoKeys.map((key, index) => (
             <button
               key={key}
@@ -69,32 +69,32 @@ export function UmbrellaDemo({ locale = "en" }: { locale?: PublicLocale }) {
               tabIndex={active === key ? 0 : -1}
               onClick={() => setActive(key)}
               onKeyDown={(event) => handleTabKeyDown(event, index)}
-              className={`border-b py-1 text-left transition-colors duration-200 ${focusRing} ${active === key ? "border-[#96B5A6] text-white" : "border-transparent text-[#729A90] hover:text-white"}`}
+              className={`min-h-11 border-b py-2 text-left transition-colors duration-150 ${focusRing} ${active === key ? "border-[#96B5A6] text-white" : "border-transparent text-[#879A97] hover:text-white"}`}
             >
               {t.views[key].label}
             </button>
           ))}
         </div>
-        <span className="text-[9px] uppercase tracking-[0.12em] text-[#738180]">{t.note}</span>
+        <span className="text-[10px] uppercase tracking-[0.1em] text-[#879A97]">{t.note}</span>
       </div>
 
-      <div id={`videntia-demo-panel-${active}`} role="tabpanel" aria-labelledby={`videntia-demo-tab-${active}`} tabIndex={0} className={`px-6 py-8 sm:px-8 sm:py-10 ${focusRing}`}>
-        <p className="text-[10px] uppercase tracking-[0.16em] text-[#7F918F]">{view.queryLabel}</p>
-        <p className="mt-3 text-[clamp(1.9rem,3vw,2.7rem)] font-light tracking-[-0.04em] text-[#E7DFCE]">{view.query}</p>
+      <div id={`videntia-demo-panel-${active}`} role="tabpanel" aria-labelledby={`videntia-demo-tab-${active}`} tabIndex={0} className={`px-5 py-7 sm:px-8 sm:py-10 ${focusRing}`}>
+        <p className="text-[11px] uppercase tracking-[0.12em] text-[#879A97]">{view.queryLabel}</p>
+        <p className="mt-3 text-[clamp(1.8rem,8vw,2.7rem)] font-light tracking-[-0.035em] text-[#E7DFCE]">{view.query}</p>
 
-        <div className="mt-8 border-y border-[#294047] sm:grid sm:grid-cols-3">
+        <div className="mt-7 border-y border-[#294047] sm:mt-8 sm:grid sm:grid-cols-3">
           {view.rows.map((label, index) => (
             <div key={label} className="border-b border-[#294047] py-5 last:border-b-0 sm:border-b-0 sm:border-r sm:px-5 sm:last:border-r-0">
-              <span className="text-[10px] text-[#456E8E]">0{index + 1}</span>
-              <p className="mt-4 text-xs tracking-[0.06em] text-[#E7DFCE]">{label}</p>
-              <p className="mt-2 text-xs text-[#729A90]">{t.dimension}</p>
+              <span className="text-[11px] text-[#587A94]">0{index + 1}</span>
+              <p className="mt-3 text-[13px] leading-5 tracking-[0.04em] text-[#E7DFCE]">{label}</p>
+              <p className="mt-2 text-[12px] text-[#879A97]">{t.dimension}</p>
             </div>
           ))}
         </div>
 
         <div className="mt-7 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <p className="max-w-xl text-xs leading-6 text-[#7F918F]">{t.explainer}</p>
-          <Link href={view.href} className={`inline-flex min-h-11 shrink-0 items-center border border-[#4A7F74] px-4 text-[10px] font-medium tracking-[0.07em] text-white transition-colors duration-200 hover:border-[#96B5A6] hover:text-[#96B5A6] ${focusRing}`}>{view.cta}</Link>
+          <p className="max-w-xl text-[13px] leading-6 text-[#879A97]">{t.explainer}</p>
+          <Link href={view.href} className={`inline-flex min-h-12 shrink-0 items-center justify-center border border-[#4A7F74] px-4 text-[11px] font-medium tracking-[0.065em] text-white transition-colors duration-150 hover:border-[#96B5A6] hover:text-[#96B5A6] ${focusRing}`}>{view.cta}</Link>
         </div>
       </div>
     </div>
