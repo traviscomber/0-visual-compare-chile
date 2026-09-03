@@ -9,18 +9,21 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
 type PriorityClaim = { country: string | null; number: string; date: string }
-type ObservedFieldChange = { field: string; before: string | null; after: string | null }
-type ObservedChange = { eventType: "new_record" | "status_changed" | "registration_added" | "applicant_changed" | "classification_changed" | "title_changed" | "record_updated"; summary: string | null; observedAt: string; sourceDate: string | null; materiality: "alta" | "media" | "baja"; changedFields: string[]; fieldChanges: ObservedFieldChange[]; sourceUrl: string | null }
-type Candidate = { id: string; applicationNumber: string | null; registrationNumber: string | null; title: string; applicants: string | null; inventors: string | null; status: string | null; country: string | null; filingDate: string | null; registrationDate: string | null; expirationDate: string | null; ipc: string[]; sourceUrl: string | null; lastSyncedAt: string | null; technicalScore: number; reviewLevel: "close_review" | "relevant" | "background"; matchedConcepts: string[]; reasons: string[]; publicationDate: string | null; pctApplicationDate: string | null; pctPublicationDate: string | null; prioritiesRaw: string | null; priorityClaims: PriorityClaim[]; familyCandidate: { key: string; sizeInResult: number } | null; typeName: string | null; subtypeName: string | null; observedChangeCount: number; observedChanges: ObservedChange[] }
+type EpoPriorityClaim = { country: string; number: string; kind: string | null; date: string | null }
 type LegalEvent = { jurisdiction: string | null; code: string; description: string | null; date: string | null }
 type EvidenceCoverage = {
   family: "family_endpoint" | "equivalents_fallback" | "source_not_found" | "unavailable"
+  priorities: "family_endpoint" | "source_not_found" | "unavailable"
   citations: "family_endpoint" | "source_not_found" | "unavailable"
   legalEvents: "family_endpoint" | "source_not_found" | "unavailable"
 }
-type GlobalFamily = { source: "epo_ops"; sourceRecordId: string; publication: string; title: string; familyMembers: string[]; jurisdictions: string[]; citations: string[]; legalEvents: LegalEvent[]; evidenceCoverage: EvidenceCoverage; retrievedAt: string; url: string }
+type GlobalFamilyMatch = { sourceRecordId: string; publication: string; matchedPriorities: Array<{ country: string; localNumber: string; epoNumber: string; date: string }>; jurisdictions: string[]; evidenceCoverage: EvidenceCoverage }
+type ObservedFieldChange = { field: string; before: string | null; after: string | null }
+type ObservedChange = { eventType: "new_record" | "status_changed" | "registration_added" | "applicant_changed" | "classification_changed" | "title_changed" | "record_updated"; summary: string | null; observedAt: string; sourceDate: string | null; materiality: "alta" | "media" | "baja"; changedFields: string[]; fieldChanges: ObservedFieldChange[]; sourceUrl: string | null }
+type Candidate = { id: string; applicationNumber: string | null; registrationNumber: string | null; title: string; applicants: string | null; inventors: string | null; status: string | null; country: string | null; filingDate: string | null; registrationDate: string | null; expirationDate: string | null; ipc: string[]; sourceUrl: string | null; lastSyncedAt: string | null; technicalScore: number; reviewLevel: "close_review" | "relevant" | "background"; matchedConcepts: string[]; reasons: string[]; publicationDate: string | null; pctApplicationDate: string | null; pctPublicationDate: string | null; prioritiesRaw: string | null; priorityClaims: PriorityClaim[]; familyCandidate: { key: string; sizeInResult: number } | null; globalFamilyMatches: GlobalFamilyMatch[]; typeName: string | null; subtypeName: string | null; observedChangeCount: number; observedChanges: ObservedChange[] }
+type GlobalFamily = { source: "epo_ops"; sourceRecordId: string; publication: string; title: string; familyMembers: string[]; jurisdictions: string[]; priorityClaims: EpoPriorityClaim[]; citations: string[]; legalEvents: LegalEvent[]; evidenceCoverage: EvidenceCoverage; retrievedAt: string; url: string }
 type GlobalEvidence = { requested: boolean; source: "EPO OPS"; availability: "not_requested" | "credential_required" | "available" | "degraded"; families: GlobalFamily[]; limitations: string[] }
-type Review = { query: string; ipc: string | null; concepts: string[]; searchStrategy: "full_query" | "concept_fallback" | "hybrid"; candidates: Candidate[]; summary: { total: number; closeReview: number; relevant: number; background: number; familyCandidates: number; candidatesWithObservedChanges: number; observedChanges: number }; coverage: { source: string; scope: string; limitations: string[]; newestSync: string | null; changeObservationSince: string | null }; globalEvidence: GlobalEvidence; generatedAt: string; durationMs: number }
+type Review = { query: string; ipc: string | null; concepts: string[]; searchStrategy: "full_query" | "concept_fallback" | "hybrid"; candidates: Candidate[]; summary: { total: number; closeReview: number; relevant: number; background: number; familyCandidates: number; candidatesWithObservedChanges: number; observedChanges: number; globalFamilyLinkedCandidates: number }; coverage: { source: string; scope: string; limitations: string[]; newestSync: string | null; changeObservationSince: string | null }; globalEvidence: GlobalEvidence; generatedAt: string; durationMs: number }
 
 const LEVEL = {
   close_review: { label: "Revisión cercana", className: "bg-[#5A432B] text-[#E8CFAE]" },
@@ -109,7 +112,7 @@ export default function PriorArtPage() {
           <div className="mt-4 flex flex-col gap-3 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="max-w-2xl">
               <p className="text-xs font-medium text-white">Cobertura internacional</p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">Si la activas, esta consulta técnica también se envía a EPO OPS para recuperar familias simples, jurisdicciones, citas y eventos jurídicos observados.</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">Si la activas, esta consulta técnica también se envía a EPO OPS para recuperar familias, prioridades, jurisdicciones, citas y eventos jurídicos observados.</p>
             </div>
             <Button type="button" variant={includeGlobal ? "secondary" : "outline"} size="sm" aria-pressed={includeGlobal} onClick={() => setIncludeGlobal(current => !current)} className="shrink-0">
               <Globe2 className="h-4 w-4" />{includeGlobal ? "EPO OPS activado" : "Activar EPO OPS"}
@@ -126,7 +129,7 @@ export default function PriorArtPage() {
       <OperationalMetricRail>
         <OperationalMetric value={review.summary.total} label="Candidatos" detail={`${review.summary.candidatesWithObservedChanges} con cambios observados`} />
         <OperationalMetric value={review.summary.closeReview} label="Revisión cercana" detail="Mayor cobertura de conceptos técnicos" tone={review.summary.closeReview ? "warning" : "neutral"} />
-        <OperationalMetric value={review.summary.familyCandidates} label="Familias candidatas" detail="Inferidas desde prioridades INAPI" />
+        <OperationalMetric value={review.summary.globalFamilyLinkedCandidates} label="Vínculos EPO" detail={`${review.summary.familyCandidates} familias locales candidatas`} tone={review.summary.globalFamilyLinkedCandidates ? "success" : "neutral"} />
         <OperationalMetric value={review.globalEvidence.families.length} label="Familias EPO" detail={GLOBAL_STATUS[review.globalEvidence.availability]} tone={review.globalEvidence.availability === "degraded" || review.globalEvidence.availability === "credential_required" ? "warning" : review.globalEvidence.availability === "available" ? "success" : "neutral"} />
       </OperationalMetricRail>
 
@@ -143,7 +146,7 @@ export default function PriorArtPage() {
             {review.coverage.newestSync ? <p className="mt-5 border-t border-border/80 pt-4 text-[11px] text-muted-foreground">Último sync observado · {formatDate(review.coverage.newestSync)}</p> : null}
           </OperationalPanel>
           <GlobalEvidencePanel evidence={review.globalEvidence} />
-          <OperationalPanel className="mt-4"><p className="text-[10px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]">Siguiente paso</p><p className="mt-3 text-sm font-medium text-white">Guarda esta evidencia en un reporte común.</p><p className="mt-2 text-xs leading-5 text-muted-foreground">El reporte conserva la consulta, candidatos, límites y fecha como snapshot versionado.</p><Button asChild size="sm" className="mt-4"><Link href={`/reportes?create=patent&subject=${encodeURIComponent(review.query)}${review.ipc ? `&ipc=${encodeURIComponent(review.ipc)}` : ""}`}>Crear reporte</Link></Button></OperationalPanel>
+          <OperationalPanel className="mt-4"><p className="text-[10px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]">Siguiente paso</p><p className="mt-3 text-sm font-medium text-white">Guarda esta evidencia en un reporte común.</p><p className="mt-2 text-xs leading-5 text-muted-foreground">El reporte conserva la consulta, candidatos, vínculos de familia, límites y fecha como snapshot versionado.</p><Button asChild size="sm" className="mt-4"><Link href={`/reportes?create=patent&subject=${encodeURIComponent(review.query)}${review.ipc ? `&ipc=${encodeURIComponent(review.ipc)}` : ""}${review.globalEvidence.requested ? "&global=1" : ""}`}>Crear reporte</Link></Button></OperationalPanel>
         </aside>
       </section>
     </> : !loading ? <section className="py-10"><p className="max-w-2xl text-sm leading-7 text-muted-foreground">Empieza con una descripción completa. Si la frase literal no encuentra antecedentes, VIDENTIA extrae conceptos técnicos y los combina sin inventar sinónimos ni traducciones.</p></section> : null}
@@ -168,16 +171,19 @@ function GlobalFamilyRow({ family }: { family: GlobalFamily }) {
 
   return <article className="py-5">
     <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">{family.publication}</p><p className="mt-1 text-sm font-medium leading-5 text-white">{family.title}</p></div><a href={family.url} target="_blank" rel="noreferrer" aria-label={`Abrir ${family.publication} en Espacenet`} className="text-muted-foreground transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#96B5A6]"><ExternalLink className="h-4 w-4" /></a></div>
-    <p className="mt-3 text-xs text-muted-foreground">{family.familyMembers.length} miembros · {family.jurisdictions.length} jurisdicciones · {family.citations.length} citas · {family.legalEvents.length} eventos jurídicos observados</p>
+    <p className="mt-3 text-xs text-muted-foreground">{family.familyMembers.length} miembros · {family.priorityClaims.length} prioridades · {family.jurisdictions.length} jurisdicciones · {family.citations.length} citas · {family.legalEvents.length} eventos jurídicos observados</p>
 
     <div className="mt-4 border-y border-border/70 py-3">
       <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">Cobertura de evidencia</p>
-      <div className="mt-2 grid gap-2 sm:grid-cols-3">
+      <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2">
         <CoverageCell label="Familia" value={COVERAGE_LABEL[family.evidenceCoverage.family]} warning={family.evidenceCoverage.family === "unavailable"} />
+        <CoverageCell label="Prioridades" value={COVERAGE_LABEL[family.evidenceCoverage.priorities]} warning={family.evidenceCoverage.priorities === "unavailable"} />
         <CoverageCell label="Citas" value={COVERAGE_LABEL[family.evidenceCoverage.citations]} warning={family.evidenceCoverage.citations === "unavailable"} />
         <CoverageCell label="Eventos" value={COVERAGE_LABEL[family.evidenceCoverage.legalEvents]} warning={family.evidenceCoverage.legalEvents === "unavailable"} />
       </div>
     </div>
+
+    {family.priorityClaims.length ? <div className="mt-4"><p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">Prioridades EPO observadas</p><div className="mt-2 space-y-1">{family.priorityClaims.slice(0, 5).map((claim, index) => <p key={`${claim.country}:${claim.number}:${claim.date}:${index}`} className="text-[11px] leading-5 text-muted-foreground">{claim.country} · {claim.number}{claim.kind ? ` ${claim.kind}` : ""}{claim.date ? ` · ${claim.date}` : ""}</p>)}</div></div> : <p className="mt-4 text-[11px] leading-5 text-muted-foreground">{priorityCoverageSummary(family.evidenceCoverage.priorities)}</p>}
 
     {jurisdictions.length ? <div className="mt-4">
       <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">Jurisdicciones observadas</p>
@@ -200,7 +206,15 @@ function CoverageCell({ label, value, warning = false }: { label: string; value:
 
 function CandidateRow({ candidate, index }: { candidate: Candidate; index: number }) {
   const level = LEVEL[candidate.reviewLevel]
-  return <article className="py-6"><div className="grid gap-5 lg:grid-cols-[48px_minmax(0,1fr)_180px]"><span className="text-[10px] text-[#456E8E]">{String(index + 1).padStart(2, "0")}</span><div><div className="flex flex-wrap items-center gap-2"><Badge className={level.className}>{level.label}</Badge><Badge variant="outline">Score técnico {candidate.technicalScore}</Badge>{candidate.familyCandidate ? <Badge variant="secondary">Familia candidata · {candidate.familyCandidate.sizeInResult}</Badge> : null}{candidate.observedChangeCount ? <Badge variant="outline">{candidate.observedChangeCount} cambio{candidate.observedChangeCount === 1 ? "" : "s"} observado{candidate.observedChangeCount === 1 ? "" : "s"}</Badge> : null}</div><h3 className="mt-3 text-base font-medium leading-7 text-white">{candidate.title}</h3><p className="mt-1 text-xs text-muted-foreground">{candidate.applicants || "Solicitante no informado"}</p><div className="mt-4 flex flex-wrap gap-2">{candidate.ipc.slice(0, 6).map(code => <Badge key={code} variant="outline">IPC {code}</Badge>)}</div><div className="mt-4 space-y-1">{candidate.reasons.map(reason => <p key={reason} className="text-xs leading-5 text-[#BDBEBD]">• {reason}</p>)}</div>{candidate.priorityClaims.length ? <div className="mt-4 border-l-2 border-[#456E8E] pl-3"><p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">Prioridades observadas</p>{candidate.priorityClaims.slice(0, 4).map(claim => <p key={`${claim.country}:${claim.number}:${claim.date}`} className="mt-1 text-xs text-muted-foreground">{claim.country ? `${claim.country} · ` : ""}{claim.number} · {claim.date}</p>)}</div> : null}{candidate.observedChanges.length ? <ObservedChanges changes={candidate.observedChanges} total={candidate.observedChangeCount} /> : null}</div><div className="text-xs leading-6 text-muted-foreground"><p>{candidate.applicationNumber ? `Solicitud ${candidate.applicationNumber}` : "Sin número"}</p><p>{candidate.country || "País no informado"}</p><p>{candidate.filingDate ? `Presentada ${candidate.filingDate}` : "Fecha no informada"}</p><p>{candidate.status || "Estado no informado"}</p>{candidate.pctApplicationDate ? <p>PCT · {candidate.pctApplicationDate}</p> : null}{candidate.sourceUrl ? <Button asChild variant="ghost" size="sm" className="mt-3 px-0"><a href={candidate.sourceUrl} target="_blank" rel="noreferrer">Fuente <ExternalLink className="h-3.5 w-3.5" /></a></Button> : null}</div></div></article>
+  return <article className="py-6"><div className="grid gap-5 lg:grid-cols-[48px_minmax(0,1fr)_180px]"><span className="text-[10px] text-[#456E8E]">{String(index + 1).padStart(2, "0")}</span><div><div className="flex flex-wrap items-center gap-2"><Badge className={level.className}>{level.label}</Badge><Badge variant="outline">Score técnico {candidate.technicalScore}</Badge>{candidate.familyCandidate ? <Badge variant="secondary">Familia candidata · {candidate.familyCandidate.sizeInResult}</Badge> : null}{candidate.globalFamilyMatches.length ? <Badge className="bg-[#173B37] text-[#96B5A6]">EPO link · {candidate.globalFamilyMatches.length}</Badge> : null}{candidate.observedChangeCount ? <Badge variant="outline">{candidate.observedChangeCount} cambio{candidate.observedChangeCount === 1 ? "" : "s"} observado{candidate.observedChangeCount === 1 ? "" : "s"}</Badge> : null}</div><h3 className="mt-3 text-base font-medium leading-7 text-white">{candidate.title}</h3><p className="mt-1 text-xs text-muted-foreground">{candidate.applicants || "Solicitante no informado"}</p><div className="mt-4 flex flex-wrap gap-2">{candidate.ipc.slice(0, 6).map(code => <Badge key={code} variant="outline">IPC {code}</Badge>)}</div><div className="mt-4 space-y-1">{candidate.reasons.map(reason => <p key={reason} className="text-xs leading-5 text-[#BDBEBD]">• {reason}</p>)}</div>{candidate.priorityClaims.length ? <div className="mt-4 border-l-2 border-[#456E8E] pl-3"><p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">Prioridades observadas</p>{candidate.priorityClaims.slice(0, 4).map(claim => <p key={`${claim.country}:${claim.number}:${claim.date}`} className="mt-1 text-xs text-muted-foreground">{claim.country ? `${claim.country} · ` : ""}{claim.number} · {claim.date}</p>)}</div> : null}{candidate.globalFamilyMatches.length ? <GlobalFamilyMatches matches={candidate.globalFamilyMatches} /> : null}{candidate.observedChanges.length ? <ObservedChanges changes={candidate.observedChanges} total={candidate.observedChangeCount} /> : null}</div><div className="text-xs leading-6 text-muted-foreground"><p>{candidate.applicationNumber ? `Solicitud ${candidate.applicationNumber}` : "Sin número"}</p><p>{candidate.country || "País no informado"}</p><p>{candidate.filingDate ? `Presentada ${candidate.filingDate}` : "Fecha no informada"}</p><p>{candidate.status || "Estado no informado"}</p>{candidate.pctApplicationDate ? <p>PCT · {candidate.pctApplicationDate}</p> : null}{candidate.sourceUrl ? <Button asChild variant="ghost" size="sm" className="mt-3 px-0"><a href={candidate.sourceUrl} target="_blank" rel="noreferrer">Fuente <ExternalLink className="h-3.5 w-3.5" /></a></Button> : null}</div></div></article>
+}
+
+function GlobalFamilyMatches({ matches }: { matches: GlobalFamilyMatch[] }) {
+  return <div className="mt-5 border-l-2 border-[#4A7F74] pl-3">
+    <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">Familia EPO vinculada por prioridad</p>
+    <p className="mt-1 text-[11px] leading-5 text-muted-foreground">Coincidencia observada por país + fecha + número normalizado. No es una conclusión jurídica ni demuestra cobertura global completa.</p>
+    <div className="mt-3 space-y-3">{matches.slice(0, 3).map(match => <div key={match.sourceRecordId} className="border-t border-border/70 pt-3 first:border-t-0 first:pt-0"><p className="text-xs font-medium text-white">{match.publication}</p><p className="mt-1 text-[11px] leading-5 text-muted-foreground">{match.jurisdictions.length ? `${match.jurisdictions.slice(0, 8).join(" · ")} · ` : ""}{match.matchedPriorities.length} prioridad{match.matchedPriorities.length === 1 ? "" : "es"} coincidente{match.matchedPriorities.length === 1 ? "" : "s"}</p>{match.matchedPriorities.slice(0, 3).map(priority => <p key={`${match.sourceRecordId}:${priority.country}:${priority.localNumber}:${priority.date}`} className="mt-1 text-[10px] leading-5 text-[#BDBEBD]">{priority.country} · INAPI {priority.localNumber} ↔ EPO {priority.epoNumber} · {priority.date}</p>)}</div>)}</div>
+  </div>
 }
 
 function ObservedChanges({ changes, total }: { changes: ObservedChange[]; total: number }) {
@@ -237,6 +251,12 @@ function jurisdictionLegalSummary(event: LegalEvent | null, coverage: EvidenceCo
   if (coverage === "family_endpoint") return "Sin evento jurídico observado en esta respuesta EPO"
   if (coverage === "source_not_found") return "Endpoint de familia sin eventos observables para esta publicación"
   return "Cobertura de eventos jurídicos no disponible"
+}
+
+function priorityCoverageSummary(coverage: EvidenceCoverage["priorities"]) {
+  if (coverage === "family_endpoint") return "Sin prioridades observadas en esta respuesta EPO."
+  if (coverage === "source_not_found") return "El endpoint de familia no devolvió prioridades para esta publicación."
+  return "Cobertura de prioridades no disponible para esta familia."
 }
 
 function citationCoverageSummary(coverage: EvidenceCoverage["citations"]) {
