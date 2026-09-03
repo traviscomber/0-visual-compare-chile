@@ -27,7 +27,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     const alternates = { languages: { en: enUrl, "es-CL": esUrl, "x-default": enUrl } }
     return [
       { url: enUrl, changeFrequency, priority, alternates },
-      { url: esUrl, changeFrequency, priority: Math.max(priority - 0.02, 0.3), alternates },
+      { url: esUrl, changeFrequency, priority: Number(Math.max(priority - 0.02, 0.3).toFixed(2)), alternates },
     ]
   })
 }
