@@ -11,6 +11,7 @@ import {
   IntelligenceCircuitOpenError,
   startIntelligenceIngestion,
 } from "@/lib/intelligence/ingestion-observability"
+import { scanMercadoPublicoCompanyWatch } from "@/lib/intelligence/mercado-publico-company-watch"
 import { searchOpenAlexWorks } from "@/lib/intelligence/openalex"
 import { scanStrategicWatch, type StrategicWatch } from "@/lib/intelligence/strategic-watch-scanner"
 import { persistIntelligenceWatchEvents } from "@/lib/intelligence/watch-event-writer"
@@ -76,8 +77,11 @@ export async function GET(request: Request) {
       const batch = watches.slice(index, index + 3)
       const scanned = await Promise.all(batch.map(async watch => {
         const strategicSignals = await scanStrategicWatch(admin, watch) as CronSignal[]
-        const marketSignals = await scanMarketIndicators(watch)
-        return { watch, signals: [...strategicSignals, ...marketSignals] }
+        const [marketSignals, procurementSignals] = await Promise.all([
+          scanMarketIndicators(watch),
+          scanMercadoPublicoCompanyWatch(admin, watch) as Promise<CronSignal[]>,
+        ])
+        return { watch, signals: [...strategicSignals, ...marketSignals, ...procurementSignals] }
       }))
       groups.push(...scanned)
     }
