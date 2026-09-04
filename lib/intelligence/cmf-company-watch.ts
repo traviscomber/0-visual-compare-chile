@@ -1,4 +1,5 @@
 import "server-only"
+import { resolveCanonicalCompanyWatchIdentity } from "@/lib/intelligence/company-watch-identity"
 import { refreshCmfOwnerSignal } from "@/lib/intelligence/cmf"
 import { createAdminClient } from "@/lib/supabase/admin"
 
@@ -24,25 +25,11 @@ type WatchLike = {
 export async function scanCmfCompanyWatch(admin: AdminClient, watch: WatchLike): Promise<CmfCompanySignal[]> {
   if (!isCompanyWatch(watch)) return []
 
-  const normalizedQuery = normalizeName(watch.query)
-  if (!normalizedQuery) return []
+  const company = await resolveCanonicalCompanyWatchIdentity(admin, watch)
+  if (!company?.rut) return []
+  const rut = company.rut
 
-  const { data: companies, error: companyError } = await admin
-    .from("intelligence_entities")
-    .select("id,canonical_name,rut,normalized_name")
-    .eq("entity_type", "company")
-    .eq("normalized_name", normalizedQuery)
-    .not("rut", "is", null)
-    .limit(2)
-
-  if (companyError) throw companyError
-  if (!companies || companies.length !== 1) return []
-
-  const company = companies[0]
-  const rut = String(company.rut || "").trim()
-  if (!rut) return []
-
-  const refreshed = await refreshCmfOwnerSignal(String(company.id), rut)
+  const refreshed = await refreshCmfOwnerSignal(company.id, rut)
   if (!refreshed.matched) return []
 
   const { data: links, error: linksError } = await admin
@@ -69,7 +56,7 @@ export async function scanCmfCompanyWatch(admin: AdminClient, watch: WatchLike):
     signal_key: `cmf:regulatory_status:${row.source_record_id || row.id}`,
     source_key: "cmf" as const,
     event_type: "regulatory_status" as const,
-    title: row.title || `CMF · ${company.canonical_name}`,
+    title: row.title || `CMF · ${company.canonicalName}`,
     summary: row.summary || `La CMF registra evidencia pública para el RUT verificado ${rut}.`,
     source_url: row.source_url,
     occurred_at: row.occurred_at || row.observed_at,
@@ -78,10 +65,12 @@ export async function scanCmfCompanyWatch(admin: AdminClient, watch: WatchLike):
       official_source: true,
       source_record_id: row.source_record_id,
       canonical_company_id: company.id,
-      canonical_company_name: company.canonical_name,
+      canonical_company_name: company.canonicalName,
       verified_rut: rut,
       confidence: row.confidence,
-      watch_match_basis: "exact_canonical_name_plus_verified_rut",
+      watch_match_basis: company.matchBasis === "canonical_entity_id"
+        ? "canonical_entity_id_plus_verified_rut"
+        : "exact_canonical_name_plus_verified_rut",
       cmf: row.payload,
       search_scope: "chile",
     },
@@ -95,14 +84,4 @@ function isCompanyWatch(watch: WatchLike) {
     if (typeof external === "string") return false
   }
   return watch.watch_type === "company" || watch.watch_type === "competitor"
-}
-
-function normalizeName(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, " ")
-    .trim()
-    .replace(/\s+/g, " ")
 }
