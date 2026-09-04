@@ -24,12 +24,23 @@ export type SnifaTimelineMilestone = {
   relevance: "alta" | "media" | "baja"
 }
 
+export type SnifaTimelineAssessment = {
+  latestStage: string
+  latestStageLabel: string
+  latestMovementAt: string | null
+  direction: "observacion" | "escalando" | "mitigacion" | "materializado"
+  attention: "alta" | "media"
+  durationDays: number | null
+  rationale: string
+}
+
 export type SnifaTimelineCollapsedEvent = SnifaTimelineEvent & {
   timeline?: {
     canonicalCompanyId: string
     canonicalCompanyName: string | null
     expediente: string
     milestones: SnifaTimelineMilestone[]
+    assessment: SnifaTimelineAssessment
   }
 }
 
@@ -78,6 +89,7 @@ export function collapseSnifaRegulatoryEvents(events: SnifaTimelineEvent[]): Sni
     const latestByEvidence = (datedMilestones.length ? datedMilestones : milestones).at(-1)!
     const newestObserved = [...items].sort((a, b) => safeTime(b.first_seen_at) - safeTime(a.first_seen_at))[0]
     const relevance = highestRelevance(items.map(item => normalizeRelevance(item.relevance)))
+    const assessment = assessTimeline(milestones, latestByEvidence)
 
     collapsed.push({
       ...newestObserved,
@@ -85,7 +97,7 @@ export function collapseSnifaRegulatoryEvents(events: SnifaTimelineEvent[]): Sni
       source_key: "snifa_sma",
       event_type: "regulatory_timeline",
       title: `Hitos regulatorios SMA · ${identity.expediente}`,
-      summary: buildTimelineDetail(milestones),
+      summary: buildTimelineDetail(milestones, assessment),
       source_url: latestByEvidence.href || newestObserved.source_url,
       occurred_at: latestByEvidence.occurredAt || newestObserved.occurred_at,
       relevance,
@@ -98,12 +110,17 @@ export function collapseSnifaRegulatoryEvents(events: SnifaTimelineEvent[]): Sni
         expediente: identity.expediente,
         milestone_count: milestones.length,
         derived_view: true,
+        derived_attention: assessment.attention,
+        derived_direction: assessment.direction,
+        latest_regulatory_stage: assessment.latestStage,
+        latest_regulatory_movement_at: assessment.latestMovementAt,
       },
       timeline: {
         canonicalCompanyId: identity.canonicalCompanyId,
         canonicalCompanyName: identity.canonicalCompanyName,
         expediente: identity.expediente,
         milestones,
+        assessment,
       },
     })
   }
@@ -147,9 +164,33 @@ function compareMilestones(a: SnifaTimelineMilestone, b: SnifaTimelineMilestone)
   return safeTime(a.firstSeenAt) - safeTime(b.firstSeenAt)
 }
 
-function buildTimelineDetail(milestones: SnifaTimelineMilestone[]) {
-  const path = milestones.map(item => `${item.label}${item.occurredAt ? ` ${formatDate(item.occurredAt)}` : ""}`).join(" → ")
-  return `${milestones.length} hitos · ${path}`
+function assessTimeline(milestones: SnifaTimelineMilestone[], latest: SnifaTimelineMilestone): SnifaTimelineAssessment {
+  const latestStage = latest.stage
+  const direction: SnifaTimelineAssessment["direction"] = latestStage === "firm_sanction"
+    ? "materializado"
+    : latestStage === "compliance_program"
+      ? "mitigacion"
+      : milestones.length > 1
+        ? "escalando"
+        : "observacion"
+  const attention: SnifaTimelineAssessment["attention"] = ["provisional_measure", "sanctioning_proceeding", "firm_sanction"].includes(latestStage) ? "alta" : "media"
+  const dated = milestones.map(item => item.occurredAt ? safeTime(item.occurredAt) : 0).filter(time => time > 0).sort((a, b) => a - b)
+  const durationDays = dated.length > 1 ? Math.max(0, Math.round((dated.at(-1)! - dated[0]) / 86_400_000)) : null
+  const rationale = `Último hito oficial: ${STAGE_LABEL[latestStage] ?? latestStage}. Dirección derivada: ${direction}. Prioridad de revisión: ${attention}.`
+  return {
+    latestStage,
+    latestStageLabel: STAGE_LABEL[latestStage] ?? latestStage,
+    latestMovementAt: latest.occurredAt,
+    direction,
+    attention,
+    durationDays,
+    rationale,
+  }
+}
+
+function buildTimelineDetail(milestones: SnifaTimelineMilestone[], assessment: SnifaTimelineAssessment) {
+  const duration = assessment.durationDays === null ? "" : ` · ${assessment.durationDays} días entre primer y último hito`
+  return `${assessment.latestStageLabel} · dirección ${assessment.direction} · prioridad ${assessment.attention}${duration} · ${milestones.length} hitos oficiales`
 }
 
 function normalizeExpediente(value: string) {

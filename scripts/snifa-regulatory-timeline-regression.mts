@@ -31,9 +31,21 @@ assert.equal(timeline.timeline.milestones.length, 3)
 assert.deepEqual(timeline.timeline.milestones.map(item=>item.stage), ["seia_entry_requirement","sanctioning_proceeding","firm_sanction"], "milestones must follow evidence dates, not ingestion order")
 assert.equal(timeline.occurred_at, "2026-06-04", "timeline date must be the latest dated milestone")
 assert.equal(timeline.source_url, "https://snifa.sma.gob.cl/RegistroPublico/Ficha/3", "timeline opens the latest dated official evidence")
-assert.match(timeline.summary ?? "", /Requerimiento SEIA.*→.*Procedimiento sancionatorio.*→.*Sanción firme/)
+assert.equal(timeline.timeline.assessment.latestStage, "firm_sanction")
+assert.equal(timeline.timeline.assessment.latestStageLabel, "Sanción firme")
+assert.equal(timeline.timeline.assessment.direction, "materializado")
+assert.equal(timeline.timeline.assessment.attention, "alta")
+assert.equal(timeline.timeline.assessment.durationDays, 145)
+assert.match(timeline.summary ?? "", /Sanción firme · dirección materializado · prioridad alta · 145 días entre primer y último hito · 3 hitos oficiales/)
 assert.ok(collapsed.some(item => item.id === "d"), "near-but-not-exact expediente must not merge")
 assert.ok(collapsed.some(item => item.id === "e"), "non-SNIFA context must pass through unchanged")
+
+const mitigation = collapseSnifaRegulatoryEvents([
+  event({ id:"m1", watch_id:"watch-m", source_key:"snifa_sma", title:"Procedimiento", occurred_at:"2026-01-01", first_seen_at:"2026-01-02T00:00:00Z", relevance:"alta", payload:{...common, regulatory_stage:"sanctioning_proceeding"} }),
+  event({ id:"m2", watch_id:"watch-m", source_key:"snifa_sma", title:"PdC", occurred_at:"2026-02-01", first_seen_at:"2026-02-02T00:00:00Z", relevance:"media", payload:{...common, regulatory_stage:"compliance_program"} }),
+])[0]
+assert.equal(mitigation.timeline?.assessment.direction, "mitigacion", "a later compliance program must be presented as a mitigation direction, not escalation")
+assert.equal(mitigation.timeline?.assessment.attention, "media")
 
 const separateWatch = collapseSnifaRegulatoryEvents([
   event({ id:"f1", watch_id:"watch-1", source_key:"snifa_sma", title:"W1 medida", occurred_at:"2026-01-01", first_seen_at:"2026-01-01T00:00:00Z", payload:{...common, regulatory_stage:"provisional_measure"} }),
@@ -43,6 +55,7 @@ const separateWatch = collapseSnifaRegulatoryEvents([
 ])
 assert.equal(separateWatch.length, 2, "different watches must produce separate timeline rows")
 assert.ok(separateWatch.every(item => item.timeline?.milestones.length === 2), "each watch must retain only its own milestones")
+assert.ok(separateWatch.every(item => item.timeline?.assessment.direction === "escalando"), "active advancing procedures must surface as escalating")
 assert.equal(new Set(separateWatch.map(item => item.id)).size, 2, "timeline ids must remain unique across duplicate watches")
 
-console.log("SNIFA regulatory timeline regression PASS: exact canonical company + expediente milestones collapse into one chronological inbox signal without changing raw persistence, unrelated expedientes, other sources, or separate watches.")
+console.log("SNIFA regulatory timeline regression PASS: exact official milestones now produce deterministic triage state, direction and duration without changing raw persistence, identity grouping or source evidence.")
