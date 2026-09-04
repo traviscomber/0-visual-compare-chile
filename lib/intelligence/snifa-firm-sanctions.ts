@@ -74,11 +74,8 @@ export function parseFirmSanctions(html: string): SnifaFirmSanction[] {
     const sourceUrl = normalizeSnifaUrl(detailMatch[1])
     if (!sourceRecordId || !sourceUrl) continue
 
-    const base = {
-      fineUta: parseFine(cells[6]),
-      sanctionDetail: null as string | null,
-    }
-    const risk = classifyEnvironmentalRisk(base.fineUta, base.sanctionDetail)
+    const fineUta = parseFine(cells[6])
+    const risk = classifyEnvironmentalRisk(fineUta, null)
 
     results.push({
       source: "snifa_sma",
@@ -88,7 +85,7 @@ export function parseFirmSanctions(html: string): SnifaFirmSanction[] {
       holderName,
       category: cells[4]?.trim() || null,
       region: cells[5]?.trim() || null,
-      fineUta: base.fineUta,
+      fineUta,
       paymentStatus: cells[7]?.trim() || null,
       startedAt: null,
       endedAt: null,
@@ -138,10 +135,10 @@ export function parseFirmSanctionDetail(html: string): Pick<SnifaFirmSanction, "
 
 export function classifyEnvironmentalRisk(fineUta: number | null, sanctionDetail: string | null): Pick<SnifaFirmSanction, "infringementCount" | "gravisimaCount" | "graveCount" | "leveCount" | "environmentalRiskLevel" | "environmentalRiskBasis"> {
   const normalized = normalizeEntity(sanctionDetail ?? "")
-  const gravisimaCount = countWord(normalized, "gravisimas") + countWord(normalized, "gravisima")
-  const graveCount = countWord(normalized, "graves") + countWord(normalized, "grave")
-  const leveCount = countWord(normalized, "leves") + countWord(normalized, "leve")
-  const infringementCount = inferInfringementCount(sanctionDetail)
+  const gravisimaCount = countWord(normalized, "gravisimas")
+  const graveCount = countWord(normalized, "graves")
+  const leveCount = countWord(normalized, "leves")
+  const infringementCount = gravisimaCount + graveCount + leveCount
   const basis: string[] = []
 
   if (gravisimaCount > 0) basis.push(`${gravisimaCount} infracción(es) gravísima(s)`)
@@ -163,15 +160,6 @@ export function classifyEnvironmentalRisk(fineUta: number | null, sanctionDetail
     environmentalRiskLevel,
     environmentalRiskBasis: basis,
   }
-}
-
-function inferInfringementCount(value: string | null) {
-  if (!value) return 0
-  const section = value.match(/Sanciones aplicadas([\s\S]*?)(?:Superintendencia del Medio Ambiente|$)/i)?.[1] ?? value
-  const numbered = [...section.matchAll(/(?:^|\s)(\d+)\s+(?=[A-ZÁÉÍÓÚÑ])/g)]
-    .map(match => Number(match[1]))
-    .filter(value => Number.isInteger(value) && value > 0 && value < 100)
-  return numbered.length ? Math.max(...numbered) : 0
 }
 
 function countWord(value: string, word: string) {
