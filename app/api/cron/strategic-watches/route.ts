@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { scanCmfCompanyWatch } from "@/lib/intelligence/cmf-company-watch"
 import { hasCmfMarketCredentials, searchCmfMarketIndicators } from "@/lib/intelligence/cmf-market"
+import { scanCompanyTrajectoryWatch } from "@/lib/intelligence/company-trajectory-watch"
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
 import { hasEpoOpsCredentials, searchEpoPatentFamilies } from "@/lib/intelligence/epo-ops"
 import { probeGdeltRawFeed } from "@/lib/intelligence/gdelt-raw-feed"
@@ -78,12 +79,22 @@ export async function GET(request: Request) {
       const batch = watches.slice(index, index + 3)
       const scanned = await Promise.all(batch.map(async watch => {
         const strategicSignals = await scanStrategicWatch(admin, watch) as CronSignal[]
-        const [marketSignals, procurementSignals, cmfCompanySignals] = await Promise.all([
+        const [marketSignals, procurementSignals, cmfCompanySignals, trajectorySignals] = await Promise.all([
           scanMarketIndicators(watch),
           scanMercadoPublicoCompanyWatch(admin, watch) as Promise<CronSignal[]>,
           scanCmfCompanyWatch(admin, watch) as Promise<CronSignal[]>,
+          scanCompanyTrajectoryWatch(admin, watch) as Promise<CronSignal[]>,
         ])
-        return { watch, signals: [...strategicSignals, ...marketSignals, ...procurementSignals, ...cmfCompanySignals] }
+        return {
+          watch,
+          signals: [
+            ...strategicSignals,
+            ...marketSignals,
+            ...procurementSignals,
+            ...cmfCompanySignals,
+            ...trajectorySignals,
+          ],
+        }
       }))
       groups.push(...scanned)
     }
