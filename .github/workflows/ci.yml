@@ -71,6 +71,8 @@ jobs:
         run: node scripts/executive-attention-queue-regression.mts
       - name: Executive attention actions regression
         run: node scripts/executive-attention-actions-regression.mts
+      - name: Executive unassigned action regression
+        run: node scripts/executive-action-unassigned-regression.mts
       - name: Executive attention ownership regression
         run: node scripts/executive-attention-ownership-regression.mts
       - name: Executive accountability ranking regression
@@ -118,11 +120,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
-          run_install: false
-      - name: Setup Node
-        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
