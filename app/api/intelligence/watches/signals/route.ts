@@ -5,6 +5,20 @@ import { collapseSnifaRegulatoryEvents } from "@/lib/intelligence/snifa-regulato
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
+type RegulatoryTimeline = {
+  canonicalCompanyName: string | null
+  expediente: string
+  milestones: Array<{
+    id: string
+    label: string
+    title: string
+    detail: string | null
+    occurredAt: string | null
+    href: string | null
+    relevance: "alta" | "media" | "baja"
+  }>
+}
+
 type CommonSignal = {
   key: string
   watchKey: string
@@ -18,6 +32,7 @@ type CommonSignal = {
   relevance: "alta" | "media" | "baja"
   isNew: boolean
   href: string
+  timeline?: RegulatoryTimeline | null
 }
 
 export async function GET() {
@@ -87,6 +102,19 @@ export async function GET() {
         relevance: normalizeRelevance(row.relevance),
         isNew,
         href: row.source_url || "/monitorear/estrategico",
+        timeline: row.timeline ? {
+          canonicalCompanyName: row.timeline.canonicalCompanyName,
+          expediente: row.timeline.expediente,
+          milestones: row.timeline.milestones.map(item => ({
+            id: item.id,
+            label: item.label,
+            title: item.title,
+            detail: item.detail,
+            occurredAt: item.occurredAt,
+            href: item.href,
+            relevance: item.relevance,
+          })),
+        } : null,
       }]
     }),
   ].sort((a, b) => Number(b.isNew) - Number(a.isNew) || relevanceRank(b.relevance) - relevanceRank(a.relevance) || Date.parse(b.firstSeenAt) - Date.parse(a.firstSeenAt))
