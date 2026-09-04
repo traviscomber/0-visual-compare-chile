@@ -3,6 +3,7 @@ import { z } from "zod"
 import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { scanStrategicWatch, type StrategicCandidateSignal, type StrategicWatch } from "@/lib/intelligence/strategic-watch-scanner"
+import { scanSnifaCompanyWatch } from "@/lib/intelligence/snifa-company-watch"
 import { buildWeeklyBriefContext, type WeeklyBriefContext } from "@/lib/intelligence/weekly-brief"
 import { buildStrategicSearchIntent, readStrategicQueryAliases, readStrategicSearchScope } from "@/lib/intelligence/search-intent"
 import { applyTechnologyResearchQuality } from "@/lib/intelligence/research-quality"
@@ -62,7 +63,19 @@ export async function GET() {
 
   const scanStartedAt = new Date().toISOString()
   const [groups, context, profiles] = await Promise.all([
-    Promise.all(active.map(async watch => ({ watch, signals: await scanStrategicWatch(admin, watch) }))),
+    Promise.all(active.map(async watch => {
+      const [strategicSignals, snifaSignals] = await Promise.all([
+        scanStrategicWatch(admin, watch),
+        scanSnifaCompanyWatch(admin, watch),
+      ])
+      return {
+        watch,
+        signals: [
+          ...strategicSignals.filter(signal => signal.source_key !== "snifa_sma"),
+          ...snifaSignals,
+        ] as StrategicCandidateSignal[],
+      }
+    })),
     contextPromise,
     loadResearchProfilesForWatches(admin, active),
   ])
