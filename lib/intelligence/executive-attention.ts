@@ -99,6 +99,8 @@ function compareAttention(a: ExecutiveAttentionItem, b: ExecutiveAttentionItem) 
   const rank = { critica: 3, alta: 2, media: 1 } as const
   const priorityDelta = rank[b.priority] - rank[a.priority]
   if (priorityDelta) return priorityDelta
+  const kindDelta = Number(b.kind === "regulatory_case") - Number(a.kind === "regulatory_case")
+  if (kindDelta) return kindDelta
   const newDelta = Number(b.isNew) - Number(a.isNew)
   if (newDelta) return newDelta
   return safeTime(b.occurredAt) - safeTime(a.occurredAt)
