@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
+import { buildExecutiveAttentionQueue } from "@/lib/intelligence/executive-attention"
 import { collapseSnifaRegulatoryEvents } from "@/lib/intelligence/snifa-regulatory-timeline"
 
 export const runtime = "nodejs"
@@ -17,6 +18,15 @@ type RegulatoryTimeline = {
     href: string | null
     relevance: "alta" | "media" | "baja"
   }>
+  assessment: {
+    latestStage: string
+    latestStageLabel: string
+    latestMovementAt: string | null
+    direction: "observacion" | "escalando" | "mitigacion" | "materializado"
+    attention: "alta" | "media"
+    durationDays: number | null
+    rationale: string
+  }
 }
 
 type CommonSignal = {
@@ -114,13 +124,32 @@ export async function GET() {
             href: item.href,
             relevance: item.relevance,
           })),
+          assessment: row.timeline.assessment,
         } : null,
       }]
     }),
   ].sort((a, b) => Number(b.isNew) - Number(a.isNew) || relevanceRank(b.relevance) - relevanceRank(a.relevance) || Date.parse(b.firstSeenAt) - Date.parse(a.firstSeenAt))
 
   const newSignals = signals.filter(item => item.isNew)
-  return NextResponse.json({ signals, summary: { new: newSignals.length, high: newSignals.filter(item => item.relevance === "alta").length, total: signals.length, brand: signals.filter(item => item.type === "brand").length, patent: signals.filter(item => item.type === "patent").length, technology: signals.filter(item => item.type === "technology").length } }, { headers: PRIVATE_NO_STORE_HEADERS })
+  const attentionQueue = buildExecutiveAttentionQueue(signals)
+  return NextResponse.json({
+    signals,
+    attentionQueue,
+    attentionSummary: {
+      total: attentionQueue.length,
+      critical: attentionQueue.filter(item => item.priority === "critica").length,
+      high: attentionQueue.filter(item => item.priority === "alta").length,
+      medium: attentionQueue.filter(item => item.priority === "media").length,
+    },
+    summary: {
+      new: newSignals.length,
+      high: newSignals.filter(item => item.relevance === "alta").length,
+      total: signals.length,
+      brand: signals.filter(item => item.type === "brand").length,
+      patent: signals.filter(item => item.type === "patent").length,
+      technology: signals.filter(item => item.type === "technology").length,
+    },
+  }, { headers: PRIVATE_NO_STORE_HEADERS })
 }
 
 export async function POST() {
