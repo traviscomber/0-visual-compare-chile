@@ -8,6 +8,7 @@ import { searchGdeltArticles } from "@/lib/intelligence/gdelt-doc"
 import { searchGoogleNews, type GoogleNewsMarket } from "@/lib/intelligence/google-news"
 import { hasMercadoPublicoWatchCredentials, searchMercadoPublicoTenders } from "@/lib/intelligence/mercado-publico-watch"
 import { searchOpenAlexWorks } from "@/lib/intelligence/openalex"
+import { searchSnifaFirmSanctions } from "@/lib/intelligence/snifa-firm-sanctions"
 import { normalizeIntelligenceSearchText } from "@/lib/intelligence/source-change-recorder"
 import {
   buildStrategicSearchIntent,
@@ -30,7 +31,7 @@ export type StrategicWatch = {
 
 export type StrategicCandidateSignal = {
   signal_key: string
-  source_key: "inapi_open_data" | "openalex" | "crossref" | "google_news_rss" | "gdelt_doc" | "epo_ops" | "mercado_publico" | "bcn_norms" | "cmf_norms" | "diario_oficial"
+  source_key: "inapi_open_data" | "openalex" | "crossref" | "google_news_rss" | "gdelt_doc" | "epo_ops" | "mercado_publico" | "bcn_norms" | "cmf_norms" | "diario_oficial" | "snifa_sma"
   event_type: "patent" | "trademark" | "publication" | "news" | "tender" | "regulation"
   title: string
   summary: string | null
@@ -73,7 +74,10 @@ export async function scanStrategicWatch(admin: AdminClient, watch: StrategicWat
       tasks.push(scanDiarioOficialRegulations(watch, intent.chileQueries))
     }
     tasks.push(scanNews(watch, intent.chileQueries, daysAgo(now, NEWS_WINDOW_DAYS), now, "chile"))
-    if (IP_ENTITY_WATCHES.has(watchType)) tasks.push(scanTrademarks(admin, watch, intent.chileQueries, daysAgo(now, TRADEMARK_WINDOW_DAYS)))
+    if (IP_ENTITY_WATCHES.has(watchType)) {
+      tasks.push(scanTrademarks(admin, watch, intent.chileQueries, daysAgo(now, TRADEMARK_WINDOW_DAYS)))
+      tasks.push(scanSnifaFirmSanctions(watch, intent.chileQueries))
+    }
   }
 
   if (scope !== "chile") {
@@ -207,6 +211,42 @@ async function scanTrademarks(admin: AdminClient, watch: StrategicWatch, variant
         application_number: row.numero_solicitud,
         status: row.estado,
         filing_date: row.fecha_presentacion,
+        matched_query: variant,
+        search_scope: "chile",
+      },
+    }))
+  }))
+  return dedupeSignals(groups.flat())
+}
+
+async function scanSnifaFirmSanctions(watch: StrategicWatch, variants: string[]): Promise<StrategicCandidateSignal[]> {
+  const groups = await Promise.all(sourceVariants(variants).map(async variant => {
+    const items = await searchSnifaFirmSanctions(variant, 12)
+    return items.map(item => ({
+      signal_key: `snifa_sma:firm_sanction:${item.sourceRecordId}`,
+      source_key: "snifa_sma" as const,
+      event_type: "regulation" as const,
+      title: `Sanción SMA firme · ${item.expediente}`,
+      summary: [
+        item.unitName,
+        item.fineUta != null ? `${item.fineUta.toLocaleString("es-CL")} UTA` : null,
+        item.paymentStatus,
+        item.region,
+      ].filter(Boolean).join(" · "),
+      source_url: item.sourceUrl,
+      occurred_at: null,
+      relevance: "alta" as const,
+      payload: {
+        official_source: true,
+        evidence_type: "firm_sanction",
+        source_record_id: item.sourceRecordId,
+        expediente: item.expediente,
+        fiscalizable_unit: item.unitName,
+        holder_name: item.holderName,
+        category: item.category,
+        region: item.region,
+        fine_uta: item.fineUta,
+        payment_status: item.paymentStatus,
         matched_query: variant,
         search_scope: "chile",
       },
