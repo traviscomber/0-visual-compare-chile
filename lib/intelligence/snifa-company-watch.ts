@@ -2,6 +2,7 @@ import "server-only"
 
 import { resolveCanonicalCompanyWatchIdentity, normalizeCompanyName } from "@/lib/intelligence/company-watch-identity"
 import { searchSnifaRecentCompliancePrograms } from "@/lib/intelligence/snifa-compliance-programs"
+import { searchSnifaEntryRequirements } from "@/lib/intelligence/snifa-entry-requirements"
 import { searchSnifaFirmSanctions } from "@/lib/intelligence/snifa-firm-sanctions"
 import { searchSnifaProvisionalMeasures } from "@/lib/intelligence/snifa-provisional-measures"
 import { searchSnifaActiveSanctioningProceedings } from "@/lib/intelligence/snifa-sanctioning-proceedings"
@@ -36,11 +37,12 @@ export async function scanSnifaCompanyWatch(admin: AdminClient, watch: WatchLike
   const normalizedCanonicalName = normalizeCompanyName(canonicalName)
   if (!normalizedCanonicalName) return []
 
-  const [sanctions, compliancePrograms, activeProceedings, provisionalMeasures] = await Promise.all([
+  const [sanctions, compliancePrograms, activeProceedings, provisionalMeasures, entryRequirements] = await Promise.all([
     searchSnifaFirmSanctions(canonicalName, 12),
     searchSnifaRecentCompliancePrograms(canonicalName, 12),
     searchSnifaActiveSanctioningProceedings(canonicalName, 12),
     searchSnifaProvisionalMeasures(canonicalName, 12),
+    searchSnifaEntryRequirements(canonicalName, 12),
   ])
 
   const sanctionSignals = sanctions
@@ -180,6 +182,48 @@ export async function scanSnifaCompanyWatch(admin: AdminClient, watch: WatchLike
       },
     }))
 
+  const entryRequirementSignals = entryRequirements
+    .filter(item => normalizeCompanyName(item.holderName).includes(normalizedCanonicalName))
+    .map(item => ({
+      signal_key: `snifa_sma:entry_requirement:${item.sourceRecordId}`,
+      source_key: "snifa_sma" as const,
+      event_type: "regulation" as const,
+      title: `Requerimiento de ingreso al SEIA · ${item.expediente}`,
+      summary: [
+        item.unitName,
+        item.region,
+        item.fiscalizationCount ? `${item.fiscalizationCount} fiscalización(es) asociada(s)` : null,
+        item.associatedProceedings ? `${item.associatedProceedings} sancionatorio(s) asociado(s)` : null,
+      ].filter(Boolean).join(" · "),
+      source_url: item.sourceUrl,
+      occurred_at: item.latestActivityAt || item.startedAt,
+      relevance: "alta" as const,
+      payload: {
+        official_source: true,
+        evidence_type: "entry_requirement",
+        regulatory_stage: "seia_entry_requirement",
+        early_warning: true,
+        source_record_id: item.sourceRecordId,
+        canonical_company_id: identity.id,
+        canonical_company_name: canonicalName,
+        verified_rut: identity.rut,
+        watch_match_basis: identity.matchBasis,
+        source_holder_match_basis: "canonical_company_name_in_official_holder",
+        expediente: item.expediente,
+        fiscalizable_unit: item.unitName,
+        holder_name: item.holderName,
+        category: item.category,
+        region: item.region,
+        started_at: item.startedAt,
+        latest_activity_at: item.latestActivityAt,
+        fiscalization_count: item.fiscalizationCount,
+        associated_proceedings: item.associatedProceedings,
+        coverage: "snifa_visible_entry_requirement_results",
+        derived_materiality: false,
+        search_scope: "chile",
+      },
+    }))
+
   const complianceSignals = compliancePrograms
     .filter(item => normalizeCompanyName(item.holderName).includes(normalizedCanonicalName))
     .map(item => ({
@@ -218,7 +262,7 @@ export async function scanSnifaCompanyWatch(admin: AdminClient, watch: WatchLike
       },
     }))
 
-  return dedupeSignals([...provisionalMeasureSignals, ...proceedingSignals, ...complianceSignals, ...sanctionSignals])
+  return dedupeSignals([...entryRequirementSignals, ...provisionalMeasureSignals, ...proceedingSignals, ...complianceSignals, ...sanctionSignals])
 }
 
 function isCompanyWatch(watch: WatchLike) {
