@@ -46,6 +46,29 @@ function callbackFor(operation,params){
   return url.toString()
 }
 
+function normalizeFeedUrl(value){
+  try{
+    const parsed = new URL(value)
+    if(parsed.protocol !== "https:" || parsed.hostname !== "patentscope.wipo.int" || !/\/rss\.xml$/i.test(parsed.pathname)) return null
+    return parsed.toString()
+  }catch{return null}
+}
+
+function completeOperationForTab(tabId,feedUrl,callback=()=>{}){
+  const normalizedFeedUrl = normalizeFeedUrl(feedUrl)
+  if(!Number.isInteger(tabId) || tabId < 0 || !normalizedFeedUrl){callback({ok:false});return}
+  readOperations(operations => {
+    const operation = findOperationByTabId(operations,tabId)
+    if(!operation || completing.has(operation.nonce)){callback({ok:false});return}
+    completing.add(operation.nonce)
+    const url = callbackFor(operation,{auto:"1",feedUrl:normalizedFeedUrl})
+    removeOperation(operation.nonce,() => chrome.tabs.create({url,active:true},() => {
+      completing.delete(operation.nonce)
+      callback({ok:!chrome.runtime.lastError})
+    }))
+  })
+}
+
 function failOperationForTab(tabId,message){
   if(!Number.isInteger(tabId)) return
   readOperations(operations => {
@@ -84,6 +107,11 @@ chrome.runtime.onMessage.addListener((message,sender,sendResponse) => {
     return true
   }
 
+  if(message?.type === "WIPO_RSS_FOUND"){
+    completeOperationForTab(sender.tab?.id,message.feedUrl,sendResponse)
+    return true
+  }
+
   if(message?.type === "WIPO_AUTOMATION_ERROR"){
     failOperationForTab(sender.tab?.id,message.message)
   }
@@ -91,16 +119,7 @@ chrome.runtime.onMessage.addListener((message,sender,sendResponse) => {
 
 chrome.webRequest.onBeforeRequest.addListener(
   details => {
-    let parsed
-    try{parsed = new URL(details.url)}catch{return}
-    if(parsed.protocol !== "https:" || parsed.hostname !== "patentscope.wipo.int" || !/\/rss\.xml$/i.test(parsed.pathname) || !Number.isInteger(details.tabId) || details.tabId < 0) return
-    readOperations(operations => {
-      const operation = findOperationByTabId(operations,details.tabId)
-      if(!operation || completing.has(operation.nonce)) return
-      completing.add(operation.nonce)
-      const url = callbackFor(operation,{auto:"1",feedUrl:parsed.toString()})
-      removeOperation(operation.nonce,() => chrome.tabs.create({url,active:true},()=>completing.delete(operation.nonce)))
-    })
+    completeOperationForTab(details.tabId,details.url)
   },
   {urls:["https://patentscope.wipo.int/*"]}
 )
