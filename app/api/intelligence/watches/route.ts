@@ -13,6 +13,8 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 type WatchSource = "brand" | "patent" | "technology"
+type StrategicSubtype = "technology" | "company" | "competitor" | "regulator" | "tender" | "market" | "topic"
+type StoredStrategicType = "technology" | "company" | "competitor"
 type CommonWatch = {
   key: string
   id: string
@@ -45,7 +47,7 @@ const ChangeSchema = z.object({
 
 const BRAND_SUBTYPES = new Set(["brand", "owner"])
 const PATENT_SUBTYPES = new Set(["company", "ipc"])
-const TECHNOLOGY_SUBTYPES = new Set(["technology", "company", "competitor"])
+const TECHNOLOGY_SUBTYPES = new Set<StrategicSubtype>(["technology", "company", "competitor", "regulator", "tender", "market", "topic"])
 
 export async function GET() {
   const auth = await requireUser()
@@ -106,7 +108,7 @@ export async function GET() {
       key: `technology:${row.id}`,
       id: row.id,
       type: "technology" as const,
-      subtype: row.watch_type,
+      subtype: readStrategicSubtype(row.watch_type, row.metadata),
       query: row.query,
       niceClasses: [],
       searchScope: readStrategicSearchScope(row.metadata),
@@ -175,13 +177,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ watch: normalizePatent(data) }, { status: 201, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
+  const strategicSubtype = subtype as StrategicSubtype
+  const storedType = storageTypeFor(strategicSubtype)
+  const storedNormalizedQuery = storedType === strategicSubtype ? normalizedQuery : `${strategicSubtype}:${normalizedQuery}`
   const scope = parsed.data.scope ?? "both"
   const { data: existing, error: existingError } = await auth.supabase
     .from("intelligence_watches")
     .select("id,metadata")
     .eq("user_id", auth.user.id)
-    .eq("watch_type", subtype)
-    .eq("normalized_query", normalizedQuery)
+    .eq("watch_type", storedType)
+    .eq("normalized_query", storedNormalizedQuery)
     .maybeSingle()
   if (existingError) return watchWriteError("technology", existingError)
 
@@ -189,14 +194,15 @@ export async function POST(request: Request) {
   const metadata = {
     ...mergeStrategicSearchMetadata(existing?.metadata, query, scope),
     organization_id: organization.id,
+    external_watch_type: strategicSubtype,
   }
   const { data, error } = await auth.supabase
     .from("intelligence_watches")
     .upsert({
       user_id: auth.user.id,
-      watch_type: subtype,
+      watch_type: storedType,
       query,
-      normalized_query: normalizedQuery,
+      normalized_query: storedNormalizedQuery,
       metadata,
       is_active: true,
       last_checked_at: null,
@@ -268,8 +274,21 @@ function normalizeSubtype(type: WatchSource, requested?: string) {
     const value = requested || "company"
     return PATENT_SUBTYPES.has(value) ? value : null
   }
-  const value = requested || "technology"
+  const value = (requested || "technology") as StrategicSubtype
   return TECHNOLOGY_SUBTYPES.has(value) ? value : null
+}
+
+function storageTypeFor(subtype: StrategicSubtype): StoredStrategicType {
+  if (subtype === "technology" || subtype === "company" || subtype === "competitor") return subtype
+  return "company"
+}
+
+function readStrategicSubtype(storedType: string, metadata: unknown): StrategicSubtype {
+  if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
+    const value = (metadata as Record<string, unknown>).external_watch_type
+    if (typeof value === "string" && TECHNOLOGY_SUBTYPES.has(value as StrategicSubtype)) return value as StrategicSubtype
+  }
+  return TECHNOLOGY_SUBTYPES.has(storedType as StrategicSubtype) ? storedType as StrategicSubtype : "technology"
 }
 
 function normalizeQuery(subtype: string, value: string) {
@@ -302,7 +321,7 @@ function normalizePatent(row: Record<string, any>): CommonWatch {
   return { key: `patent:${row.id}`, id: row.id, type: "patent", subtype: row.watch_type, query: row.query, niceClasses: [], searchScope: null, isActive: row.is_active, lastCheckedAt: row.last_checked_at, lastReviewedAt: null, createdAt: row.created_at, updatedAt: row.updated_at }
 }
 function normalizeTechnology(row: Record<string, any>): CommonWatch {
-  return { key: `technology:${row.id}`, id: row.id, type: "technology", subtype: row.watch_type, query: row.query, niceClasses: [], searchScope: readStrategicSearchScope(row.metadata), isActive: row.is_active, lastCheckedAt: row.last_checked_at, lastReviewedAt: row.last_reviewed_at, createdAt: row.created_at, updatedAt: row.updated_at }
+  return { key: `technology:${row.id}`, id: row.id, type: "technology", subtype: readStrategicSubtype(row.watch_type, row.metadata), query: row.query, niceClasses: [], searchScope: readStrategicSearchScope(row.metadata), isActive: row.is_active, lastCheckedAt: row.last_checked_at, lastReviewedAt: row.last_reviewed_at, createdAt: row.created_at, updatedAt: row.updated_at }
 }
 
 function countByType(watches: CommonWatch[]) {

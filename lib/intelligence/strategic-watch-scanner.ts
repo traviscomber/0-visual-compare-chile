@@ -10,7 +10,7 @@ import {
   readStrategicSearchScope,
 } from "@/lib/intelligence/search-intent"
 
-export type StrategicWatchType = "technology" | "company" | "competitor"
+export type StrategicWatchType = "technology" | "company" | "competitor" | "regulator" | "tender" | "market" | "topic"
 
 export type StrategicWatch = {
   id: string
@@ -44,22 +44,29 @@ const SCIENCE_WINDOW_DAYS = 180
 const NEWS_WINDOW_DAYS = 14
 const MAX_QUERY_VARIANTS_PER_SOURCE = 2
 
+const STRATEGIC_WATCH_TYPES = new Set<StrategicWatchType>(["technology", "company", "competitor", "regulator", "tender", "market", "topic"])
+const IP_ENTITY_WATCHES = new Set<StrategicWatchType>(["company", "competitor"])
+const NEWS_ONLY_WATCHES = new Set<StrategicWatchType>(["regulator", "tender", "market", "topic"])
+
 export async function scanStrategicWatch(admin: AdminClient, watch: StrategicWatch): Promise<StrategicCandidateSignal[]> {
   const now = new Date()
+  const watchType = effectiveWatchType(watch)
   const scope = readStrategicSearchScope(watch.metadata)
   const intent = buildStrategicSearchIntent(watch.query, scope, readStrategicQueryAliases(watch.metadata))
   const tasks: Array<Promise<StrategicCandidateSignal[]>> = []
 
   if (scope !== "global") {
-    tasks.push(scanObservedSourceChanges(admin, watch, intent.chileQueries, daysAgo(now, SOURCE_CHANGE_WINDOW_DAYS)))
-    tasks.push(scanPatents(admin, watch, intent.chileQueries, daysAgo(now, PATENT_WINDOW_DAYS)))
+    if (!NEWS_ONLY_WATCHES.has(watchType)) {
+      tasks.push(scanObservedSourceChanges(admin, watch, intent.chileQueries, daysAgo(now, SOURCE_CHANGE_WINDOW_DAYS)))
+      tasks.push(scanPatents(admin, watch, intent.chileQueries, daysAgo(now, PATENT_WINDOW_DAYS)))
+    }
     tasks.push(scanNews(watch, intent.chileQueries, daysAgo(now, NEWS_WINDOW_DAYS), now, "chile"))
-    if (watch.watch_type !== "technology") tasks.push(scanTrademarks(admin, watch, intent.chileQueries, daysAgo(now, TRADEMARK_WINDOW_DAYS)))
+    if (IP_ENTITY_WATCHES.has(watchType)) tasks.push(scanTrademarks(admin, watch, intent.chileQueries, daysAgo(now, TRADEMARK_WINDOW_DAYS)))
   }
 
   if (scope !== "chile") {
     tasks.push(scanNews(watch, intent.globalQueries, daysAgo(now, NEWS_WINDOW_DAYS), now, "global"))
-    if (watch.watch_type === "technology") {
+    if (watchType === "technology") {
       tasks.push(scanScience(watch, intent.globalQueries, daysAgo(now, SCIENCE_WINDOW_DAYS), now))
       if (hasEpoOpsCredentials()) tasks.push(scanEpoFamilies(watch, intent.globalQueries))
     }
@@ -76,6 +83,7 @@ export async function scanStrategicWatch(admin: AdminClient, watch: StrategicWat
 }
 
 async function scanObservedSourceChanges(admin: AdminClient, watch: StrategicWatch, variants: string[], from: Date): Promise<StrategicCandidateSignal[]> {
+  const watchType = effectiveWatchType(watch)
   const groups = await Promise.all(sourceVariants(variants).map(async variant => {
     const normalizedQuery = normalizeIntelligenceSearchText(variant)
     if (!normalizedQuery) return []
@@ -88,7 +96,7 @@ async function scanObservedSourceChanges(admin: AdminClient, watch: StrategicWat
       .order("observed_at", { ascending: false })
       .limit(24)
 
-    if (watch.watch_type === "technology") query = query.eq("entity_type", "patent")
+    if (watchType === "technology") query = query.eq("entity_type", "patent")
     const { data, error } = await query
     if (error) throw error
 
@@ -121,9 +129,10 @@ async function scanObservedSourceChanges(admin: AdminClient, watch: StrategicWat
 }
 
 async function scanPatents(admin: AdminClient, watch: StrategicWatch, variants: string[], from: Date): Promise<StrategicCandidateSignal[]> {
+  const watchType = effectiveWatchType(watch)
   const groups = await Promise.all(sourceVariants(variants).map(async variant => {
     const escaped = escapeLike(variant)
-    const column = watch.watch_type === "technology" ? "title" : "applicants"
+    const column = watchType === "technology" ? "title" : "applicants"
     const { data, error } = await admin
       .from("patent_records")
       .select("id,source_record_id,application_number,title,applicants,status,country,filing_date,publication_date,source_url")
@@ -138,12 +147,12 @@ async function scanPatents(admin: AdminClient, watch: StrategicWatch, variants: 
       source_key: "inapi_open_data" as const,
       event_type: "patent" as const,
       title: row.title || "Patente sin título",
-      summary: watch.watch_type === "technology"
+      summary: watchType === "technology"
         ? `Actividad de patente relacionada con ${watch.query}. ${row.applicants ? `Solicitante: ${row.applicants}.` : ""}`.trim()
         : `Actividad de patente asociada a ${watch.query}.${row.status ? ` Estado: ${row.status}.` : ""}`,
       source_url: row.source_url,
       occurred_at: row.publication_date || row.filing_date,
-      relevance: watch.watch_type === "technology" ? "media" as const : "alta" as const,
+      relevance: watchType === "technology" ? "media" as const : "alta" as const,
       payload: {
         application_number: row.application_number,
         applicants: row.applicants,
@@ -269,6 +278,7 @@ async function scanEpoFamilies(watch: StrategicWatch, variants: string[]): Promi
 }
 
 async function scanNews(watch: StrategicWatch, variants: string[], from: Date, to: Date, market: GoogleNewsMarket): Promise<StrategicCandidateSignal[]> {
+  const watchType = effectiveWatchType(watch)
   const groups = await Promise.all(sourceVariants(variants).map(async variant => {
     const items = await searchGoogleNews(variant, from, to, 8, market)
     return items.map(item => ({
@@ -279,11 +289,19 @@ async function scanNews(watch: StrategicWatch, variants: string[], from: Date, t
       summary: item.publisher || "Cobertura pública reciente.",
       source_url: item.url,
       occurred_at: item.date,
-      relevance: "baja" as const,
-      payload: { publisher: item.publisher, role: "context_only", matched_query: variant, search_scope: market },
+      relevance: watchType === "regulator" || watchType === "tender" ? "media" as const : "baja" as const,
+      payload: { publisher: item.publisher, role: "context_only", watch_type: watchType, matched_query: variant, search_scope: market },
     }))
   }))
   return dedupeSignals(groups.flat())
+}
+
+function effectiveWatchType(watch: StrategicWatch): StrategicWatchType {
+  if (watch.metadata && typeof watch.metadata === "object" && !Array.isArray(watch.metadata)) {
+    const value = (watch.metadata as Record<string, unknown>).external_watch_type
+    if (typeof value === "string" && STRATEGIC_WATCH_TYPES.has(value as StrategicWatchType)) return value as StrategicWatchType
+  }
+  return STRATEGIC_WATCH_TYPES.has(watch.watch_type) ? watch.watch_type : "technology"
 }
 
 function sourceVariants(values: string[]) {
