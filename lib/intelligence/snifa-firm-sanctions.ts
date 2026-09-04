@@ -6,6 +6,8 @@ const SNIFA_BASE = "https://snifa.sma.gob.cl"
 const SNIFA_RESULTS_PATH = "/RegistroPublico/Resultado"
 const MAX_RESULTS = 20
 
+export type SnifaRiskLevel = "critical" | "high" | "medium" | "low"
+
 export type SnifaFirmSanction = {
   source: "snifa_sma"
   sourceRecordId: string
@@ -20,6 +22,12 @@ export type SnifaFirmSanction = {
   endedAt: string | null
   status: string | null
   sanctionDetail: string | null
+  infringementCount: number
+  gravisimaCount: number
+  graveCount: number
+  leveCount: number
+  environmentalRiskLevel: SnifaRiskLevel
+  environmentalRiskBasis: string[]
   sourceUrl: string
 }
 
@@ -42,8 +50,7 @@ export async function searchSnifaFirmSanctions(query: string, limit = 12): Promi
     .filter(item => entityMatches(item, normalizedQuery))
     .slice(0, safeLimit)
 
-  const enriched = await Promise.all(sanctions.map(item => enrichFirmSanction(item)))
-  return enriched
+  return Promise.all(sanctions.map(item => enrichFirmSanction(item)))
 }
 
 export function parseFirmSanctions(html: string): SnifaFirmSanction[] {
@@ -67,6 +74,12 @@ export function parseFirmSanctions(html: string): SnifaFirmSanction[] {
     const sourceUrl = normalizeSnifaUrl(detailMatch[1])
     if (!sourceRecordId || !sourceUrl) continue
 
+    const base = {
+      fineUta: parseFine(cells[6]),
+      sanctionDetail: null as string | null,
+    }
+    const risk = classifyEnvironmentalRisk(base.fineUta, base.sanctionDetail)
+
     results.push({
       source: "snifa_sma",
       sourceRecordId,
@@ -75,12 +88,13 @@ export function parseFirmSanctions(html: string): SnifaFirmSanction[] {
       holderName,
       category: cells[4]?.trim() || null,
       region: cells[5]?.trim() || null,
-      fineUta: parseFine(cells[6]),
+      fineUta: base.fineUta,
       paymentStatus: cells[7]?.trim() || null,
       startedAt: null,
       endedAt: null,
       status: null,
       sanctionDetail: null,
+      ...risk,
       sourceUrl,
     })
   }
@@ -100,7 +114,12 @@ async function enrichFirmSanction(item: SnifaFirmSanction): Promise<SnifaFirmSan
 
     if (!response.ok) return item
     const html = await response.text()
-    return { ...item, ...parseFirmSanctionDetail(html) }
+    const detail = parseFirmSanctionDetail(html)
+    return {
+      ...item,
+      ...detail,
+      ...classifyEnvironmentalRisk(item.fineUta, detail.sanctionDetail),
+    }
   } catch (error) {
     console.warn("[snifa] sanction detail unavailable", { sourceRecordId: item.sourceRecordId, error })
     return item
@@ -115,6 +134,50 @@ export function parseFirmSanctionDetail(html: string): Pick<SnifaFirmSanction, "
     status: labelValue(text, "Estado"),
     sanctionDetail: labelValue(text, "Detalle Sanción") ?? labelValue(text, "Detalle Sancion"),
   }
+}
+
+export function classifyEnvironmentalRisk(fineUta: number | null, sanctionDetail: string | null): Pick<SnifaFirmSanction, "infringementCount" | "gravisimaCount" | "graveCount" | "leveCount" | "environmentalRiskLevel" | "environmentalRiskBasis"> {
+  const normalized = normalizeEntity(sanctionDetail ?? "")
+  const gravisimaCount = countWord(normalized, "gravisimas") + countWord(normalized, "gravisima")
+  const graveCount = countWord(normalized, "graves") + countWord(normalized, "grave")
+  const leveCount = countWord(normalized, "leves") + countWord(normalized, "leve")
+  const infringementCount = inferInfringementCount(sanctionDetail)
+  const basis: string[] = []
+
+  if (gravisimaCount > 0) basis.push(`${gravisimaCount} infracción(es) gravísima(s)`)
+  if (graveCount > 0) basis.push(`${graveCount} infracción(es) grave(s)`)
+  if (leveCount > 0) basis.push(`${leveCount} infracción(es) leve(s)`)
+  if (fineUta != null) basis.push(`${fineUta.toLocaleString("es-CL")} UTA`)
+  if (infringementCount > 0) basis.push(`${infringementCount} hecho(s) sancionados`)
+
+  let environmentalRiskLevel: SnifaRiskLevel = "low"
+  if (gravisimaCount > 0 || (fineUta ?? 0) >= 5000) environmentalRiskLevel = "critical"
+  else if (graveCount > 0 || (fineUta ?? 0) >= 1000) environmentalRiskLevel = "high"
+  else if (leveCount > 0 || (fineUta ?? 0) >= 100) environmentalRiskLevel = "medium"
+
+  return {
+    infringementCount,
+    gravisimaCount,
+    graveCount,
+    leveCount,
+    environmentalRiskLevel,
+    environmentalRiskBasis: basis,
+  }
+}
+
+function inferInfringementCount(value: string | null) {
+  if (!value) return 0
+  const section = value.match(/Sanciones aplicadas([\s\S]*?)(?:Superintendencia del Medio Ambiente|$)/i)?.[1] ?? value
+  const numbered = [...section.matchAll(/(?:^|\s)(\d+)\s+(?=[A-ZÁÉÍÓÚÑ])/g)]
+    .map(match => Number(match[1]))
+    .filter(value => Number.isInteger(value) && value > 0 && value < 100)
+  return numbered.length ? Math.max(...numbered) : 0
+}
+
+function countWord(value: string, word: string) {
+  if (!value || !word) return 0
+  const matches = value.match(new RegExp(`\\b${escapeRegExp(word)}\\b`, "g"))
+  return matches?.length ?? 0
 }
 
 function labelValue(text: string, label: string) {
