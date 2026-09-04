@@ -41,11 +41,19 @@ type CommonSignal = {
 type SignalSummary = { new:number; high:number; total:number; brand:number; patent:number; technology:number }
 
 const EMPTY_SUMMARY: SignalSummary = { new:0, high:0, total:0, brand:0, patent:0, technology:0 }
-const TYPE_LABEL: Record<WatchType,string> = { brand:"Marca", patent:"Patente", technology:"Tecnología" }
+const TYPE_LABEL: Record<WatchType,string> = { brand:"Marca", patent:"Patente", technology:"Inteligencia" }
 const SUBTYPE_OPTIONS: Record<WatchType,Array<{value:string;label:string}>> = {
   brand:[{value:"brand",label:"Marca"},{value:"owner",label:"Titular"}],
   patent:[{value:"company",label:"Empresa"},{value:"ipc",label:"IPC"}],
-  technology:[{value:"technology",label:"Tecnología"},{value:"company",label:"Empresa"},{value:"competitor",label:"Competidor"}],
+  technology:[
+    {value:"technology",label:"Tecnología"},
+    {value:"company",label:"Empresa"},
+    {value:"competitor",label:"Competidor"},
+    {value:"regulator",label:"Regulador"},
+    {value:"tender",label:"Licitación"},
+    {value:"market",label:"Mercado"},
+    {value:"topic",label:"Tema"},
+  ],
 }
 
 export default function CommonWatchesPage(){
@@ -153,42 +161,42 @@ export default function CommonWatchesPage(){
 
   return <OperationalPage>
     <OperationalHeader
-      eyebrow="VIDENTIA / SEGUIMIENTOS"
-      title="Seguimiento en 3 pasos."
-      description={<>Elige qué quieres seguir una vez. VIDENTIA mantiene la vigilancia y tú vuelves sólo para revisar lo nuevo.</>}
-      meta={<><span>Marcas · Patentes · Tecnologías</span><span>Evidencia trazable</span><span>Revisión humana</span></>}
+      eyebrow="VIDENTIA / EXTERNAL INTELLIGENCE"
+      title="Observa cambios, no búsquedas."
+      description={<>Configura qué importa para tu empresa. VIDENTIA mantiene la vigilancia externa y concentra sólo las señales nuevas con evidencia.</>}
+      meta={<><span>Marcas · Patentes · Competidores · Mercados</span><span>Evidencia trazable</span><span>Revisión humana</span></>}
       actions={<Button onClick={()=>setShowCreate(value=>!value)}><Plus className="h-4 w-4"/>{showCreate?"Cerrar alta":"Añadir seguimiento"}</Button>}
     />
 
     <section aria-label="Flujo de seguimiento" className="grid gap-px border-y border-border/80 bg-border/80 md:grid-cols-3">
       <div className="bg-background p-6">
         <p className="font-mono text-2xl text-[#96B5A6]">1</p>
-        <h2 className="mt-5 text-lg font-medium text-white">Elige qué seguir</h2>
-        <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">Marca, patente o tecnología. Lo configuras una vez.</p>
+        <h2 className="mt-5 text-lg font-medium text-white">Define qué importa</h2>
+        <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">Marca, patente, tecnología, empresa, competidor, regulador, licitación, mercado o tema.</p>
         <p className="mt-5 text-xs text-[#96B5A6]">{active.length?`${active.length} activo${active.length===1?"":"s"}`:"Sin seguimientos activos"}</p>
         <Button className="mt-4" variant="outline" size="sm" onClick={()=>setShowCreate(true)}><Plus className="h-3.5 w-3.5"/>Crear seguimiento</Button>
       </div>
       <div className="bg-background p-6">
         <p className="font-mono text-2xl text-[#96B5A6]">2</p>
-        <h2 className="mt-5 text-lg font-medium text-white">VIDENTIA vigila</h2>
-        <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">Tus seguimientos quedan activos y las fuentes alimentan esta bandeja. No tienes que repetir la búsqueda.</p>
-        <p className="mt-5 text-xs text-[#96B5A6]">{counts.brand} marcas · {counts.patent} patentes · {counts.technology} tecnologías</p>
+        <h2 className="mt-5 text-lg font-medium text-white">VIDENTIA observa</h2>
+        <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">Las fuentes disponibles se revisan según el tipo de seguimiento. No tienes que repetir la búsqueda.</p>
+        <p className="mt-5 text-xs text-[#96B5A6]">{counts.brand} marcas · {counts.patent} patentes · {counts.technology} inteligencia externa</p>
         <Button className="mt-4" variant="outline" size="sm" onClick={()=>void refreshSources()} disabled={refreshing||loading}>{refreshing?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<RefreshCw className="h-3.5 w-3.5"/>}Revisar ahora</Button>
       </div>
       <div className="bg-background p-6">
         <p className="font-mono text-2xl text-[#96B5A6]">3</p>
-        <h2 className="mt-5 text-lg font-medium text-white">Revisa novedades</h2>
-        <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">Abre sólo los cambios nuevos, revisa su evidencia y marca la bandeja cuando termines.</p>
+        <h2 className="mt-5 text-lg font-medium text-white">Decide sobre cambios</h2>
+        <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">Revisa sólo señales nuevas, abre la evidencia y marca la bandeja cuando termines.</p>
         <p className="mt-5 text-xs text-[#96B5A6]">{summary.new} nueva{summary.new===1?"":"s"} · {summary.high} alta prioridad</p>
         <Button asChild className="mt-4" size="sm"><a href="#novedades">{summary.new?`Ver ${summary.new} novedad${summary.new===1?"":"es"}`:"Ver bandeja"}</a></Button>
       </div>
     </section>
 
     {showCreate?<section className="border-b border-border/80 py-7"><OperationalPanel><form onSubmit={createWatch}>
-      <OperationalSectionHeader eyebrow="PASO 1 / NUEVO SEGUIMIENTO" title="¿Qué quieres vigilar?" meta="A · Tipo   B · Criterio   C · Activar"/>
+      <OperationalSectionHeader eyebrow="PASO 1 / NUEVO SEGUIMIENTO" title="¿Qué quieres observar?" meta="A · Familia   B · Criterio   C · Activar"/>
       <div className="mt-5 grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)_auto] xl:items-end">
         <div>
-          <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground">A · Tipo</p>
+          <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground">A · Familia</p>
           <div className="grid grid-cols-3 rounded-[10px] bg-[#0F2A33] p-1">{(["brand","patent","technology"] as WatchType[]).map(item=><button key={item} type="button" onClick={()=>changeType(item)} className={`min-h-9 rounded-[8px] px-2 text-xs ${type===item?"bg-[#173B37] text-white":"text-muted-foreground hover:text-white"}`}>{TYPE_LABEL[item]}</button>)}</div>
         </div>
         <div>
@@ -204,7 +212,7 @@ export default function CommonWatchesPage(){
           <Button className="w-full xl:w-auto" disabled={saving||query.trim().length<2}>{saving?<Loader2 className="h-4 w-4 animate-spin"/>:<Plus className="h-4 w-4"/>}Activar seguimiento</Button>
         </div>
       </div>
-      <p className="mt-3 text-xs leading-5 text-muted-foreground">Tecnología normaliza equivalencias controladas como IA / AI. Chile prioriza INAPI y señales locales; Global usa ciencia y contexto internacional; Ambos cruza las dos capas.</p>
+      <p className="mt-3 text-xs leading-5 text-muted-foreground">{coverageHint(type,subtype)} VIDENTIA sólo muestra fuentes realmente conectadas; nuevas fuentes se incorporarán sin cambiar tus seguimientos.</p>
     </form></OperationalPanel></section>:null}
 
     {error?<div role="alert" className="mt-6 bg-[#3A2525] p-4 text-sm text-[#E8AAA3]">{error}</div>:null}
@@ -212,12 +220,12 @@ export default function CommonWatchesPage(){
     <section id="novedades" className="grid scroll-mt-6 gap-9 py-9 xl:grid-cols-[minmax(0,1.45fr)_minmax(310px,0.55fr)] xl:gap-10">
       <div>
         <OperationalSectionHeader
-          eyebrow="PASO 3 / NOVEDADES"
+          eyebrow="PASO 3 / SEÑALES"
           title={showHistory?"Historial de señales":summary.new?`${summary.new} novedad${summary.new===1?"":"es"} para revisar`:"Sin novedades pendientes"}
           meta={summary.new?`${summary.high} de alta prioridad`:"La vigilancia sigue activa"}
           action={<div className="flex flex-wrap gap-2"><Button variant="ghost" size="sm" onClick={()=>setShowHistory(value=>!value)}>{showHistory?"Sólo nuevas":"Ver historial"}</Button>{summary.new>0?<Button size="sm" onClick={()=>void markReviewed()} disabled={reviewing}>{reviewing?<Loader2 className="h-4 w-4 animate-spin"/>:<Check className="h-4 w-4"/>}Marcar revisadas</Button>:null}</div>}
         />
-        {loading?<div className="mt-5 flex items-center gap-2 border-y border-border/80 py-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin"/>Cargando novedades…</div>:visibleSignals.length?<div className="mt-5 divide-y divide-border/80 border-y border-border/80">{visibleSignals.map(signal=><SignalRow key={signal.key} signal={signal}/>)}</div>:<div className="mt-5 border-y border-border/80 py-10"><p className="font-medium text-white">{active.length?"No hay nada nuevo que revisar":"Aún no hay seguimientos activos"}</p><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{active.length?"VIDENTIA seguirá reuniendo señales de tus seguimientos. Puedes revisar el historial si necesitas volver atrás.":"Empieza por el paso 1 y activa un seguimiento de marca, patente o tecnología."}</p>{!active.length?<Button className="mt-4" size="sm" onClick={()=>setShowCreate(true)}><Plus className="h-3.5 w-3.5"/>Crear seguimiento</Button>:null}</div>}
+        {loading?<div className="mt-5 flex items-center gap-2 border-y border-border/80 py-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin"/>Cargando novedades…</div>:visibleSignals.length?<div className="mt-5 divide-y divide-border/80 border-y border-border/80">{visibleSignals.map(signal=><SignalRow key={signal.key} signal={signal}/>)}</div>:<div className="mt-5 border-y border-border/80 py-10"><p className="font-medium text-white">{active.length?"No hay nada nuevo que revisar":"Aún no hay seguimientos activos"}</p><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{active.length?"VIDENTIA seguirá reuniendo señales de tus seguimientos. Puedes revisar el historial si necesitas volver atrás.":"Empieza por el paso 1 y activa un seguimiento externo."}</p>{!active.length?<Button className="mt-4" size="sm" onClick={()=>setShowCreate(true)}><Plus className="h-3.5 w-3.5"/>Crear seguimiento</Button>:null}</div>}
       </div>
 
       <aside><OperationalPanel><OperationalSectionHeader eyebrow="PASO 2" title="En seguimiento" meta={`${active.length} activos`}/>{watches.length?<div className="mt-5 divide-y divide-border/80 border-t border-border/80">{watches.map(watch=><div key={watch.key} className="py-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap gap-2"><Badge variant="outline">{TYPE_LABEL[watch.type]}</Badge><Badge variant="secondary">{subtypeLabel(watch.type,watch.subtype)}</Badge>{watch.type==="technology"&&watch.searchScope?<Badge variant="outline">{scopeLabel(watch.searchScope)}</Badge>:null}<Badge className={watch.isActive?"bg-[#173B37] text-[#96B5A6]":""} variant={watch.isActive?undefined:"secondary"}>{watch.isActive?"Activo":"Pausado"}</Badge></div><p className="mt-3 font-medium text-white">{watch.query}</p>{watch.niceClasses.length?<p className="mt-1 text-xs text-muted-foreground">Niza {watch.niceClasses.join(", ")}</p>:null}<p className="mt-2 text-[11px] text-muted-foreground">{watch.lastCheckedAt?`Última revisión ${formatDate(watch.lastCheckedAt)}`:"Preparando línea base"}</p></div><div className="flex flex-wrap justify-end gap-1"><Button variant="ghost" size="sm" onClick={()=>void toggle(watch)}>{watch.isActive?<Pause className="h-3.5 w-3.5"/>:<Play className="h-3.5 w-3.5"/>}{watch.isActive?"Pausar":"Activar"}</Button><Button variant="ghost" size="icon-sm" onClick={()=>void remove(watch.key)} aria-label="Eliminar seguimiento"><Trash2 className="h-4 w-4"/></Button></div></div></div>)}</div>:<p className="mt-5 text-sm leading-6 text-muted-foreground">Todavía no hay seguimientos.</p>}
@@ -236,7 +244,24 @@ function SignalRow({signal}:{signal:CommonSignal}){
   </article>
 }
 
-function placeholder(type:WatchType,subtype:string){if(type==="brand")return subtype==="owner"?"Ej: EMPRESA SPA":"Ej: N3URALIA";if(type==="patent")return subtype==="ipc"?"Ej: A61K":"Ej: NESTLE";return subtype==="technology"?"Ej: agentes de IA empresariales":"Ej: SQM"}
+function placeholder(type:WatchType,subtype:string){
+  if(type==="brand")return subtype==="owner"?"Ej: EMPRESA SPA":"Ej: N3URALIA"
+  if(type==="patent")return subtype==="ipc"?"Ej: A61K":"Ej: NESTLE"
+  if(subtype==="technology")return "Ej: agentes de IA empresariales"
+  if(subtype==="company")return "Ej: SQM"
+  if(subtype==="competitor")return "Ej: NotCo"
+  if(subtype==="regulator")return "Ej: Comisión para el Mercado Financiero"
+  if(subtype==="tender")return "Ej: almacenamiento energético"
+  if(subtype==="market")return "Ej: litio Chile"
+  return "Ej: protección de datos personales"
+}
+function coverageHint(type:WatchType,subtype:string){
+  if(type==="brand")return "Marcas usa evidencia marcaria conectada."
+  if(type==="patent")return "Patentes usa INAPI y las fuentes internacionales configuradas."
+  if(subtype==="technology")return "Tecnología cruza patentes, ciencia, noticias y cambios observados según cobertura."
+  if(subtype==="company"||subtype==="competitor")return "Empresa y Competidor cruzan propiedad intelectual, cambios observados y noticias."
+  return "Regulador, Licitación, Mercado y Tema usan por ahora noticias verificables de Chile y/o globales."
+}
 function subtypeLabel(type:WatchType,subtype:string){return SUBTYPE_OPTIONS[type].find(item=>item.value===subtype)?.label??subtype}
 function scopeLabel(scope:SearchScope){return scope==="chile"?"Chile":scope==="global"?"Global":"Ambos"}
 function formatDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?value:new Intl.DateTimeFormat("es-CL",{dateStyle:"medium",timeStyle:"short"}).format(date)}
