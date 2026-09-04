@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { searchBcnRegulations } from "@/lib/intelligence/bcn-regulatory"
 import { searchCmfRegulations } from "@/lib/intelligence/cmf-regulatory"
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
+import { searchDiarioOficialRegulations } from "@/lib/intelligence/diario-oficial-regulatory"
 import { hasEpoOpsCredentials, searchEpoPatentFamilies } from "@/lib/intelligence/epo-ops"
 import { searchGoogleNews, type GoogleNewsMarket } from "@/lib/intelligence/google-news"
 import { hasMercadoPublicoWatchCredentials, searchMercadoPublicoTenders } from "@/lib/intelligence/mercado-publico-watch"
@@ -28,7 +29,7 @@ export type StrategicWatch = {
 
 export type StrategicCandidateSignal = {
   signal_key: string
-  source_key: "inapi_open_data" | "openalex" | "crossref" | "google_news_rss" | "epo_ops" | "mercado_publico" | "bcn_norms" | "cmf_norms"
+  source_key: "inapi_open_data" | "openalex" | "crossref" | "google_news_rss" | "epo_ops" | "mercado_publico" | "bcn_norms" | "cmf_norms" | "diario_oficial"
   event_type: "patent" | "trademark" | "publication" | "news" | "tender" | "regulation"
   title: string
   summary: string | null
@@ -67,6 +68,7 @@ export async function scanStrategicWatch(admin: AdminClient, watch: StrategicWat
     if (watchType === "regulator") {
       tasks.push(scanBcnRegulations(watch, intent.chileQueries))
       tasks.push(scanCmfRegulations(watch, intent.chileQueries))
+      tasks.push(scanDiarioOficialRegulations(watch, intent.chileQueries))
     }
     tasks.push(scanNews(watch, intent.chileQueries, daysAgo(now, NEWS_WINDOW_DAYS), now, "chile"))
     if (IP_ENTITY_WATCHES.has(watchType)) tasks.push(scanTrademarks(admin, watch, intent.chileQueries, daysAgo(now, TRADEMARK_WINDOW_DAYS)))
@@ -295,6 +297,38 @@ async function scanCmfRegulations(watch: StrategicWatch, variants: string[]): Pr
         norm_number: item.number,
         status: item.status,
         publication_date: item.publishedAt,
+        matched_query: variant,
+        search_scope: "chile",
+      },
+    }))
+  }))
+  return dedupeSignals(groups.flat())
+}
+
+async function scanDiarioOficialRegulations(watch: StrategicWatch, variants: string[]): Promise<StrategicCandidateSignal[]> {
+  const groups = await Promise.all(sourceVariants(variants).map(async variant => {
+    const items = await searchDiarioOficialRegulations(variant, { days: 3, limit: 12 })
+    return items.map(item => ({
+      signal_key: `diario_oficial:regulation:${item.cve}`,
+      source_key: "diario_oficial" as const,
+      event_type: "regulation" as const,
+      title: item.title,
+      summary: [
+        item.section,
+        item.edition ? `Edición ${item.edition}` : null,
+        `CVE ${item.cve}`,
+        `Publicada ${formatSignalDate(item.publicationDate)}`,
+      ].filter(Boolean).join(" · "),
+      source_url: item.sourceUrl,
+      occurred_at: item.publicationDate,
+      relevance: "alta" as const,
+      payload: {
+        official_source: true,
+        source_record_id: item.cve,
+        cve: item.cve,
+        edition: item.edition,
+        section: item.section,
+        publication_date: item.publicationDate,
         matched_query: variant,
         search_scope: "chile",
       },
