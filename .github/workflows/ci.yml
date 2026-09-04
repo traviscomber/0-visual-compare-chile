@@ -67,6 +67,8 @@ jobs:
         run: node scripts/dashboard-opportunities-regression.mts
       - name: Executive flow gates regression
         run: node scripts/executive-flow-gates-regression.mts
+      - name: Executive attention queue regression
+        run: node scripts/executive-attention-queue-regression.mts
       - name: Public product architecture regression
         run: node scripts/public-product-architecture-regression.mts
       - name: Portal and common watches regression
