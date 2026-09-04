@@ -45,7 +45,7 @@ const ChangeSchema = z.object({
 
 const BRAND_SUBTYPES = new Set(["brand", "owner"])
 const PATENT_SUBTYPES = new Set(["company", "ipc"])
-const TECHNOLOGY_SUBTYPES = new Set(["technology", "company", "competitor"])
+const TECHNOLOGY_SUBTYPES = new Set(["technology", "company", "competitor", "regulator", "tender", "market", "topic"])
 
 export async function GET() {
   const auth = await requireUser()
