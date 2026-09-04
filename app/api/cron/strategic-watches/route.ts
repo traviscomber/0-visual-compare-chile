@@ -15,6 +15,7 @@ import {
 } from "@/lib/intelligence/ingestion-observability"
 import { scanMercadoPublicoCompanyWatch } from "@/lib/intelligence/mercado-publico-company-watch"
 import { searchOpenAlexWorks } from "@/lib/intelligence/openalex"
+import { scanSnifaCompanyWatch } from "@/lib/intelligence/snifa-company-watch"
 import { scanStrategicWatch, type StrategicWatch } from "@/lib/intelligence/strategic-watch-scanner"
 import { persistIntelligenceWatchEvents } from "@/lib/intelligence/watch-event-writer"
 import { createHighRelevanceWatchNotifications } from "@/lib/intelligence/watch-notifications"
@@ -80,12 +81,14 @@ export async function GET(request: Request) {
     for (let index = 0; index < watches.length; index += 3) {
       const batch = watches.slice(index, index + 3)
       const scanned = await Promise.all(batch.map(async watch => {
-        const strategicSignals = await scanStrategicWatch(admin, watch) as CronSignal[]
-        const [marketSignals, procurementSignals, cmfCompanySignals, trajectorySignals] = await Promise.all([
+        const strategicSignals = (await scanStrategicWatch(admin, watch) as CronSignal[])
+          .filter(signal => signal.source_key !== "snifa_sma")
+        const [marketSignals, procurementSignals, cmfCompanySignals, trajectorySignals, snifaCompanySignals] = await Promise.all([
           scanMarketIndicators(watch),
           scanMercadoPublicoCompanyWatch(admin, watch) as Promise<CronSignal[]>,
           scanCmfCompanyWatch(admin, watch) as Promise<CronSignal[]>,
           scanCompanyTrajectoryWatch(admin, watch) as Promise<CronSignal[]>,
+          scanSnifaCompanyWatch(admin, watch) as Promise<CronSignal[]>,
         ])
         return {
           watch,
@@ -95,6 +98,7 @@ export async function GET(request: Request) {
             ...procurementSignals,
             ...cmfCompanySignals,
             ...trajectorySignals,
+            ...snifaCompanySignals,
           ],
         }
       }))
