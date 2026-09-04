@@ -10,7 +10,7 @@ import {
   readStrategicSearchScope,
 } from "@/lib/intelligence/search-intent"
 
-export type StrategicWatchType = "technology" | "company" | "competitor"
+export type StrategicWatchType = "technology" | "company" | "competitor" | "regulator" | "tender" | "market" | "topic"
 
 export type StrategicWatch = {
   id: string
@@ -44,6 +44,9 @@ const SCIENCE_WINDOW_DAYS = 180
 const NEWS_WINDOW_DAYS = 14
 const MAX_QUERY_VARIANTS_PER_SOURCE = 2
 
+const IP_ENTITY_WATCHES = new Set<StrategicWatchType>(["company", "competitor"])
+const NEWS_ONLY_WATCHES = new Set<StrategicWatchType>(["regulator", "tender", "market", "topic"])
+
 export async function scanStrategicWatch(admin: AdminClient, watch: StrategicWatch): Promise<StrategicCandidateSignal[]> {
   const now = new Date()
   const scope = readStrategicSearchScope(watch.metadata)
@@ -51,10 +54,12 @@ export async function scanStrategicWatch(admin: AdminClient, watch: StrategicWat
   const tasks: Array<Promise<StrategicCandidateSignal[]>> = []
 
   if (scope !== "global") {
-    tasks.push(scanObservedSourceChanges(admin, watch, intent.chileQueries, daysAgo(now, SOURCE_CHANGE_WINDOW_DAYS)))
-    tasks.push(scanPatents(admin, watch, intent.chileQueries, daysAgo(now, PATENT_WINDOW_DAYS)))
+    if (!NEWS_ONLY_WATCHES.has(watch.watch_type)) {
+      tasks.push(scanObservedSourceChanges(admin, watch, intent.chileQueries, daysAgo(now, SOURCE_CHANGE_WINDOW_DAYS)))
+      tasks.push(scanPatents(admin, watch, intent.chileQueries, daysAgo(now, PATENT_WINDOW_DAYS)))
+    }
     tasks.push(scanNews(watch, intent.chileQueries, daysAgo(now, NEWS_WINDOW_DAYS), now, "chile"))
-    if (watch.watch_type !== "technology") tasks.push(scanTrademarks(admin, watch, intent.chileQueries, daysAgo(now, TRADEMARK_WINDOW_DAYS)))
+    if (IP_ENTITY_WATCHES.has(watch.watch_type)) tasks.push(scanTrademarks(admin, watch, intent.chileQueries, daysAgo(now, TRADEMARK_WINDOW_DAYS)))
   }
 
   if (scope !== "chile") {
@@ -279,8 +284,8 @@ async function scanNews(watch: StrategicWatch, variants: string[], from: Date, t
       summary: item.publisher || "Cobertura pública reciente.",
       source_url: item.url,
       occurred_at: item.date,
-      relevance: "baja" as const,
-      payload: { publisher: item.publisher, role: "context_only", matched_query: variant, search_scope: market },
+      relevance: watch.watch_type === "regulator" || watch.watch_type === "tender" ? "media" as const : "baja" as const,
+      payload: { publisher: item.publisher, role: "context_only", watch_type: watch.watch_type, matched_query: variant, search_scope: market },
     }))
   }))
   return dedupeSignals(groups.flat())
