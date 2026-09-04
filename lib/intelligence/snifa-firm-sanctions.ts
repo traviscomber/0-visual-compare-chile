@@ -16,6 +16,10 @@ export type SnifaFirmSanction = {
   region: string | null
   fineUta: number | null
   paymentStatus: string | null
+  startedAt: string | null
+  endedAt: string | null
+  status: string | null
+  sanctionDetail: string | null
   sourceUrl: string
 }
 
@@ -38,7 +42,8 @@ export async function searchSnifaFirmSanctions(query: string, limit = 12): Promi
     .filter(item => entityMatches(item, normalizedQuery))
     .slice(0, safeLimit)
 
-  return sanctions
+  const enriched = await Promise.all(sanctions.map(item => enrichFirmSanction(item)))
+  return enriched
 }
 
 export function parseFirmSanctions(html: string): SnifaFirmSanction[] {
@@ -72,11 +77,58 @@ export function parseFirmSanctions(html: string): SnifaFirmSanction[] {
       region: cells[5]?.trim() || null,
       fineUta: parseFine(cells[6]),
       paymentStatus: cells[7]?.trim() || null,
+      startedAt: null,
+      endedAt: null,
+      status: null,
+      sanctionDetail: null,
       sourceUrl,
     })
   }
 
   return dedupe(results)
+}
+
+async function enrichFirmSanction(item: SnifaFirmSanction): Promise<SnifaFirmSanction> {
+  try {
+    const response = await fetchWithRetry(item.sourceUrl, {
+      cache: "no-store",
+      headers: {
+        Accept: "text/html,application/xhtml+xml",
+        "User-Agent": "VIDENTIA/1.0 external-intelligence",
+      },
+    }, { attempts: 2, baseDelayMs: 400, timeoutMs: 10_000 })
+
+    if (!response.ok) return item
+    const html = await response.text()
+    return { ...item, ...parseFirmSanctionDetail(html) }
+  } catch (error) {
+    console.warn("[snifa] sanction detail unavailable", { sourceRecordId: item.sourceRecordId, error })
+    return item
+  }
+}
+
+export function parseFirmSanctionDetail(html: string): Pick<SnifaFirmSanction, "startedAt" | "endedAt" | "status" | "sanctionDetail"> {
+  const text = cleanVisibleText(html)
+  return {
+    startedAt: normalizeDate(labelValue(text, "Fecha Inicio")),
+    endedAt: normalizeDate(labelValue(text, "Fecha Término") ?? labelValue(text, "Fecha Termino")),
+    status: labelValue(text, "Estado"),
+    sanctionDetail: labelValue(text, "Detalle Sanción") ?? labelValue(text, "Detalle Sancion"),
+  }
+}
+
+function labelValue(text: string, label: string) {
+  const normalizedLabel = escapeRegExp(label)
+  const boundary = "(?=\\s+(?:Fecha Inicio|Fecha T[eé]rmino|Estado|Multa|Estado Pago|Detalle Sanci[oó]n|Unidad fiscalizable|Titular)\\s*:|$)"
+  const match = text.match(new RegExp(`${normalizedLabel}\\s*:\\s*([\\s\\S]*?)${boundary}`, "i"))
+  return match?.[1]?.replace(/\s+/g, " ").trim() || null
+}
+
+function normalizeDate(value: string | null) {
+  if (!value) return null
+  const match = value.match(/\b(\d{2})-(\d{2})-(\d{4})\b/)
+  if (!match) return value
+  return `${match[3]}-${match[2]}-${match[1]}`
 }
 
 function entityMatches(item: SnifaFirmSanction, normalizedQuery: string) {
@@ -136,4 +188,8 @@ function normalizeEntity(value: string) {
     .replace(/[^a-z0-9]+/g, " ")
     .replace(/\s+/g, " ")
     .trim()
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
