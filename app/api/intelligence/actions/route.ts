@@ -32,6 +32,68 @@ type ActionRow = {
   action_created: boolean
 }
 
+export async function GET(request: Request) {
+  const auth = await requireUser()
+  if (!auth.ok) return auth.response
+
+  const url = new URL(request.url)
+  const sourceId = url.searchParams.get("sourceId")?.trim() ?? ""
+  const actionTitle = url.searchParams.get("actionTitle")?.trim() ?? ""
+  if (!sourceId || sourceId.length > 240 || !actionTitle || actionTitle.length > 240) {
+    return NextResponse.json({ error: "Consulta de acción inválida." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
+  }
+
+  const { data: itemRows, error: itemError } = await auth.supabase
+    .from("case_items")
+    .select("id,case_id,title")
+    .eq("source_id", sourceId)
+    .limit(20)
+  if (itemError) return NextResponse.json({ error: "No pudimos verificar la acción vinculada." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
+  const caseIds = [...new Set((itemRows ?? []).map(row => row.case_id).filter(Boolean))]
+  if (!caseIds.length) return NextResponse.json({ linked: false }, { headers: PRIVATE_NO_STORE_HEADERS })
+
+  const { data: caseRows, error: caseError } = await auth.supabase
+    .from("cases")
+    .select("id,status,updated_at")
+    .in("id", caseIds)
+    .in("status", ["open", "review", "decided"])
+    .order("updated_at", { ascending: false })
+    .limit(1)
+  if (caseError) return NextResponse.json({ error: "No pudimos verificar el caso vinculado." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
+  const caseRow = caseRows?.[0]
+  if (!caseRow?.id) return NextResponse.json({ linked: false }, { headers: PRIVATE_NO_STORE_HEADERS })
+
+  const { data: actionRows, error: actionError } = await auth.supabase
+    .from("case_actions")
+    .select("id,case_id,title,assigned_to,status,due_at,created_at,completed_at,outcome,outcome_at,updated_at")
+    .eq("case_id", caseRow.id)
+    .eq("title", actionTitle)
+    .order("created_at", { ascending: false })
+    .limit(1)
+  if (actionError) return NextResponse.json({ error: "No pudimos cargar el estado de la acción." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
+  const action = actionRows?.[0]
+  if (!action?.id) return NextResponse.json({ linked: false }, { headers: PRIVATE_NO_STORE_HEADERS })
+
+  const [{ data: members, error: membersError }, { data: role, error: roleError }] = await Promise.all([
+    auth.supabase.rpc("get_case_members", { p_case_id: caseRow.id }),
+    auth.supabase.rpc("case_access_role", { p_case_id: caseRow.id, p_user_id: auth.user.id }),
+  ])
+  if (membersError || roleError || !role) {
+    return NextResponse.json({ error: "No pudimos cargar responsable y permisos de la acción." }, { status: 403, headers: PRIVATE_NO_STORE_HEADERS })
+  }
+
+  return NextResponse.json({
+    linked: true,
+    href: `/casos/${caseRow.id}/equipo`,
+    caseId: caseRow.id,
+    caseStatus: caseRow.status,
+    currentUserId: auth.user.id,
+    currentUserRole: role,
+    members: members ?? [],
+    action,
+  }, { headers: PRIVATE_NO_STORE_HEADERS })
+}
+
 export async function POST(request: Request) {
   const auth = await requireUser()
   if (!auth.ok) return auth.response

@@ -71,6 +71,8 @@ jobs:
         run: node scripts/executive-attention-queue-regression.mts
       - name: Executive attention actions regression
         run: node scripts/executive-attention-actions-regression.mts
+      - name: Executive attention ownership regression
+        run: node scripts/executive-attention-ownership-regression.mts
       - name: Public product architecture regression
         run: node scripts/public-product-architecture-regression.mts
       - name: Portal and common watches regression
