@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { hasCmfMarketCredentials, searchCmfMarketIndicators } from "@/lib/intelligence/cmf-market"
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
 import { hasEpoOpsCredentials, searchEpoPatentFamilies } from "@/lib/intelligence/epo-ops"
 import { probeGdeltRawFeed } from "@/lib/intelligence/gdelt-raw-feed"
@@ -19,6 +20,17 @@ export const dynamic = "force-dynamic"
 export const maxDuration = 300
 
 type CronWatch = StrategicWatch & { user_id: string }
+type CronSignal = {
+  signal_key: string
+  source_key: string
+  event_type: string
+  title: string
+  summary: string | null
+  source_url: string | null
+  occurred_at: string | null
+  relevance: "alta" | "media" | "baja"
+  payload: Record<string, unknown>
+}
 type ProbeResult = {
   source: string
   ok: boolean | null
@@ -59,13 +71,14 @@ export async function GET(request: Request) {
     const probeQuery = watches.find(watch => watch.watch_type === "technology")?.query ?? watches[0].query
     const probesPromise = runSourceProbes(admin, probeQuery)
 
-    const groups = [] as Array<{ watch: CronWatch; signals: Awaited<ReturnType<typeof scanStrategicWatch>> }>
+    const groups = [] as Array<{ watch: CronWatch; signals: CronSignal[] }>
     for (let index = 0; index < watches.length; index += 3) {
       const batch = watches.slice(index, index + 3)
-      const scanned = await Promise.all(batch.map(async watch => ({
-        watch,
-        signals: await scanStrategicWatch(admin, watch),
-      })))
+      const scanned = await Promise.all(batch.map(async watch => {
+        const strategicSignals = await scanStrategicWatch(admin, watch) as CronSignal[]
+        const marketSignals = await scanMarketIndicators(watch)
+        return { watch, signals: [...strategicSignals, ...marketSignals] }
+      }))
       groups.push(...scanned)
     }
 
@@ -122,6 +135,41 @@ export async function GET(request: Request) {
   }
 }
 
+async function scanMarketIndicators(watch: CronWatch): Promise<CronSignal[]> {
+  if (!isMarketWatch(watch) || !hasCmfMarketCredentials()) return []
+  try {
+    const items = await searchCmfMarketIndicators(watch.query)
+    return items.map(item => ({
+      signal_key: `cmf_market:market_indicator:${item.sourceRecordId}`,
+      source_key: "cmf_market",
+      event_type: "market_indicator",
+      title: `${item.label} · ${item.value}`,
+      summary: `Indicador oficial CMF para ${item.date}.`,
+      source_url: item.sourceUrl,
+      occurred_at: item.date,
+      relevance: "alta",
+      payload: {
+        official_source: true,
+        source_record_id: item.sourceRecordId,
+        indicator: item.indicator,
+        value: item.value,
+        date: item.date,
+        search_scope: "chile",
+      },
+    }))
+  } catch (error) {
+    console.warn("[strategic-watch:cmf-market] source unavailable", error)
+    return []
+  }
+}
+
+function isMarketWatch(watch: CronWatch) {
+  if (watch.metadata && typeof watch.metadata === "object" && !Array.isArray(watch.metadata)) {
+    return (watch.metadata as Record<string, unknown>).external_watch_type === "market"
+  }
+  return watch.watch_type === "market"
+}
+
 async function runSourceProbes(admin: ReturnType<typeof createAdminClient>, query: string): Promise<ProbeResult[]> {
   const now = new Date()
   const fromScience = new Date(now.getTime() - 30 * 86400000)
@@ -166,6 +214,10 @@ async function runSourceProbes(admin: ReturnType<typeof createAdminClient>, quer
   } else {
     probes.push({ source: "epo_ops", ok: null, fetched: 0, skipped: "credentials_not_configured" })
   }
+
+  probes.push(hasCmfMarketCredentials()
+    ? { source: "cmf_market", ok: true, fetched: 0, blocking: false, details: { mode: "on_matching_market_watches" } }
+    : { source: "cmf_market", ok: null, fetched: 0, blocking: false, skipped: "credentials_not_configured" })
 
   return probes
 }
