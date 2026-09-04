@@ -98,13 +98,11 @@ function extractEdition(html: string) {
 }
 
 function extractTitle(context: string) {
-  const text = cleanVisibleText(context)
-  if (!text) return null
-  const chunks = text.split(/\s*\|\s*|\s{2,}/).map(value => value.trim()).filter(Boolean)
-  for (let index = chunks.length - 1; index >= 0; index -= 1) {
-    const candidate = chunks[index]
+  const lines = visibleLines(context)
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    const candidate = lines[index]
     if (!candidate) continue
-    if (/^(ver pdf|sumario|normas generales|poder ejecutivo)$/i.test(candidate)) continue
+    if (/^(ver pdf(?:\s*\(cve[-\s]*\d+\))?|sumario|normas generales|poder ejecutivo)$/i.test(candidate)) continue
     if (/^(ministerio|subsecretar[ií]a|servicio|direcci[oó]n|comisi[oó]n)\b/i.test(candidate) && candidate.length < 90) continue
     if (candidate.length >= 12 && candidate.length <= 700) return candidate
   }
@@ -112,9 +110,12 @@ function extractTitle(context: string) {
 }
 
 function extractSection(context: string) {
-  const text = cleanVisibleText(context)
-  const matches = text.match(/(?:MINISTERIO|SUBSECRETAR[IÍ]A|SERVICIO|DIRECCI[OÓ]N|COMISI[OÓ]N)[^|]{0,140}/gi)
-  return matches?.at(-1)?.trim() ?? null
+  const lines = visibleLines(context)
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    const candidate = lines[index]
+    if (/^(MINISTERIO|SUBSECRETAR[IÍ]A|SERVICIO|DIRECCI[OÓ]N|COMISI[OÓ]N)\b/i.test(candidate)) return candidate.slice(0, 180)
+  }
+  return null
 }
 
 function matchesQuery(item: DiarioOficialRegulatorySignal, normalizedQuery: string) {
@@ -166,6 +167,18 @@ function formatIsoDate(value: Date) {
 
 function stripTags(value: string) {
   return value.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ")
+}
+
+function visibleLines(value: string) {
+  const withBreaks = value
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/(?:div|p|li|tr|td|th|h[1-6]|section|article)>/gi, "\n")
+  return decodeHtml(withBreaks.replace(/<[^>]+>/g, " "))
+    .split(/\r?\n/)
+    .map(line => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
 }
 
 function decodeHtml(value: string) {
