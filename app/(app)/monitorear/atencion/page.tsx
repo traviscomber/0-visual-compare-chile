@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { AlertTriangle, ArrowLeft, CircleCheck, ExternalLink, ListTodo, Loader2, RefreshCw } from "lucide-react"
 import { OperationalHeader, OperationalPage, OperationalPanel, OperationalSectionHeader } from "@/components/app/operational-ui"
 import { Badge } from "@/components/ui/badge"
@@ -20,13 +20,19 @@ type LinkedAction = {
   members:Member[]; created?:{case?:boolean;evidence?:boolean;action?:boolean};
   action:{ id:string; assigned_to:string|null; status:"open"|"done"; due_at:string|null; completed_at:string|null; outcome:string|null }
 }
+type AccountabilityState = "checking" | "none" | "overdue" | "unassigned" | "open" | "resolved"
+type AccountabilitySummary = { overdue:number; unassigned:number; open:number; resolved:number }
 
 const EMPTY: Summary = { total:0, critical:0, high:0, medium:0 }
+const EMPTY_ACCOUNTABILITY: AccountabilitySummary = { overdue:0, unassigned:0, open:0, resolved:0 }
 const PRIORITY_LABEL: Record<Priority,string> = { critica:"Crítica", alta:"Alta", media:"Media" }
+const ACCOUNTABILITY_RANK: Record<AccountabilityState,number> = { overdue:0, unassigned:1, none:2, open:3, checking:4, resolved:5 }
+const PRIORITY_RANK: Record<Priority,number> = { critica:0, alta:1, media:2 }
 
 export default function ExecutiveAttentionPage(){
   const [items,setItems]=useState<AttentionItem[]>([])
   const [summary,setSummary]=useState<Summary>(EMPTY)
+  const [accountability,setAccountability]=useState<Record<string,AccountabilityState>>({})
   const [loading,setLoading]=useState(true)
   const [error,setError]=useState<string|null>(null)
 
@@ -38,32 +44,54 @@ export default function ExecutiveAttentionPage(){
       if(!response.ok)throw new Error(payload.error||"No pudimos construir la cola ejecutiva.")
       setItems(Array.isArray(payload.attentionQueue)?payload.attentionQueue:[])
       setSummary(payload.attentionSummary??EMPTY)
+      setAccountability({})
     }catch(cause){setError(cause instanceof Error?cause.message:"No pudimos construir la cola ejecutiva.")}finally{setLoading(false)}
   }
 
   useEffect(()=>{void load()},[])
-  const top=useMemo(()=>items.slice(0,12),[items])
+  const reportAccountability=useCallback((key:string,state:AccountabilityState)=>{
+    setAccountability(current=>current[key]===state?current:{...current,[key]:state})
+  },[])
+  const ranked=useMemo(()=>[...items].sort((a,b)=>{
+    const aState=accountability[a.key]??"checking"
+    const bState=accountability[b.key]??"checking"
+    const byAccountability=ACCOUNTABILITY_RANK[aState]-ACCOUNTABILITY_RANK[bState]
+    if(byAccountability!==0)return byAccountability
+    const byPriority=PRIORITY_RANK[a.priority]-PRIORITY_RANK[b.priority]
+    if(byPriority!==0)return byPriority
+    const aTime=a.occurredAt?Date.parse(a.occurredAt):0
+    const bTime=b.occurredAt?Date.parse(b.occurredAt):0
+    return bTime-aTime||a.key.localeCompare(b.key)
+  }),[items,accountability])
+  const accountabilitySummary=useMemo(()=>Object.values(accountability).reduce<AccountabilitySummary>((acc,state)=>{
+    if(state==="overdue")acc.overdue+=1
+    else if(state==="unassigned")acc.unassigned+=1
+    else if(state==="open")acc.open+=1
+    else if(state==="resolved")acc.resolved+=1
+    return acc
+  },{...EMPTY_ACCOUNTABILITY}),[accountability])
 
   return <OperationalPage>
     <OperationalHeader
       eyebrow="VIDENTIA / EXECUTIVE ATTENTION"
       title="Qué requiere atención"
-      description={<>Prioridad externa conectada con trabajo responsable: evidencia, dueño, vencimiento y resultado en el mismo flujo.</>}
+      description={<>Prioridad externa conectada con accountability operativo: primero lo vencido y sin dueño, sin perder la materialidad de la señal.</>}
       meta={<><span>{summary.critical} críticos</span><span>{summary.high} altos</span><span>{summary.medium} medios</span></>}
       actions={<div className="flex flex-wrap gap-2"><Button asChild variant="outline"><Link href="/monitorear"><ArrowLeft className="h-4 w-4"/>Monitorear</Link></Button><Button onClick={()=>void load()} disabled={loading}>{loading?<Loader2 className="h-4 w-4 animate-spin"/>:<RefreshCw className="h-4 w-4"/>}Actualizar</Button></div>}
     />
 
-    <section className="grid gap-px border-y border-border/80 bg-border/80 sm:grid-cols-3">
-      <Metric label="Crítica" value={summary.critical} detail="Riesgo regulatorio materializado"/>
-      <Metric label="Alta" value={summary.high} detail="Escalamiento o señal nueva relevante"/>
-      <Metric label="Media" value={summary.medium} detail="Mitigación u observación activa"/>
+    <section className="grid gap-px border-y border-border/80 bg-border/80 sm:grid-cols-4">
+      <Metric label="Vencidas" value={accountabilitySummary.overdue} detail="Acciones abiertas fuera de plazo"/>
+      <Metric label="Sin responsable" value={accountabilitySummary.unassigned} detail="Acciones abiertas sin ownership"/>
+      <Metric label="Abiertas" value={accountabilitySummary.open} detail="Asignadas y dentro de plazo"/>
+      <Metric label="Resueltas" value={accountabilitySummary.resolved} detail="Resultado registrado en el caso"/>
     </section>
 
     <section className="py-9"><OperationalPanel>
-      <OperationalSectionHeader eyebrow="COLA EJECUTIVA" title={summary.total?`${summary.total} caso${summary.total===1?"":"s"} con atención activa`:"Sin casos que requieran atención"} meta="Prioridad · responsable · vencimiento · resultado"/>
+      <OperationalSectionHeader eyebrow="COLA EJECUTIVA" title={summary.total?`${summary.total} caso${summary.total===1?"":"s"} con atención activa`:"Sin casos que requieran atención"} meta="Accountability → prioridad externa → recencia"/>
       {error?<div role="alert" className="mt-5 bg-[#3A2525] p-4 text-sm text-[#E8AAA3]">{error}</div>:null}
-      {loading?<div className="mt-5 flex items-center gap-2 border-y border-border/80 py-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin"/>Calculando prioridad ejecutiva…</div>:top.length?<div className="mt-5 divide-y divide-border/80 border-y border-border/80">{top.map((item,index)=><AttentionRow key={item.key} item={item} index={index}/>)}</div>:<div className="mt-5 border-y border-border/80 py-10"><p className="font-medium text-white">No hay casos priorizados.</p></div>}
-      {items.length>top.length?<p className="mt-4 text-xs text-muted-foreground">Mostrando los 12 casos de mayor prioridad de {items.length}.</p>:null}
+      {loading?<div className="mt-5 flex items-center gap-2 border-y border-border/80 py-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin"/>Calculando prioridad ejecutiva…</div>:ranked.length?<div className="mt-5 divide-y divide-border/80 border-y border-border/80">{ranked.map((item,index)=><AttentionRow key={item.key} item={item} index={index} visible={index<12} onAccountabilityChange={reportAccountability}/>)}</div>:<div className="mt-5 border-y border-border/80 py-10"><p className="font-medium text-white">No hay casos priorizados.</p></div>}
+      {ranked.length>12?<p className="mt-4 text-xs text-muted-foreground">Mostrando los 12 casos con mayor urgencia operativa de {ranked.length}. Todos se consideran para el ranking y las métricas.</p>:null}
     </OperationalPanel></section>
   </OperationalPage>
 }
@@ -72,7 +100,7 @@ function Metric({label,value,detail}:{label:string;value:number;detail:string}){
   return <div className="bg-background p-6"><p className="text-[10px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]">{label}</p><p className="mt-3 font-mono text-3xl text-white">{value}</p><p className="mt-2 text-xs leading-5 text-muted-foreground">{detail}</p></div>
 }
 
-function AttentionRow({item,index}:{item:AttentionItem;index:number}){
+function AttentionRow({item,index,visible,onAccountabilityChange}:{item:AttentionItem;index:number;visible:boolean;onAccountabilityChange:(key:string,state:AccountabilityState)=>void}){
   const [creating,setCreating]=useState(false)
   const [checking,setChecking]=useState(true)
   const [action,setAction]=useState<LinkedAction|null>(null)
@@ -91,6 +119,9 @@ function AttentionRow({item,index}:{item:AttentionItem;index:number}){
     }catch(cause){setActionError(cause instanceof Error?cause.message:"No pudimos verificar la acción.")}finally{setChecking(false)}
   }
   useEffect(()=>{void loadActionState()},[item.signalKey,title])
+
+  const accountabilityState=currentAccountabilityState(action,checking)
+  useEffect(()=>{onAccountabilityChange(item.key,accountabilityState)},[item.key,accountabilityState,onAccountabilityChange])
 
   async function createAction(){
     if(creating||action)return
@@ -124,7 +155,7 @@ function AttentionRow({item,index}:{item:AttentionItem;index:number}){
   const assignee=action?.members.find(member=>member.user_id===action.action.assigned_to)
   const canAssign=action?.currentUserRole==="owner"||action?.currentUserRole==="editor"
 
-  return <article className="grid gap-4 py-5 md:grid-cols-[64px_minmax(0,1fr)_auto] md:items-start">
+  return <article className={`${visible?"grid":"hidden"} gap-4 py-5 md:grid-cols-[64px_minmax(0,1fr)_auto] md:items-start`}>
     <div className="flex items-center gap-2 md:block"><span className="font-mono text-sm text-[#96B5A6]">{String(index+1).padStart(2,"0")}</span><AlertTriangle className="mt-2 hidden h-4 w-4 text-muted-foreground md:block"/></div>
     <div>
       <div className="flex flex-wrap items-center gap-2"><Badge variant={item.priority==="critica"?"destructive":"secondary"}>{PRIORITY_LABEL[item.priority]}</Badge>{item.isNew?<Badge className="bg-[#173B37] text-[#96B5A6] hover:bg-[#173B37]">Nuevo</Badge>:null}<Badge variant="outline">{item.kind==="regulatory_case"?"Caso regulatorio":"Señal externa"}</Badge><Badge variant="outline">{checking?"Verificando acción":status}</Badge></div>
@@ -152,10 +183,19 @@ function AttentionRow({item,index}:{item:AttentionItem;index:number}){
   </article>
 }
 
+function currentAccountabilityState(value:LinkedAction|null,checking:boolean):AccountabilityState{
+  if(checking)return "checking"
+  if(!value)return "none"
+  if(value.action.status==="done")return "resolved"
+  if(value.action.due_at&&Date.parse(value.action.due_at)<Date.now())return "overdue"
+  if(!value.action.assigned_to)return "unassigned"
+  return "open"
+}
 function actionStatus(value:LinkedAction|null){
   if(!value)return "Sin acción"
   if(value.action.status==="done")return "Acción resuelta"
   if(value.action.due_at&&Date.parse(value.action.due_at)<Date.now())return "Acción vencida"
+  if(!value.action.assigned_to)return "Sin responsable"
   return "Acción abierta"
 }
 function defaultDueAt(priority:Priority){const hours=priority==="critica"?24:priority==="alta"?48:24*7;return new Date(Date.now()+hours*60*60*1000).toISOString()}
