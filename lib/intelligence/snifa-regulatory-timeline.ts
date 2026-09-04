@@ -81,7 +81,7 @@ export function collapseSnifaRegulatoryEvents(events: SnifaTimelineEvent[]): Sni
 
     collapsed.push({
       ...newestObserved,
-      id: `timeline:${identity.canonicalCompanyId}:${normalizeExpediente(identity.expediente)}`,
+      id: `timeline:${newestObserved.watch_id}:${identity.canonicalCompanyId}:${normalizeExpediente(identity.expediente)}`,
       source_key: "snifa_sma",
       event_type: "regulatory_timeline",
       title: `Hitos regulatorios SMA · ${identity.expediente}`,
