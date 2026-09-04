@@ -15,13 +15,18 @@ export async function persistIntelligenceWatchEvents(
   client: SupabaseClient,
   input: IntelligenceWatchEventWrite[],
 ) {
-  if (!input.length) return { persisted: 0 }
+  if (!input.length) return { persisted: 0, created: [] as IntelligenceWatchEventWrite[] }
 
   let persisted = 0
+  const created: IntelligenceWatchEventWrite[] = []
   for (let offset = 0; offset < input.length; offset += BATCH_SIZE) {
     const batch = input.slice(offset, offset + BATCH_SIZE)
     const existing = await loadExisting(client, batch)
     const rows = batch.map(row => mergeIntelligenceWatchEvent(row, existing.get(eventKey(row))))
+    for (const row of batch) {
+      if (!existing.has(eventKey(row))) created.push(row)
+    }
+
     const { data, error } = await client
       .from("intelligence_watch_events")
       .upsert(rows, { onConflict: "user_id,watch_id,signal_key", ignoreDuplicates: false })
@@ -31,7 +36,7 @@ export async function persistIntelligenceWatchEvents(
     persisted += data?.length ?? 0
   }
 
-  return { persisted }
+  return { persisted, created }
 }
 
 async function loadExisting(client: SupabaseClient, rows: IntelligenceWatchEventWrite[]) {
