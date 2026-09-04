@@ -36,9 +36,13 @@ assert.ok(collapsed.some(item => item.id === "d"), "near-but-not-exact expedient
 assert.ok(collapsed.some(item => item.id === "e"), "non-SNIFA context must pass through unchanged")
 
 const separateWatch = collapseSnifaRegulatoryEvents([
-  event({ id:"f", watch_id:"watch-1", source_key:"snifa_sma", title:"A", first_seen_at:"2026-01-01T00:00:00Z", payload:{...common, regulatory_stage:"provisional_measure"} }),
-  event({ id:"g", watch_id:"watch-2", source_key:"snifa_sma", title:"B", first_seen_at:"2026-01-02T00:00:00Z", payload:{...common, regulatory_stage:"sanctioning_proceeding"} }),
+  event({ id:"f1", watch_id:"watch-1", source_key:"snifa_sma", title:"W1 medida", occurred_at:"2026-01-01", first_seen_at:"2026-01-01T00:00:00Z", payload:{...common, regulatory_stage:"provisional_measure"} }),
+  event({ id:"f2", watch_id:"watch-1", source_key:"snifa_sma", title:"W1 sancionatorio", occurred_at:"2026-02-01", first_seen_at:"2026-02-01T00:00:00Z", payload:{...common, regulatory_stage:"sanctioning_proceeding"} }),
+  event({ id:"g1", watch_id:"watch-2", source_key:"snifa_sma", title:"W2 medida", occurred_at:"2026-01-02", first_seen_at:"2026-01-02T00:00:00Z", payload:{...common, regulatory_stage:"provisional_measure"} }),
+  event({ id:"g2", watch_id:"watch-2", source_key:"snifa_sma", title:"W2 sancionatorio", occurred_at:"2026-02-02", first_seen_at:"2026-02-02T00:00:00Z", payload:{...common, regulatory_stage:"sanctioning_proceeding"} }),
 ])
-assert.equal(separateWatch.length, 2, "different watches must not be collapsed into one inbox row")
+assert.equal(separateWatch.length, 2, "different watches must produce separate timeline rows")
+assert.ok(separateWatch.every(item => item.timeline?.milestones.length === 2), "each watch must retain only its own milestones")
+assert.equal(new Set(separateWatch.map(item => item.id)).size, 2, "timeline ids must remain unique across duplicate watches")
 
 console.log("SNIFA regulatory timeline regression PASS: exact canonical company + expediente milestones collapse into one chronological inbox signal without changing raw persistence, unrelated expedientes, other sources, or separate watches.")
