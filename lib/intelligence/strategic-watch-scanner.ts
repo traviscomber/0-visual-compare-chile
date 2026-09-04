@@ -4,6 +4,7 @@ import { searchCmfRegulations } from "@/lib/intelligence/cmf-regulatory"
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
 import { searchDiarioOficialRegulations } from "@/lib/intelligence/diario-oficial-regulatory"
 import { hasEpoOpsCredentials, searchEpoPatentFamilies } from "@/lib/intelligence/epo-ops"
+import { searchGdeltArticles } from "@/lib/intelligence/gdelt-doc"
 import { searchGoogleNews, type GoogleNewsMarket } from "@/lib/intelligence/google-news"
 import { hasMercadoPublicoWatchCredentials, searchMercadoPublicoTenders } from "@/lib/intelligence/mercado-publico-watch"
 import { searchOpenAlexWorks } from "@/lib/intelligence/openalex"
@@ -29,7 +30,7 @@ export type StrategicWatch = {
 
 export type StrategicCandidateSignal = {
   signal_key: string
-  source_key: "inapi_open_data" | "openalex" | "crossref" | "google_news_rss" | "epo_ops" | "mercado_publico" | "bcn_norms" | "cmf_norms" | "diario_oficial"
+  source_key: "inapi_open_data" | "openalex" | "crossref" | "google_news_rss" | "gdelt_doc" | "epo_ops" | "mercado_publico" | "bcn_norms" | "cmf_norms" | "diario_oficial"
   event_type: "patent" | "trademark" | "publication" | "news" | "tender" | "regulation"
   title: string
   summary: string | null
@@ -51,6 +52,7 @@ const MAX_QUERY_VARIANTS_PER_SOURCE = 2
 const STRATEGIC_WATCH_TYPES = new Set<StrategicWatchType>(["technology", "company", "competitor", "regulator", "tender", "market", "topic"])
 const IP_ENTITY_WATCHES = new Set<StrategicWatchType>(["company", "competitor"])
 const NEWS_ONLY_WATCHES = new Set<StrategicWatchType>(["regulator", "tender", "market", "topic"])
+const GDELT_GLOBAL_WATCHES = new Set<StrategicWatchType>(["company", "competitor", "market", "topic"])
 
 export async function scanStrategicWatch(admin: AdminClient, watch: StrategicWatch): Promise<StrategicCandidateSignal[]> {
   const now = new Date()
@@ -76,6 +78,7 @@ export async function scanStrategicWatch(admin: AdminClient, watch: StrategicWat
 
   if (scope !== "chile") {
     tasks.push(scanNews(watch, intent.globalQueries, daysAgo(now, NEWS_WINDOW_DAYS), now, "global"))
+    if (GDELT_GLOBAL_WATCHES.has(watchType)) tasks.push(scanGdeltNews(watch, intent.globalQueries))
     if (watchType === "technology") {
       tasks.push(scanScience(watch, intent.globalQueries, daysAgo(now, SCIENCE_WINDOW_DAYS), now))
       if (hasEpoOpsCredentials()) tasks.push(scanEpoFamilies(watch, intent.globalQueries))
@@ -404,6 +407,32 @@ async function scanEpoFamilies(watch: StrategicWatch, variants: string[]): Promi
         family_members: item.familyMembers,
         jurisdictions: item.jurisdictions,
         coverage: "EPO OPS simple patent family",
+        matched_query: variant,
+        search_scope: "global",
+      },
+    }))
+  }))
+  return dedupeSignals(groups.flat())
+}
+
+async function scanGdeltNews(watch: StrategicWatch, variants: string[]): Promise<StrategicCandidateSignal[]> {
+  const groups = await Promise.all(sourceVariants(variants).map(async variant => {
+    const items = await searchGdeltArticles(variant, { timespan: "7d", limit: 12 })
+    return items.map(item => ({
+      signal_key: `gdelt_doc:news:${item.sourceRecordId}`,
+      source_key: "gdelt_doc" as const,
+      event_type: "news" as const,
+      title: item.title,
+      summary: [item.domain, item.sourceCountry, item.language].filter(Boolean).join(" · ") || "Cobertura global indexada por GDELT.",
+      source_url: item.url,
+      occurred_at: item.seenAt,
+      relevance: "media" as const,
+      payload: {
+        publisher_domain: item.domain,
+        source_country: item.sourceCountry,
+        language: item.language,
+        role: "context_only",
+        watch_type: effectiveWatchType(watch),
         matched_query: variant,
         search_scope: "global",
       },
