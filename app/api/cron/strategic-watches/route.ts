@@ -17,6 +17,7 @@ import { scanMercadoPublicoCompanyWatch } from "@/lib/intelligence/mercado-publi
 import { searchOpenAlexWorks } from "@/lib/intelligence/openalex"
 import { scanStrategicWatch, type StrategicWatch } from "@/lib/intelligence/strategic-watch-scanner"
 import { persistIntelligenceWatchEvents } from "@/lib/intelligence/watch-event-writer"
+import { createHighRelevanceWatchNotifications } from "@/lib/intelligence/watch-notifications"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -68,9 +69,10 @@ export async function GET(request: Request) {
     const watches = (data ?? []) as CronWatch[]
 
     if (!watches.length) {
-      return NextResponse.json({ ok: true, watches: 0, signals: 0, probes: [], durationMs: Date.now() - startedAt })
+      return NextResponse.json({ ok: true, watches: 0, signals: 0, notifications: 0, probes: [], durationMs: Date.now() - startedAt })
     }
 
+    const previouslyCheckedWatchIds = new Set(watches.filter(watch => Boolean(watch.last_checked_at)).map(watch => watch.id))
     const probeQuery = watches.find(watch => watch.watch_type === "technology")?.query ?? watches[0].query
     const probesPromise = runSourceProbes(admin, probeQuery)
 
@@ -115,7 +117,15 @@ export async function GET(request: Request) {
       updated_at: scanStartedAt,
     })))
 
-    if (rows.length) await persistIntelligenceWatchEvents(admin, rows)
+    const persistence = rows.length
+      ? await persistIntelligenceWatchEvents(admin, rows)
+      : { persisted: 0, created: [] }
+    const notificationResult = await createHighRelevanceWatchNotifications(
+      admin,
+      persistence.created,
+      previouslyCheckedWatchIds,
+      scanStartedAt,
+    )
 
     const baselineIds = watches.filter(watch => !watch.last_checked_at).map(watch => watch.id)
     if (baselineIds.length) {
@@ -139,6 +149,7 @@ export async function GET(request: Request) {
       ok: failedProbes.length === 0,
       watches: watches.length,
       signals: rows.length,
+      notifications: notificationResult.created,
       probes,
       durationMs: Date.now() - startedAt,
     }, { status: failedProbes.length ? 503 : 200 })
