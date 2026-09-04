@@ -228,14 +228,16 @@ async function scanSnifaFirmSanctions(watch: StrategicWatch, variants: string[])
       event_type: "regulation" as const,
       title: `Sanción SMA firme · ${item.expediente}`,
       summary: [
+        `Riesgo ${item.environmentalRiskLevel}`,
+        item.infringementCount ? `${item.infringementCount} hecho(s)` : null,
         item.unitName,
         item.fineUta != null ? `${item.fineUta.toLocaleString("es-CL")} UTA` : null,
         item.paymentStatus,
         item.region,
       ].filter(Boolean).join(" · "),
       source_url: item.sourceUrl,
-      occurred_at: null,
-      relevance: "alta" as const,
+      occurred_at: item.endedAt || item.startedAt,
+      relevance: snifaRiskRelevance(item.environmentalRiskLevel),
       payload: {
         official_source: true,
         evidence_type: "firm_sanction",
@@ -247,6 +249,16 @@ async function scanSnifaFirmSanctions(watch: StrategicWatch, variants: string[])
         region: item.region,
         fine_uta: item.fineUta,
         payment_status: item.paymentStatus,
+        started_at: item.startedAt,
+        ended_at: item.endedAt,
+        status: item.status,
+        environmental_risk_level: item.environmentalRiskLevel,
+        environmental_risk_basis: item.environmentalRiskBasis,
+        infringement_count: item.infringementCount,
+        gravisima_count: item.gravisimaCount,
+        grave_count: item.graveCount,
+        leve_count: item.leveCount,
+        derived_materiality: true,
         matched_query: variant,
         search_scope: "chile",
       },
@@ -523,6 +535,12 @@ function dedupeSignals(values: StrategicCandidateSignal[]) {
 
 async function safe<T>(promise: Promise<T>, fallback: T): Promise<T> {
   try { return await promise } catch (error) { console.warn("[strategic-watch] source unavailable", error); return fallback }
+}
+
+function snifaRiskRelevance(value: "critical" | "high" | "medium" | "low"): StrategicCandidateSignal["relevance"] {
+  if (value === "critical" || value === "high") return "alta"
+  if (value === "medium") return "media"
+  return "baja"
 }
 
 function escapeLike(value: string) { return value.replace(/[%_]/g, "\\$&") }
