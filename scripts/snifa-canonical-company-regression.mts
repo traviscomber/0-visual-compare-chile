@@ -9,10 +9,15 @@ function requireText(source: string, needle: string, label: string) {
   if (!source.includes(needle)) fail(`${label} missing ${needle}`)
 }
 
-const [adapter, cron, interactive] = await Promise.all([
+function forbidText(source: string, needle: string, label: string) {
+  if (source.includes(needle)) fail(`${label} still contains legacy ${needle}`)
+}
+
+const [adapter, cron, interactive, strategicScanner] = await Promise.all([
   readFile("lib/intelligence/snifa-company-watch.ts", "utf8"),
   readFile("app/api/cron/strategic-watches/route.ts", "utf8"),
   readFile("app/api/intelligence/strategic-watch-signals/route.ts", "utf8"),
+  readFile("lib/intelligence/strategic-watch-scanner.ts", "utf8"),
 ])
 
 for (const needle of [
@@ -32,4 +37,8 @@ for (const [source, label] of [[cron, "strategic cron"], [interactive, "interact
   requireText(source, 'filter(signal => signal.source_key !== "snifa_sma")', label)
 }
 
-console.log("SNIFA canonical company regression PASS: official environmental sanctions require one canonical company with verified RUT, source-holder corroboration, and both persistence paths replace legacy text-only SNIFA candidates.")
+for (const needle of ["searchSnifaFirmSanctions", "scanSnifaFirmSanctions"]) {
+  forbidText(strategicScanner, needle, "strategic-watch-scanner")
+}
+
+console.log("SNIFA canonical company regression PASS: official environmental sanctions require one canonical company with verified RUT, source-holder corroboration, both persistence paths replace legacy text-only candidates, and the shared strategic scanner performs no parallel SNIFA network scan.")
