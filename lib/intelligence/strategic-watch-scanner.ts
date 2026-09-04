@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
 import { hasEpoOpsCredentials, searchEpoPatentFamilies } from "@/lib/intelligence/epo-ops"
 import { searchGoogleNews, type GoogleNewsMarket } from "@/lib/intelligence/google-news"
+import { hasMercadoPublicoWatchCredentials, searchMercadoPublicoTenders } from "@/lib/intelligence/mercado-publico-watch"
 import { searchOpenAlexWorks } from "@/lib/intelligence/openalex"
 import { normalizeIntelligenceSearchText } from "@/lib/intelligence/source-change-recorder"
 import {
@@ -25,8 +26,8 @@ export type StrategicWatch = {
 
 export type StrategicCandidateSignal = {
   signal_key: string
-  source_key: "inapi_open_data" | "openalex" | "crossref" | "google_news_rss" | "epo_ops"
-  event_type: "patent" | "trademark" | "publication" | "news"
+  source_key: "inapi_open_data" | "openalex" | "crossref" | "google_news_rss" | "epo_ops" | "mercado_publico"
+  event_type: "patent" | "trademark" | "publication" | "news" | "tender"
   title: string
   summary: string | null
   source_url: string | null
@@ -60,6 +61,7 @@ export async function scanStrategicWatch(admin: AdminClient, watch: StrategicWat
       tasks.push(scanObservedSourceChanges(admin, watch, intent.chileQueries, daysAgo(now, SOURCE_CHANGE_WINDOW_DAYS)))
       tasks.push(scanPatents(admin, watch, intent.chileQueries, daysAgo(now, PATENT_WINDOW_DAYS)))
     }
+    if (watchType === "tender" && hasMercadoPublicoWatchCredentials()) tasks.push(scanMercadoPublicoTenders(watch, intent.chileQueries))
     tasks.push(scanNews(watch, intent.chileQueries, daysAgo(now, NEWS_WINDOW_DAYS), now, "chile"))
     if (IP_ENTITY_WATCHES.has(watchType)) tasks.push(scanTrademarks(admin, watch, intent.chileQueries, daysAgo(now, TRADEMARK_WINDOW_DAYS)))
   }
@@ -202,6 +204,37 @@ async function scanTrademarks(admin: AdminClient, watch: StrategicWatch, variant
   return dedupeSignals(groups.flat())
 }
 
+async function scanMercadoPublicoTenders(watch: StrategicWatch, variants: string[]): Promise<StrategicCandidateSignal[]> {
+  const groups = await Promise.all(sourceVariants(variants).map(async variant => {
+    const items = await searchMercadoPublicoTenders(variant, 10)
+    return items.map(item => ({
+      signal_key: `mercado_publico:tender:${item.code}`,
+      source_key: "mercado_publico" as const,
+      event_type: "tender" as const,
+      title: item.name,
+      summary: [item.buyer, item.status, item.closingDate ? `Cierre ${formatSignalDate(item.closingDate)}` : null].filter(Boolean).join(" · ") || "Licitación activa en Mercado Público.",
+      source_url: item.sourceUrl,
+      occurred_at: null,
+      relevance: "media" as const,
+      payload: {
+        official_source: true,
+        source_record_id: item.code,
+        tender_code: item.code,
+        description: item.description,
+        status: item.status,
+        status_code: item.statusCode,
+        closing_date: item.closingDate,
+        buyer: item.buyer,
+        buying_unit: item.buyingUnit,
+        region: item.region,
+        matched_query: variant,
+        search_scope: "chile",
+      },
+    }))
+  }))
+  return dedupeSignals(groups.flat())
+}
+
 async function scanScience(watch: StrategicWatch, variants: string[], from: Date, to: Date): Promise<StrategicCandidateSignal[]> {
   const rows: StrategicCandidateSignal[] = []
   const seenDoi = new Set<string>()
@@ -326,3 +359,4 @@ function dateOnly(value: Date) { return value.toISOString().slice(0, 10) }
 function daysAgo(reference: Date, days: number) { return new Date(reference.getTime() - days * 86400000) }
 function normalizeDoi(value: string | null) { return value ? value.toLowerCase().replace(/^https?:\/\/(dx\.)?doi\.org\//, "") : null }
 function relevanceRank(value: StrategicCandidateSignal["relevance"]) { return value === "alta" ? 3 : value === "media" ? 2 : 1 }
+function formatSignalDate(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("es-CL", { dateStyle: "medium" }).format(date) }
