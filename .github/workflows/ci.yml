@@ -93,6 +93,8 @@ jobs:
         run: node scripts/gdelt-context-fusion-regression.mts
       - name: SNIFA environmental risk regression
         run: node scripts/snifa-risk-regression.mts
+      - name: SNIFA canonical company regression
+        run: node scripts/snifa-canonical-company-regression.mts
       - name: Strategic onboarding regression
         run: node scripts/strategic-onboarding-regression.mts
 
