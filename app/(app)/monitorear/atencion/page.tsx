@@ -17,7 +17,7 @@ type Summary = { total:number; critical:number; high:number; medium:number }
 type Member = { user_id:string; display_name:string; email:string; role:"owner"|"editor"|"viewer" }
 type LinkedAction = {
   href:string; caseId:string; caseStatus:string; currentUserId:string; currentUserRole:"owner"|"editor"|"viewer";
-  members:Member[];
+  members:Member[]; created?:{case?:boolean;evidence?:boolean;action?:boolean};
   action:{ id:string; assigned_to:string|null; status:"open"|"done"; due_at:string|null; completed_at:string|null; outcome:string|null }
 }
 
@@ -80,14 +80,14 @@ function AttentionRow({item,index}:{item:AttentionItem;index:number}){
   const external=item.href.startsWith("http")
   const title=truncate(actionTitle(item),240)
 
-  async function loadActionState(){
+  async function loadActionState(created?:LinkedAction["created"]){
     setChecking(true)
     try{
       const params=new URLSearchParams({sourceId:item.signalKey,actionTitle:title})
       const response=await fetch(`/api/intelligence/actions?${params.toString()}`,{cache:"no-store"})
       const payload=await response.json().catch(()=>({}))
       if(!response.ok)throw new Error(payload.error||"No pudimos verificar la acción.")
-      setAction(payload.linked?payload:null)
+      setAction(payload.linked?{...payload,created}:null)
     }catch(cause){setActionError(cause instanceof Error?cause.message:"No pudimos verificar la acción.")}finally{setChecking(false)}
   }
   useEffect(()=>{void loadActionState()},[item.signalKey,title])
@@ -105,7 +105,7 @@ function AttentionRow({item,index}:{item:AttentionItem;index:number}){
       })})
       const payload=await response.json().catch(()=>({}))
       if(!response.ok)throw new Error(payload.error||"No pudimos crear la acción.")
-      await loadActionState()
+      await loadActionState(payload.created)
     }catch(cause){setActionError(cause instanceof Error?cause.message:"No pudimos crear la acción.")}finally{setCreating(false)}
   }
 
@@ -116,7 +116,7 @@ function AttentionRow({item,index}:{item:AttentionItem;index:number}){
       const response=await fetch("/api/cases/collaboration",{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({type:"action_schedule",id:action.action.id,assignedTo,dueAt})})
       const payload=await response.json().catch(()=>({}))
       if(!response.ok)throw new Error(payload.error||"No pudimos actualizar responsable o fecha.")
-      await loadActionState()
+      await loadActionState(action.created)
     }catch(cause){setActionError(cause instanceof Error?cause.message:"No pudimos actualizar responsable o fecha.")}
   }
 
@@ -136,6 +136,7 @@ function AttentionRow({item,index}:{item:AttentionItem;index:number}){
       {action?<div className="mt-3 border-l-2 border-[#96B5A6]/35 pl-3">
         <p className="text-xs text-[#96B5A6]">Responsable · {assignee?.display_name||"Sin responsable"}</p>
         <p className="mt-1 text-xs text-muted-foreground">Fecha límite · {action.action.due_at?formatDate(action.action.due_at):"Sin fecha"}</p>
+        {action.created?<p className="mt-1 text-xs text-[#96B5A6]">{action.created?.action===false?"Acción existente recuperada":"Acción creada y vinculada a la evidencia"}</p>:null}
         {action.action.outcome?<p className="mt-2 text-xs leading-5 text-foreground/80">Resultado · {action.action.outcome}</p>:null}
         {canAssign&&action.action.status==="open"?<div className="mt-3 grid max-w-xl gap-2 sm:grid-cols-2">
           <select aria-label="Responsable" value={action.action.assigned_to??""} onChange={event=>void updateSchedule(event.target.value||null,action.action.due_at)} className="h-9 border border-input bg-background px-2 text-xs text-foreground"><option value="">Sin responsable</option>{action.members.map(member=><option key={member.user_id} value={member.user_id}>{member.display_name}</option>)}</select>
