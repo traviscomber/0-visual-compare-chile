@@ -75,6 +75,8 @@ jobs:
         run: node scripts/executive-action-unassigned-regression.mts
       - name: Executive critical escalation regression
         run: node scripts/executive-critical-escalation-regression.mts
+      - name: Executive escalation visibility regression
+        run: node scripts/executive-attention-escalation-visibility-regression.mts
       - name: Executive attention ownership regression
         run: node scripts/executive-attention-ownership-regression.mts
       - name: Executive accountability ranking regression

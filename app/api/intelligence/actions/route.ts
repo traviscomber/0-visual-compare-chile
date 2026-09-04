@@ -82,6 +82,22 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "No pudimos cargar responsable y permisos de la acción." }, { status: 403, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
+  const { data: escalationRows, error: escalationError } = await auth.supabase
+    .from("case_automation_actions")
+    .select("id,action_type,created_at")
+    .eq("case_action_id", action.id)
+    .eq("action_type", "executive_unassigned_escalation")
+    .order("created_at", { ascending: false })
+    .limit(1)
+  if (escalationError) {
+    return NextResponse.json({ error: "No pudimos cargar el estado de escalamiento." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
+  }
+  const escalationRow = escalationRows?.[0]
+  const escalation = escalationRow ? {
+    type: "owner_unassigned_critical" as const,
+    createdAt: escalationRow.created_at,
+  } : null
+
   return NextResponse.json({
     linked: true,
     href: `/casos/${caseRow.id}/equipo`,
@@ -91,6 +107,7 @@ export async function GET(request: Request) {
     currentUserRole: role,
     members: members ?? [],
     action,
+    escalation,
   }, { headers: PRIVATE_NO_STORE_HEADERS })
 }
 

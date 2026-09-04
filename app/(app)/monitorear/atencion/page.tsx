@@ -18,7 +18,8 @@ type Member = { user_id:string; display_name:string; email:string; role:"owner"|
 type LinkedAction = {
   href:string; caseId:string; caseStatus:string; currentUserId:string; currentUserRole:"owner"|"editor"|"viewer";
   members:Member[]; created?:{case?:boolean;evidence?:boolean;action?:boolean};
-  action:{ id:string; assigned_to:string|null; status:"open"|"done"; due_at:string|null; completed_at:string|null; outcome:string|null }
+  action:{ id:string; assigned_to:string|null; status:"open"|"done"; due_at:string|null; completed_at:string|null; outcome:string|null };
+  escalation:{ type:"owner_unassigned_critical"; createdAt:string }|null
 }
 type AccountabilityState = "checking" | "none" | "overdue" | "unassigned" | "open" | "resolved"
 type AccountabilitySummary = { overdue:number; unassigned:number; open:number; resolved:number }
@@ -158,7 +159,7 @@ function AttentionRow({item,index,visible,onAccountabilityChange}:{item:Attentio
   return <article className={`${visible?"grid":"hidden"} gap-4 py-5 md:grid-cols-[64px_minmax(0,1fr)_auto] md:items-start`}>
     <div className="flex items-center gap-2 md:block"><span className="font-mono text-sm text-[#96B5A6]">{String(index+1).padStart(2,"0")}</span><AlertTriangle className="mt-2 hidden h-4 w-4 text-muted-foreground md:block"/></div>
     <div>
-      <div className="flex flex-wrap items-center gap-2"><Badge variant={item.priority==="critica"?"destructive":"secondary"}>{PRIORITY_LABEL[item.priority]}</Badge>{item.isNew?<Badge className="bg-[#173B37] text-[#96B5A6] hover:bg-[#173B37]">Nuevo</Badge>:null}<Badge variant="outline">{item.kind==="regulatory_case"?"Caso regulatorio":"Señal externa"}</Badge><Badge variant="outline">{checking?"Verificando acción":status}</Badge></div>
+      <div className="flex flex-wrap items-center gap-2"><Badge variant={item.priority==="critica"?"destructive":"secondary"}>{PRIORITY_LABEL[item.priority]}</Badge>{item.isNew?<Badge className="bg-[#173B37] text-[#96B5A6] hover:bg-[#173B37]">Nuevo</Badge>:null}<Badge variant="outline">{item.kind==="regulatory_case"?"Caso regulatorio":"Señal externa"}</Badge><Badge variant="outline">{checking?"Verificando acción":status}</Badge>{action?.escalation?<Badge variant="outline">Escalada al owner</Badge>:null}</div>
       <h2 className="mt-3 text-sm font-medium leading-6 text-white">{item.title}</h2>
       <p className="mt-1 text-xs text-[#96B5A6]">{item.subject} · {item.source}</p>
       <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{item.reason}</p>
@@ -167,6 +168,7 @@ function AttentionRow({item,index,visible,onAccountabilityChange}:{item:Attentio
       {action?<div className="mt-3 border-l-2 border-[#96B5A6]/35 pl-3">
         <p className="text-xs text-[#96B5A6]">Responsable · {assignee?.display_name||"Sin responsable"}</p>
         <p className="mt-1 text-xs text-muted-foreground">Fecha límite · {action.action.due_at?formatDate(action.action.due_at):"Sin fecha"}</p>
+        {action.escalation?<p className="mt-1 text-xs text-[#E8AAA3]">Escalada al owner · {formatDate(action.escalation.createdAt)}</p>:null}
         {action.created?<p className="mt-1 text-xs text-[#96B5A6]">{action.created?.action===false?"Acción existente recuperada":"Acción creada y vinculada a la evidencia"}</p>:null}
         {action.action.outcome?<p className="mt-2 text-xs leading-5 text-foreground/80">Resultado · {action.action.outcome}</p>:null}
         {canAssign&&action.action.status==="open"?<div className="mt-3 grid max-w-xl gap-2 sm:grid-cols-2">
