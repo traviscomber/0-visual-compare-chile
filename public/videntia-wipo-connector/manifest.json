@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "VIDENTIA WIPO Connector",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Conecta WIPO PATENTSCOPE con VIDENTIA para activar seguimientos sin copiar enlaces manualmente.",
   "permissions": ["storage", "tabs", "webRequest"],
   "host_permissions": [
