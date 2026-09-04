@@ -1,12 +1,11 @@
 import "server-only"
 
 import { fetchWithRetry } from "@/lib/intelligence/fetch-with-retry"
+import { classifyEnvironmentalRisk, type SnifaRiskLevel } from "@/lib/intelligence/snifa-risk"
 
 const SNIFA_BASE = "https://snifa.sma.gob.cl"
 const SNIFA_RESULTS_PATH = "/RegistroPublico/Resultado"
 const MAX_RESULTS = 20
-
-export type SnifaRiskLevel = "critical" | "high" | "medium" | "low"
 
 export type SnifaFirmSanction = {
   source: "snifa_sma"
@@ -131,41 +130,6 @@ export function parseFirmSanctionDetail(html: string): Pick<SnifaFirmSanction, "
     status: labelValue(text, "Estado"),
     sanctionDetail: labelValue(text, "Detalle Sanción") ?? labelValue(text, "Detalle Sancion"),
   }
-}
-
-export function classifyEnvironmentalRisk(fineUta: number | null, sanctionDetail: string | null): Pick<SnifaFirmSanction, "infringementCount" | "gravisimaCount" | "graveCount" | "leveCount" | "environmentalRiskLevel" | "environmentalRiskBasis"> {
-  const normalized = normalizeEntity(sanctionDetail ?? "")
-  const gravisimaCount = countWord(normalized, "gravisimas")
-  const graveCount = countWord(normalized, "graves")
-  const leveCount = countWord(normalized, "leves")
-  const infringementCount = gravisimaCount + graveCount + leveCount
-  const basis: string[] = []
-
-  if (gravisimaCount > 0) basis.push(`${gravisimaCount} infracción(es) gravísima(s)`)
-  if (graveCount > 0) basis.push(`${graveCount} infracción(es) grave(s)`)
-  if (leveCount > 0) basis.push(`${leveCount} infracción(es) leve(s)`)
-  if (fineUta != null) basis.push(`${fineUta.toLocaleString("es-CL")} UTA`)
-  if (infringementCount > 0) basis.push(`${infringementCount} hecho(s) sancionados`)
-
-  let environmentalRiskLevel: SnifaRiskLevel = "low"
-  if (gravisimaCount > 0 || (fineUta ?? 0) >= 5000) environmentalRiskLevel = "critical"
-  else if (graveCount > 0 || (fineUta ?? 0) >= 1000) environmentalRiskLevel = "high"
-  else if (leveCount > 0 || (fineUta ?? 0) >= 100) environmentalRiskLevel = "medium"
-
-  return {
-    infringementCount,
-    gravisimaCount,
-    graveCount,
-    leveCount,
-    environmentalRiskLevel,
-    environmentalRiskBasis: basis,
-  }
-}
-
-function countWord(value: string, word: string) {
-  if (!value || !word) return 0
-  const matches = value.match(new RegExp(`\\b${escapeRegExp(word)}\\b`, "g"))
-  return matches?.length ?? 0
 }
 
 function labelValue(text: string, label: string) {

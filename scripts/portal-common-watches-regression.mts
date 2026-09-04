@@ -37,20 +37,20 @@ for(const forbidden of [
 for(const needle of [
   'fetch("/api/intelligence/watches"',
   'fetch("/api/intelligence/watches/signals"',
-  'eyebrow="VIDENTIA / SEGUIMIENTOS"',
-  'Seguimiento en 3 pasos.',
-  'Elige qué seguir',
-  'VIDENTIA vigila',
-  'Revisa novedades',
+  'eyebrow="VIDENTIA / EXTERNAL INTELLIGENCE"',
+  'title="Observa cambios, no búsquedas."',
+  'Define qué importa',
+  'VIDENTIA observa',
+  'Decide sobre cambios',
   'PASO 1 / NUEVO SEGUIMIENTO',
-  'A · Tipo',
+  'A · Familia',
   'B · Criterio',
   'C · Activar',
   'Activar seguimiento',
   'No pudimos cargar tus seguimientos.',
   'No pudimos crear el seguimiento.',
   'href="#novedades"',
-  'PASO 3 / NOVEDADES',
+  'PASO 3 / SEÑALES',
   'Marcar revisadas',
   'PASO 2',
   '(["brand","patent","technology"] as WatchType[])',
@@ -59,7 +59,7 @@ for(const needle of [
   '<option value="chile">Chile</option>',
   '<option value="global">Global</option>',
   '<option value="both">Ambos</option>',
-  'IA / AI',
+  'Marcas · Patentes · Competidores · Mercados',
   'href="/monitorear/estrategico"',
   'href="/patentes/alertas"',
 ])requireText(page,needle,"common watch workspace")
@@ -96,4 +96,4 @@ for(const [source,label] of [[watchesApi,"watch API"],[signalsApi,"signal API"]]
   if(source.includes("createAdminClient")||source.includes("SUPABASE_SERVICE_ROLE_KEY"))fail(`${label} must remain behind authenticated RLS, not service role`)
 }
 
-console.log("Portal/Common Watches regression PASS: user-facing monitoring terminology is consistently Seguimientos, the workspace remains a simple 1-2-3 journey (choose, VIDENTIA watches, review changes), with A-B-C creation, six-destination IA, contextual deep tools, scoped Chile/Global/Both technology searches, and authenticated RLS facades preserved without a destructive migration.")
+console.log("Portal/Common Watches regression PASS: External Intelligence remains the canonical monitoring workspace, with the 1-2-3 define/observe/decide journey, A-B-C creation, scoped Chile/Global/Both technology searches, contextual deep tools, and authenticated RLS facades preserved without a destructive migration.")
