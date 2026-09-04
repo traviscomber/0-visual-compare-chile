@@ -97,6 +97,8 @@ jobs:
         run: node scripts/snifa-canonical-company-regression.mts
       - name: SNIFA regulatory timeline regression
         run: node scripts/snifa-regulatory-timeline-regression.mts
+      - name: SNIFA regulatory timeline UI regression
+        run: node scripts/snifa-regulatory-timeline-ui-regression.mts
       - name: Strategic onboarding regression
         run: node scripts/strategic-onboarding-regression.mts
 
