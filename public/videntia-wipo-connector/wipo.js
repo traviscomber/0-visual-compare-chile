@@ -50,6 +50,16 @@ function exactSavedQueryRow(query){
   return [...document.querySelectorAll("tr")].find(row => row.querySelector("td")?.textContent?.trim().toLocaleLowerCase() === target) || null
 }
 
+function absoluteRssUrl(element){
+  const href = element?.getAttribute?.("href") || ""
+  if(!href) return null
+  try{
+    const parsed = new URL(href,window.location.href)
+    if(parsed.protocol !== "https:" || parsed.hostname !== "patentscope.wipo.int" || !/\/rss\.xml$/i.test(parsed.pathname)) return null
+    return parsed.toString()
+  }catch{return null}
+}
+
 async function connectSavedQuery(pending){
   const table = await waitFor(()=>document.querySelector("table,[role='grid']"),12000)
   if(!table){fail("WIPO no mostró tus consultas guardadas. Confirma que tu sesión de WIPO esté iniciada e inténtalo nuevamente.");return}
@@ -73,6 +83,15 @@ async function connectSavedQuery(pending){
   setStep(pending,"requesting_feed")
   const rss = [...row.querySelectorAll("a,button")].find(element => /^rss$/i.test(textOf(element)) || /rss/i.test(element.getAttribute("title") || ""))
   if(!rss){fail("WIPO no ofreció seguimiento para esta consulta. Abre Saved Queries y confirma que la consulta sea pública.");return}
+
+  const feedUrl = absoluteRssUrl(rss)
+  if(feedUrl){
+    chrome.runtime.sendMessage({type:"WIPO_RSS_FOUND",feedUrl}, response => {
+      if(!response?.ok) fail("WIPO entregó el RSS, pero VIDENTIA no pudo completar el retorno automático.")
+    })
+    return
+  }
+
   rss.click()
 }
 
