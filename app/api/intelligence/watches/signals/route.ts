@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
+import { collapseSnifaRegulatoryEvents } from "@/lib/intelligence/snifa-regulatory-timeline"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -29,7 +30,7 @@ export async function GET() {
     auth.supabase.from("intelligence_watches").select("id,query,is_active,last_reviewed_at").eq("user_id", auth.user.id),
     auth.supabase.from("trademark_watch_signal_events").select("id,watch_id,source,mark_name,applicant_name,application_number,event_date,source_url,relevance,reason,first_seen_at").eq("user_id", auth.user.id).order("first_seen_at", { ascending: false }).limit(150),
     auth.supabase.from("patent_alert_events").select("id,watch_id,title,application_number,applicants,ipc_codes,filing_date,detected_at,read_at,source_key,source_url,source_date").eq("user_id", auth.user.id).order("detected_at", { ascending: false }).limit(150),
-    auth.supabase.from("intelligence_watch_events").select("id,watch_id,source_key,event_type,title,summary,source_url,occurred_at,relevance,first_seen_at").eq("user_id", auth.user.id).order("first_seen_at", { ascending: false }).limit(150),
+    auth.supabase.from("intelligence_watch_events").select("id,watch_id,source_key,event_type,title,summary,source_url,occurred_at,relevance,first_seen_at,payload").eq("user_id", auth.user.id).order("first_seen_at", { ascending: false }).limit(150),
   ])
 
   const failed = [brandWatchesResult.error, patentWatchesResult.error, technologyWatchesResult.error, brandEventsResult.error, patentEventsResult.error, technologyEventsResult.error].find(Boolean)
@@ -41,6 +42,7 @@ export async function GET() {
   const brandWatches = new Map((brandWatchesResult.data ?? []).map(item => [item.id, item]))
   const patentWatches = new Map((patentWatchesResult.data ?? []).map(item => [item.id, item]))
   const technologyWatches = new Map((technologyWatchesResult.data ?? []).map(item => [item.id, item]))
+  const technologyEvents = collapseSnifaRegulatoryEvents((technologyEventsResult.data ?? []).map(row => ({ ...row, relevance: row.relevance ?? null })))
 
   const signals: CommonSignal[] = [
     ...(brandEventsResult.data ?? []).flatMap(row => {
@@ -68,11 +70,24 @@ export async function GET() {
         href: row.source_url || (isWipo ? "/patentes/wipo" : "/patentes"),
       }]
     }),
-    ...(technologyEventsResult.data ?? []).flatMap(row => {
+    ...technologyEvents.flatMap(row => {
       const watch = technologyWatches.get(row.watch_id)
       if (!watch?.is_active) return []
       const isNew = Boolean(watch.last_reviewed_at && Date.parse(row.first_seen_at) > Date.parse(watch.last_reviewed_at))
-      return [{ key: `technology:${row.id}`, watchKey: `technology:${row.watch_id}`, type: "technology" as const, watchQuery: watch.query, source: row.source_key, title: row.title, detail: row.summary || row.event_type, occurredAt: row.occurred_at, firstSeenAt: row.first_seen_at, relevance: normalizeRelevance(row.relevance), isNew, href: row.source_url || "/monitorear/estrategico" }]
+      return [{
+        key: `technology:${row.id}`,
+        watchKey: `technology:${row.watch_id}`,
+        type: "technology" as const,
+        watchQuery: watch.query,
+        source: row.timeline ? "SMA · línea regulatoria" : row.source_key,
+        title: row.title,
+        detail: row.summary || row.event_type,
+        occurredAt: row.occurred_at,
+        firstSeenAt: row.first_seen_at,
+        relevance: normalizeRelevance(row.relevance),
+        isNew,
+        href: row.source_url || "/monitorear/estrategico",
+      }]
     }),
   ].sort((a, b) => Number(b.isNew) - Number(a.isNew) || relevanceRank(b.relevance) - relevanceRank(a.relevance) || Date.parse(b.firstSeenAt) - Date.parse(a.firstSeenAt))
 
