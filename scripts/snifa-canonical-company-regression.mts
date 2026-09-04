@@ -13,10 +13,11 @@ function forbidText(source: string, needle: string, label: string) {
   if (source.includes(needle)) fail(`${label} still contains legacy ${needle}`)
 }
 
-const [adapter, complianceSource, proceedingSource, cron, interactive, strategicScanner] = await Promise.all([
+const [adapter, complianceSource, proceedingSource, provisionalSource, cron, interactive, strategicScanner] = await Promise.all([
   readFile("lib/intelligence/snifa-company-watch.ts", "utf8"),
   readFile("lib/intelligence/snifa-compliance-programs.ts", "utf8"),
   readFile("lib/intelligence/snifa-sanctioning-proceedings.ts", "utf8"),
+  readFile("lib/intelligence/snifa-provisional-measures.ts", "utf8"),
   readFile("app/api/cron/strategic-watches/route.ts", "utf8"),
   readFile("app/api/intelligence/strategic-watch-signals/route.ts", "utf8"),
   readFile("lib/intelligence/strategic-watch-scanner.ts", "utf8"),
@@ -28,6 +29,7 @@ for (const needle of [
   "searchSnifaFirmSanctions(canonicalName, 12)",
   "searchSnifaRecentCompliancePrograms(canonicalName, 12)",
   "searchSnifaActiveSanctioningProceedings(canonicalName, 12)",
+  "searchSnifaProvisionalMeasures(canonicalName, 12)",
   "normalizeCompanyName(item.holderName).includes(normalizedCanonicalName)",
   "canonical_company_id: identity.id",
   "canonical_company_name: canonicalName",
@@ -38,10 +40,14 @@ for (const needle of [
   'regulatory_stage: "compliance_program"',
   'evidence_type: "sanctioning_proceeding"',
   'regulatory_stage: "sanctioning_proceeding"',
+  'evidence_type: "provisional_measure"',
+  'regulatory_stage: "provisional_measure"',
+  'urgency_basis: "sma_environment_or_health_protection_measure"',
   "proceeding_active: true",
   "early_warning: true",
   'coverage: "snifa_visible_active_sanctioning_results"',
   'coverage: "snifa_visible_compliance_program_results"',
+  'coverage: "snifa_visible_provisional_measure_results"',
 ]) requireText(adapter, needle, "SNIFA company adapter")
 
 for (const needle of [
@@ -63,6 +69,16 @@ for (const needle of [
   "latestActivityAt",
 ]) requireText(proceedingSource, needle, "SNIFA sanctioning source")
 
+for (const needle of [
+  'const RESULTS_PATH = "/MedidaProvisional/Resultado"',
+  "/MedidaProvisional\\/Ficha\\/(\\d+)",
+  "normalizeEntity(item.holderName).includes(normalizedQuery)",
+  "Fecha creación",
+  "Fecha Inicio",
+  "Sancionatorios asociados",
+  "associatedProceedings",
+]) requireText(provisionalSource, needle, "SNIFA provisional measure source")
+
 for (const [source, label] of [[cron, "strategic cron"], [interactive, "interactive strategic signals"]] as const) {
   requireText(source, "scanSnifaCompanyWatch", label)
   requireText(source, 'filter(signal => signal.source_key !== "snifa_sma")', label)
@@ -72,4 +88,4 @@ for (const needle of ["searchSnifaFirmSanctions", "scanSnifaFirmSanctions"]) {
   forbidText(strategicScanner, needle, "strategic-watch-scanner")
 }
 
-console.log("SNIFA canonical company regression PASS: official environmental sanctions, active sanctioning proceedings and compliance-program early warnings require one canonical company with verified RUT and source-holder corroboration; both persistence paths replace legacy text-only candidates and the shared strategic scanner performs no parallel SNIFA network scan.")
+console.log("SNIFA canonical company regression PASS: official environmental sanctions, provisional measures, active sanctioning proceedings and compliance-program early warnings require one canonical company with verified RUT and source-holder corroboration; both persistence paths replace legacy text-only candidates and the shared strategic scanner performs no parallel SNIFA network scan.")
