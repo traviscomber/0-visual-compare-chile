@@ -45,6 +45,8 @@ jobs:
         run: node scripts/company-direction-regression.mts
       - name: Company identity quality benchmark
         run: node scripts/company-identity-quality-benchmark.mts
+      - name: Company watch canonical identity regression
+        run: node scripts/company-watch-canonical-identity-regression.mts
       - name: Grade A block 1-3 regression
         run: node scripts/grade-a-block-1-3-regression.mts
       - name: Grade A block 4-6 regression
