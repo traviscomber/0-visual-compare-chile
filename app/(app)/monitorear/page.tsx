@@ -24,6 +24,20 @@ type CommonWatch = {
   createdAt: string
   updatedAt: string
 }
+type RegulatoryTimelineMilestone = {
+  id: string
+  label: string
+  title: string
+  detail: string | null
+  occurredAt: string | null
+  href: string | null
+  relevance: "alta" | "media" | "baja"
+}
+type RegulatoryTimeline = {
+  canonicalCompanyName: string | null
+  expediente: string
+  milestones: RegulatoryTimelineMilestone[]
+}
 type CommonSignal = {
   key: string
   watchKey: string
@@ -37,6 +51,7 @@ type CommonSignal = {
   relevance: "alta" | "media" | "baja"
   isNew: boolean
   href: string
+  timeline?: RegulatoryTimeline | null
 }
 type SignalSummary = { new:number; high:number; total:number; brand:number; patent:number; technology:number }
 
@@ -239,9 +254,24 @@ function SignalRow({signal}:{signal:CommonSignal}){
   const external=signal.href.startsWith("http")
   return <article className="grid gap-3 py-5 sm:grid-cols-[140px_minmax(0,1fr)_auto] sm:items-start">
     <div><Badge variant="outline">{TYPE_LABEL[signal.type]}</Badge><p className="mt-2 text-[11px] text-muted-foreground">{signal.source}</p></div>
-    <div><div className="flex flex-wrap items-center gap-2">{signal.isNew?<Badge className="bg-[#173B37] text-[#96B5A6] hover:bg-[#173B37]">Nuevo</Badge>:null}<Badge variant="secondary">{signal.relevance}</Badge></div><h3 className="mt-3 text-sm font-medium leading-6 text-white">{signal.title}</h3><p className="mt-1 text-xs text-[#96B5A6]">Seguimiento · {signal.watchQuery}</p>{signal.detail?<p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{signal.detail}</p>:null}<p className="mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground"><Clock3 className="h-3 w-3"/>{formatDate(signal.occurredAt||signal.firstSeenAt)}</p></div>
+    <div><div className="flex flex-wrap items-center gap-2">{signal.isNew?<Badge className="bg-[#173B37] text-[#96B5A6] hover:bg-[#173B37]">Nuevo</Badge>:null}<Badge variant="secondary">{signal.relevance}</Badge>{signal.timeline?<Badge variant="outline">{signal.timeline.milestones.length} hitos SMA</Badge>:null}</div><h3 className="mt-3 text-sm font-medium leading-6 text-white">{signal.title}</h3><p className="mt-1 text-xs text-[#96B5A6]">Seguimiento · {signal.watchQuery}</p>{signal.detail?<p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{signal.detail}</p>:null}<p className="mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground"><Clock3 className="h-3 w-3"/>{formatDate(signal.occurredAt||signal.firstSeenAt)}</p>{signal.timeline?<RegulatoryTimelineDetails timeline={signal.timeline}/>:null}</div>
     <Button asChild variant="ghost" size="sm"><Link href={signal.href} target={external?"_blank":undefined} rel={external?"noreferrer":undefined}>Abrir{external?<ExternalLink className="h-3.5 w-3.5"/>:null}</Link></Button>
   </article>
+}
+
+function RegulatoryTimelineDetails({timeline}:{timeline:RegulatoryTimeline}){
+  return <details className="group mt-4 border-y border-border/70 py-3">
+    <summary className="cursor-pointer list-none text-xs font-medium text-[#96B5A6] marker:content-none">Ver línea regulatoria · {timeline.expediente}{timeline.canonicalCompanyName?` · ${timeline.canonicalCompanyName}`:""}</summary>
+    <div className="mt-4 border-l border-[#355C55] pl-5">
+      {timeline.milestones.map((milestone,index)=><div key={milestone.id} className="relative pb-5 last:pb-0">
+        <span aria-hidden="true" className="absolute -left-[23px] top-1.5 h-1.5 w-1.5 rounded-full bg-[#96B5A6]"/>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="font-mono text-[10px] text-[#96B5A6]">{String(index+1).padStart(2,"0")}</span><span className="text-xs font-medium text-white">{milestone.label}</span><Badge variant="secondary">{milestone.relevance}</Badge>{milestone.occurredAt?<span className="text-[11px] text-muted-foreground">{formatDate(milestone.occurredAt)}</span>:null}</div>
+        <p className="mt-1 text-sm leading-6 text-white/90">{milestone.title}</p>
+        {milestone.detail?<p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">{milestone.detail}</p>:null}
+        {milestone.href?<Link className="mt-2 inline-flex items-center gap-1 text-xs text-[#96B5A6] hover:text-white" href={milestone.href} target="_blank" rel="noreferrer">Evidencia SMA<ExternalLink className="h-3 w-3"/></Link>:null}
+      </div>)}
+    </div>
+  </details>
 }
 
 function placeholder(type:WatchType,subtype:string){
