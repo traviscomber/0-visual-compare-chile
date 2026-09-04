@@ -1,6 +1,7 @@
 import "server-only"
 
 import { resolveCanonicalCompanyWatchIdentity, normalizeCompanyName } from "@/lib/intelligence/company-watch-identity"
+import { searchSnifaRecentCompliancePrograms } from "@/lib/intelligence/snifa-compliance-programs"
 import { searchSnifaFirmSanctions } from "@/lib/intelligence/snifa-firm-sanctions"
 import { createAdminClient } from "@/lib/supabase/admin"
 
@@ -33,8 +34,12 @@ export async function scanSnifaCompanyWatch(admin: AdminClient, watch: WatchLike
   const normalizedCanonicalName = normalizeCompanyName(canonicalName)
   if (!normalizedCanonicalName) return []
 
-  const items = await searchSnifaFirmSanctions(canonicalName, 12)
-  return items
+  const [sanctions, compliancePrograms] = await Promise.all([
+    searchSnifaFirmSanctions(canonicalName, 12),
+    searchSnifaRecentCompliancePrograms(canonicalName, 12),
+  ])
+
+  const sanctionSignals = sanctions
     .filter(item => normalizeCompanyName(item.holderName).includes(normalizedCanonicalName))
     .map(item => ({
       signal_key: `snifa_sma:firm_sanction:${item.sourceRecordId}`,
@@ -55,6 +60,8 @@ export async function scanSnifaCompanyWatch(admin: AdminClient, watch: WatchLike
       payload: {
         official_source: true,
         evidence_type: "firm_sanction",
+        regulatory_stage: "firm_sanction",
+        early_warning: false,
         source_record_id: item.sourceRecordId,
         canonical_company_id: identity.id,
         canonical_company_name: canonicalName,
@@ -81,6 +88,46 @@ export async function scanSnifaCompanyWatch(admin: AdminClient, watch: WatchLike
         search_scope: "chile",
       },
     }))
+
+  const complianceSignals = compliancePrograms
+    .filter(item => normalizeCompanyName(item.holderName).includes(normalizedCanonicalName))
+    .map(item => ({
+      signal_key: `snifa_sma:compliance_program:${item.sourceRecordId}`,
+      source_key: "snifa_sma" as const,
+      event_type: "regulation" as const,
+      title: `Programa de Cumplimiento SMA · ${item.expediente}`,
+      summary: [item.status, item.unitName, item.region, item.resolutionDate ? `Resuelto ${formatDate(item.resolutionDate)}` : null].filter(Boolean).join(" · "),
+      source_url: item.sourceUrl,
+      occurred_at: item.resolutionDate,
+      relevance: "alta" as const,
+      payload: {
+        official_source: true,
+        evidence_type: "compliance_program",
+        regulatory_stage: "compliance_program",
+        early_warning: true,
+        source_record_id: item.sourceRecordId,
+        canonical_company_id: identity.id,
+        canonical_company_name: canonicalName,
+        verified_rut: identity.rut,
+        watch_match_basis: identity.matchBasis,
+        source_holder_match_basis: "canonical_company_name_in_official_holder",
+        expediente: item.expediente,
+        fiscalizable_unit: item.unitName,
+        holder_name: item.holderName,
+        category: item.category,
+        region: item.region,
+        resolution_date: item.resolutionDate,
+        end_date: item.endDate,
+        reporting_frequency: item.reportingFrequency,
+        status: item.status,
+        program_type: item.programType,
+        coverage: "snifa_visible_compliance_program_results",
+        derived_materiality: false,
+        search_scope: "chile",
+      },
+    }))
+
+  return dedupeSignals([...sanctionSignals, ...complianceSignals])
 }
 
 function isCompanyWatch(watch: WatchLike) {
@@ -96,4 +143,15 @@ function riskRelevance(level: string): "alta" | "media" | "baja" {
   if (level === "critical" || level === "high") return "alta"
   if (level === "medium") return "media"
   return "baja"
+}
+
+function dedupeSignals(signals: SnifaCompanySignal[]) {
+  const map = new Map<string, SnifaCompanySignal>()
+  for (const signal of signals) map.set(signal.signal_key, signal)
+  return [...map.values()]
+}
+
+function formatDate(value: string) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("es-CL", { dateStyle: "medium" }).format(date)
 }
