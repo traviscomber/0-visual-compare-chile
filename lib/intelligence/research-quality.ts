@@ -13,9 +13,10 @@ export type ResearchProfileContext = {
 export type ResearchQualitySignal = {
   signal_key: string
   source_key: string
-  event_type: "patent" | "trademark" | "publication" | "news"
+  event_type: "patent" | "trademark" | "publication" | "news" | "tender" | "regulation"
   title: string
   summary: string | null
+  source_url?: string | null
   occurred_at: string | null
   relevance: "alta" | "media" | "baja"
   payload: Record<string, unknown>
