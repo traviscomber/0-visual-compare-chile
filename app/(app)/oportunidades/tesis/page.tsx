@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
-import { ArrowLeft, BrainCircuit, ExternalLink, Loader2, Minus, RefreshCw, TrendingDown, TrendingUp } from "lucide-react"
+import { ArrowLeft, BrainCircuit, Check, ExternalLink, Eye, FlaskConical, Loader2, Minus, RefreshCw, RotateCcw, TrendingDown, TrendingUp, X } from "lucide-react"
 import { OperationalHeader, OperationalMetric, OperationalMetricRail, OperationalPage, OperationalPanel, OperationalSectionHeader } from "@/components/app/operational-ui"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -18,6 +18,15 @@ type ResearchComparison = {
   reasons?: string[]
   news_non_scoring?: boolean
 }
+type HumanDecision = {
+  from_status?: string
+  to_status?: string
+  from_decision?: string
+  to_decision?: string
+  rationale?: string
+  evidence_warning?: string | null
+  actor_role?: string
+}
 type ResearchRun = {
   id: string
   run_type: "generated" | "live_research" | "scheduled_research" | "human_review"
@@ -25,6 +34,7 @@ type ResearchRun = {
     comparison?: ResearchComparison
     facts?: string[]
     market_state?: Record<string, unknown>
+    human_decision?: HumanDecision
   }
   score_snapshot?: { overall?: number; evidence_strength?: number; timing?: number }
   confidence: number | null
@@ -60,6 +70,8 @@ type SavedOpportunity = {
   updated_at: string
   research_history: ResearchRun[]
 }
+type DecisionTarget = "exploring" | "watching" | "prototype" | "rejected"
+type DecisionDraft = { opportunityId: string; target: DecisionTarget; rationale: string }
 
 const statusLabel: Record<SavedOpportunity["status"], string> = {
   exploring: "Explorando",
@@ -75,6 +87,8 @@ export default function SavedOpportunityThesesPage() {
   const [items, setItems] = useState<SavedOpportunity[]>([])
   const [loading, setLoading] = useState(true)
   const [researchingId, setResearchingId] = useState<string | null>(null)
+  const [decidingId, setDecidingId] = useState<string | null>(null)
+  const [decisionDraft, setDecisionDraft] = useState<DecisionDraft | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => { void loadOrganizations() }, [])
@@ -111,7 +125,7 @@ export default function SavedOpportunityThesesPage() {
   }
 
   async function researchThesis(item: SavedOpportunity) {
-    if (!organizationId || researchingId) return
+    if (!organizationId || researchingId || decidingId) return
     setResearchingId(item.id)
     setError(null)
     try {
@@ -130,49 +144,114 @@ export default function SavedOpportunityThesesPage() {
     }
   }
 
+  function beginDecision(item: SavedOpportunity, target: DecisionTarget) {
+    setDecisionDraft({ opportunityId: item.id, target, rationale: "" })
+    setError(null)
+  }
+
+  async function applyDecision(item: SavedOpportunity) {
+    if (!organizationId || !decisionDraft || decisionDraft.opportunityId !== item.id || decisionDraft.rationale.trim().length < 8 || decidingId || researchingId) return
+    setDecidingId(item.id)
+    setError(null)
+    try {
+      const response = await fetch(`/api/intelligence/opportunity-theses/${encodeURIComponent(item.id)}/decision`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ organizationId, target: decisionDraft.target, rationale: decisionDraft.rationale.trim() }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload.error || "No pudimos aplicar la decisión humana.")
+      setDecisionDraft(null)
+      await loadTheses(organizationId)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No pudimos aplicar la decisión humana.")
+    } finally {
+      setDecidingId(null)
+    }
+  }
+
   const active = useMemo(() => items.filter(item => !["rejected", "archived"].includes(item.status)), [items])
-  const prototype = active.filter(item => item.status === "prototype" || item.decision === "build").length
-  const watching = active.filter(item => item.status === "watching" || item.decision === "watch").length
+  const prototype = active.filter(item => item.status === "prototype").length
+  const watching = active.filter(item => item.status === "watching").length
   const avgEvidence = active.length ? Math.round(active.reduce((sum, item) => sum + item.evidence_strength, 0) / active.length) : 0
   const changing = active.filter(item => {
     const comparison = latestComparison(item.research_history)
     return comparison?.direction === "strengthening" || comparison?.direction === "weakening"
   }).length
+  const currentOrganization = organizations.find(org => org.id === organizationId) ?? null
+  const isAdmin = currentOrganization?.role === "admin"
 
   return <OperationalPage>
     <OperationalHeader
       eyebrow="VIDENTIA / Opportunity Engine / Tesis"
       title={active.length ? `${active.length} tesis de producto bajo seguimiento.` : "Todavía no hay tesis persistentes."}
-      description="Cada tesis conserva una línea de convicción. VIDENTIA vuelve a observar investigación y patentes, compara contra el snapshot anterior y sólo mueve score cuando cambian los ejes duros; noticias permanecen como contexto no puntuable."
-      meta={<><span>Human-promoted</span><span>Conviction curve</span><span>Delta evidence</span><span>No auto-build</span></>}
+      description="Cada tesis conserva una curva de convicción y una decisión humana separada del score. VIDENTIA puede fortalecer o debilitar evidencia; sólo una persona decide vigilar, prototipar o descartar."
+      meta={<><span>Human-promoted</span><span>Conviction curve</span><span>Audited decisions</span><span>No auto-build</span></>}
       actions={<div className="flex flex-wrap gap-2"><Button asChild variant="outline"><Link href="/oportunidades"><ArrowLeft className="h-4 w-4" /> Oportunidades</Link></Button><Button asChild><Link href="/oportunidades/descubrir"><BrainCircuit className="h-4 w-4" /> Descubrir productos</Link></Button></div>}
     />
 
     <OperationalMetricRail>
       <OperationalMetric value={active.length} label="Activas" detail="Promovidas por una persona" tone={active.length ? "success" : "neutral"} />
-      <OperationalMetric value={prototype} label="Para prototipar" detail="Nunca promovidas automáticamente por research" tone={prototype ? "success" : "neutral"} />
-      <OperationalMetric value={changing} label="Con movimiento" detail="Último research cambió convicción" tone={changing ? "warning" : "neutral"} />
-      <OperationalMetric value={`${avgEvidence}/100`} label="Fuerza de evidencia" detail="Promedio de tesis activas" tone={avgEvidence >= 70 ? "success" : avgEvidence >= 45 ? "warning" : "neutral"} />
+      <OperationalMetric value={watching} label="Vigilando" detail="Decisión humana de seguimiento" tone={watching ? "warning" : "neutral"} />
+      <OperationalMetric value={prototype} label="Prototipos" detail="Aprobación humana; no inversión automática" tone={prototype ? "success" : "neutral"} />
+      <OperationalMetric value={`${avgEvidence}/100`} label="Fuerza de evidencia" detail={`${changing} tesis con movimiento reciente`} tone={avgEvidence >= 70 ? "success" : avgEvidence >= 45 ? "warning" : "neutral"} />
     </OperationalMetricRail>
 
     <section className="grid gap-8 border-b border-border/80 py-8 xl:grid-cols-[minmax(0,1.25fr)_320px] xl:gap-10">
       <div>
-        <OperationalSectionHeader eyebrow="01 / Portfolio de tesis" title="Convicción que debe ganarse, no asumirse." meta={`${items.length} guardadas`} />
-        {organizations.length > 1 ? <label className="mt-5 block max-w-md"><span className="mb-2 block text-xs text-muted-foreground">Organización</span><select value={organizationId} onChange={event => setOrganizationId(event.target.value)} className="h-11 w-full rounded-[10px] border border-border bg-card/40 px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/45">{organizations.map(org => <option key={org.id} value={org.id}>{org.name}</option>)}</select></label> : null}
+        <OperationalSectionHeader eyebrow="01 / Portfolio de tesis" title="Convicción que debe ganarse. Decisiones que deben explicarse." meta={`${items.length} guardadas`} />
+        {organizations.length > 1 ? <label className="mt-5 block max-w-md"><span className="mb-2 block text-xs text-muted-foreground">Organización</span><select value={organizationId} onChange={event => { setOrganizationId(event.target.value); setDecisionDraft(null) }} className="h-11 w-full rounded-[10px] border border-border bg-card/40 px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/45">{organizations.map(org => <option key={org.id} value={org.id}>{org.name}</option>)}</select></label> : null}
         {loading ? <div className="flex items-center gap-3 py-12 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Cargando tesis…</div> : null}
         {error ? <div role="alert" className="mt-6 border-y border-[#7A5B41]/45 bg-[#332C24]/35 px-4 py-4 text-sm text-[#D6C3A8]">{error}</div> : null}
-        {!loading && !error ? <div className="mt-5 divide-y divide-border/80 border-y border-border/80">{items.length ? items.map(item => <ThesisRow key={item.id} item={item} researching={researchingId === item.id} onResearch={() => void researchThesis(item)} />) : <div className="py-10"><p className="text-sm font-medium text-white">Ninguna tesis ha cruzado todavía el gate humano.</p><p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Ejecuta Opportunity Engine, revisa por qué una propuesta podría funcionar y guárdala sólo si merece seguimiento real.</p><Button asChild size="sm" className="mt-4"><Link href="/oportunidades/descubrir">Descubrir productos</Link></Button></div>}</div> : null}
+        {!loading ? <div className="mt-5 divide-y divide-border/80 border-y border-border/80">{items.length ? items.map(item => <ThesisRow
+          key={item.id}
+          item={item}
+          isAdmin={isAdmin}
+          researching={researchingId === item.id}
+          deciding={decidingId === item.id}
+          decisionDraft={decisionDraft?.opportunityId === item.id ? decisionDraft : null}
+          onResearch={() => void researchThesis(item)}
+          onBeginDecision={target => beginDecision(item, target)}
+          onDecisionRationale={rationale => setDecisionDraft(current => current?.opportunityId === item.id ? { ...current, rationale } : current)}
+          onCancelDecision={() => setDecisionDraft(null)}
+          onApplyDecision={() => void applyDecision(item)}
+        />) : <div className="py-10"><p className="text-sm font-medium text-white">Ninguna tesis ha cruzado todavía el gate humano.</p><p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Ejecuta Opportunity Engine, revisa por qué una propuesta podría funcionar y guárdala sólo si merece seguimiento real.</p><Button asChild size="sm" className="mt-4"><Link href="/oportunidades/descubrir">Descubrir productos</Link></Button></div>}</div> : null}
       </div>
 
-      <aside><OperationalPanel><OperationalSectionHeader eyebrow="Regla" title="Persistencia ≠ aprobación." /><div className="mt-5 space-y-4 text-sm leading-6 text-muted-foreground"><p>La primera re-investigación establece un baseline estructurado y mueve <span className="text-foreground">0 puntos</span>. Después, sólo cambios respecto del baseline pueden fortalecer o debilitar una tesis.</p><p className="border-t border-border/80 pt-4">Si OpenAlex o INAPI no responden, VIDENTIA no castiga la tesis por ausencia de fuente. GDELT/noticias nunca suben score por volumen.</p><p className="border-t border-border/80 pt-4">Research puede mantener o degradar una recomendación. Nunca transforma automáticamente una tesis en <span className="text-foreground">Prototipo</span> o autorización de inversión.</p></div></OperationalPanel></aside>
+      <aside><OperationalPanel><OperationalSectionHeader eyebrow="Gobernanza" title="Score ≠ decisión." /><div className="mt-5 space-y-4 text-sm leading-6 text-muted-foreground"><p><span className="text-foreground">Vigilar</span> es una decisión operativa disponible a miembros. Prototipar y descartar requieren rol administrador.</p><p className="border-t border-border/80 pt-4">Toda decisión exige una razón escrita y genera un snapshot <span className="text-foreground">human_review</span>. Scores y confianza permanecen intactos.</p><p className="border-t border-border/80 pt-4">Un administrador puede prototipar pese a evidencia insuficiente; VIDENTIA registra la advertencia en vez de ocultarla o bloquear la decisión.</p></div></OperationalPanel></aside>
     </section>
   </OperationalPage>
 }
 
-function ThesisRow({ item, researching, onResearch }: { item: SavedOpportunity; researching: boolean; onResearch: () => void }) {
+function ThesisRow({
+  item,
+  isAdmin,
+  researching,
+  deciding,
+  decisionDraft,
+  onResearch,
+  onBeginDecision,
+  onDecisionRationale,
+  onCancelDecision,
+  onApplyDecision,
+}: {
+  item: SavedOpportunity
+  isAdmin: boolean
+  researching: boolean
+  deciding: boolean
+  decisionDraft: DecisionDraft | null
+  onResearch: () => void
+  onBeginDecision: (target: DecisionTarget) => void
+  onDecisionRationale: (rationale: string) => void
+  onCancelDecision: () => void
+  onApplyDecision: () => void
+}) {
   const scoreTone = item.evidence_strength >= 70 ? "border-[#96B5A6]/30 bg-[#173B37]/65 text-[#B8D0C2]" : item.evidence_strength >= 45 ? "border-[#D6A46F]/30 bg-[#332C24]/65 text-[#E0B987]" : "border-border bg-card/30 text-muted-foreground"
   const comparison = latestComparison(item.research_history)
+  const humanDecision = latestHumanDecision(item.research_history)
   const closed = item.status === "rejected" || item.status === "archived"
+  const prototypeWarning = item.evidence_strength < 60 || item.confidence < 0.65 || item.evidence_state === "hypothesis"
+
   return <article className="py-6">
     <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
       <div className="min-w-0 max-w-4xl">
@@ -184,13 +263,26 @@ function ThesisRow({ item, researching, onResearch }: { item: SavedOpportunity; 
         <div className="mt-5 grid gap-5 md:grid-cols-2">{item.thesis.target_buyer ? <Detail label="Comprador" value={item.thesis.target_buyer} /> : null}{item.thesis.problem ? <Detail label="Problema" value={item.thesis.problem} /> : null}{item.thesis.unfair_advantage ? <Detail label="Ventaja" value={item.thesis.unfair_advantage} /> : null}{item.thesis.why_now ? <Detail label="Por qué ahora" value={item.thesis.why_now} /> : null}</div>
         <div className="mt-5 grid gap-5 md:grid-cols-3"><ListBlock label="Research probes" items={item.research_queries} /><ListBlock label="Triggers" items={item.watch_triggers} /><ListBlock label="Evidencia faltante" items={item.thesis.missing_evidence ?? []} /></div>
         {comparison?.reasons?.length ? <div className="mt-5 border-t border-border/70 pt-4"><p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">Último cambio de convicción</p><div className="mt-2 space-y-1 text-xs leading-5 text-foreground">{comparison.reasons.slice(0, 4).map(reason => <p key={reason}>• {reason}</p>)}</div></div> : null}
+        {humanDecision ? <div className="mt-5 border-t border-border/70 pt-4"><p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">Última decisión humana</p><p className="mt-2 text-xs leading-5 text-foreground">{humanDecision.rationale}</p>{humanDecision.evidence_warning ? <p className="mt-2 text-xs leading-5 text-[#E0B987]">{humanDecision.evidence_warning}</p> : null}</div> : null}
+
+        {decisionDraft ? <div className="mt-6 border-y border-border/80 bg-card/20 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-1"><div><p className="text-[10px] uppercase tracking-[0.13em] text-[#96B5A6]">Decisión humana</p><p className="mt-1 text-sm text-white">{decisionTitle(decisionDraft.target)}</p></div><Button type="button" size="sm" variant="ghost" onClick={onCancelDecision}><X className="h-3.5 w-3.5" /> Cancelar</Button></div>
+          {decisionDraft.target === "prototype" && prototypeWarning ? <p className="mx-1 mt-3 border-l border-[#D6A46F]/50 pl-3 text-xs leading-5 text-[#E0B987]">La evidencia está bajo uno o más guardrails. Puedes continuar como administrador; la excepción quedará auditada.</p> : null}
+          <textarea value={decisionDraft.rationale} onChange={event => onDecisionRationale(event.target.value)} rows={3} maxLength={1000} placeholder="Explica por qué esta tesis debe cambiar de estado. Mínimo 8 caracteres." className="mt-4 w-full rounded-[10px] border border-border bg-card/40 px-3 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring/45" />
+          <div className="mt-3 flex items-center justify-between gap-3"><span className="text-[10px] text-muted-foreground">El score y la confianza no cambian con esta decisión.</span><Button type="button" size="sm" disabled={deciding || decisionDraft.rationale.trim().length < 8} onClick={onApplyDecision}>{deciding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}{deciding ? "Guardando…" : "Aplicar decisión"}</Button></div>
+        </div> : null}
       </div>
-      <div className="shrink-0 text-xs leading-5 text-muted-foreground lg:w-48">
+
+      <div className="shrink-0 text-xs leading-5 text-muted-foreground lg:w-52">
         <p>Timing {item.timing_score}/100</p>
         <p>{item.last_researched_at ? `Investigada ${formatDate(item.last_researched_at)}` : "Sin research persistido adicional"}</p>
         <p className="mt-2">Guardada {formatDate(item.created_at)}</p>
         <a href={item.source_website_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-foreground hover:text-white">Fuente web <ExternalLink className="h-3 w-3" /></a>
-        {!closed ? <Button type="button" variant="outline" size="sm" className="mt-4 w-full" disabled={researching} onClick={onResearch}>{researching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}{researching ? "Investigando…" : "Re-investigar"}</Button> : null}
+        {!closed ? <Button type="button" variant="outline" size="sm" className="mt-4 w-full" disabled={researching || deciding} onClick={onResearch}>{researching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}{researching ? "Investigando…" : "Re-investigar"}</Button> : null}
+        {item.status !== "watching" && item.status !== "archived" ? <Button type="button" variant="ghost" size="sm" className="mt-2 w-full justify-start" disabled={deciding} onClick={() => onBeginDecision("watching")}><Eye className="h-3.5 w-3.5" /> Vigilar</Button> : null}
+        {isAdmin && item.status !== "prototype" && item.status !== "archived" ? <Button type="button" variant="ghost" size="sm" className="mt-1 w-full justify-start" disabled={deciding} onClick={() => onBeginDecision("prototype")}><FlaskConical className="h-3.5 w-3.5" /> Prototipar</Button> : null}
+        {isAdmin && item.status !== "rejected" && item.status !== "archived" ? <Button type="button" variant="ghost" size="sm" className="mt-1 w-full justify-start text-[#E0B987] hover:text-[#E0B987]" disabled={deciding} onClick={() => onBeginDecision("rejected")}><X className="h-3.5 w-3.5" /> Descartar</Button> : null}
+        {isAdmin && item.status === "rejected" ? <Button type="button" variant="ghost" size="sm" className="mt-1 w-full justify-start" disabled={deciding} onClick={() => onBeginDecision("exploring")}><RotateCcw className="h-3.5 w-3.5" /> Reabrir análisis</Button> : null}
       </div>
     </div>
   </article>
@@ -220,17 +312,10 @@ function ConvictionSparkline({ history, currentScore }: { history: ResearchRun[]
   const points = scores.map((score, index) => {
     const x = scores.length === 1 ? width : (index / (scores.length - 1)) * width
     const y = height - ((score - min) / span) * (height - 8) - 4
-    return { x, y, score }
+    return { x, y }
   })
   const polyline = points.map(point => `${point.x},${point.y}`).join(" ")
-  return <div aria-label={`Curva de convicción, score actual ${currentScore} de 100`}>
-    <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.12em] text-muted-foreground"><span>Conviction curve</span><span>{currentScore}</span></div>
-    <svg viewBox={`0 0 ${width} ${height}`} className="mt-1 h-12 w-full overflow-visible text-[#96B5A6]" role="img" aria-hidden="true">
-      <line x1="0" x2={width} y1={height - 4} y2={height - 4} stroke="currentColor" strokeOpacity="0.16" strokeWidth="1" />
-      {points.length > 1 ? <polyline points={polyline} fill="none" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" /> : null}
-      {points.map((point, index) => <circle key={`${point.x}:${index}`} cx={point.x} cy={point.y} r={index === points.length - 1 ? 2.6 : 1.8} fill="currentColor" />)}
-    </svg>
-  </div>
+  return <div aria-label={`Curva de convicción, score actual ${currentScore} de 100`}><div className="flex items-center justify-between text-[10px] uppercase tracking-[0.12em] text-muted-foreground"><span>Conviction curve</span><span>{currentScore}</span></div><svg viewBox={`0 0 ${width} ${height}`} className="mt-1 h-12 w-full overflow-visible text-[#96B5A6]" role="img" aria-hidden="true"><line x1="0" x2={width} y1={height - 4} y2={height - 4} stroke="currentColor" strokeOpacity="0.16" strokeWidth="1" />{points.length > 1 ? <polyline points={polyline} fill="none" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" /> : null}{points.map((point, index) => <circle key={`${point.x}:${index}`} cx={point.x} cy={point.y} r={index === points.length - 1 ? 2.6 : 1.8} fill="currentColor" />)}</svg></div>
 }
 
 function latestComparison(history: ResearchRun[]): ResearchComparison | null {
@@ -242,6 +327,21 @@ function latestComparison(history: ResearchRun[]): ResearchComparison | null {
   return null
 }
 
+function latestHumanDecision(history: ResearchRun[]): HumanDecision | null {
+  for (const run of history) {
+    if (run.run_type !== "human_review") continue
+    const decision = run.evidence_summary?.human_decision
+    if (decision && typeof decision === "object") return decision
+  }
+  return null
+}
+
+function decisionTitle(target: DecisionTarget) {
+  if (target === "watching") return "Vigilar esta tesis"
+  if (target === "prototype") return "Aprobar un prototipo"
+  if (target === "rejected") return "Descartar esta tesis"
+  return "Reabrir esta tesis para análisis"
+}
 function Detail({ label, value }: { label: string; value: string }) { return <div><p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">{label}</p><p className="mt-1 text-xs leading-5 text-foreground">{value}</p></div> }
 function ListBlock({ label, items }: { label: string; items: string[] }) { return <div><p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">{label}</p><div className="mt-2 space-y-1 text-xs leading-5 text-foreground">{items.length ? items.map(item => <p key={item}>• {item}</p>) : <p>—</p>}</div></div> }
 function formatDate(value: string) { return new Date(value).toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric" }) }
