@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
 import { assertPortfolioOrganizationAccess } from "@/lib/intelligence/portfolio-access"
+import { ensureOpportunityPrototypeExecution } from "@/lib/intelligence/opportunity-prototype-execution"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 export const runtime = "nodejs"
@@ -36,7 +37,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   const { data: current, error: loadError } = await admin
     .from("innovation_opportunity_theses")
-    .select("id,organization_id,status,decision,evidence_state,confidence,overall_score,evidence_strength,timing_score,strategic_fit,capability_reuse_score,novelty_score,defensibility_score,thesis,last_researched_at")
+    .select("id,organization_id,title,status,decision,evidence_state,confidence,overall_score,evidence_strength,timing_score,strategic_fit,capability_reuse_score,novelty_score,defensibility_score,thesis,last_researched_at")
     .eq("id", id)
     .eq("organization_id", parsed.data.organizationId)
     .maybeSingle()
@@ -131,6 +132,25 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: "No pudimos guardar la trazabilidad; la decisión fue revertida." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
+  let execution: Awaited<ReturnType<typeof ensureOpportunityPrototypeExecution>> | null = null
+  if (parsed.data.target === "prototype") {
+    try {
+      execution = await ensureOpportunityPrototypeExecution(auth.supabase, {
+        organizationId: parsed.data.organizationId,
+        opportunityId: id,
+        opportunityTitle: String(current.title),
+        decisionMakerUserId: auth.user.id,
+        humanReviewId: String(audit.id),
+        rationale: parsed.data.rationale,
+        evidenceWarning: warning,
+        scoreSnapshot,
+        confidence: Number(current.confidence),
+      })
+    } catch (executionError) {
+      console.error("[opportunity-theses:decision:prototype-execution]", executionError)
+    }
+  }
+
   return NextResponse.json({
     opportunity: {
       id,
@@ -144,6 +164,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       last_researched_at: current.last_researched_at,
     },
     audit,
+    execution,
     evidence_warning: warning,
     changed: true,
   }, { headers: PRIVATE_NO_STORE_HEADERS })
