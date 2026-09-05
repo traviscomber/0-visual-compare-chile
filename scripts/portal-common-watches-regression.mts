@@ -37,29 +37,27 @@ for(const forbidden of [
 for(const needle of [
   'fetch("/api/intelligence/watches"',
   'fetch("/api/intelligence/watches/signals"',
-  'eyebrow="VIDENTIA / EXTERNAL INTELLIGENCE"',
-  'title="Observa cambios, no búsquedas."',
-  'Define qué importa',
-  'VIDENTIA observa',
-  'Decide sobre cambios',
-  'PASO 1 / NUEVO SEGUIMIENTO',
-  'A · Familia',
-  'B · Criterio',
-  'C · Activar',
+  'eyebrow="VIDENTIA / Inteligencia externa"',
+  'const highNew=useMemo',
+  'label="Alta prioridad"',
+  'label="Nuevas"',
+  'label="Vigilancias activas"',
+  'label="Evidencia observada"',
+  '01 / Atención',
+  '02 / Cobertura',
+  'Añadir seguimiento',
   'Activar seguimiento',
   'No pudimos cargar tus seguimientos.',
   'No pudimos crear el seguimiento.',
-  'href="#novedades"',
-  'PASO 3 / SEÑALES',
   'Marcar revisadas',
-  'PASO 2',
   '(["brand","patent","technology"] as WatchType[])',
   'SUBTYPE_OPTIONS',
   'aria-label="Dónde buscar"',
   '<option value="chile">Chile</option>',
   '<option value="global">Global</option>',
   '<option value="both">Ambos</option>',
-  'Marcas · Patentes · Competidores · Mercados',
+  'rank={alta:3,media:2,baja:1}',
+  'href="/monitorear/atencion"',
   'href="/monitorear/estrategico"',
   'href="/patentes/alertas"',
 ])requireText(page,needle,"common watch workspace")
@@ -68,7 +66,9 @@ for(const forbidden of [
   'eyebrow="VIDENTIA / Watches"',
   'No pudimos cargar tus vigilancias.',
   'No pudimos crear la vigilancia.',
-])if(page.includes(forbidden))fail(`stale monitoring terminology must not remain user-facing: ${forbidden}`)
+  'bg-[#3A2525]',
+  'text-[#E8AAA3]',
+])if(page.includes(forbidden))fail(`stale monitoring terminology or alert palette must not remain user-facing: ${forbidden}`)
 
 for(const needle of [
   'from("trademark_watches")',
@@ -96,4 +96,4 @@ for(const [source,label] of [[watchesApi,"watch API"],[signalsApi,"signal API"]]
   if(source.includes("createAdminClient")||source.includes("SUPABASE_SERVICE_ROLE_KEY"))fail(`${label} must remain behind authenticated RLS, not service role`)
 }
 
-console.log("Portal/Common Watches regression PASS: External Intelligence remains the canonical monitoring workspace, with the 1-2-3 define/observe/decide journey, A-B-C creation, scoped Chile/Global/Both technology searches, contextual deep tools, and authenticated RLS facades preserved without a destructive migration.")
+console.log("Portal/Common Watches regression PASS: External Intelligence remains the canonical monitoring workspace, prioritizes new high-relevance evidence before configuration, preserves scoped watch creation and contextual deep tools, and keeps authenticated RLS facades without a destructive migration.")
