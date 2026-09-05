@@ -27,7 +27,20 @@ for (const needle of [
   "calibrateOpportunity",
   'item.scores.evidence_strength < 60',
   'item.evidence_state === "hypothesis"',
+  "research_queries",
+  "buildTechnologySignals",
+  "LIVE_RESEARCH_LIMIT = 3",
+  'buildTechnologySignals(query, LIVE_RESEARCH_WINDOW_DAYS, "both")',
+  'signals.corroboration.status === "corroborada"',
+  "signals.patent_signal.recent_matches",
+  "signals.momentum.change_percent",
+  "Investigación automática VIDENTIA",
+  "La presencia de noticias jamás equivale por sí sola a demanda o validación de mercado.",
 ]) requireText(engine, needle, "opportunity engine")
+
+if (engine.includes("signals.evidence.news.length") && engine.includes("evidenceDelta")) {
+  fail("news volume must not directly increase Opportunity Engine evidence scores")
+}
 
 for (const needle of [
   'redirect: "manual"',
@@ -53,7 +66,7 @@ for (const needle of [
 ]) requireText(route, needle, "opportunity engine API")
 
 for (const forbidden of [".insert(", ".update(", ".delete(", "create_intelligence_action", "service_role"] ) {
-  if (route.includes(forbidden)) fail(`opportunity engine API must remain read-only in v1: ${forbidden}`)
+  if (route.includes(forbidden)) fail(`opportunity engine API must remain read-only before explicit human persistence: ${forbidden}`)
 }
 
 for (const needle of [
@@ -65,4 +78,4 @@ for (const needle of [
   "Triggers a vigilar",
 ]) requireText(page, needle, "opportunity discovery page")
 
-console.log("Opportunity Engine regression PASS: product discovery is organization-scoped, read-only, SSRF-hardened, Sol-routed, calibrated against evidence, fuses strategic/patent/trademark watch signals, remains explicitly falsifiable, and exposes anti-roadmap output before any persistence or execution.")
+console.log("Opportunity Engine regression PASS: product discovery is organization-scoped, read-only, SSRF-hardened, Sol-routed, calibrated against evidence, fuses strategic/patent/trademark watch signals, auto-researches only a bounded top set with OpenAlex/Crossref/INAPI/GDELT technology signals, never treats news volume as market validation, remains falsifiable, and exposes anti-roadmap output before persistence or execution.")
