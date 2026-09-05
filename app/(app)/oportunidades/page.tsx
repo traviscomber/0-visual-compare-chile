@@ -84,10 +84,11 @@ export default function OpportunitiesPage() {
   }
 
   const filtered = useMemo(() => {
-    const rank: Record<Recommendation["tier"], number> = { alta: 3, media: 2, observacion: 1 }
+    const tierRank: Record<Recommendation["tier"], number> = { alta: 3, media: 2, observacion: 1 }
+    const statusRank: Record<Status, number> = { accepted: 5, new: 4, reviewed: 3, converted_to_action: 2, discarded: 1 }
     return items
       .filter(item => filter === "all" ? true : filter === "active" ? !["discarded", "converted_to_action"].includes(item.status) : item.status === filter)
-      .sort((a, b) => rank[b.tier] - rank[a.tier] || b.score - a.score || Date.parse(b.updated_at) - Date.parse(a.updated_at))
+      .sort((a, b) => statusRank[b.status] - statusRank[a.status] || tierRank[b.tier] - tierRank[a.tier] || b.score - a.score || Date.parse(b.updated_at) - Date.parse(a.updated_at))
   }, [items, filter])
 
   const metrics = useMemo(() => ({
@@ -98,40 +99,41 @@ export default function OpportunitiesPage() {
   }), [items])
 
   const selectedOrganization = organizations.find(item => item.id === organizationId) ?? null
+  const actionNow = metrics.accepted
 
   return <OperationalPage>
     <OperationalHeader
       eyebrow="VIDENTIA / Oportunidades"
-      title="Qué merece una decisión ahora."
-      description={<>Una bandeja ejecutiva construida sólo con recomendaciones que alguien decidió guardar. Prioriza revisión, decisión y trabajo trazable; no recalcula señales ni crea acciones automáticamente.</>}
+      title={actionNow ? `${actionNow} oportunidad${actionNow === 1 ? "" : "es"} lista${actionNow === 1 ? "" : "s"} para ejecutar.` : metrics.active ? `${metrics.active} oportunidad${metrics.active === 1 ? "" : "es"} requiere${metrics.active === 1 ? "" : "n"} decisión.` : "No hay oportunidades pendientes."}
+      description={<>Esta bandeja muestra únicamente recomendaciones persistidas. Primero aparecen las aceptadas, luego las de prioridad alta y después el resto de señales para revisión.</>}
       meta={<><span>Persistidas</span><span>Priorizadas</span><span>Auditables</span><span>Accionables</span></>}
       actions={<Button asChild variant="outline"><Link href="/brechas">Buscar nuevas brechas <GitCompareArrows className="ml-1 h-4 w-4" /></Link></Button>}
     />
 
     <OperationalMetricRail>
+      <OperationalMetric value={metrics.accepted} label="Listas para ejecutar" detail="Aceptadas y pendientes de llevar a trabajo" tone={metrics.accepted ? "warning" : "neutral"} />
+      <OperationalMetric value={metrics.high} label="Prioridad alta" detail="Activas que requieren revisión prioritaria" tone={metrics.high ? "warning" : "neutral"} />
       <OperationalMetric value={metrics.active} label="Activas" detail="Pendientes de decisión o aceptación" tone={metrics.active ? "warning" : "neutral"} />
-      <OperationalMetric value={metrics.high} label="Prioridad alta" detail="Activas con score alto" tone={metrics.high ? "danger" : "neutral"} />
-      <OperationalMetric value={metrics.accepted} label="Aceptadas" detail="Listas para convertirse en trabajo" tone={metrics.accepted ? "warning" : "neutral"} />
       <OperationalMetric value={metrics.action} label="En acción" detail="Ya vinculadas a una tarea" tone={metrics.action ? "success" : "neutral"} />
     </OperationalMetricRail>
 
     <section className="grid gap-8 border-b border-border/80 py-8 xl:grid-cols-[minmax(0,1.3fr)_minmax(300px,0.7fr)] xl:gap-10">
       <div>
-        <OperationalSectionHeader eyebrow="01 / Bandeja" title="Oportunidades persistidas" meta={`${filtered.length} visibles`} />
+        <OperationalSectionHeader eyebrow="01 / Bandeja" title="Primero actúa. Después revisa." meta={`${filtered.length} visibles`} />
 
         {organizations.length > 1 ? <label className="mt-5 block max-w-md"><span className="mb-2 block text-xs text-muted-foreground">Organización</span><select value={organizationId} onChange={event => setOrganizationId(event.target.value)} className="h-11 w-full rounded-[10px] border border-border bg-card/40 px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/45">{organizations.map(org => <option key={org.id} value={org.id}>{org.name}</option>)}</select></label> : null}
 
         <div className="mt-5 flex flex-wrap gap-2">
           <FilterButton active={filter === "active"} onClick={() => setFilter("active")}>Activas</FilterButton>
+          <FilterButton active={filter === "accepted"} onClick={() => setFilter("accepted")}>Aceptadas</FilterButton>
           <FilterButton active={filter === "new"} onClick={() => setFilter("new")}>Nuevas</FilterButton>
           <FilterButton active={filter === "reviewed"} onClick={() => setFilter("reviewed")}>Revisadas</FilterButton>
-          <FilterButton active={filter === "accepted"} onClick={() => setFilter("accepted")}>Aceptadas</FilterButton>
           <FilterButton active={filter === "converted_to_action"} onClick={() => setFilter("converted_to_action")}>En acción</FilterButton>
           <FilterButton active={filter === "all"} onClick={() => setFilter("all")}>Todas</FilterButton>
         </div>
 
         {loading ? <div className="flex items-center gap-3 py-12 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Cargando oportunidades…</div> : null}
-        {error ? <div role="alert" className="mt-6 rounded-[10px] bg-[#3A2525] p-4 text-sm text-[#E8AAA3]">{error}</div> : null}
+        {error ? <div role="alert" className="mt-6 rounded-[10px] bg-[#2E2922] p-4 text-sm text-[#D9B27C]">{error}</div> : null}
 
         {!loading && !error ? <div className="mt-5 divide-y divide-border/80 border-y border-border/80">
           {filtered.length ? filtered.map(item => <OpportunityRow key={item.id} item={item} />) : <div className="py-10"><ShieldCheck className="h-5 w-5 text-primary" /><p className="mt-3 text-sm font-medium text-white">No hay oportunidades en este estado.</p><p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">Las oportunidades aparecen aquí sólo después de guardar una recomendación desde Brechas IP.</p></div>}
@@ -159,15 +161,22 @@ function FilterButton({ active, children, onClick }: { active: boolean; children
 function OpportunityRow({ item }: { item: Recommendation }) {
   const competitorName = item.competitor?.canonical_name ?? "Competidor"
   const gapHref = `/brechas?competitor=${encodeURIComponent(competitorName)}&competitorIdentityId=${encodeURIComponent(item.competitor_identity_id)}`
-  const tone = item.tier === "alta" ? "border-red-400/20 bg-red-400/[0.06] text-red-300" : item.tier === "media" ? "border-amber-300/20 bg-amber-300/[0.06] text-amber-200" : "border-border bg-card/30 text-muted-foreground"
+  const tone = item.status === "accepted"
+    ? "border-[#96B5A6]/25 bg-[#173B37]/65 text-[#B8D0C2]"
+    : item.tier === "alta"
+      ? "border-[#D6A46F]/25 bg-[#332C24]/70 text-[#E0B987]"
+      : item.tier === "media"
+        ? "border-[#7E9CAB]/20 bg-[#13272D]/70 text-[#A9C0CA]"
+        : "border-border bg-card/30 text-muted-foreground"
 
   return <article className="px-2 py-5">
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
+          {item.status === "accepted" ? <Badge variant="outline" className="rounded-md border-[#96B5A6]/25 bg-[#173B37] text-[#B8D0C2]">Aceptada · lista para ejecutar</Badge> : null}
           <Badge variant="outline" className={`rounded-md ${tone}`}>{item.score}/100 · {item.tier}</Badge>
           <Badge variant="outline" className="rounded-md">{item.classification} {item.code}</Badge>
-          <Badge variant="outline" className="rounded-md">{statusLabels[item.status]}</Badge>
+          {item.status !== "accepted" ? <Badge variant="outline" className="rounded-md">{statusLabels[item.status]}</Badge> : null}
         </div>
         <p className="mt-3 text-xs text-muted-foreground">{competitorName}{item.competitor?.country ? ` · ${item.competitor.country}` : ""}</p>
         <h3 className="mt-1 text-base font-medium text-white">{item.headline}</h3>
@@ -178,7 +187,7 @@ function OpportunityRow({ item }: { item: Recommendation }) {
 
       <div className="flex shrink-0 flex-wrap gap-2 lg:max-w-[220px] lg:justify-end">
         {item.case_id ? <Button asChild size="sm"><Link href={`/casos/${item.case_id}/equipo`}><BriefcaseBusiness className="h-4 w-4" />Abrir tarea</Link></Button> : null}
-        {!item.case_id ? <Button asChild size="sm" variant="outline"><Link href={gapHref}>Revisar decisión <ArrowRight className="h-4 w-4" /></Link></Button> : null}
+        {!item.case_id ? <Button asChild size="sm" variant={item.status === "accepted" ? "default" : "outline"}><Link href={gapHref}>{item.status === "accepted" ? "Preparar ejecución" : "Revisar decisión"} <ArrowRight className="h-4 w-4" /></Link></Button> : null}
         <Button asChild size="sm" variant="ghost"><Link href={`/espacios?type=${item.asset_type}&code=${encodeURIComponent(item.code)}`}><Radar className="h-4 w-4" />Espacio</Link></Button>
       </div>
     </div>
