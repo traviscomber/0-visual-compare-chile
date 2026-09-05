@@ -66,12 +66,13 @@ for (const forbidden of ["createAdminClient", "SUPABASE_SERVICE_ROLE_KEY", "what
 }
 
 for (const needle of [
-  "Una estructura de inteligencia para las tres verticales.",
+  "Qué cambió, qué importa y qué revisar ahora.",
+  "Último corte por tema",
   "Qué cambió",
   "Qué importa",
   "Evidencia",
-  "Revisión",
-  "Watch next",
+  "Revisión sugerida",
+  "Próximo monitoreo",
   "El servidor reconstruye el reporte; el navegador no entrega conclusiones libres.",
   '(["brand","patent","technology"] as Vertical[])',
   'href="/reportes/evaluaciones"',
@@ -80,6 +81,9 @@ for (const needle of [
   "EPO OPS incluido",
   "families, jurisdicciones, citas, eventos jurídicos observados y el estado de cobertura de la fuente",
   "No se infiere estado jurídico actual.",
+  "latestBySeries",
+  "Último · v",
+  "versiones preservadas",
 ]) requireText(page, needle, "reports UI")
 
 for (const needle of [
@@ -88,4 +92,4 @@ for (const needle of [
   "Evaluaciones persistidas",
 ]) requireText(evaluations, needle, "legacy evaluations surface")
 
-console.log("Common reports regression PASS: Brand/Patent/Technology use one immutable versioned snapshot model, authenticated RLS and server-derived evidence; Patent snapshots preserve EPO families, priority claims, deterministic INAPI-to-EPO family links, jurisdiction/citation/legal-event coverage, and no inferred current legal status.")
+console.log("Common reports regression PASS: Brand/Patent/Technology keep one immutable versioned snapshot model while the UI prioritizes the latest executive cut per topic; authenticated RLS, server-derived evidence, EPO family provenance and preserved historical versions remain intact.")
