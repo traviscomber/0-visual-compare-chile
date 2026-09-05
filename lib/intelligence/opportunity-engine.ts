@@ -3,6 +3,10 @@ import { zodResponseFormat } from "openai/helpers/zod"
 import { z } from "zod"
 import { estimateModelCostUsd, modelForTier } from "@/lib/ai/model-router"
 import type { CompanyWebsiteProfile } from "@/lib/intelligence/company-website-profile"
+import { buildTechnologySignals } from "@/lib/intelligence/technology-signals"
+
+const LIVE_RESEARCH_LIMIT = 3
+const LIVE_RESEARCH_WINDOW_DAYS = 180
 
 const CapabilitySchema = z.object({
   name: z.string(),
@@ -35,12 +39,13 @@ const OpportunitySchema = z.object({
   contrarian_reason: z.string(),
   second_order_effect: z.string(),
   capability_reuse: z.array(z.string()).min(2).max(8),
-  observed_signals: z.array(z.string()).max(8),
+  observed_signals: z.array(z.string()).max(10),
   assumptions: z.array(z.string()).max(6),
   disconfirming_signals: z.array(z.string()).max(6),
   moat: z.string(),
   first_experiments: z.array(z.string()).min(1).max(4),
   watch_triggers: z.array(z.string()).min(1).max(5),
+  research_queries: z.array(z.string()).min(1).max(3),
   missing_evidence: z.array(z.string()).max(6),
   evidence_state: z.enum(["observed", "mixed", "hypothesis"]),
   decision: z.enum(["build", "investigate", "watch", "reject"]),
@@ -100,6 +105,7 @@ REGLAS EPISTEMOLÓGICAS OBLIGATORIAS
 - Desafía cada hipótesis: incluye señales que la invalidarían, evidencia faltante y criterios de investigación.
 - No confundas actividad pública con intención empresarial.
 - Los eventos de watches son señales observadas, no pruebas de demanda. Úsalos para formular y tensionar hipótesis, no para declarar mercado validado.
+- Para cada tesis entrega research_queries: 1 a 3 frases técnicas breves que puedan buscarse directamente en literatura, patentes y noticias. Deben describir la tecnología/capacidad habilitante, no el nombre inventado del producto ni una frase comercial.
 - Mantén decisiones humanas: build significa "merece prototipo/validación", no autorización automática de inversión.
 
 MÉTODO
@@ -119,7 +125,7 @@ PONDERACIÓN DEL OVERALL
 - evidence_strength 15%
 - defensibility 10%
 
-El servidor recalculará el overall y puede degradar una decisión build cuando evidencia/confianza sean insuficientes. No intentes compensar evidencia débil inflando otros factores.
+El servidor recalculará el overall, investigará automáticamente un número limitado de las mejores tesis contra OpenAlex, Crossref, INAPI y GDELT, y puede degradar una decisión build cuando evidencia/confianza sean insuficientes. La presencia de noticias jamás equivale por sí sola a demanda o validación de mercado. No intentes compensar evidencia débil inflando otros factores.
 
 Responde en español ejecutivo, concreto y técnicamente preciso.`
 
@@ -130,7 +136,7 @@ export async function runOpportunityEngine(context: OpportunityEngineContext) {
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   const response = await client.chat.completions.parse({
     model,
-    max_completion_tokens: 4_500,
+    max_completion_tokens: 4_700,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       {
@@ -163,9 +169,19 @@ export async function runOpportunityEngine(context: OpportunityEngineContext) {
 
   const parsed = response.choices[0]?.message.parsed
   if (!parsed) throw new Error("Opportunity Engine returned no schema-valid output")
+
+  const calibrated = parsed.opportunities.map(calibrateOpportunity)
+  const researchTargets = [...calibrated]
+    .filter((item) => item.decision !== "reject")
+    .sort((a, b) => b.scores.overall - a.scores.overall)
+    .slice(0, LIVE_RESEARCH_LIMIT)
+  const targetNames = new Set(researchTargets.map((item) => item.name))
+  const researched = await Promise.all(researchTargets.map(enrichOpportunityWithLiveResearch))
+  const researchedByName = new Map(researched.map((item) => [item.name, item]))
+
   const output: OpportunityEngineOutput = {
     ...parsed,
-    opportunities: parsed.opportunities.map(calibrateOpportunity),
+    opportunities: calibrated.map((item) => targetNames.has(item.name) ? (researchedByName.get(item.name) ?? item) : item),
   }
 
   return {
@@ -175,6 +191,82 @@ export async function runOpportunityEngine(context: OpportunityEngineContext) {
     completionTokens: response.usage?.completion_tokens ?? 0,
     estimatedCostUsd: estimateModelCostUsd("sol", response.usage),
   }
+}
+
+async function enrichOpportunityWithLiveResearch(item: Opportunity): Promise<Opportunity> {
+  const query = item.research_queries[0]?.trim()
+  if (!query) return item
+
+  try {
+    const signals = await buildTechnologySignals(query, LIVE_RESEARCH_WINDOW_DAYS, "both")
+    const coreSourceAvailable = Boolean(signals.sources.openalex.available || signals.sources.crossref.available || signals.sources.inapi_patents.available)
+    if (!coreSourceAvailable) return item
+
+    let evidenceDelta = 0
+    let timingDelta = 0
+    let confidenceDelta = 0
+
+    if (signals.corroboration.status === "corroborada") {
+      evidenceDelta += 10
+      timingDelta += 6
+      confidenceDelta += 0.06
+    } else if (signals.corroboration.status === "parcial") {
+      evidenceDelta += 5
+      timingDelta += 3
+      confidenceDelta += 0.03
+    }
+
+    if (signals.patent_signal.available && signals.patent_signal.recent_matches > 0) {
+      evidenceDelta += Math.min(6, 2 + signals.patent_signal.recent_matches)
+      timingDelta += 3
+    }
+
+    if (signals.momentum.available && signals.momentum.change_percent !== null) {
+      if (signals.momentum.change_percent >= 20) {
+        evidenceDelta += 4
+        timingDelta += 4
+      } else if (signals.momentum.change_percent <= -20) {
+        timingDelta -= 3
+      }
+    }
+
+    const liveFacts = buildLiveResearchFacts(query, signals)
+    const next: Opportunity = {
+      ...item,
+      why_now: liveFacts.length ? `${item.why_now} Investigación automática VIDENTIA: ${liveFacts.join(" ")}` : item.why_now,
+      observed_signals: dedupeStrings([...item.observed_signals, ...liveFacts]).slice(0, 10),
+      evidence_state: item.evidence_state === "hypothesis" && liveFacts.length ? "mixed" : item.evidence_state,
+      confidence: clamp(item.confidence + confidenceDelta, 0, 1),
+      scores: {
+        ...item.scores,
+        evidence_strength: clamp(Math.round(item.scores.evidence_strength + evidenceDelta), 0, 100),
+        timing: clamp(Math.round(item.scores.timing + timingDelta), 0, 100),
+      },
+    }
+
+    return calibrateOpportunity(next)
+  } catch (error) {
+    console.warn(`[opportunity-engine] live research unavailable for ${query}`, error)
+    return item
+  }
+}
+
+function buildLiveResearchFacts(query: string, signals: Awaited<ReturnType<typeof buildTechnologySignals>>): string[] {
+  const facts: string[] = []
+
+  if (signals.momentum.available) {
+    const current = signals.momentum.current_publications ?? 0
+    const previous = signals.momentum.previous_publications ?? 0
+    const change = signals.momentum.change_percent
+    facts.push(`Probe “${query}”: ${current} publicaciones en ${signals.period_days} días vs ${previous} en la ventana anterior; tendencia ${signals.momentum.trend}${change === null ? "" : ` (${change > 0 ? "+" : ""}${change}%)`}.`)
+  }
+
+  if (signals.patent_signal.available) {
+    facts.push(`INAPI para “${query}”: ${signals.patent_signal.recent_matches} coincidencias recientes de alta precisión, ${signals.patent_signal.selected_matches} antecedentes seleccionados y ${signals.patent_signal.distinct_applicants} solicitantes distintos.`)
+  }
+
+  facts.push(`Corroboración del probe: ${signals.corroboration.status} (${signals.corroboration.confirming_axes}/${signals.corroboration.available_axes} ejes disponibles confirman actividad).`)
+  return facts
 }
 
 function calibrateOpportunity(item: Opportunity): Opportunity {
@@ -200,4 +292,18 @@ function calibrateOpportunity(item: Opportunity): Opportunity {
     decision,
     scores: { ...item.scores, overall },
   }
+}
+
+function dedupeStrings(values: string[]): string[] {
+  const seen = new Set<string>()
+  return values.filter((value) => {
+    const normalized = value.trim().toLowerCase()
+    if (!normalized || seen.has(normalized)) return false
+    seen.add(normalized)
+    return true
+  })
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
 }
