@@ -81,16 +81,32 @@ export default async function DashboardPage(){
   const acceptedRecommendations=activeRecommendations.filter(item=>item.status==="accepted")
   const recommendationRank:Record<RecommendationSummary["tier"],number>={alta:3,media:2,observacion:1}
   const priorityRecommendations=[...activeRecommendations].sort((a,b)=>Number(b.status==="accepted")-Number(a.status==="accepted")||recommendationRank[b.tier]-recommendationRank[a.tier]||b.score-a.score||Date.parse(b.updated_at)-Date.parse(a.updated_at))
-  const attention=changed.length+ready.length+stalled.length+newSignals.length+newStrategicSignals.length+(opportunitiesAvailable?activeRecommendations.length:0)
+  const readyCaseIds=new Set(ready.map(item=>item.caseRow.id))
+  const changedCaseIds=new Set(changed.map(item=>item.caseRow.id))
+  const attentionCaseIds=new Set([...readyCaseIds,...changedCaseIds,...stalled.map(item=>item.caseRow.id)])
+  const changedOnly=changed.filter(item=>!readyCaseIds.has(item.caseRow.id))
+  const stalledOnly=stalled.filter(item=>!readyCaseIds.has(item.caseRow.id)&&!changedCaseIds.has(item.caseRow.id))
+  const acceptedPriorityRecommendations=priorityRecommendations.filter(item=>item.status==="accepted")
+  const otherPriorityRecommendations=priorityRecommendations.filter(item=>item.status!=="accepted")
+  const highStrategicSignals=newStrategicSignals.filter(item=>item.relevance==="alta")
+  const otherStrategicSignals=newStrategicSignals.filter(item=>item.relevance!=="alta")
+  const highTrademarkSignals=newSignals.filter(item=>item.relevance==="alta")
+  const otherTrademarkSignals=newSignals.filter(item=>item.relevance!=="alta")
+  const decisionNow=ready.length+acceptedRecommendations.length
+  const attention=attentionCaseIds.size+newSignals.length+newStrategicSignals.length+(opportunitiesAvailable?activeRecommendations.length:0)
   const displayName=(typeof user.user_metadata?.full_name==="string"&&user.user_metadata.full_name)||(typeof user.user_metadata?.name==="string"&&user.user_metadata.name)||user.email?.split("@")[0]||"equipo"
 
   const queue=[
-    ...priorityRecommendations.slice(0,2).map(item=>({href:"/oportunidades",icon:Compass,kicker:item.status==="accepted"?"Oportunidad aceptada":item.tier==="alta"?"Oportunidad · Prioridad alta":"Oportunidad persistida",title:item.headline,detail:item.recommended_action,action:item.status==="accepted"?"Llevar a ejecución":"Revisar oportunidad",tone:item.status==="accepted"||item.tier==="alta"?"warm" as const:"primary" as const})),
-    ...changed.slice(0,2).map(item=>({href:`/casos/${item.caseRow.id}`,icon:BriefcaseBusiness,kicker:"Evidencia nueva",title:item.caseRow.title,detail:`${item.intelligence.newEvidenceCount} evidencia${item.intelligence.newEvidenceCount===1?"":"s"} nueva${item.intelligence.newEvidenceCount===1?"":"s"} desde la última revisión.`,action:"Revisar caso",tone:"primary" as const})),
-    ...ready.slice(0,2).map(item=>({href:`/casos/${item.caseRow.id}`,icon:CheckCircle2,kicker:"Listo para decidir",title:item.caseRow.title,detail:item.intelligence.pendingDecision,action:"Preparar decisión",tone:"primary" as const})),
-    ...newStrategicSignals.slice(0,2).map(item=>{const watch=strategicWatchMap.get(item.watch_id);return {href:watch?strategicAnalysisHref(watch.watch_type,watch.query):"/monitorear/estrategico",icon:Radar,kicker:`${item.source_key} · Cambio estratégico`,title:item.title,detail:watch?`${watch.query} · ${item.event_type} · relevancia ${item.relevance}`:`${item.event_type} · relevancia ${item.relevance}`,action:watch?"Abrir análisis":"Revisar cambio",tone:item.relevance==="alta"?"warm" as const:"primary" as const}}),
-    ...newSignals.slice(0,2).map(item=>({href:"/monitorear",icon:BellRing,kicker:`${item.source} · Nueva señal`,title:item.mark_name,detail:item.reason||item.applicant_name||"Antecedente nuevo en vigilancia.",action:"Revisar señal",tone:item.relevance==="alta"?"warm" as const:"neutral" as const})),
-    ...stalled.slice(0,1).map(item=>({href:`/casos/${item.caseRow.id}`,icon:Clock3,kicker:"Sin movimiento",title:item.caseRow.title,detail:`Última actividad ${relative(item.caseRow.updated_at).toLowerCase()}.`,action:"Retomar caso",tone:"neutral" as const})),
+    ...ready.map(item=>({href:`/casos/${item.caseRow.id}`,icon:CheckCircle2,kicker:"Listo para decidir",title:item.caseRow.title,detail:item.intelligence.pendingDecision,action:"Preparar decisión",tone:"warm" as const})),
+    ...acceptedPriorityRecommendations.map(item=>({href:"/oportunidades",icon:Compass,kicker:"Oportunidad aceptada",title:item.headline,detail:item.recommended_action,action:"Llevar a ejecución",tone:"warm" as const})),
+    ...otherPriorityRecommendations.filter(item=>item.tier==="alta").map(item=>({href:"/oportunidades",icon:Compass,kicker:"Oportunidad · Prioridad alta",title:item.headline,detail:item.recommended_action,action:"Revisar oportunidad",tone:"warm" as const})),
+    ...changedOnly.map(item=>({href:`/casos/${item.caseRow.id}`,icon:BriefcaseBusiness,kicker:"Evidencia nueva",title:item.caseRow.title,detail:`${item.intelligence.newEvidenceCount} evidencia${item.intelligence.newEvidenceCount===1?"":"s"} nueva${item.intelligence.newEvidenceCount===1?"":"s"} desde la última revisión.`,action:"Revisar caso",tone:"primary" as const})),
+    ...highStrategicSignals.map(item=>{const watch=strategicWatchMap.get(item.watch_id);return {href:watch?strategicAnalysisHref(watch.watch_type,watch.query):"/monitorear/estrategico",icon:Radar,kicker:`${item.source_key} · Cambio estratégico · Alta`,title:item.title,detail:watch?`${watch.query} · ${item.event_type}`:item.event_type,action:watch?"Abrir análisis":"Revisar cambio",tone:"warm" as const}}),
+    ...highTrademarkSignals.map(item=>({href:"/monitorear",icon:BellRing,kicker:`${item.source} · Señal alta`,title:item.mark_name,detail:item.reason||item.applicant_name||"Antecedente nuevo en vigilancia.",action:"Revisar señal",tone:"warm" as const})),
+    ...stalledOnly.map(item=>({href:`/casos/${item.caseRow.id}`,icon:Clock3,kicker:"Sin movimiento",title:item.caseRow.title,detail:`Última actividad ${relative(item.caseRow.updated_at).toLowerCase()}.`,action:"Retomar caso",tone:"neutral" as const})),
+    ...otherPriorityRecommendations.map(item=>({href:"/oportunidades",icon:Compass,kicker:"Oportunidad persistida",title:item.headline,detail:item.recommended_action,action:"Revisar oportunidad",tone:"primary" as const})),
+    ...otherStrategicSignals.map(item=>{const watch=strategicWatchMap.get(item.watch_id);return {href:watch?strategicAnalysisHref(watch.watch_type,watch.query):"/monitorear/estrategico",icon:Radar,kicker:`${item.source_key} · Cambio estratégico`,title:item.title,detail:watch?`${watch.query} · ${item.event_type} · relevancia ${item.relevance}`:`${item.event_type} · relevancia ${item.relevance}`,action:watch?"Abrir análisis":"Revisar cambio",tone:"primary" as const}}),
+    ...otherTrademarkSignals.map(item=>({href:"/monitorear",icon:BellRing,kicker:`${item.source} · Nueva señal`,title:item.mark_name,detail:item.reason||item.applicant_name||"Antecedente nuevo en vigilancia.",action:"Revisar señal",tone:"neutral" as const})),
   ].slice(0,6)
 
   const executiveQuestions=[
@@ -107,26 +123,26 @@ export default async function DashboardPage(){
 
   return <OperationalPage>
     <OperationalHeader
-      eyebrow="VIDENTIA / Resumen"
-      title={attention?"Hay decisiones que requieren revisión.":"No hay cambios que requieran atención."}
-      description={<>Hola, {displayName}. Este resumen reúne oportunidades persistidas, evidencia nueva, señales estratégicas y casos listos para decidir.</>}
+      eyebrow="VIDENTIA / Resumen ejecutivo"
+      title={decisionNow?`${decisionNow} prioridad${decisionNow===1?"":"es"} lista${decisionNow===1?"":"s"} para actuar.`:attention?`${attention} elemento${attention===1?"":"s"} requiere${attention===1?"":"n"} revisión.`:"No hay cambios que requieran atención."}
+      description={<>Hola, {displayName}. {attentionCaseIds.size?`${attentionCaseIds.size} caso${attentionCaseIds.size===1?"":"s"} concentra${attentionCaseIds.size===1?"":"n"} cambios, decisión o falta de movimiento. `:""}La bandeja prioriza decisiones y acciones aceptadas antes que señales informativas.</>}
       actions={<><Button asChild variant="outline"><Link href="/oportunidades">Oportunidades</Link></Button><Button asChild><Link href="/investigar">Nueva investigación <Search className="ml-1 h-4 w-4"/></Link></Button></>}
     />
 
     <OperationalMetricRail>
-      <OperationalMetric value={opportunitiesAvailable?activeRecommendations.length:"—"} label="Oportunidades activas" detail={opportunitiesAvailable?`${highRecommendations.length} prioridad alta · ${acceptedRecommendations.length} aceptadas`:"No pudimos cargar el lifecycle"} tone={opportunitiesAvailable&&activeRecommendations.length?"warning":"neutral"}/>
-      <OperationalMetric value={changed.length} label="Casos con cambios" detail="Evidencia desde la última revisión"/>
-      <OperationalMetric value={ready.length} label="Listos para decidir" detail="Con contexto suficiente para revisión"/>
+      <OperationalMetric value={decisionNow} label="Prioridades para actuar" detail={`${ready.length} decisiones · ${acceptedRecommendations.length} oportunidades aceptadas`} tone={decisionNow?"warning":"neutral"}/>
+      <OperationalMetric value={changed.length} label="Casos con evidencia nueva" detail={`${attentionCaseIds.size} casos únicos requieren atención`}/>
+      <OperationalMetric value={opportunitiesAvailable?activeRecommendations.length:"—"} label="Oportunidades activas" detail={opportunitiesAvailable?`${highRecommendations.length} prioridad alta · ${acceptedRecommendations.length} aceptadas`:"No pudimos cargar el lifecycle"} tone={opportunitiesAvailable&&highRecommendations.length?"warning":"neutral"}/>
       <OperationalMetric value={newSignals.length+newStrategicSignals.length} label="Señales nuevas" detail={`${newStrategicSignals.length} estratégicas · ${newSignals.length} marcarias`} tone={newSignals.length+newStrategicSignals.length?"warning":"neutral"}/>
     </OperationalMetricRail>
 
     <section className="border-b border-border/80 py-9">
       <OperationalSectionHeader
         eyebrow="Bandeja prioritaria"
-        title="Qué conviene resolver ahora"
-        action={attention===0?<Badge variant="outline" className="bg-[#173B37] text-[#96B5A6]">Sin novedades pendientes</Badge>:<span className="text-sm text-muted-foreground">{attention} elemento{attention===1?"":"s"} de atención</span>}
+        title="Primero decide. Después revisa señales."
+        action={attention===0?<Badge variant="outline" className="bg-[#173B37] text-[#96B5A6]">Sin novedades pendientes</Badge>:<span className="text-sm text-muted-foreground">{decisionNow?`${decisionNow} para actuar · `:""}{attention} pendiente{attention===1?"":"s"}{queue.length<attention?` · mostrando ${queue.length}`:""}</span>}
       />
-      {queue.length?<div className="mt-5 divide-y divide-border/80 border-y border-border/80">{queue.map((item,index)=>{const Icon=item.icon;return <Link key={`${item.href}-${index}`} href={item.href} className="group grid gap-4 px-2 py-5 outline-none transition-colors hover:bg-secondary/55 focus-visible:bg-secondary/55 sm:grid-cols-[40px_1fr_auto] sm:items-center"><span className={`flex h-9 w-9 items-center justify-center rounded-[9px] ${item.tone==="primary"?"bg-[#173B37] text-[#96B5A6]":item.tone==="warm"?"bg-[#332C24] text-[#D6A46F]":"bg-[#13272D] text-muted-foreground"}`}><Icon className="h-4 w-4"/></span><div className="min-w-0"><p className="text-[10px] font-medium uppercase tracking-[0.13em] text-muted-foreground">{item.kicker}</p><h3 className="mt-1 font-medium text-white">{item.title}</h3><p className="mt-1 text-sm leading-6 text-muted-foreground">{item.detail}</p></div><span className="inline-flex items-center gap-2 text-sm font-medium text-white">{item.action}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1"/></span></Link>})}</div>:<div className="mt-5 border-y border-border/80 py-8"><div className="flex items-start gap-4"><span className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-[#173B37] text-[#96B5A6]"><CheckCircle2 className="h-4 w-4"/></span><div><h3 className="font-medium text-white">No hay nada urgente.</h3><p className="mt-1 text-sm leading-6 text-muted-foreground">Puedes iniciar una investigación o revisar las vigilancias activas.</p></div></div></div>}
+      {queue.length?<div className="mt-5 divide-y divide-border/80 border-y border-border/80">{queue.map((item,index)=>{const Icon=item.icon;return <Link key={`${item.href}-${item.title}-${index}`} href={item.href} className="group grid gap-4 px-2 py-5 outline-none transition-colors hover:bg-secondary/55 focus-visible:bg-secondary/55 sm:grid-cols-[40px_1fr_auto] sm:items-center"><span className={`flex h-9 w-9 items-center justify-center rounded-[9px] ${item.tone==="primary"?"bg-[#173B37] text-[#96B5A6]":item.tone==="warm"?"bg-[#332C24] text-[#D6A46F]":"bg-[#13272D] text-muted-foreground"}`}><Icon className="h-4 w-4"/></span><div className="min-w-0"><p className="text-[10px] font-medium uppercase tracking-[0.13em] text-muted-foreground">{item.kicker}</p><h3 className="mt-1 font-medium text-white">{item.title}</h3><p className="mt-1 text-sm leading-6 text-muted-foreground">{item.detail}</p></div><span className="inline-flex items-center gap-2 text-sm font-medium text-white">{item.action}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1"/></span></Link>})}</div>:<div className="mt-5 border-y border-border/80 py-8"><div className="flex items-start gap-4"><span className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-[#173B37] text-[#96B5A6]"><CheckCircle2 className="h-4 w-4"/></span><div><h3 className="font-medium text-white">No hay nada urgente.</h3><p className="mt-1 text-sm leading-6 text-muted-foreground">Puedes iniciar una investigación o revisar las vigilancias activas.</p></div></div></div>}
     </section>
 
     <section className="border-b border-border/80 py-9">
