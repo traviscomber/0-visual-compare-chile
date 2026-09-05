@@ -77,20 +77,45 @@ export async function GET(request: Request) {
   const access = await assertPortfolioOrganizationAccess(admin, auth.user.id, parsed.data.organizationId)
   if (!access.ok) return NextResponse.json({ error: "No perteneces a esta organización." }, { status: 403, headers: PRIVATE_NO_STORE_HEADERS })
 
-  const { data, error } = await admin
-    .from("innovation_opportunity_theses")
-    .select("id,title,status,decision,evidence_state,confidence,overall_score,evidence_strength,timing_score,research_queries,watch_triggers,thesis,source_website_url,source_generated_at,model,last_researched_at,created_at,updated_at")
-    .eq("organization_id", parsed.data.organizationId)
-    .order("overall_score", { ascending: false })
-    .order("updated_at", { ascending: false })
-    .limit(100)
+  const [{ data: theses, error: thesesError }, { data: history, error: historyError }] = await Promise.all([
+    admin
+      .from("innovation_opportunity_theses")
+      .select("id,title,status,decision,evidence_state,confidence,overall_score,evidence_strength,timing_score,research_queries,watch_triggers,thesis,source_website_url,source_generated_at,model,last_researched_at,created_at,updated_at")
+      .eq("organization_id", parsed.data.organizationId)
+      .order("overall_score", { ascending: false })
+      .order("updated_at", { ascending: false })
+      .limit(100),
+    admin
+      .from("innovation_opportunity_research_runs")
+      .select("id,opportunity_id,run_type,evidence_summary,score_snapshot,confidence,observed_at,created_at")
+      .eq("organization_id", parsed.data.organizationId)
+      .order("observed_at", { ascending: false })
+      .limit(1000),
+  ])
 
-  if (error) {
-    console.error("[opportunity-theses:list]", error)
+  if (thesesError) {
+    console.error("[opportunity-theses:list]", thesesError)
     return NextResponse.json({ error: "No pudimos cargar las tesis guardadas." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
   }
+  if (historyError) {
+    console.error("[opportunity-theses:history]", historyError)
+    return NextResponse.json({ error: "No pudimos cargar el historial de convicción." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
+  }
 
-  return NextResponse.json({ opportunities: data ?? [] }, { headers: PRIVATE_NO_STORE_HEADERS })
+  const historyByOpportunity = new Map<string, Array<Record<string, unknown>>>()
+  for (const row of history ?? []) {
+    const key = String(row.opportunity_id)
+    const bucket = historyByOpportunity.get(key) ?? []
+    if (bucket.length < 20) bucket.push(row as Record<string, unknown>)
+    historyByOpportunity.set(key, bucket)
+  }
+
+  return NextResponse.json({
+    opportunities: (theses ?? []).map((thesis) => ({
+      ...thesis,
+      research_history: historyByOpportunity.get(String(thesis.id)) ?? [],
+    })),
+  }, { headers: PRIVATE_NO_STORE_HEADERS })
 }
 
 export async function POST(request: Request) {

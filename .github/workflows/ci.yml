@@ -67,6 +67,8 @@ jobs:
         run: node scripts/opportunity-engine-regression.mts
       - name: Opportunity thesis persistence regression
         run: node scripts/opportunity-thesis-persistence-regression.mts
+      - name: Opportunity conviction regression
+        run: node scripts/opportunity-conviction-regression.mts
       - name: Dashboard opportunities regression
         run: node scripts/dashboard-opportunities-regression.mts
       - name: Executive flow gates regression
