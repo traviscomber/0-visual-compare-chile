@@ -10,12 +10,12 @@ const [page,route]=await Promise.all([
 
 for(const needle of [
   "type RegulatoryTimelineMilestone",
-  "timeline?: RegulatoryTimeline | null",
   "RegulatoryTimelineDetails",
   "Ver línea regulatoria",
   "Evidencia SMA",
   "hitos SMA",
 ])requireText(page,needle,"monitoring UI")
+if(!page.includes("timeline?: RegulatoryTimeline | null")&&!page.includes("timeline?:RegulatoryTimeline|null"))fail("monitoring UI missing typed regulatory timeline")
 
 for(const needle of [
   "collapseSnifaRegulatoryEvents",
