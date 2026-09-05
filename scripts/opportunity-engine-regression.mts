@@ -23,6 +23,10 @@ for (const needle of [
   "frontier_questions",
   "evidence_strength",
   "defensibility",
+  "observedWatchEvents",
+  "calibrateOpportunity",
+  'item.scores.evidence_strength < 60',
+  'item.evidence_state === "hypothesis"',
 ]) requireText(engine, needle, "opportunity engine")
 
 for (const needle of [
@@ -39,6 +43,13 @@ for (const needle of [
   "runOpportunityEngine",
   "PRIVATE_NO_STORE_HEADERS",
   '.eq("organization_id", parsed.data.organizationId)',
+  '.from("intelligence_watches")',
+  '.from("patent_watches")',
+  '.from("trademark_watches")',
+  '.from("intelligence_watch_events")',
+  '.from("patent_alert_events")',
+  '.from("trademark_watch_signal_events")',
+  "observedEvents",
 ]) requireText(route, needle, "opportunity engine API")
 
 for (const forbidden of [".insert(", ".update(", ".delete(", "create_intelligence_action", "service_role"] ) {
@@ -54,4 +65,4 @@ for (const needle of [
   "Triggers a vigilar",
 ]) requireText(page, needle, "opportunity discovery page")
 
-console.log("Opportunity Engine regression PASS: product discovery is organization-scoped, read-only, SSRF-hardened, Sol-routed, epistemically constrained, explicitly falsifiable, and exposes evidence strength plus anti-roadmap output before any persistence or execution.")
+console.log("Opportunity Engine regression PASS: product discovery is organization-scoped, read-only, SSRF-hardened, Sol-routed, calibrated against evidence, fuses strategic/patent/trademark watch signals, remains explicitly falsifiable, and exposes anti-roadmap output before any persistence or execution.")
