@@ -90,10 +90,14 @@ for(const needle of [
   'last_reviewed_at: reviewedAt',
   'read_at: reviewedAt',
   '.eq("user_id", auth.user.id)',
+  'createAdminClient()',
+  'listPortfolioOrganizations(admin, auth.user.id)',
+  '.from("innovation_opportunity_theses")',
+  '.in("organization_id", organizationIds)',
+  '.from("innovation_opportunity_research_runs")',
 ])requireText(signalsApi,needle,"common signal inbox API")
 
-for(const [source,label] of [[watchesApi,"watch API"],[signalsApi,"signal API"]] as const){
-  if(source.includes("createAdminClient")||source.includes("SUPABASE_SERVICE_ROLE_KEY"))fail(`${label} must remain behind authenticated RLS, not service role`)
-}
+if(watchesApi.includes("createAdminClient")||watchesApi.includes("SUPABASE_SERVICE_ROLE_KEY"))fail("watch API must remain behind authenticated RLS, not service role")
+if(signalsApi.includes("SUPABASE_SERVICE_ROLE_KEY"))fail("signal API must use the shared admin client and never inline the service-role secret")
 
-console.log("Portal/Common Watches regression PASS: External Intelligence remains the canonical monitoring workspace, prioritizes new high-relevance evidence before configuration, preserves scoped watch creation and contextual deep tools, and keeps authenticated RLS facades without a destructive migration.")
+console.log("Portal/Common Watches regression PASS: External Intelligence remains the canonical monitoring workspace, prioritizes new high-relevance evidence before configuration, preserves scoped watch creation and contextual deep tools, keeps watch CRUD behind authenticated RLS, and permits server-only thesis attention reads only after explicit organization membership scoping.")
