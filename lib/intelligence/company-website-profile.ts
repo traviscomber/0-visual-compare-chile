@@ -27,6 +27,7 @@ const LINK_KEYWORDS = [
 export async function readPublicCompanyWebsite(inputUrl: string): Promise<CompanyWebsiteProfile> {
   const start = normalizePublicUrl(inputUrl)
   const first = await fetchHtmlValidated(start)
+  const canonicalHost = new URL(first.url).hostname
   const pages: CompanyWebsitePage[] = [toPage(first.url, first.html)]
 
   const candidates = extractSameOriginLinks(first.html, first.url)
@@ -39,7 +40,7 @@ export async function readPublicCompanyWebsite(inputUrl: string): Promise<Compan
     if (pages.some((page) => page.url === candidate.url)) continue
     try {
       const fetched = await fetchHtmlValidated(new URL(candidate.url))
-      if (new URL(fetched.url).hostname !== start.hostname) continue
+      if (new URL(fetched.url).hostname !== canonicalHost) continue
       pages.push(toPage(fetched.url, fetched.html))
     } catch {
       // A secondary page is optional. The root page remains authoritative input.
@@ -53,7 +54,7 @@ export async function readPublicCompanyWebsite(inputUrl: string): Promise<Compan
 
   return {
     canonicalUrl: first.url,
-    hostname: start.hostname,
+    hostname: canonicalHost,
     pages,
     combinedText,
   }
@@ -66,7 +67,7 @@ function normalizePublicUrl(inputUrl: string): URL {
   } catch {
     throw new Error("Ingresa una URL pública válida.")
   }
-  if (!['http:', 'https:'].includes(url.protocol)) throw new Error("La web debe usar HTTP o HTTPS.")
+  if (!["http:", "https:"].includes(url.protocol)) throw new Error("La web debe usar HTTP o HTTPS.")
   if (url.username || url.password) throw new Error("La URL no puede incluir credenciales.")
   url.hash = ""
   return url
@@ -151,7 +152,7 @@ function extractSameOriginLinks(html: string, baseUrl: string): string[] {
   while ((match = regex.exec(html))) {
     try {
       const url = new URL(match[1], base)
-      if (!['http:', 'https:'].includes(url.protocol) || url.hostname !== base.hostname) continue
+      if (!["http:", "https:"].includes(url.protocol) || url.hostname !== base.hostname) continue
       url.hash = ""
       url.search = ""
       const normalized = url.toString().replace(/\/$/, "")
