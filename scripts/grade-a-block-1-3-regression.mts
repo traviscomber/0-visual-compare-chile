@@ -120,7 +120,7 @@ for (const question of [
 for (const href of ["/monitorear/estrategico", "/empresas", "/espacios", "/tecnologias", "/oportunidades"]) {
   if (!dashboardPage.includes(`href:\"${href}\"`) && !dashboardPage.includes(`href=\"${href}\"`)) fail(`dashboard missing executive route ${href}`)
 }
-if (!opportunitiesPage.includes('href="/brechas"') || !opportunitiesPage.includes("Buscar nuevas brechas")) fail("opportunities workspace must preserve explicit discovery access to /brechas")
+if (!opportunitiesPage.includes('href="/brechas"') || !opportunitiesPage.includes("Brechas IP")) fail("opportunities workspace must preserve explicit visible discovery access to /brechas")
 if (!dashboardPage.includes('from("intelligence_watches")') || !dashboardPage.includes('from("intelligence_watch_events")')) fail("dashboard executive layer is not grounded in the user strategic watch state")
 
 for (const needle of [
