@@ -43,8 +43,8 @@ for (const needle of [
   "Registrar resultado",
   'status:"done",outcome',
   "Resultado requerido",
-  'label="Vencidas"',
-  'label="Próximas 48 h"',
+  'label="Para actuar"',
+  'detail={`${overdue.length} vencidas · ${dueSoon.length} próximas`}',
   "outcome.trim().length<2",
   'kind:"overdue"',
   'kind:"soon"',
@@ -64,4 +64,4 @@ for (const needle of [
   "assignee_can_only_change_status_and_outcome",
 ]) requireText(outcomeMigration, needle, "outcome migration")
 
-console.log("Action SLA regression PASS: owner/editor scheduling remains membership-scoped and RLS-bound, overdue/48h states are visible, and inbox completion requires an attributable outcome.")
+console.log("Action SLA regression PASS: owner/editor scheduling remains membership-scoped and RLS-bound, overdue/48h work is prioritized in the action rail, and inbox completion requires an attributable outcome.")
