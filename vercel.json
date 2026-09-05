@@ -23,6 +23,10 @@
     {
       "path": "/api/cron/wipo-patent-watches",
       "schedule": "17 */6 * * *"
+    },
+    {
+      "path": "/api/cron/opportunity-conviction",
+      "schedule": "55 10 * * *"
     }
   ]
 }

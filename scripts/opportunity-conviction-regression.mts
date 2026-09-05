@@ -10,6 +10,7 @@ function requireText(haystack: string, needle: string, label: string) {
 }
 
 const rules = await readFile("lib/intelligence/opportunity-conviction.ts", "utf8")
+const service = await readFile("lib/intelligence/opportunity-thesis-research.ts", "utf8")
 const researchRoute = await readFile("app/api/intelligence/opportunity-theses/[id]/research/route.ts", "utf8")
 const thesisRoute = await readFile("app/api/intelligence/opportunity-theses/route.ts", "utf8")
 const thesisPage = await readFile("app/(app)/oportunidades/tesis/page.tsx", "utf8")
@@ -35,18 +36,25 @@ if (rules.includes("news_context_count *") || rules.includes("news_context_count
 }
 
 for (const needle of [
-  "requireUser()",
-  "assertPortfolioOrganizationAccess",
   "observeOpportunityMarketState",
   "compareOpportunityMarketStates",
   "findLatestMarketState",
   '.from("innovation_opportunity_research_runs")',
   '.from("innovation_opportunity_theses")',
-  'run_type: "live_research"',
   "news_non_scoring: true",
   "rollback",
   "La tesis está cerrada. Reactívala antes de investigar nuevamente.",
-]) requireText(researchRoute, needle, "research route")
+  "OpenAlex e INAPI no estuvieron disponibles",
+  'trigger: runType === "scheduled_research" ? "vercel_cron" : "explicit_user_action"',
+]) requireText(service, needle, "shared research service")
+
+for (const needle of [
+  "requireUser()",
+  "assertPortfolioOrganizationAccess",
+  "researchPersistedOpportunity",
+  'runType: "live_research"',
+  "OpportunityResearchError",
+]) requireText(researchRoute, needle, "manual research route")
 
 for (const needle of [
   '.from("innovation_opportunity_research_runs")',
@@ -64,4 +72,4 @@ for (const needle of [
   "/research",
 ]) requireText(thesisPage, needle, "conviction workspace")
 
-console.log("Opportunity conviction regression PASS: persistent theses establish a zero-delta baseline, compare only new hard-evidence movement, ignore news volume for scoring, tolerate source outages, bound score/confidence deltas, never auto-upgrade to build, append research lineage, and expose the conviction curve with explicit human-triggered re-research.")
+console.log("Opportunity conviction regression PASS: manual and scheduled research share one scoring service; persistent theses establish a zero-delta baseline, compare only new hard-evidence movement, ignore news volume for scoring, tolerate source outages without penalty, bound deltas, never auto-upgrade to build, append lineage, and expose the conviction curve with explicit human re-research.")
