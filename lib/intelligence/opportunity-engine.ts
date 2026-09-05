@@ -65,6 +65,8 @@ export const OpportunityEngineOutputSchema = z.object({
 
 export type OpportunityEngineOutput = z.infer<typeof OpportunityEngineOutputSchema>
 
+type Opportunity = z.infer<typeof OpportunitySchema>
+
 export type OpportunityEngineContext = {
   organization: {
     id: string
@@ -75,6 +77,7 @@ export type OpportunityEngineContext = {
   website: CompanyWebsiteProfile
   recentSearches: Array<Record<string, unknown>>
   userWatches: Array<Record<string, unknown>>
+  observedEvents: Array<Record<string, unknown>>
   recommendations: Array<Record<string, unknown>>
   generatedAt: string
   challenge?: string | null
@@ -96,6 +99,7 @@ REGLAS EPISTEMOLÓGICAS OBLIGATORIAS
 - Prefiere nuevos sistemas, redes de inteligencia, infraestructuras de decisión, productos de datos o loops operacionales con aprendizaje acumulativo sobre features aisladas.
 - Desafía cada hipótesis: incluye señales que la invalidarían, evidencia faltante y criterios de investigación.
 - No confundas actividad pública con intención empresarial.
+- Los eventos de watches son señales observadas, no pruebas de demanda. Úsalos para formular y tensionar hipótesis, no para declarar mercado validado.
 - Mantén decisiones humanas: build significa "merece prototipo/validación", no autorización automática de inversión.
 
 MÉTODO
@@ -107,13 +111,15 @@ MÉTODO
 6. Puntúa cada tesis con severidad. No infles scores.
 7. Incluye al menos tres oportunidades no obvias y al menos dos ideas que explícitamente NO conviene construir.
 
-PONDERACIÓN ORIENTATIVA DEL OVERALL
+PONDERACIÓN DEL OVERALL
 - strategic_fit 25%
 - capability_reuse 20%
 - novelty 15%
 - timing 15%
 - evidence_strength 15%
 - defensibility 10%
+
+El servidor recalculará el overall y puede degradar una decisión build cuando evidencia/confianza sean insuficientes. No intentes compensar evidencia débil inflando otros factores.
 
 Responde en español ejecutivo, concreto y técnicamente preciso.`
 
@@ -144,6 +150,7 @@ export async function runOpportunityEngine(context: OpportunityEngineContext) {
             },
             recentSearches: context.recentSearches,
             userWatches: context.userWatches,
+            observedWatchEvents: context.observedEvents,
             persistedRecommendations: context.recommendations,
           }),
           "",
@@ -154,8 +161,12 @@ export async function runOpportunityEngine(context: OpportunityEngineContext) {
     response_format: zodResponseFormat(OpportunityEngineOutputSchema, "videntia_opportunity_engine"),
   })
 
-  const output = response.choices[0]?.message.parsed
-  if (!output) throw new Error("Opportunity Engine returned no schema-valid output")
+  const parsed = response.choices[0]?.message.parsed
+  if (!parsed) throw new Error("Opportunity Engine returned no schema-valid output")
+  const output: OpportunityEngineOutput = {
+    ...parsed,
+    opportunities: parsed.opportunities.map(calibrateOpportunity),
+  }
 
   return {
     output,
@@ -163,5 +174,30 @@ export async function runOpportunityEngine(context: OpportunityEngineContext) {
     promptTokens: response.usage?.prompt_tokens ?? 0,
     completionTokens: response.usage?.completion_tokens ?? 0,
     estimatedCostUsd: estimateModelCostUsd("sol", response.usage),
+  }
+}
+
+function calibrateOpportunity(item: Opportunity): Opportunity {
+  const overall = Math.round(
+    item.scores.strategic_fit * 0.25
+    + item.scores.capability_reuse * 0.20
+    + item.scores.novelty * 0.15
+    + item.scores.timing * 0.15
+    + item.scores.evidence_strength * 0.15
+    + item.scores.defensibility * 0.10,
+  )
+
+  let decision = item.decision
+  if (decision === "build" && (item.scores.evidence_strength < 60 || item.confidence < 0.65 || item.evidence_state === "hypothesis")) {
+    decision = "investigate"
+  }
+  if (decision === "investigate" && item.scores.evidence_strength < 30 && item.confidence < 0.45) {
+    decision = "watch"
+  }
+
+  return {
+    ...item,
+    decision,
+    scores: { ...item.scores, overall },
   }
 }
