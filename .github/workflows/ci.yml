@@ -71,6 +71,8 @@ jobs:
         run: node scripts/opportunity-conviction-regression.mts
       - name: Opportunity conviction cron regression
         run: node scripts/opportunity-conviction-cron-regression.mts
+      - name: Opportunity human decision regression
+        run: node scripts/opportunity-human-decision-regression.mts
       - name: Dashboard opportunities regression
         run: node scripts/dashboard-opportunities-regression.mts
       - name: Executive flow gates regression
