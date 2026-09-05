@@ -10,6 +10,7 @@ function requireText(haystack: string, needle: string, label: string) {
 }
 
 const migration = await readFile("supabase/migrations/20260905214500_add_innovation_opportunity_theses.sql", "utf8")
+const creatorIndexMigration = await readFile("supabase/migrations/20260905222434_index_innovation_opportunity_created_by.sql", "utf8")
 const route = await readFile("app/api/intelligence/opportunity-theses/route.ts", "utf8")
 const discoveryPage = await readFile("app/(app)/oportunidades/descubrir/page.tsx", "utf8")
 const thesisPage = await readFile("app/(app)/oportunidades/tesis/page.tsx", "utf8")
@@ -27,6 +28,11 @@ for (const needle of [
   "grant select, insert, update, delete on table public.innovation_opportunity_research_runs to service_role",
   "Human-promoted Opportunity Engine product theses",
 ]) requireText(migration, needle, "migration")
+
+for (const needle of [
+  "innovation_opportunity_theses_created_by_idx",
+  "innovation_opportunity_research_runs_created_by_idx",
+]) requireText(creatorIndexMigration, needle, "creator index migration")
 
 for (const forbidden of [
   "grant select on table public.innovation_opportunity_theses to authenticated",
@@ -65,4 +71,4 @@ for (const forbidden of [
   "opportunity-theses",
 ]) if (engineRoute.includes(forbidden)) fail(`generation API must remain non-persistent until explicit human action: ${forbidden}`)
 
-console.log("Opportunity thesis persistence regression PASS: generation remains ephemeral, persistence requires an explicit authenticated organization-scoped promotion, canonical thesis tables stay server-only behind RLS and revoked client grants, and the initial evidence snapshot preserves lineage for future confidence changes.")
+console.log("Opportunity thesis persistence regression PASS: generation remains ephemeral, persistence requires an explicit authenticated organization-scoped promotion, canonical thesis tables stay server-only behind RLS and revoked client grants, creator foreign keys are indexed, and the initial evidence snapshot preserves lineage for future confidence changes.")
