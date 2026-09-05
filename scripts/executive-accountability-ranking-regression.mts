@@ -7,10 +7,10 @@ for (const needle of [
   'type AccountabilityState = "checking" | "none" | "overdue" | "unassigned" | "open" | "resolved"',
   'ACCOUNTABILITY_RANK',
   'PRIORITY_RANK',
-  'Accountability → prioridad externa → recencia',
+  'Accountability → materialidad / convicción → recencia',
   'label="Para actuar"',
   'label="Abiertas"',
-  'label="Críticas"',
+  'label="Cambios de tesis"',
   'label="Resueltas"',
   'currentAccountabilityState(action,checking)',
   'onAccountabilityChange(item.key,accountabilityState)',
@@ -27,11 +27,11 @@ assert.match(
 const accountabilitySort = page.indexOf('const byAccountability=ACCOUNTABILITY_RANK[aState]-ACCOUNTABILITY_RANK[bState]')
 const prioritySort = page.indexOf('const byPriority=PRIORITY_RANK[a.priority]-PRIORITY_RANK[b.priority]')
 const recencySort = page.indexOf('return bTime-aTime||a.key.localeCompare(b.key)')
-assert.ok(accountabilitySort >= 0 && prioritySort > accountabilitySort && recencySort > prioritySort, "ranking must apply accountability first, then external priority, then recency")
+assert.ok(accountabilitySort >= 0 && prioritySort > accountabilitySort && recencySort > prioritySort, "ranking must apply accountability first, then attention priority, then recency")
 
 assert.match(page, /if\(value\.action\.status==="done"\)return "resolved"/)
 assert.match(page, /Date\.parse\(value\.action\.due_at\)<Date\.now\(\)\)return "overdue"/)
 assert.match(page, /if\(!value\.action\.assigned_to\)return "unassigned"/)
 assert.match(page, /return "open"/)
 
-console.log("Executive accountability ranking regression PASS: overdue and unassigned work outrank other attention while external materiality remains the secondary ordering signal, and shared operational metrics cover the mounted attention items.")
+console.log("Executive accountability ranking regression PASS: overdue and unassigned work outrank other attention while external materiality and conviction remain secondary ordering signals, and shared operational metrics cover the mounted attention items.")

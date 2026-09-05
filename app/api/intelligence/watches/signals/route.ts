@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server"
 import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
-import { buildExecutiveAttentionQueue } from "@/lib/intelligence/executive-attention"
+import { buildExecutiveAttentionQueue, sortExecutiveAttentionItems } from "@/lib/intelligence/executive-attention"
+import { buildOpportunityAttentionItems } from "@/lib/intelligence/opportunity-attention"
+import { listPortfolioOrganizations } from "@/lib/intelligence/portfolio-access"
 import { collapseSnifaRegulatoryEvents } from "@/lib/intelligence/snifa-regulatory-timeline"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -48,14 +51,16 @@ type CommonSignal = {
 export async function GET() {
   const auth = await requireUser()
   if (!auth.ok) return auth.response
+  const admin = createAdminClient()
 
-  const [brandWatchesResult, patentWatchesResult, technologyWatchesResult, brandEventsResult, patentEventsResult, technologyEventsResult] = await Promise.all([
+  const [brandWatchesResult, patentWatchesResult, technologyWatchesResult, brandEventsResult, patentEventsResult, technologyEventsResult, portfolioOrganizations] = await Promise.all([
     auth.supabase.from("trademark_watches").select("id,query,is_active,last_reviewed_at").eq("user_id", auth.user.id),
     auth.supabase.from("patent_watches").select("id,query,is_active,source_type,source_status").eq("user_id", auth.user.id),
     auth.supabase.from("intelligence_watches").select("id,query,is_active,last_reviewed_at").eq("user_id", auth.user.id),
     auth.supabase.from("trademark_watch_signal_events").select("id,watch_id,source,mark_name,applicant_name,application_number,event_date,source_url,relevance,reason,first_seen_at").eq("user_id", auth.user.id).order("first_seen_at", { ascending: false }).limit(150),
     auth.supabase.from("patent_alert_events").select("id,watch_id,title,application_number,applicants,ipc_codes,filing_date,detected_at,read_at,source_key,source_url,source_date").eq("user_id", auth.user.id).order("detected_at", { ascending: false }).limit(150),
     auth.supabase.from("intelligence_watch_events").select("id,watch_id,source_key,event_type,title,summary,source_url,occurred_at,relevance,first_seen_at,payload").eq("user_id", auth.user.id).order("first_seen_at", { ascending: false }).limit(150),
+    listPortfolioOrganizations(admin, auth.user.id),
   ])
 
   const failed = [brandWatchesResult.error, patentWatchesResult.error, technologyWatchesResult.error, brandEventsResult.error, patentEventsResult.error, technologyEventsResult.error].find(Boolean)
@@ -130,8 +135,12 @@ export async function GET() {
     }),
   ].sort((a, b) => Number(b.isNew) - Number(a.isNew) || relevanceRank(b.relevance) - relevanceRank(a.relevance) || Date.parse(b.firstSeenAt) - Date.parse(a.firstSeenAt))
 
+  const opportunityAttention = await loadOpportunityAttention(admin, portfolioOrganizations.map(item => item.id))
   const newSignals = signals.filter(item => item.isNew)
-  const attentionQueue = buildExecutiveAttentionQueue(signals)
+  const attentionQueue = sortExecutiveAttentionItems([
+    ...buildExecutiveAttentionQueue(signals),
+    ...opportunityAttention,
+  ])
   return NextResponse.json({
     signals,
     attentionQueue,
@@ -140,6 +149,7 @@ export async function GET() {
       critical: attentionQueue.filter(item => item.priority === "critica").length,
       high: attentionQueue.filter(item => item.priority === "alta").length,
       medium: attentionQueue.filter(item => item.priority === "media").length,
+      opportunity: opportunityAttention.length,
     },
     summary: {
       new: newSignals.length,
@@ -164,6 +174,46 @@ export async function POST() {
   const failed = [brandResult.error, technologyResult.error, patentResult.error].find(Boolean)
   if (failed) { console.error("[common-watch-signals:review]", failed); return NextResponse.json({ error: "No pudimos registrar la revisión completa." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS }) }
   return NextResponse.json({ ok: true, reviewedAt }, { headers: PRIVATE_NO_STORE_HEADERS })
+}
+
+async function loadOpportunityAttention(admin: ReturnType<typeof createAdminClient>, organizationIds: string[]) {
+  if (!organizationIds.length) return []
+  const { data: opportunities, error: opportunityError } = await admin
+    .from("innovation_opportunity_theses")
+    .select("id,title,status")
+    .in("organization_id", organizationIds)
+    .in("status", ["exploring", "watching", "prototype"])
+    .order("updated_at", { ascending: false })
+    .limit(100)
+  if (opportunityError) {
+    console.error("[common-watch-signals:opportunities]", opportunityError)
+    throw new Error("Could not load organization opportunity theses")
+  }
+  const thesisIds = (opportunities ?? []).map(item => String(item.id))
+  if (!thesisIds.length) return []
+
+  const { data: researchRuns, error: researchError } = await admin
+    .from("innovation_opportunity_research_runs")
+    .select("id,opportunity_id,run_type,evidence_summary,observed_at")
+    .in("organization_id", organizationIds)
+    .in("opportunity_id", thesisIds)
+    .order("observed_at", { ascending: false })
+    .limit(500)
+  if (researchError) {
+    console.error("[common-watch-signals:opportunity-research]", researchError)
+    throw new Error("Could not load opportunity conviction history")
+  }
+
+  return buildOpportunityAttentionItems(
+    (opportunities ?? []).map(item => ({ id: String(item.id), title: String(item.title), status: String(item.status) })),
+    (researchRuns ?? []).map(item => ({
+      id: String(item.id),
+      opportunity_id: String(item.opportunity_id),
+      run_type: String(item.run_type),
+      evidence_summary: item.evidence_summary,
+      observed_at: String(item.observed_at),
+    })),
+  )
 }
 
 function normalizeRelevance(value: string | null): "alta" | "media" | "baja" { if (value === "alta" || value === "baja") return value; return "media" }

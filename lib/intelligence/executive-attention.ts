@@ -38,12 +38,15 @@ export type ExecutiveAttentionItem = {
   reason: string
   occurredAt: string | null
   isNew: boolean
-  kind: "regulatory_case" | "new_high_signal"
+  kind: "regulatory_case" | "new_high_signal" | "opportunity_conviction"
 }
 
 export function buildExecutiveAttentionQueue(signals: ExecutiveAttentionSignal[]): ExecutiveAttentionItem[] {
-  const items = signals.flatMap(signal => toAttentionItem(signal))
-  return items.sort(compareAttention)
+  return sortExecutiveAttentionItems(signals.flatMap(signal => toAttentionItem(signal)))
+}
+
+export function sortExecutiveAttentionItems(items: ExecutiveAttentionItem[]) {
+  return [...items].sort(compareAttention)
 }
 
 function toAttentionItem(signal: ExecutiveAttentionSignal): ExecutiveAttentionItem[] {
