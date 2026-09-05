@@ -16,11 +16,16 @@ for (const needle of [
   'listPortfolioOrganizations(admin,user.id)',
   '.from("intelligence_recommendations")',
   '.eq("organization_id",opportunityOrganization.id)',
-  'label="Oportunidades activas"',
+  'const activeRecommendations=',
+  'const acceptedRecommendations=',
+  'const priorityRecommendations=',
+  'const acceptedPriorityRecommendations=',
+  'const attentionCaseIds=new Set(',
   'href="/oportunidades"',
   'href:"/oportunidades",icon:Compass,title:"¿Dónde aparecen oportunidades?"',
-  'priorityRecommendations.slice(0,2)',
   'opportunitiesAvailable?activeRecommendations.length:"—"',
+  'kicker:"Oportunidad aceptada"',
+  'action:"Llevar a ejecución"',
 ]) requireText(dashboard, needle, "dashboard")
 
 for (const forbidden of [
@@ -38,4 +43,4 @@ for (const needle of [
   "grant select, insert, update, delete on table public.intelligence_recommendations to service_role;",
 ]) requireText(lifecycleMigration, needle, "recommendation lifecycle security")
 
-console.log("Dashboard opportunities regression PASS: dashboard reads the authorized persisted recommendation lifecycle server-side, prioritizes actionable opportunities, links to the canonical workspace, and never recomputes intelligence or exposes a client recommendation read path.")
+console.log("Dashboard opportunities regression PASS: dashboard reads the authorized persisted recommendation lifecycle server-side, ranks accepted opportunities first, deduplicates executive attention, links to the canonical workspace, and never recomputes intelligence or exposes a client recommendation read path.")
