@@ -51,8 +51,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   }
 
   const sensitiveTarget = parsed.data.target === "prototype" || parsed.data.target === "rejected"
-  const reopensClosedDecision = current.status === "rejected" && parsed.data.target !== "rejected"
-  if ((sensitiveTarget || reopensClosedDecision) && access.role !== "admin") {
+  const changesAdminDecision = (current.status === "prototype" || current.status === "rejected") && parsed.data.target !== current.status
+  if ((sensitiveTarget || changesAdminDecision) && access.role !== "admin") {
     return NextResponse.json({ error: "Esta decisión requiere rol administrador." }, { status: 403, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
