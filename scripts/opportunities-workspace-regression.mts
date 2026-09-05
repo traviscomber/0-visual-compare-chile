@@ -18,7 +18,9 @@ for (const needle of [
   "/api/intelligence/recommendations?organizationId=",
   'filter === "active"',
   'item.status === "converted_to_action"',
-  "Buscar nuevas brechas",
+  "/oportunidades/descubrir",
+  "Descubrir productos",
+  "Brechas IP",
   "Revisar decisión",
   "Abrir tarea",
   "Una sola fuente de verdad",
@@ -29,7 +31,7 @@ for (const forbidden of [
   "scoreRecommendation(",
   "create_intelligence_action",
 ]) {
-  if (page.includes(forbidden)) fail(`opportunities page must not recompute or auto-create work: ${forbidden}`)
+  if (page.includes(forbidden)) fail(`opportunities page must not recompute or auto-create persisted work: ${forbidden}`)
 }
 
 for (const needle of [
@@ -44,4 +46,4 @@ requireText(
   "contextual technology navigation",
 )
 
-console.log("Opportunities workspace regression PASS: the executive workspace reads persisted recommendations, preserves lifecycle state, enriches competitor identity server-side, remains reachable as contextual Technology intelligence, and never recomputes intelligence or auto-creates actions.")
+console.log("Opportunities workspace regression PASS: persisted recommendations keep their lifecycle and source-of-truth boundaries, while product discovery is exposed as a separate hypothesis workspace before persistence or action creation.")
