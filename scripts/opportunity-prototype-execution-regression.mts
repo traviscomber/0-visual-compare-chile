@@ -42,16 +42,16 @@ for (const needle of [
   'execution,',
 ]) requireText(route, needle, "decision route")
 
+if (!/if \(parsed\.data\.target === "prototype"\) \{[\s\S]*?ensureOpportunityPrototypeExecution\(auth\.supabase/.test(route)) {
+  fail("prototype execution must be guarded by the explicit prototype target")
+}
+
 const auditInsert = route.indexOf('.from("innovation_opportunity_research_runs")')
 const executionCall = route.indexOf("ensureOpportunityPrototypeExecution(auth.supabase")
 const executionCatch = route.indexOf('console.error("[opportunity-theses:decision:prototype-execution]"')
 const response = route.indexOf("execution,", executionCatch)
 if (!(auditInsert >= 0 && executionCall > auditInsert && executionCatch > executionCall && response > executionCatch)) {
   fail("prototype execution must occur after immutable human-review persistence and remain best-effort")
-}
-
-if (route.includes('parsed.data.target === "watching"') && route.includes("ensureOpportunityPrototypeExecution", route.indexOf('parsed.data.target === "watching"'))) {
-  fail("watching must never create prototype execution")
 }
 
 console.log("Opportunity prototype execution regression PASS: only explicit admin prototype approval bridges into the existing accountable case/action layer, the decision maker becomes the initial assignee, no deadline or high urgency is invented, exact opportunity evidence is preserved, and execution delivery failure never rolls back the audited human decision.")
