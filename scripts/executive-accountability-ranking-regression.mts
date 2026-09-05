@@ -6,18 +6,23 @@ const page = await readFile("app/(app)/monitorear/atencion/page.tsx", "utf8")
 for (const needle of [
   'type AccountabilityState = "checking" | "none" | "overdue" | "unassigned" | "open" | "resolved"',
   'ACCOUNTABILITY_RANK',
-  'overdue:0, unassigned:1, none:2, open:3, checking:4, resolved:5',
   'PRIORITY_RANK',
   'Accountability → prioridad externa → recencia',
-  'label="Vencidas"',
-  'label="Sin responsable"',
+  'label="Para actuar"',
   'label="Abiertas"',
+  'label="Críticas"',
   'label="Resueltas"',
   'currentAccountabilityState(action,checking)',
   'onAccountabilityChange(item.key,accountabilityState)',
   'visible={index<12}',
   'Todos se consideran para el ranking y las métricas.',
 ]) assert.ok(page.includes(needle), `missing accountability contract: ${needle}`)
+
+assert.match(
+  page,
+  /ACCOUNTABILITY_RANK[^=]*=\s*\{\s*overdue\s*:\s*0\s*,\s*unassigned\s*:\s*1\s*,\s*none\s*:\s*2\s*,\s*open\s*:\s*3\s*,\s*checking\s*:\s*4\s*,\s*resolved\s*:\s*5\s*\}/,
+  "accountability rank must remain overdue → unassigned → none → open → checking → resolved",
+)
 
 const accountabilitySort = page.indexOf('const byAccountability=ACCOUNTABILITY_RANK[aState]-ACCOUNTABILITY_RANK[bState]')
 const prioritySort = page.indexOf('const byPriority=PRIORITY_RANK[a.priority]-PRIORITY_RANK[b.priority]')
@@ -29,4 +34,4 @@ assert.match(page, /Date\.parse\(value\.action\.due_at\)<Date\.now\(\)\)return "
 assert.match(page, /if\(!value\.action\.assigned_to\)return "unassigned"/)
 assert.match(page, /return "open"/)
 
-console.log("Executive accountability ranking regression PASS: overdue and unassigned work outrank other attention while external materiality remains the secondary ordering signal, and accountability metrics cover all mounted attention items.")
+console.log("Executive accountability ranking regression PASS: overdue and unassigned work outrank other attention while external materiality remains the secondary ordering signal, and shared operational metrics cover the mounted attention items.")
