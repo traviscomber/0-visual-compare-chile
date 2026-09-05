@@ -63,7 +63,7 @@ export function TechnologyStrategyWorkbench() {
     <div className="py-9">
       <section className="grid gap-6 border-b border-border/80 pb-8 lg:grid-cols-[minmax(0,1fr)_260px]">
         <div>
-          <OperationalSectionHeader eyebrow="Technology Intelligence V2" title="Lea la tecnología como una señal estratégica verificable." />
+          <OperationalSectionHeader eyebrow="Evaluación estratégica" title="¿Qué tecnología merece seguimiento?" />
           <form onSubmit={run} className="mt-5 flex flex-col gap-3 sm:flex-row">
             <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ej. nanoburbujas" maxLength={160} className="h-11 flex-1" />
             <Button type="submit" disabled={query.trim().length < 2 || loading} className="h-11 px-5">
@@ -78,12 +78,12 @@ export function TechnologyStrategyWorkbench() {
         <div>
           <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#96B5A6]">Horizonte</p>
           <div className="mt-3 grid grid-cols-3 gap-2">
-            {[90, 180, 365].map(days => <button key={days} type="button" onClick={() => setWindowDays(days)} className={`h-10 rounded-[9px] text-xs ${windowDays === days ? "bg-[#173B37] text-white" : "bg-[#13272D] text-muted-foreground"}`}>{days === 365 ? "12m" : `${days}d`}</button>)}
+            {[90, 180, 365].map(days => <button key={days} type="button" onClick={() => setWindowDays(days)} className={`h-10 rounded-[9px] text-xs ${windowDays === days ? "bg-[#173B37] text-white" : "bg-[#13272D] text-muted-foreground"}`}>{days === 365 ? "12 meses" : `${days} días`}</button>)}
           </div>
         </div>
       </section>
 
-      {error ? <div role="alert" className="border-b border-border/80 py-6 text-sm text-[#E8AAA3]">{error}</div> : null}
+      {error ? <div role="alert" className="border-b border-border/80 py-6 text-sm text-amber-200">{error}</div> : null}
       {!result && !loading ? <p className="py-10 text-sm leading-6 text-muted-foreground">La lectura no intenta adivinar estrategia corporativa. Ordena evidencia científica y de patentes para mostrar madurez observable, proxy de adopción, actores visibles y movimientos verificables.</p> : null}
       {result && !loading ? <StrategyResult result={result} /> : null}
     </div>
@@ -92,6 +92,7 @@ export function TechnologyStrategyWorkbench() {
 
 function StrategyResult({ result }: { result: StrategyResponse }) {
   const { signals, strategy } = result
+  const followUpSignals = strategy.emerging_players.actors.length + strategy.competitive_moves.moves.length
   return (
     <div>
       <section className="py-8">
@@ -103,9 +104,9 @@ function StrategyResult({ result }: { result: StrategyResponse }) {
       </section>
 
       <OperationalMetricRail>
+        <OperationalMetric value={followUpSignals} label="Para seguir" detail="Actores + movimientos observados" tone={followUpSignals ? "warning" : "neutral"} />
         <OperationalMetric value={strategy.maturity.label} label="Madurez de evidencia" detail="Investigación + IP observada" tone={strategy.maturity.level === "scaling" || strategy.maturity.level === "established" ? "success" : "neutral"} />
         <OperationalMetric value={strategy.adoption.label} label="Proxy de adopción" detail="No equivale a adopción comercial" tone={strategy.adoption.level === "strong" ? "success" : strategy.adoption.level === "moderate" ? "warning" : "neutral"} />
-        <OperationalMetric value={strategy.emerging_players.actors.length} label="Actores observados" detail="Patentes o presencia científica repetida" tone={strategy.emerging_players.actors.length ? "success" : "neutral"} />
         <OperationalMetric value={strategy.competitive_moves.moves.length} label="Movimientos observados" detail={`Ventana ${signals.period_days} días`} tone={strategy.competitive_moves.moves.length ? "success" : "neutral"} />
       </OperationalMetricRail>
 
@@ -134,7 +135,7 @@ function StrategyResult({ result }: { result: StrategyResponse }) {
           <div className="mt-5 divide-y divide-border/80 border-y border-border/80">
             {strategy.competitive_moves.moves.length ? strategy.competitive_moves.moves.map((move, index) => (
               <div key={`${move.type}:${move.actor}:${index}`} className="py-4">
-                <div className="flex items-center justify-between gap-3"><p className="text-sm font-medium text-white">{move.actor}</p><span className="text-[10px] uppercase tracking-[0.12em] text-[#96B5A6]">{move.type === "patent_filing" ? "Filing" : "Research"}</span></div>
+                <div className="flex items-center justify-between gap-3"><p className="text-sm font-medium text-white">{move.actor}</p><span className="text-[10px] uppercase tracking-[0.12em] text-[#96B5A6]">{move.type === "patent_filing" ? "Solicitud de patente" : "Presencia científica"}</span></div>
                 <p className="mt-2 text-xs leading-5 text-muted-foreground">{move.evidence}</p>
                 <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">{move.observed_at ? <span>{move.observed_at}</span> : null}{move.source_url ? <a href={move.source_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:text-white">Fuente <ExternalLink className="size-3" /></a> : null}</div>
               </div>
@@ -144,7 +145,7 @@ function StrategyResult({ result }: { result: StrategyResponse }) {
       </section>
 
       <section className="flex flex-col gap-4 py-8 sm:flex-row sm:items-center sm:justify-between">
-        <div><p className="text-sm font-medium text-white">Convierta la señal en seguimiento.</p><p className="mt-1 text-xs text-muted-foreground">La vigilancia conservará la consulta; una nueva lectura permitirá comparar evidencia futura.</p></div>
+        <div><p className="text-sm font-medium text-white">{followUpSignals ? "Hay señales que justifican seguimiento." : "No hay señales suficientes para escalar seguimiento."}</p><p className="mt-1 text-xs text-muted-foreground">La vigilancia conservará la consulta; una nueva lectura permitirá comparar evidencia futura.</p></div>
         <div className="flex gap-2"><Button asChild><Link href={strategicWatchHref("technology", signals.query)}>Vigilar tecnología <ArrowRight /></Link></Button><Button asChild variant="outline"><Link href={`/tecnologias?technology=${encodeURIComponent(signals.query)}&windowDays=${signals.period_days}`}>Ver evidencia base</Link></Button></div>
       </section>
     </div>
@@ -152,5 +153,4 @@ function StrategyResult({ result }: { result: StrategyResponse }) {
 }
 
 function SignalBlock({ eyebrow, title, basis, items }: { eyebrow: string; title: string; basis: string; items: string[] }) {
-  return <div><p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#96B5A6]">{eyebrow}</p><h3 className="mt-2 text-xl font-light text-[#E7DFCE]">{title}</h3><p className="mt-3 text-sm leading-6 text-muted-foreground">{basis}</p><ul className="mt-4 space-y-2 text-xs leading-5 text-white">{items.map(item => <li key={item}>— {item}</li>)}</ul></div>
-}
+  return <div><p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#96B5A6]">{eyebrow}</p><h3 className="mt-2 text-xl font-light text-[#E7DFCE]">{title}</h3><p className="mt-3 text-sm leading-6 text-muted-foreground">{basis}</p><ul className="mt-4 space-y-2 text-xs leading-5 text-white">{items.map(item => <li key={item}>— {item}</li>)}</ul></div>}
