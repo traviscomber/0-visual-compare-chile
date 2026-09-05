@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button"
 
 type Notification = { id:string; kind:string; title:string; body:string|null; href:string|null; read_at:string|null; created_at:string }
 const formatDate=(value:string)=>new Intl.DateTimeFormat("es-CL",{dateStyle:"medium",timeStyle:"short"}).format(new Date(value))
-const KIND_LABELS:Record<string,string>={review_requested:"Revisión solicitada",review_approved:"Aprobación",review_changes_requested:"Cambios solicitados",mention:"Mención",action_assigned:"Tarea asignada"}
-const KIND_PRIORITY:Record<string,number>={review_changes_requested:0,action_assigned:1,review_requested:2,review_approved:3,mention:4}
+const KIND_LABELS:Record<string,string>={review_requested:"Revisión solicitada",review_approved:"Aprobación",review_changes_requested:"Cambios solicitados",opportunity_conviction:"Tesis debilitada",mention:"Mención",action_assigned:"Tarea asignada",intelligence_signal:"Señal de inteligencia"}
+const KIND_PRIORITY:Record<string,number>={review_changes_requested:0,opportunity_conviction:1,action_assigned:2,review_requested:3,review_approved:4,mention:5,intelligence_signal:6}
+const ACTIONABLE_KINDS=new Set(["review_changes_requested","opportunity_conviction","action_assigned","review_requested"])
 
 export default function NotificationsPage(){
   const [items,setItems]=useState<Notification[]>([])
@@ -34,7 +35,8 @@ export default function NotificationsPage(){
 
   const unread=items.filter(item=>!item.read_at).length
   const reviewed=items.length-unread
-  const actionable=items.filter(item=>!item.read_at&&["review_changes_requested","action_assigned","review_requested"].includes(item.kind)).length
+  const actionable=items.filter(item=>!item.read_at&&ACTIONABLE_KINDS.has(item.kind)).length
+  const weakenedTheses=items.filter(item=>!item.read_at&&item.kind==="opportunity_conviction").length
   const ranked=useMemo(()=>[...items].sort((a,b)=>{
     if(Boolean(a.read_at)!==Boolean(b.read_at))return a.read_at?1:-1
     const byKind=(KIND_PRIORITY[a.kind]??9)-(KIND_PRIORITY[b.kind]??9)
@@ -47,15 +49,15 @@ export default function NotificationsPage(){
     <OperationalHeader
       eyebrow="VIDENTIA / Notificaciones"
       title={headline}
-      description={<>Cambios solicitados, tareas y revisiones aparecen primero. Menciones y aprobaciones permanecen visibles como contexto, y lo ya revisado queda al final de la bandeja.</>}
-      meta={<><span>Acción antes que contexto</span><span>Expediente trazable</span><span>Revisión explícita</span></>}
+      description={<>Cambios solicitados, tesis debilitadas, tareas y revisiones aparecen primero. Sólo movimientos materiales negativos de convicción generan aviso; baselines, estabilidad y fortalecimientos permanecen fuera de esta bandeja.</>}
+      meta={<><span>Acción antes que contexto</span><span>Convicción selectiva</span><span>Revisión explícita</span></>}
       actions={<Button variant="outline" disabled={unread===0||marking!==null} onClick={()=>void mark()}>{marking==="all"?<Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none"/>:<CheckCheck className="h-4 w-4"/>}Marcar todo revisado</Button>}
     />
 
     <OperationalMetricRail>
-      <OperationalMetric value={actionable} label="Para actuar" detail="Tareas, cambios y revisiones pendientes" tone={actionable>0?"warning":"success"}/>
+      <OperationalMetric value={actionable} label="Para actuar" detail="Tesis, tareas, cambios y revisiones pendientes" tone={actionable>0?"warning":"success"}/>
+      <OperationalMetric value={weakenedTheses} label="Tesis debilitadas" detail="Movimiento material negativo sin revisar" tone={weakenedTheses>0?"warning":"neutral"}/>
       <OperationalMetric value={unread} label="Sin revisar" detail="Todos los avisos pendientes" tone={unread>0?"warning":"neutral"}/>
-      <OperationalMetric value={reviewed} label="Revisados" detail="Avisos ya confirmados"/>
       <OperationalMetric value={unread===0?"Al día":"Atención"} label="Estado" detail={unread===0?"No hay avisos pendientes":"Hay actividad por revisar"} tone={unread===0?"success":"warning"}/>
     </OperationalMetricRail>
 
@@ -63,7 +65,7 @@ export default function NotificationsPage(){
 
     <section className="py-8">
       <OperationalSectionHeader eyebrow="01 / Bandeja de atención" title={unread===0?"Todo revisado":actionable?`${actionable} requiere${actionable===1?"":"n"} acción ahora`:`${unread} pendiente${unread===1?"":"s"} de revisión`} meta="Pendiente accionable → pendiente informativo → revisado" />
-      <div className="mt-5 divide-y divide-border/80 border-y border-border/80">{loading?<div className="py-10 text-sm text-muted-foreground"><Loader2 className="mr-2 inline h-4 w-4 animate-spin motion-reduce:animate-none"/>Cargando avisos…</div>:ranked.length===0?<div className="py-10 sm:py-12"><Bell className="h-5 w-5 text-muted-foreground"/><p className="mt-3 text-sm font-medium text-white">No tienes avisos pendientes.</p><p className="mt-1 text-sm text-muted-foreground">Cuando un expediente requiera tu atención aparecerá aquí.</p></div>:ranked.map(item=><article key={item.id} className={`grid gap-4 py-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start ${item.read_at?"opacity-55":""}`}><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline">{KIND_LABELS[item.kind]||"Actualización"}</Badge>{!item.read_at&&<Badge className="bg-[#173B37] text-[#96B5A6] hover:bg-[#173B37]">Nuevo</Badge>}<time className="text-xs text-muted-foreground">{formatDate(item.created_at)}</time></div><h3 className="mt-3 break-words font-medium text-white">{item.title}</h3>{item.body&&<p className="mt-1 max-w-3xl break-words text-sm leading-6 text-muted-foreground">{item.body}</p>}</div><div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">{item.href&&<Button asChild size="sm" variant={item.read_at?"outline":"default"} className="flex-1 sm:flex-none"><Link href={item.href}>Revisar <ArrowRight className="ml-1.5 h-3.5 w-3.5"/></Link></Button>}{!item.read_at&&<Button size="sm" variant="ghost" className="flex-1 sm:flex-none" disabled={marking!==null} onClick={()=>void mark(item.id)}>{marking===item.id?<Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none"/>:null}Marcar revisado</Button>}</div></article>)}</div>
+      <div className="mt-5 divide-y divide-border/80 border-y border-border/80">{loading?<div className="py-10 text-sm text-muted-foreground"><Loader2 className="mr-2 inline h-4 w-4 animate-spin motion-reduce:animate-none"/>Cargando avisos…</div>:ranked.length===0?<div className="py-10 sm:py-12"><Bell className="h-5 w-5 text-muted-foreground"/><p className="mt-3 text-sm font-medium text-white">No tienes avisos pendientes.</p><p className="mt-1 text-sm text-muted-foreground">Cuando un expediente o una tesis requiera tu atención aparecerá aquí.</p></div>:ranked.map(item=><article key={item.id} className={`grid gap-4 py-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start ${item.read_at?"opacity-55":""}`}><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline">{KIND_LABELS[item.kind]||"Actualización"}</Badge>{!item.read_at&&<Badge className="bg-[#173B37] text-[#96B5A6] hover:bg-[#173B37]">Nuevo</Badge>}<time className="text-xs text-muted-foreground">{formatDate(item.created_at)}</time></div><h3 className="mt-3 break-words font-medium text-white">{item.title}</h3>{item.body&&<p className="mt-1 max-w-3xl break-words text-sm leading-6 text-muted-foreground">{item.body}</p>}</div><div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">{item.href&&<Button asChild size="sm" variant={item.read_at?"outline":"default"} className="flex-1 sm:flex-none"><Link href={item.href}>Revisar <ArrowRight className="ml-1.5 h-3.5 w-3.5"/></Link></Button>}{!item.read_at&&<Button size="sm" variant="ghost" className="flex-1 sm:flex-none" disabled={marking!==null} onClick={()=>void mark(item.id)}>{marking===item.id?<Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none"/>:null}Marcar revisado</Button>}</div></article>)}</div>
     </section>
   </OperationalPage>
 }

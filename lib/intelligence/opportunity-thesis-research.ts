@@ -6,6 +6,7 @@ import {
   type ConvictionScores,
   type OpportunityMarketState,
 } from "@/lib/intelligence/opportunity-conviction"
+import { createOpportunityConvictionNotifications } from "@/lib/intelligence/opportunity-notifications"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 export type OpportunityResearchRunType = "live_research" | "scheduled_research"
@@ -29,7 +30,7 @@ export async function researchPersistedOpportunity(input: {
   const { admin, organizationId, opportunityId, actorUserId, runType } = input
   const { data: thesisRow, error: thesisError } = await admin
     .from("innovation_opportunity_theses")
-    .select("id,organization_id,status,decision,evidence_state,confidence,overall_score,evidence_strength,timing_score,strategic_fit,capability_reuse_score,novelty_score,defensibility_score,research_queries,thesis,last_researched_at")
+    .select("id,organization_id,created_by,title,status,decision,evidence_state,confidence,overall_score,evidence_strength,timing_score,strategic_fit,capability_reuse_score,novelty_score,defensibility_score,research_queries,thesis,last_researched_at")
     .eq("id", opportunityId)
     .eq("organization_id", organizationId)
     .maybeSingle()
@@ -161,7 +162,7 @@ export async function researchPersistedOpportunity(input: {
       observed_at: observedAt,
       created_by: actorUserId,
     })
-    .select("id,run_type,evidence_summary,score_snapshot,confidence,observed_at")
+    .select("id,opportunity_id,run_type,evidence_summary,score_snapshot,confidence,observed_at")
     .single()
 
   if (runError || !researchRun) {
@@ -173,6 +174,26 @@ export async function researchPersistedOpportunity(input: {
       .eq("organization_id", organizationId)
     if (rollbackError) console.error("[opportunity-theses:research:rollback]", rollbackError)
     throw new OpportunityResearchError("No pudimos guardar la trazabilidad del research; el cambio de convicción fue revertido.", 500, "snapshot_failed")
+  }
+
+  let notificationsCreated = 0
+  try {
+    const notificationResult = await createOpportunityConvictionNotifications(admin, {
+      organizationId,
+      opportunityId,
+      opportunityTitle: String(thesisRow.title),
+      creatorUserId: String(thesisRow.created_by),
+      researchRun: {
+        id: String(researchRun.id),
+        opportunity_id: String(researchRun.opportunity_id),
+        run_type: String(researchRun.run_type),
+        evidence_summary: researchRun.evidence_summary,
+        observed_at: String(researchRun.observed_at),
+      },
+    })
+    notificationsCreated = notificationResult.created
+  } catch (notificationError) {
+    console.error("[opportunity-theses:research:notification]", notificationError)
   }
 
   return {
@@ -188,6 +209,7 @@ export async function researchPersistedOpportunity(input: {
     },
     research: researchRun,
     comparison,
+    notificationsCreated,
   }
 }
 
