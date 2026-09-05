@@ -60,9 +60,10 @@ for (const needle of [
 
 for (const needle of [
   "/api/intelligence/opportunity-theses?organizationId=",
-  "Persistencia ≠ aprobación.",
-  "Convicción que debe ganarse, no asumirse.",
+  "Score ≠ decisión.",
+  "Convicción que debe ganarse. Decisiones que deben explicarse.",
   "Research probes",
+  "Human-promoted",
 ]) requireText(thesisPage, needle, "thesis workspace")
 
 for (const forbidden of [
@@ -71,4 +72,4 @@ for (const forbidden of [
   "opportunity-theses",
 ]) if (engineRoute.includes(forbidden)) fail(`generation API must remain non-persistent until explicit human action: ${forbidden}`)
 
-console.log("Opportunity thesis persistence regression PASS: generation remains ephemeral, persistence requires an explicit authenticated organization-scoped promotion, canonical thesis tables stay server-only behind RLS and revoked client grants, creator foreign keys are indexed, and the initial evidence snapshot preserves lineage for future confidence changes.")
+console.log("Opportunity thesis persistence regression PASS: generation remains ephemeral, persistence requires an explicit authenticated organization-scoped promotion, canonical thesis tables stay server-only behind RLS and revoked client grants, creator foreign keys are indexed, the workspace keeps persistence separate from decision governance, and the initial evidence snapshot preserves lineage for future confidence changes.")
