@@ -56,7 +56,7 @@ for (const needle of [
 
 if (route.includes("createAdminClient")) fail("action API must execute as the authenticated user, not service role")
 if (!inbox.includes('from("/api/cases/inbox"') && !inbox.includes('fetch("/api/cases/inbox"')) fail("case action inbox is no longer reachable from the pending-work surface")
-if (!inbox.includes("Acciones asignadas")) fail("pending-work UI no longer surfaces case actions")
+for (const needle of ["orderedActions", 'label="Para actuar"', "Resuelve primero lo que vence.", "Registrar resultado"]) requireText(inbox, needle, "pending-work action surface")
 
 for (const needle of [
   'fetch("/api/intelligence/actions"',
@@ -74,4 +74,4 @@ const createTaskIndex = strategicWatchConfirmation.indexOf("async function creat
 const actionPostIndex = strategicWatchConfirmation.indexOf('fetch("/api/intelligence/actions"', createTaskIndex)
 if (createTaskIndex < 0 || actionPostIndex < createTaskIndex) fail("task mutation is not contained inside the explicit create-task flow")
 
-console.log("Action layer regression PASS: intelligence actions reuse cases/items/actions atomically, preserve RLS, deduplicate repeated open work, surface through the existing case inbox, and expose an explicit task CTA without auto-creating a watch.")
+console.log("Action layer regression PASS: intelligence actions reuse cases/items/actions atomically, preserve RLS, deduplicate repeated open work, surface through the prioritized case inbox, and expose an explicit task CTA without auto-creating a watch.")
