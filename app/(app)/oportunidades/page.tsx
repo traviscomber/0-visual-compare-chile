@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { ArrowRight, BriefcaseBusiness, CheckCircle2, CircleDot, GitCompareArrows, Loader2, Radar, ShieldCheck } from "lucide-react"
+import { ArrowRight, BrainCircuit, BriefcaseBusiness, CheckCircle2, CircleDot, GitCompareArrows, Loader2, Radar, ShieldCheck } from "lucide-react"
 import { OperationalHeader, OperationalMetric, OperationalMetricRail, OperationalPage, OperationalPanel, OperationalSectionHeader } from "@/components/app/operational-ui"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -105,9 +105,9 @@ export default function OpportunitiesPage() {
     <OperationalHeader
       eyebrow="VIDENTIA / Oportunidades"
       title={actionNow ? `${actionNow} oportunidad${actionNow === 1 ? "" : "es"} lista${actionNow === 1 ? "" : "s"} para ejecutar.` : metrics.active ? `${metrics.active} oportunidad${metrics.active === 1 ? "" : "es"} requiere${metrics.active === 1 ? "" : "n"} decisión.` : "No hay oportunidades pendientes."}
-      description={<>Esta bandeja muestra únicamente recomendaciones persistidas. Primero aparecen las aceptadas, luego las de prioridad alta y después el resto de señales para revisión.</>}
+      description={<>Esta bandeja conserva oportunidades persistidas. El Opportunity Engine abre una segunda vía: descubrir productos nuevos desde las capacidades reales de la empresa y señales autorizadas del OS.</>}
       meta={<><span>Persistidas</span><span>Priorizadas</span><span>Auditables</span><span>Accionables</span></>}
-      actions={<Button asChild variant="outline"><Link href="/brechas">Buscar nuevas brechas <GitCompareArrows className="ml-1 h-4 w-4" /></Link></Button>}
+      actions={<div className="flex flex-wrap gap-2"><Button asChild><Link href="/oportunidades/descubrir"><BrainCircuit className="h-4 w-4" />Descubrir productos</Link></Button><Button asChild variant="outline"><Link href="/brechas">Brechas IP <GitCompareArrows className="ml-1 h-4 w-4" /></Link></Button></div>}
     />
 
     <OperationalMetricRail>
@@ -136,7 +136,7 @@ export default function OpportunitiesPage() {
         {error ? <div role="alert" className="mt-6 rounded-[10px] bg-[#2E2922] p-4 text-sm text-[#D9B27C]">{error}</div> : null}
 
         {!loading && !error ? <div className="mt-5 divide-y divide-border/80 border-y border-border/80">
-          {filtered.length ? filtered.map(item => <OpportunityRow key={item.id} item={item} />) : <div className="py-10"><ShieldCheck className="h-5 w-5 text-primary" /><p className="mt-3 text-sm font-medium text-white">No hay oportunidades en este estado.</p><p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">Las oportunidades aparecen aquí sólo después de guardar una recomendación desde Brechas IP.</p></div>}
+          {filtered.length ? filtered.map(item => <OpportunityRow key={item.id} item={item} />) : <div className="py-10"><ShieldCheck className="h-5 w-5 text-primary" /><p className="mt-3 text-sm font-medium text-white">No hay oportunidades persistidas en este estado.</p><p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">Puedes guardar señales desde Brechas IP o abrir Opportunity Engine para descubrir nuevas tesis de producto antes de llevarlas al lifecycle operativo.</p><Button asChild size="sm" className="mt-4"><Link href="/oportunidades/descubrir">Abrir Opportunity Engine <ArrowRight className="h-4 w-4" /></Link></Button></div>}
         </div> : null}
       </div>
 
@@ -146,7 +146,7 @@ export default function OpportunitiesPage() {
           <div className="mt-5 space-y-4 text-sm leading-6 text-muted-foreground">
             <p>Esta pantalla no inventa oportunidades. Lee el lifecycle persistido del Recommendation Engine y conserva el mismo score, evidencia y estado.</p>
             <p className="border-t border-border/80 pt-4">{selectedOrganization?.binding ? <>Portafolio vinculado a <span className="text-foreground">{selectedOrganization.binding.canonical_name}</span>.</> : "La organización todavía no tiene una identidad propia vinculada."}</p>
-            <p className="text-xs leading-5">Las decisiones regulatorias, de registrabilidad, infracción o libertad de operación siguen requiriendo revisión humana especializada.</p>
+            <p className="text-xs leading-5">Opportunity Engine genera hipótesis separadas de este lifecycle hasta que el equipo decide investigarlas, persistirlas o convertirlas en trabajo.</p>
           </div>
         </OperationalPanel>
       </aside>
