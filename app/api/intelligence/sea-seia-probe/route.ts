@@ -4,10 +4,10 @@ const SEA_BASE = "https://seia.sea.gob.cl"
 
 export async function GET(request: NextRequest) {
   const query = String(request.nextUrl.searchParams.get("q") ?? "Codelco").trim().slice(0, 80)
-  const url = new URL("/busqueda/buscarProyectoResumen.php", SEA_BASE)
-  url.searchParams.set("nombre", query)
+  const summaryUrl = new URL("/busqueda/buscarProyectoResumen.php", SEA_BASE)
+  summaryUrl.searchParams.set("nombre", query)
 
-  const response = await fetch(url, {
+  const summaryResponse = await fetch(summaryUrl, {
     cache: "no-store",
     headers: {
       Accept: "text/html,application/xhtml+xml",
@@ -15,25 +15,45 @@ export async function GET(request: NextRequest) {
     },
     signal: AbortSignal.timeout(12_000),
   })
-  const html = await response.text()
+  const html = await summaryResponse.text()
 
-  const markers = [
-    "Cargando...",
-    "buscarProyectoAction.php",
-    "buscarProyectoActionExcel.php",
-    "id_expediente=",
-    "Nombre del Proyecto",
-    query,
-  ]
+  const actionUrl = new URL("/busqueda/buscarProyectoResumenAction.php", SEA_BASE)
+  actionUrl.searchParams.set("nombre", query)
+  actionUrl.searchParams.set("draw", "1")
+  actionUrl.searchParams.set("start", "0")
+  actionUrl.searchParams.set("length", "10")
+
+  const actionResponse = await fetch(actionUrl, {
+    cache: "no-store",
+    headers: {
+      Accept: "application/json,text/plain,*/*",
+      Referer: summaryUrl.toString(),
+      "User-Agent": "VIDENTIA/1.0 source-validation",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    signal: AbortSignal.timeout(12_000),
+  })
+  const actionText = await actionResponse.text()
+  let actionJson: unknown = null
+  try { actionJson = JSON.parse(actionText) } catch {}
 
   return NextResponse.json({
-    ok: response.ok,
-    status: response.status,
-    finalUrl: response.url,
-    contentType: response.headers.get("content-type"),
-    htmlBytes: Buffer.byteLength(html),
-    markers: Object.fromEntries(markers.map(marker => [marker, html.toLowerCase().includes(marker.toLowerCase())])),
-    scripts: [...html.matchAll(/<script\b[^>]*src=["']([^"']+)["']/gi)].map(match => match[1]).slice(0, 20),
-    endpoints: [...new Set([...html.matchAll(/(?:https?:\/\/[^"'\s<>]+|\/[A-Za-z0-9_./?=&%-]+\.php[^"'\s<>]*)/g)].map(match => match[0]).filter(value => /busqueda|proyecto|ajax|xhr/i.test(value)))].slice(0, 40),
+    summary: {
+      ok: summaryResponse.ok,
+      status: summaryResponse.status,
+      finalUrl: summaryResponse.url,
+      contentType: summaryResponse.headers.get("content-type"),
+      htmlBytes: Buffer.byteLength(html),
+      endpointPresent: html.includes("buscarProyectoResumenAction.php"),
+    },
+    action: {
+      ok: actionResponse.ok,
+      status: actionResponse.status,
+      finalUrl: actionResponse.url,
+      contentType: actionResponse.headers.get("content-type"),
+      bytes: Buffer.byteLength(actionText),
+      json: actionJson,
+      prefix: actionJson ? null : actionText.slice(0, 1200),
+    },
   })
 }
