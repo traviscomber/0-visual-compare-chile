@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { Loader2, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-const AUTO_REFRESH_KEY = "videntia:juan-frontier-v321:last-refresh"
+const AUTO_REFRESH_KEY = "videntia:juan-frontier-v33:last-refresh"
 const AUTO_REFRESH_MS = 4 * 60 * 60 * 1000
 
 export function JuanResearchFrontierRefresh() {
@@ -41,7 +41,7 @@ export function JuanResearchFrontierRefresh() {
       {running ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
       {running ? "Investigando…" : "Investigar ahora"}
     </Button>
-    {running ? <p className="max-w-64 text-right text-[10px] leading-4 text-[#96B5A6]">Actualizando papers y señales de frontera…</p> : null}
+    {running ? <p className="max-w-64 text-right text-[10px] leading-4 text-[#96B5A6]">Actualizando evidencia Chile y frontera mundial…</p> : null}
     {error ? <p className="max-w-64 text-right text-[10px] leading-4 text-[#E0B987]">{error}</p> : null}
   </div>
 }
