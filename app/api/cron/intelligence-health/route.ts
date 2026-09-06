@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { ensureTdpiSourceValidation } from "@/lib/intelligence/tdpi-source-validation"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -15,6 +16,7 @@ export async function GET(request: Request) {
   const startedAt = Date.now()
   try {
     const admin = createAdminClient()
+    const tdpiValidation = await ensureTdpiSourceValidation(admin)
     const [healthResult, calibrationResult] = await Promise.all([
       admin.rpc("run_intelligence_health_sweep", { p_context: "vercel_health_cron" }),
       admin.rpc("run_intelligence_calibration_snapshot", { p_context: "vercel_health_cron" }),
@@ -24,6 +26,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       ok: true,
       durationMs: Date.now() - startedAt,
+      tdpiValidation,
       health: healthResult.data,
       calibration: calibrationResult.data,
     })
