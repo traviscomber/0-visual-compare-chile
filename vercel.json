@@ -33,6 +33,10 @@
       "schedule": "35 */6 * * *"
     },
     {
+      "path": "/api/cron/juan-product-evolution",
+      "schedule": "45 */6 * * *"
+    },
+    {
       "path": "/api/cron/opportunity-conviction",
       "schedule": "55 */6 * * *"
     }
