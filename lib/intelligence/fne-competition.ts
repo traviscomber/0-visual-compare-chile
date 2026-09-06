@@ -3,7 +3,7 @@ import "server-only"
 import { fetchWithRetry } from "@/lib/intelligence/fetch-with-retry"
 
 const FNE_BASE = "https://www.fne.gob.cl"
-const SEARCH_PATH = "/search/operaciones_resultados.php"
+const SEARCH_PATH = "/search/investigaciones_resultados.php"
 const MAX_RESULTS = 24
 
 export type FneCompetitionSignal = {
@@ -21,13 +21,14 @@ export async function searchFneCompetition(query: string, limit = 12): Promise<F
   if (cleaned.length < 2) return []
 
   const url = new URL(SEARCH_PATH, FNE_BASE)
-  url.searchParams.set("AnoFin", "000")
-  url.searchParams.set("AnoIni", "000")
+  url.searchParams.set("AnoFin", "0")
+  url.searchParams.set("AnoIni", "0")
   url.searchParams.set("Clave", "")
-  url.searchParams.set("Conducta", "000")
-  url.searchParams.set("Mercado", "000")
+  url.searchParams.set("Conducta", "0")
+  url.searchParams.set("Mercado", "0")
   url.searchParams.set("Partes", cleaned)
-  url.searchParams.set("select1", "000")
+  url.searchParams.set("select1", "0")
+  url.searchParams.set("select2", "")
 
   const response = await fetchWithRetry(url, {
     cache: "no-store",
@@ -51,7 +52,7 @@ function parseFneResults(html: string, matchedQuery: string): FneCompetitionSign
     const sourceUrl = normalizeOfficialUrl(rawHref)
     if (!sourceUrl || !/\.(?:pdf|docx?)(?:$|\?)/i.test(sourceUrl)) continue
 
-    const after = html.slice((match.index ?? 0) + match[0].length, (match.index ?? 0) + match[0].length + 500)
+    const after = html.slice((match.index ?? 0) + match[0].length, (match.index ?? 0) + match[0].length + 700)
     const date = after.match(/\b(\d{2})\/(\d{2})\/(\d{4})\b/)
     const publicationDate = date ? `${date[3]}-${date[2]}-${date[1]}` : null
     const path = new URL(sourceUrl).pathname
@@ -79,6 +80,7 @@ function inferDocumentType(title: string) {
   if (normalized.includes("prohib")) return "prohibicion"
   if (normalized.includes("aprob")) return "aprobacion"
   if (normalized.includes("archivo")) return "archivo"
+  if (normalized.includes("acuerdo extrajudicial")) return "acuerdo_extrajudicial"
   return "documento_fne"
 }
 
