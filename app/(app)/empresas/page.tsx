@@ -267,7 +267,7 @@ function GraphSection({ graph }: { graph: NonNullable<TrajectoryResult["graph"]>
       <OperationalMetric value={activity.total_12m} label="Expedientes / 12m" detail={`${activity.patents_12m} patentes · ${activity.trademarks_12m} marcas`} />
       <OperationalMetric value={activity.classification_count} label="Clases distintas" detail="IPC + Niza observadas en los últimos 12 meses" />
       <OperationalMetric value={graph.legacy.brandCount} label="Marcas históricas" detail={`${graph.legacy.linkedEntities} enlaces legacy exactos`} />
-      <OperationalMetric value={graph.corporateRelationships.length} label="Relaciones verificadas" detail="Matriz, filiales o grupo con evidencia explícita" />
+      <OperationalMetric value={graph.corporateRelationships.length} label="Relaciones corporativas verificadas" detail="Matriz, filiales o grupo con evidencia explícita" />
     </OperationalMetricRail>
     <div className="mt-8 grid gap-8 xl:grid-cols-[1.05fr_.95fr]">
       <div><div className="flex items-center gap-2"><Waypoints className="h-4 w-4 text-[#96B5A6]" /><h3 className="font-medium text-white">Marcas conectadas al titular histórico</h3></div><div className="mt-4 flex flex-wrap gap-2">{graph.legacy.brands.slice(0, 18).map(brand => <Badge key={brand.id} variant="outline" className="bg-[#13272D]">{brand.canonical_name}</Badge>)}</div>{graph.legacy.brandCount > 18 ? <p className="mt-3 text-xs text-muted-foreground">Se muestran 18 de {graph.legacy.brandCount.toLocaleString("es-CL")} marcas enlazadas.</p> : null}</div>
