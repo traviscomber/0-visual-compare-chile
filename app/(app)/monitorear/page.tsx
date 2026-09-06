@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 
 type WatchType = "brand" | "patent" | "technology"
 type SearchScope = "chile" | "global" | "both"
+type FeedbackType = "relevant" | "irrelevant" | "false_match" | "identity_incorrect"
 type CommonWatch = {
   key:string; id:string; type:WatchType; subtype:string; query:string; niceClasses:number[]; searchScope:SearchScope|null;
   isActive:boolean; lastCheckedAt:string|null; lastReviewedAt:string|null; createdAt:string; updatedAt:string
@@ -21,6 +22,7 @@ type CommonSignal = {
   occurredAt:string|null; firstSeenAt:string; relevance:"alta"|"media"|"baja"; isNew:boolean; href:string; timeline?:RegulatoryTimeline|null
 }
 type SignalSummary = { new:number; high:number; total:number; brand:number; patent:number; technology:number }
+type FeedbackEntry = { id:string; target_key:string; feedback_type:FeedbackType; updated_at:string }
 
 const EMPTY_SUMMARY:SignalSummary={new:0,high:0,total:0,brand:0,patent:0,technology:0}
 const TYPE_LABEL:Record<WatchType,string>={brand:"Marca",patent:"Patente",technology:"Inteligencia"}
@@ -34,6 +36,7 @@ export default function CommonWatchesPage(){
   const [watches,setWatches]=useState<CommonWatch[]>([])
   const [signals,setSignals]=useState<CommonSignal[]>([])
   const [summary,setSummary]=useState<SignalSummary>(EMPTY_SUMMARY)
+  const [reviews,setReviews]=useState<Map<string,FeedbackEntry>>(new Map())
   const [type,setType]=useState<WatchType>("brand")
   const [subtype,setSubtype]=useState("brand")
   const [query,setQuery]=useState("")
@@ -44,32 +47,40 @@ export default function CommonWatchesPage(){
   const [loading,setLoading]=useState(true)
   const [saving,setSaving]=useState(false)
   const [refreshing,setRefreshing]=useState(false)
-  const [reviewing,setReviewing]=useState(false)
+  const [reviewingKey,setReviewingKey]=useState<string|null>(null)
   const [error,setError]=useState<string|null>(null)
 
   const active=useMemo(()=>watches.filter(item=>item.isActive),[watches])
+  const pendingSignals=useMemo(()=>signals.filter(item=>item.isNew&&!reviews.has(item.key)),[signals,reviews])
   const visibleSignals=useMemo(()=>{
-    const base=showHistory?signals:signals.filter(item=>item.isNew)
+    const base=showHistory?signals:pendingSignals
     const rank={alta:3,media:2,baja:1} as const
     return [...base].sort((a,b)=>rank[b.relevance]-rank[a.relevance]||Date.parse(b.occurredAt||b.firstSeenAt)-Date.parse(a.occurredAt||a.firstSeenAt))
-  },[signals,showHistory])
+  },[signals,pendingSignals,showHistory])
   const counts=useMemo(()=>({brand:active.filter(item=>item.type==="brand").length,patent:active.filter(item=>item.type==="patent").length,technology:active.filter(item=>item.type==="technology").length}),[active])
-  const highNew=useMemo(()=>signals.filter(item=>item.isNew&&item.relevance==="alta").length,[signals])
+  const highPending=useMemo(()=>pendingSignals.filter(item=>item.relevance==="alta").length,[pendingSignals])
+  const validatedCount=useMemo(()=>[...reviews.values()].filter(item=>item.feedback_type==="relevant").length,[reviews])
+  const dismissedCount=useMemo(()=>[...reviews.values()].filter(item=>item.feedback_type==="irrelevant"||item.feedback_type==="false_match").length,[reviews])
 
   async function load(){
     setLoading(true);setError(null)
     try{
-      const [watchResponse,signalResponse]=await Promise.all([
+      const [watchResponse,signalResponse,feedbackResponse]=await Promise.all([
         fetch("/api/intelligence/watches",{cache:"no-store"}),
         fetch("/api/intelligence/watches/signals",{cache:"no-store"}),
+        fetch("/api/intelligence/feedback?targetType=watch_signal",{cache:"no-store"}),
       ])
       const watchPayload=await watchResponse.json().catch(()=>({}))
       const signalPayload=await signalResponse.json().catch(()=>({}))
+      const feedbackPayload=await feedbackResponse.json().catch(()=>({}))
       if(!watchResponse.ok)throw new Error(watchPayload.error||"No pudimos cargar tus seguimientos.")
-      if(!signalResponse.ok)throw new Error(signalPayload.error||"No pudimos construir la bandeja de señales.")
+      if(!signalResponse.ok)throw new Error(signalPayload.error||"No pudimos construir la bandeja de tareas.")
+      if(!feedbackResponse.ok)throw new Error(feedbackPayload.error||"No pudimos cargar las validaciones.")
       setWatches(Array.isArray(watchPayload.watches)?watchPayload.watches:[])
       setSignals(Array.isArray(signalPayload.signals)?signalPayload.signals:[])
       setSummary(signalPayload.summary??EMPTY_SUMMARY)
+      const entries=(Array.isArray(feedbackPayload.feedback)?feedbackPayload.feedback:[]) as FeedbackEntry[]
+      setReviews(new Map(entries.map(item=>[item.target_key,item])))
     }catch(cause){setError(cause instanceof Error?cause.message:"No pudimos cargar seguimientos.")}finally{setLoading(false)}
   }
 
@@ -106,27 +117,33 @@ export default function CommonWatchesPage(){
     }finally{setRefreshing(false)}
   }
 
-  async function markReviewed(){
-    if(reviewing||!summary.new)return
-    setReviewing(true);setError(null)
+  async function reviewSignal(signal:CommonSignal,feedbackType:"relevant"|"irrelevant"){
+    if(reviewingKey)return
+    setReviewingKey(signal.key);setError(null)
     try{
-      const response=await fetch("/api/intelligence/watches/signals",{method:"POST",headers:{"content-type":"application/json"},body:"{}"})
-      const payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload.error||"No pudimos registrar la revisión.");await load()
-    }catch(cause){setError(cause instanceof Error?cause.message:"No pudimos registrar la revisión.")}finally{setReviewing(false)}
+      const response=await fetch("/api/intelligence/feedback",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({targetType:"watch_signal",targetKey:signal.key,feedbackType})})
+      const payload=await response.json().catch(()=>({}))
+      if(!response.ok)throw new Error(payload.error||"No pudimos guardar la validación.")
+      setReviews(current=>{
+        const next=new Map(current)
+        next.set(signal.key,{id:String(payload.id||signal.key),target_key:signal.key,feedback_type:feedbackType,updated_at:new Date().toISOString()})
+        return next
+      })
+    }catch(cause){setError(cause instanceof Error?cause.message:"No pudimos guardar la validación.")}finally{setReviewingKey(null)}
   }
 
   async function toggle(watch:CommonWatch){const response=await fetch("/api/intelligence/watches",{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({key:watch.key,active:!watch.isActive})});if(!response.ok){setError("No pudimos actualizar el seguimiento.");return}await load()}
   async function remove(key:string){const response=await fetch(`/api/intelligence/watches?key=${encodeURIComponent(key)}`,{method:"DELETE"});if(!response.ok){setError("No pudimos eliminar el seguimiento.");return}await load()}
 
-  const headline=highNew?`${highNew} señal${highNew===1?"":"es"} importante${highNew===1?"":"s"} por revisar`:summary.new?`${summary.new} cambio${summary.new===1?"":"s"} nuevo${summary.new===1?"":"s"}`:active.length?"Todo al día":"Activa tu primera vigilancia"
+  const headline=highPending?`${highPending} tarea${highPending===1?"":"s"} importante${highPending===1?"":"s"} por validar`:pendingSignals.length?`${pendingSignals.length} tarea${pendingSignals.length===1?"":"s"} por revisar`:active.length?"Todo revisado":"Activa tu primera vigilancia"
 
   return <OperationalPage>
     <section className="border-b border-border/80 py-7">
       <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
         <div className="max-w-3xl">
-          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#96B5A6]">VIDENTIA / Seguimientos</p>
+          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#96B5A6]">VIDENTIA / Tareas de vigilancia</p>
           <h1 className="mt-2 text-3xl font-light tracking-[-0.03em] text-[#E7DFCE] sm:text-4xl">{headline}</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Aquí aparece sólo lo que cambió en marcas, patentes y tecnologías. Crea o ajusta seguimientos cuando lo necesites.</p>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Cada cambio nuevo se convierte en una tarea. Abre la evidencia, valida si importa o descártala. VIDENTIA conserva la decisión para no volver a pedirte lo mismo.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={()=>void refreshSources()} disabled={refreshing||loading}>{refreshing?<Loader2 className="h-4 w-4 animate-spin"/>:<RefreshCw className="h-4 w-4"/>}Actualizar</Button>
@@ -136,10 +153,10 @@ export default function CommonWatchesPage(){
     </section>
 
     <OperationalMetricRail>
-      <OperationalMetric value={highNew} label="Importantes" detail="Conviene revisarlas primero" tone={highNew?"warning":"success"}/>
-      <OperationalMetric value={summary.new} label="Nuevas" detail="Cambios aún no revisados" tone={summary.new?"warning":"success"}/>
+      <OperationalMetric value={pendingSignals.length} label="Por revisar" detail={`${highPending} importantes · validar una por una`} tone={pendingSignals.length?"warning":"success"}/>
+      <OperationalMetric value={validatedCount} label="Validadas" detail="Confirmadas por el usuario" tone="success"/>
+      <OperationalMetric value={dismissedCount} label="Descartadas" detail="No requieren seguimiento"/>
       <OperationalMetric value={active.length} label="Seguimientos" detail={`${counts.brand} marcas · ${counts.patent} patentes · ${counts.technology} inteligencia`}/>
-      <OperationalMetric value={summary.total} label="Historial" detail="Evidencia disponible para contexto"/>
     </OperationalMetricRail>
 
     {showCreate?<section className="border-b border-border/80 py-7"><OperationalPanel><form onSubmit={createWatch}>
@@ -156,8 +173,8 @@ export default function CommonWatchesPage(){
 
     <section id="novedades" className="grid scroll-mt-6 gap-9 py-9 xl:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.45fr)] xl:gap-10">
       <div>
-        <OperationalSectionHeader eyebrow="Cambios" title={showHistory?"Historial":highNew?"Revisa primero las señales importantes":summary.new?"Novedades por revisar":"No hay cambios pendientes"} meta={showHistory?`${summary.total} señales`:summary.new?`${summary.new} nuevas · ${highNew} importantes`:"Vigilancia activa"} action={<div className="flex flex-wrap gap-2"><Button variant="ghost" size="sm" onClick={()=>setShowHistory(value=>!value)}>{showHistory?"Sólo nuevas":"Ver historial"}</Button>{summary.new>0?<Button size="sm" onClick={()=>void markReviewed()} disabled={reviewing}>{reviewing?<Loader2 className="h-4 w-4 animate-spin"/>:<Check className="h-4 w-4"/>}Marcar revisadas</Button>:null}</div>}/>
-        {loading?<div className="mt-5 flex items-center gap-2 border-y border-border/80 py-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin"/>Cargando señales…</div>:visibleSignals.length?<div className="mt-5 divide-y divide-border/80 border-y border-border/80">{visibleSignals.map(signal=><SignalRow key={signal.key} signal={signal}/>)}</div>:<div className="mt-5 border-y border-border/80 py-10"><p className="font-medium text-white">{active.length?"No hay nada nuevo que revisar":"Aún no hay seguimientos activos"}</p><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{active.length?"VIDENTIA seguirá reuniendo evidencia y mostrará aquí sólo los cambios nuevos.":"Activa un seguimiento para comenzar la vigilancia."}</p>{!active.length?<Button className="mt-4" size="sm" onClick={()=>setShowCreate(true)}><Plus className="h-3.5 w-3.5"/>Crear seguimiento</Button>:null}</div>}
+        <OperationalSectionHeader eyebrow="Cola de revisión" title={showHistory?"Decisiones y evidencia":highPending?"Valida primero las tareas importantes":pendingSignals.length?"Revisa y decide":"No quedan tareas pendientes"} meta={showHistory?`${summary.total} señales · ${reviews.size} decisiones`:pendingSignals.length?`${pendingSignals.length} pendientes · ${highPending} importantes`:"Vigilancia activa"} action={<Button variant="ghost" size="sm" onClick={()=>setShowHistory(value=>!value)}>{showHistory?"Sólo pendientes":"Ver historial"}</Button>}/>
+        {loading?<div className="mt-5 flex items-center gap-2 border-y border-border/80 py-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin"/>Cargando tareas…</div>:visibleSignals.length?<div className="mt-5 divide-y divide-border/80 border-y border-border/80">{visibleSignals.map(signal=><SignalRow key={signal.key} signal={signal} feedback={reviews.get(signal.key)?.feedback_type??null} busy={reviewingKey===signal.key} onReview={reviewSignal}/>)}</div>:<div className="mt-5 border-y border-border/80 py-10"><p className="font-medium text-white">{active.length?"No hay tareas pendientes":"Aún no hay seguimientos activos"}</p><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{active.length?"VIDENTIA seguirá reuniendo evidencia. Cuando aparezca un cambio, llegará aquí como una tarea para validar.":"Activa un seguimiento para comenzar la vigilancia."}</p>{!active.length?<Button className="mt-4" size="sm" onClick={()=>setShowCreate(true)}><Plus className="h-3.5 w-3.5"/>Crear seguimiento</Button>:null}</div>}
       </div>
 
       <aside><OperationalPanel><OperationalSectionHeader eyebrow="En seguimiento" title={`${active.length} activos`}/>{watches.length?<div className="mt-5 divide-y divide-border/80 border-t border-border/80">{watches.map(watch=><div key={watch.key} className="py-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap gap-2"><Badge variant="outline">{TYPE_LABEL[watch.type]}</Badge><Badge className={watch.isActive?"bg-[#173B37] text-[#96B5A6]":""} variant={watch.isActive?undefined:"secondary"}>{watch.isActive?"Activo":"Pausado"}</Badge></div><p className="mt-3 font-medium text-white">{watch.query}</p><p className="mt-1 text-xs text-muted-foreground">{subtypeLabel(watch.type,watch.subtype)}{watch.type==="technology"&&watch.searchScope?` · ${scopeLabel(watch.searchScope)}`:""}{watch.niceClasses.length?` · Niza ${watch.niceClasses.join(", ")}`:""}</p><p className="mt-2 text-[11px] text-muted-foreground">{watch.lastCheckedAt?`Revisado ${formatDate(watch.lastCheckedAt)}`:"Preparando línea base"}</p></div><div className="flex flex-wrap justify-end gap-1"><Button variant="ghost" size="icon-sm" onClick={()=>void toggle(watch)} aria-label={watch.isActive?"Pausar seguimiento":"Activar seguimiento"}>{watch.isActive?<Pause className="h-3.5 w-3.5"/>:<Play className="h-3.5 w-3.5"/>}</Button><Button variant="ghost" size="icon-sm" onClick={()=>void remove(watch.key)} aria-label="Eliminar seguimiento"><Trash2 className="h-4 w-4"/></Button></div></div></div>)}</div>:<p className="mt-5 text-sm leading-6 text-muted-foreground">Todavía no hay seguimientos.</p>}
@@ -167,13 +184,20 @@ export default function CommonWatchesPage(){
   </OperationalPage>
 }
 
-function SignalRow({signal}:{signal:CommonSignal}){
+function SignalRow({signal,feedback,busy,onReview}:{signal:CommonSignal;feedback:FeedbackType|null;busy:boolean;onReview:(signal:CommonSignal,feedbackType:"relevant"|"irrelevant")=>Promise<void>}){
   const external=signal.href.startsWith("http")
   const isHigh=signal.relevance==="alta"
-  return <article className="grid gap-3 py-5 sm:grid-cols-[120px_minmax(0,1fr)_auto] sm:items-start">
+  const decided=feedback==="relevant"||feedback==="irrelevant"||feedback==="false_match"
+  return <article className="grid gap-4 py-5 sm:grid-cols-[120px_minmax(0,1fr)]">
     <div><Badge variant="outline">{TYPE_LABEL[signal.type]}</Badge><p className="mt-2 text-[11px] text-muted-foreground">{humanizeSource(signal.source)}</p></div>
-    <div><div className="flex flex-wrap items-center gap-2">{signal.isNew?<Badge className="bg-[#173B37] text-[#96B5A6] hover:bg-[#173B37]">Nuevo</Badge>:null}<Badge className={isHigh?"border-[#D6A46F]/25 bg-[#332C24]/65 text-[#E0B987]":""} variant={isHigh?"outline":"secondary"}>{isHigh?"Importante":signal.relevance}</Badge>{signal.timeline?<Badge variant="outline">{signal.timeline.milestones.length} hitos</Badge>:null}</div><h3 className="mt-3 text-sm font-medium leading-6 text-white">{signal.title}</h3><p className="mt-1 text-xs text-[#96B5A6]">{signal.watchQuery}</p>{signal.detail?<p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{signal.detail}</p>:null}<p className="mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground"><Clock3 className="h-3 w-3"/>{formatDate(signal.occurredAt||signal.firstSeenAt)}</p>{signal.timeline?<RegulatoryTimelineDetails timeline={signal.timeline}/>:null}</div>
-    <Button asChild variant={isHigh?"outline":"ghost"} size="sm"><Link href={signal.href} target={external?"_blank":undefined} rel={external?"noreferrer":undefined}>Ver evidencia{external?<ExternalLink className="h-3.5 w-3.5"/>:null}</Link></Button>
+    <div>
+      <div className="flex flex-wrap items-center gap-2">{!decided&&signal.isNew?<Badge className="bg-[#173B37] text-[#96B5A6] hover:bg-[#173B37]">Pendiente</Badge>:null}{feedback==="relevant"?<Badge className="bg-[#173B37] text-[#96B5A6] hover:bg-[#173B37]">Validada</Badge>:null}{feedback==="irrelevant"||feedback==="false_match"?<Badge variant="secondary">Descartada</Badge>:null}<Badge className={isHigh?"border-[#D6A46F]/25 bg-[#332C24]/65 text-[#E0B987]":""} variant={isHigh?"outline":"secondary"}>{isHigh?"Importante":signal.relevance}</Badge>{signal.timeline?<Badge variant="outline">{signal.timeline.milestones.length} hitos</Badge>:null}</div>
+      <h3 className="mt-3 text-sm font-medium leading-6 text-white">{signal.title}</h3><p className="mt-1 text-xs text-[#96B5A6]">{signal.watchQuery}</p>{signal.detail?<p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{signal.detail}</p>:null}<p className="mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground"><Clock3 className="h-3 w-3"/>{formatDate(signal.occurredAt||signal.firstSeenAt)}</p>{signal.timeline?<RegulatoryTimelineDetails timeline={signal.timeline}/>:null}
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button asChild variant="outline" size="sm"><Link href={signal.href} target={external?"_blank":undefined} rel={external?"noreferrer":undefined}>Revisar evidencia{external?<ExternalLink className="h-3.5 w-3.5"/>:null}</Link></Button>
+        {!decided?<><Button size="sm" onClick={()=>void onReview(signal,"relevant")} disabled={busy}>{busy?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Check className="h-3.5 w-3.5"/>}Validar</Button><Button variant="ghost" size="sm" onClick={()=>void onReview(signal,"irrelevant")} disabled={busy}><Trash2 className="h-3.5 w-3.5"/>Descartar</Button></>:null}
+      </div>
+    </div>
   </article>
 }
 
