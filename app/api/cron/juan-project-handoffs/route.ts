@@ -11,6 +11,7 @@ export const maxDuration = 300
 const JUAN_EMAIL = "juan@n3uralia.com"
 const READY_THRESHOLD = 90
 const MAX_PER_LAYER = 3
+const SCOREABLE_EVIDENCE_TYPES = new Set(["paper", "patent", "news", "market", "regulation"])
 
 type ReuseAsset = { title: string; url: string; reuse: string }
 type ProjectIdea = {
@@ -163,15 +164,13 @@ export async function GET(request: Request) {
     ])
 
     const ownEvidence = existingEvidence.filter(row => row.idea_key === idea.key)
-    const humanEvidenceCount = ownEvidence.filter(row => !String(row.title ?? "").startsWith("Código reutilizable ·")).length
-    const reuseBoost = Math.min(6, idea.reuseAssets.length * 1.5)
+    const canonicalEvidenceCount = ownEvidence.filter(row => SCOREABLE_EVIDENCE_TYPES.has(String(row.evidence_type ?? ""))).length
     const liveScore = Math.min(100, Math.round(
       idea.strength
       + (papers.length ? Math.min(8, 3 + Math.log10(Math.max(1, papers[0].citedByCount + 1)) * 2) : 0)
       + (patentMatches.length ? 5 : 0)
       + (signalMatches.length ? signalMatches[0].relevance === "alta" ? 6 : 4 : 0)
-      + Math.min(4, humanEvidenceCount)
-      + reuseBoost,
+      + Math.min(4, canonicalEvidenceCount),
     ))
 
     for (const paper of papers) addEvidence(evidenceToInsert, existingKeys, {
@@ -234,12 +233,13 @@ export async function GET(request: Request) {
 
     const researchSnapshot = {
       threshold: READY_THRESHOLD,
-      rule: "research score > 90 enters human decision",
-      research_mode: "deep_auto_v1",
+      rule: "evidence-only research score > 90 enters human decision; institutional capability never changes conviction",
+      research_mode: "deep_auto_v2_evidence_only",
       research_summary: {
         papers: papers.length,
         patents: patentMatches.length,
         signals: signalMatches.length,
+        canonical_evidence: canonicalEvidenceCount,
         reuse_assets: idea.reuseAssets.length,
       },
       papers: papers.map(item => ({ source: item.source, title: item.title, url: item.url, date: item.date, cited_by_count: item.citedByCount })),
@@ -247,7 +247,8 @@ export async function GET(request: Request) {
       signals: signalMatches.map(item => ({ title: item.title, source: item.sourceKey, url: item.url, relevance: item.relevance, date: item.date })),
       reuse_assets: idea.reuseAssets,
       reuse_advantage: {
-        score_boost: reuseBoost,
+        score_boost: 0,
+        score_effect: "excluded_from_evidence_conviction",
         approach: "reuse_adapt_extract_build_buy_connect",
       },
       evidence_gaps: inferEvidenceGaps(papers.length, patentMatches.length, signalMatches.length, idea.reuseAssets.length),
@@ -256,8 +257,8 @@ export async function GET(request: Request) {
     }
 
     const rationale = liveScore > READY_THRESHOLD
-      ? `VIDENTIA completó un estudio automático con ${papers.length} papers, ${patentMatches.length} patentes, ${signalMatches.length} señales y ${idea.reuseAssets.length} activos N3uralia reutilizables. La decisión final queda exclusivamente en Juan.`
-      : `VIDENTIA sigue investigando: el research score está en ${liveScore}/100 y todavía no alcanza el umbral de decisión.`
+      ? `VIDENTIA completó un estudio automático basado sólo en evidencia con ${papers.length} papers, ${patentMatches.length} patentes y ${signalMatches.length} señales. Los ${idea.reuseAssets.length} activos N3uralia se muestran sólo como capacidad de ejecución y no aumentan la convicción. La decisión final queda exclusivamente en Juan.`
+      : `VIDENTIA sigue investigando: la convicción basada sólo en evidencia está en ${liveScore}/100 y todavía no alcanza el umbral de decisión. Los activos N3uralia no afectan este score.`
 
     const { error: handoffError } = await admin.from("intelligence_project_handoffs").upsert({
       user_id: juan.id,
@@ -282,7 +283,9 @@ export async function GET(request: Request) {
       papers: papers.length,
       patents: patentMatches.length,
       signals: signalMatches.length,
+      canonicalEvidence: canonicalEvidenceCount,
       reuseAssets: idea.reuseAssets.length,
+      institutionalScoreBoost: 0,
     })
   }
 
@@ -296,7 +299,7 @@ export async function GET(request: Request) {
   const response = {
     ok: true,
     threshold: READY_THRESHOLD,
-    researchMode: "deep_auto_v1",
+    researchMode: "deep_auto_v2_evidence_only",
     ideas: scored,
     awaitingDecision: scored.filter(item => item.status === "ready_for_n3uralia").length,
     evidenceAdded: insertedEvidence,
