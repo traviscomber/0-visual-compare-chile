@@ -2,46 +2,48 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { AlertTriangle, CheckCircle2, ChevronDown, Database, Loader2, RefreshCw, ShieldCheck, Zap } from "lucide-react"
-import { OperationalHeader, OperationalMetric, OperationalMetricRail, OperationalPage, OperationalSectionHeader } from "@/components/app/operational-ui"
+import { OperationalMetric, OperationalMetricRail, OperationalPage, OperationalSectionHeader } from "@/components/app/operational-ui"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
 type SourceStatus = "operational" | "degraded" | "stale" | "initializing" | "on_demand" | "manual" | "credentials_required" | "inactive"
 
+type Source = {
+  key: string
+  name: string
+  authority: string | null
+  freshness_policy: string | null
+  active: boolean
+  status: SourceStatus
+  configured: boolean
+  missing_credentials: string[]
+  last_success_at: string | null
+  last_attempt_at: string | null
+  age_hours: number | null
+  sla_hours: number | null
+  consecutive_failures: number
+  circuit_state: string | null
+  last_error: string | null
+  latest_run: null | {
+    id: string
+    status: string
+    started_at: string
+    finished_at: string | null
+    fetched: number
+    upserted: number
+    changes: number
+    rejected: number
+    duration_ms: number | null
+    validation_only: boolean
+    pipeline: string | null
+  }
+}
+
 type Health = {
   generated_at: string
   grade: "A" | "B" | "C" | "pending"
   summary: { operational: number; attention: number; on_demand: number; manual_or_inactive: number }
-  sources: Array<{
-    key: string
-    name: string
-    authority: string | null
-    freshness_policy: string | null
-    active: boolean
-    status: SourceStatus
-    configured: boolean
-    missing_credentials: string[]
-    last_success_at: string | null
-    last_attempt_at: string | null
-    age_hours: number | null
-    sla_hours: number | null
-    consecutive_failures: number
-    circuit_state: string | null
-    last_error: string | null
-    latest_run: null | {
-      id: string
-      status: string
-      started_at: string
-      finished_at: string | null
-      fetched: number
-      upserted: number
-      changes: number
-      rejected: number
-      duration_ms: number | null
-      validation_only: boolean
-      pipeline: string | null
-    }
-  }>
+  sources: Source[]
   recent_runs: Array<{
     id: string
     source_key: string
@@ -107,14 +109,14 @@ const STATUS_EXPLANATION: Record<SourceStatus, string> = {
   operational: "VIDENTIA la está usando y la información está al día.",
   degraded: "La fuente responde, pero necesita revisión técnica.",
   stale: "La última actualización superó el tiempo esperado.",
-  initializing: "La fuente está conectada y aún está generando su primera evidencia de uso.",
-  on_demand: "VIDENTIA la consulta cuando una búsqueda o vigilancia la necesita.",
+  initializing: "Está conectada y preparando su primera evidencia de uso.",
+  on_demand: "VIDENTIA la consulta sólo cuando una búsqueda o vigilancia la necesita.",
   manual: "Se consulta manualmente cuando el caso lo requiere.",
   credentials_required: "El conector existe, pero falta una credencial para poder usarlo.",
   inactive: "No se está utilizando actualmente.",
 }
 
-function isAttention(status: SourceStatus) {
+function needsAttention(status: SourceStatus) {
   return ["degraded", "stale", "credentials_required"].includes(status)
 }
 
@@ -140,60 +142,66 @@ export default function SourcesHealthPage() {
 
   useEffect(() => { void load() }, [load])
 
-  const sourceGroups = useMemo(() => {
-    if (!health) return { ready: [], attention: [], other: [] } as const
+  const groups = useMemo(() => {
+    if (!health) return { ready: [] as Source[], attention: [] as Source[], other: [] as Source[] }
     return {
       ready: health.sources.filter(source => ["operational", "on_demand", "initializing"].includes(source.status)),
-      attention: health.sources.filter(source => isAttention(source.status)),
+      attention: health.sources.filter(source => needsAttention(source.status)),
       other: health.sources.filter(source => ["manual", "inactive"].includes(source.status)),
     }
   }, [health])
 
   return <OperationalPage>
-    <OperationalHeader
-      eyebrow="VIDENTIA / Fuentes"
-      title="Las fuentes que alimentan tu inteligencia."
-      description={<>Aquí ves qué información puede usar VIDENTIA, qué está funcionando y qué requiere atención. El detalle técnico sigue disponible, pero no interfiere con la lectura principal.</>}
-      meta={<><span>Fuentes oficiales</span><span>Estado simple</span><span>Trazabilidad</span></>}
-      actions={<Button variant="outline" onClick={() => void load()} disabled={loading}>{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}Actualizar</Button>}
-    />
+    <section className="border-b border-border/80 py-7 sm:py-8">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-end">
+        <div>
+          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#96B5A6]">VIDENTIA / Fuentes</p>
+          <h1 className="mt-3 max-w-3xl text-[clamp(2.1rem,4vw,4rem)] font-light leading-[0.98] tracking-[-0.045em] text-[#E7DFCE]">Qué información puede usar VIDENTIA.</h1>
+        </div>
+        <div className="xl:pb-1">
+          <p className="max-w-xl text-sm leading-6 text-muted-foreground">Ve en segundos qué fuentes están disponibles y cuáles necesitan acción. El detalle técnico queda separado para administración.</p>
+          <Button className="mt-4" variant="outline" onClick={() => void load()} disabled={loading}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Actualizar
+          </Button>
+        </div>
+      </div>
+    </section>
 
     {error ? <div role="alert" className="mt-6 rounded-[10px] bg-[#3A2525] p-4 text-sm text-[#E8AAA3]">{error}</div> : null}
 
     {health ? <>
       <OperationalMetricRail>
-        <OperationalMetric value={health.sources.length} label="Fuentes disponibles" detail="Red total conectada a VIDENTIA" tone="neutral" />
-        <OperationalMetric value={sourceGroups.ready.length} label="Listas para usar" detail="Activas, bajo demanda o inicializando" tone="success" />
-        <OperationalMetric value={sourceGroups.attention.length} label="Necesitan atención" detail={sourceGroups.attention.length ? "Configuración o actualización pendiente" : "Sin bloqueos relevantes"} tone={sourceGroups.attention.length ? "warning" : "success"} />
-        <OperationalMetric value={health.grade} label="Confianza de datos" detail={health.grade === "A" ? "Controles principales aprobados" : `${health.quality.failures} críticos · ${health.quality.warnings} avisos`} tone={health.grade === "A" ? "success" : health.grade === "C" ? "danger" : "warning"} />
+        <OperationalMetric value={health.sources.length} label="Fuentes conectadas" detail="Red disponible para VIDENTIA" tone="neutral" />
+        <OperationalMetric value={groups.ready.length} label="Listas para trabajar" detail="Activas o bajo demanda" tone="success" />
+        <OperationalMetric value={groups.attention.length} label="Necesitan acción" detail={groups.attention.length ? "Configuración o actualización pendiente" : "Sin bloqueos relevantes"} tone={groups.attention.length ? "warning" : "success"} />
+        <OperationalMetric value={health.grade} label="Confianza" detail={health.grade === "A" ? "Controles principales aprobados" : `${health.quality.failures} críticos · ${health.quality.warnings} avisos`} tone={health.grade === "A" ? "success" : health.grade === "C" ? "danger" : "warning"} />
       </OperationalMetricRail>
 
-      {sourceGroups.attention.length ? <section className="border-b border-border/80 py-9">
-        <OperationalSectionHeader eyebrow="01 / Atención" title="Lo único que requiere tu atención" meta={`${sourceGroups.attention.length} fuente${sourceGroups.attention.length === 1 ? "" : "s"}`} />
-        <div className="mt-5 grid gap-3 lg:grid-cols-2">
-          {sourceGroups.attention.map(source => <SourceCard key={source.key} source={source} attention />)}
+      {groups.attention.length ? <section className="border-b border-border/80 py-8">
+        <OperationalSectionHeader eyebrow="01 / Acción" title="Esto es lo único que debes resolver" meta={`${groups.attention.length} fuente${groups.attention.length === 1 ? "" : "s"}`} />
+        <div className="mt-5 grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+          {groups.attention.map(source => <SourceCard key={source.key} source={source} attention />)}
         </div>
       </section> : null}
 
-      <section className="border-b border-border/80 py-9">
-        <OperationalSectionHeader eyebrow={sourceGroups.attention.length ? "02 / Disponibles" : "01 / Disponibles"} title="Fuentes listas para trabajar" meta={`Actualizado ${formatDateTime(health.generated_at)}`} />
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">No necesitas conocer cómo se ejecuta cada conector. Si aparece aquí, VIDENTIA puede usar esa fuente cuando corresponde.</p>
-        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {sourceGroups.ready.map(source => <SourceCard key={source.key} source={source} />)}
+      <section className="border-b border-border/80 py-8">
+        <OperationalSectionHeader eyebrow={groups.attention.length ? "02 / Disponibles" : "01 / Disponibles"} title="Fuentes listas para usar" meta={`Actualizado ${formatDateTime(health.generated_at)}`} />
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {groups.ready.map(source => <SourceCard key={source.key} source={source} />)}
         </div>
       </section>
 
-      {sourceGroups.other.length ? <section className="border-b border-border/80 py-9">
-        <OperationalSectionHeader eyebrow={sourceGroups.attention.length ? "03 / Otras" : "02 / Otras"} title="Fuentes complementarias" />
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Estas fuentes no forman parte del flujo automático principal. Se mantienen sólo cuando tienen una utilidad concreta.</p>
-        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {sourceGroups.other.map(source => <SourceCard key={source.key} source={source} />)}
+      {groups.other.length ? <section className="border-b border-border/80 py-8">
+        <OperationalSectionHeader eyebrow={groups.attention.length ? "03 / Complementarias" : "02 / Complementarias"} title="Fuentes de uso puntual" />
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {groups.other.map(source => <SourceCard key={source.key} source={source} />)}
         </div>
       </section> : null}
 
-      <section className="border-b border-border/80 py-9">
-        <OperationalSectionHeader eyebrow="04 / Cobertura" title="Qué puede sostener hoy VIDENTIA" />
-        <div className="mt-6 grid gap-px bg-border/70 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="border-b border-border/80 py-8">
+        <OperationalSectionHeader eyebrow="Cobertura" title="Qué puede sostener hoy VIDENTIA" />
+        <div className="mt-5 grid gap-px bg-border/70 sm:grid-cols-2 xl:grid-cols-4">
           <Coverage icon={Database} value={health.coverage.company_identities.toLocaleString("es-CL")} label="Empresas identificadas" detail={`${health.coverage.company_aliases.toLocaleString("es-CL")} alias asociados`} />
           <Coverage icon={Zap} value={health.coverage.company_activity_12m.toLocaleString("es-CL")} label="Actividad reciente" detail="Expedientes vinculados en 12 meses" />
           <Coverage icon={ShieldCheck} value={health.coverage.observed_change_events.toLocaleString("es-CL")} label="Cambios detectados" detail="Cambios observados por VIDENTIA" />
@@ -201,14 +209,14 @@ export default function SourcesHealthPage() {
         </div>
       </section>
 
-      <details className="group py-9">
+      <details className="group py-8">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4 border-y border-border/80 py-5 text-sm font-medium text-white">
-          <span>Ver detalle técnico y bitácora</span>
+          <span>Detalle técnico y bitácora</span>
           <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
         </summary>
         <div className="pt-7">
-          <OperationalSectionHeader eyebrow="Detalle técnico" title="Validaciones, corridas y controles" meta={`${health.recent_runs.length} corridas recientes`} />
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Esta sección está pensada para administración y soporte. No es necesaria para interpretar el estado general de VIDENTIA.</p>
+          <OperationalSectionHeader eyebrow="Administración" title="Validaciones, corridas y controles" meta={`${health.recent_runs.length} corridas recientes`} />
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Esta sección sirve para soporte y auditoría. No es necesaria para saber si VIDENTIA puede usar una fuente.</p>
 
           <div className="mt-6 divide-y divide-border/80 border-y border-border/80">
             {health.recent_runs.map(run => <article key={run.id} className="grid gap-3 py-4 lg:grid-cols-[minmax(0,1fr)_180px_180px] lg:items-center">
@@ -239,7 +247,7 @@ export default function SourcesHealthPage() {
   </OperationalPage>
 }
 
-function SourceCard({ source, attention = false }: { source: Health["sources"][number]; attention?: boolean }) {
+function SourceCard({ source, attention = false }: { source: Source; attention?: boolean }) {
   return <article className={attention ? "border border-[#8D7042]/70 bg-[#2C291F]/40 p-5" : "border border-border/80 bg-background p-5"}>
     <div className="flex items-start justify-between gap-4">
       <div className="min-w-0">
@@ -250,27 +258,31 @@ function SourceCard({ source, attention = false }: { source: Health["sources"][n
     </div>
     <p className="mt-4 text-sm leading-6 text-[#D5E0E3]">{STATUS_EXPLANATION[source.status]}</p>
     <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
-      {source.last_success_at ? <span>Última actualización: {formatRelative(source.age_hours)}</span> : source.status === "on_demand" ? <span>Se consulta cuando se necesita</span> : <span>Aún sin primera ejecución</span>}
-      {source.latest_run && !source.latest_run.validation_only ? <span>{source.latest_run.fetched.toLocaleString("es-CL")} registros revisados</span> : null}
+      {source.last_success_at ? <span>Actualizada {formatRelative(source.age_hours)}</span> : source.status === "on_demand" ? <span>Se consulta cuando se necesita</span> : <span>Aún sin primera ejecución</span>}
+      {source.latest_run && !source.latest_run.validation_only && source.latest_run.fetched > 0 ? <span>{source.latest_run.fetched.toLocaleString("es-CL")} registros revisados</span> : null}
     </div>
-    {source.missing_credentials.length ? <p className="mt-4 text-xs text-[#D8C49C]">Configuración pendiente: {humanizeCredential(source.missing_credentials[0])}</p> : null}
+    {source.missing_credentials.length ? <p className="mt-4 text-xs text-[#D8C49C]">Falta: {humanizeCredential(source.missing_credentials[0])}</p> : null}
     {source.last_error ? <p className="mt-3 line-clamp-2 text-xs leading-5 text-[#E8AAA3]">{source.last_error}</p> : null}
   </article>
 }
 
 function StatusBadge({ status }: { status: SourceStatus }) {
-  const warning = isAttention(status)
+  const warning = needsAttention(status)
   return <Badge variant="outline" className={warning ? "border-[#8D7042] bg-[#2C291F] text-[#D8C49C]" : status === "operational" ? "border-[#345E55] bg-[#173B37] text-[#B7D3D1]" : "bg-[#13272D] text-muted-foreground"}>{STATUS_LABEL[status]}</Badge>
 }
 
 function RunStatus({ status }: { status: string }) {
   const good = status === "completed"
-  const warning = status === "partial" || status === "running" || status === "queued"
-  return <Badge variant="outline" className={good ? "border-[#345E55] bg-[#173B37] text-[#B7D3D1]" : warning ? "border-[#8D7042] bg-[#2C291F] text-[#D8C49C]" : "border-[#75423F] bg-[#3A2525] text-[#E8AAA3]"}>{good ? "OK" : warning ? "EN CURSO" : "ERROR"}</Badge>
+  const warning = ["partial", "running", "queued"].includes(status)
+  return <Badge variant="outline" className={good ? "border-[#345E55] bg-[#173B37] text-[#B7D3D1]" : warning ? "border-[#8D7042] bg-[#2C291F] text-[#D8C49C]" : "border-[#75423F] bg-[#3A2525] text-[#E8AAA3]"}>{good ? "OK" : status.toUpperCase()}</Badge>
 }
 
 function Coverage({ icon: Icon, value, label, detail }: { icon: typeof Database; value: string; label: string; detail: string }) {
   return <div className="bg-background p-5"><Icon className="h-4 w-4 text-[#96B5A6]" /><p className="mt-4 text-2xl font-light text-[#E7DFCE]">{value}</p><p className="mt-1 text-sm font-medium text-white">{label}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p></div>
+}
+
+function humanizeCredential(value: string) {
+  return value.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, letter => letter.toUpperCase())
 }
 
 function formatDateTime(value: string) {
@@ -279,13 +291,10 @@ function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("es-CL", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Santiago" }).format(date)
 }
 
-function formatRelative(ageHours: number | null) {
-  if (ageHours === null) return "reciente"
-  if (ageHours < 1) return "hace menos de 1 hora"
-  if (ageHours < 48) return `hace ${Math.round(ageHours)} h`
-  return `hace ${Math.round(ageHours / 24)} días`
-}
-
-function humanizeCredential(value: string) {
-  return value.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, letter => letter.toUpperCase())
+function formatRelative(hours: number | null) {
+  if (hours === null) return "recientemente"
+  if (hours < 1) return "hace menos de 1 hora"
+  if (hours < 24) return `hace ${Math.round(hours)} h`
+  const days = Math.round(hours / 24)
+  return `hace ${days} d`
 }
