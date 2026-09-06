@@ -8,8 +8,10 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
 type Organization = { id: string; name: string; slug: string; role: string }
+type PrototypeAssessmentValue = "supports" | "mixed" | "refutes" | "inconclusive"
 type ResearchComparison = {
   baseline?: boolean
+  market_baseline?: boolean
   evidence_delta?: number
   timing_delta?: number
   confidence_delta?: number
@@ -17,6 +19,7 @@ type ResearchComparison = {
   direction?: "strengthening" | "weakening" | "stable" | "baseline"
   reasons?: string[]
   news_non_scoring?: boolean
+  prototype_assessment?: PrototypeAssessmentValue | null
 }
 type HumanDecision = {
   from_status?: string
@@ -36,11 +39,25 @@ type PrototypeOutcome = {
   outcome_by?: string
   completed_at?: string | null
 }
+type PrototypeAssessmentRecord = {
+  source_research_id?: string
+  action_id?: string
+  outcome_at?: string
+  assessment?: PrototypeAssessmentValue
+  actor_role?: string
+}
 type PrototypeLearning = {
+  researchId: string
   outcome: PrototypeOutcome
   actorRole?: string
   convictionEffect?: string
   scoresUnchanged?: boolean
+}
+type PrototypeAssessmentView = {
+  researchId: string
+  assessment: PrototypeAssessmentValue
+  actorRole?: string
+  consumed: boolean
 }
 type ResearchRun = {
   id: string
@@ -51,6 +68,9 @@ type ResearchRun = {
     market_state?: Record<string, unknown>
     human_decision?: HumanDecision
     prototype_outcome?: PrototypeOutcome
+    prototype_assessment?: PrototypeAssessmentRecord
+    prototype_assessment_id?: string | null
+    prototype_assessment_applied?: PrototypeAssessmentRecord | null
     actor_role?: string
     conviction_effect?: string
     scores_unchanged?: boolean
@@ -101,6 +121,13 @@ const statusLabel: Record<SavedOpportunity["status"], string> = {
   archived: "Archivada",
 }
 
+const prototypeAssessmentOptions: Array<{ value: PrototypeAssessmentValue; label: string }> = [
+  { value: "supports", label: "Apoya" },
+  { value: "mixed", label: "Mixto" },
+  { value: "refutes", label: "Refuta" },
+  { value: "inconclusive", label: "Inconcluso" },
+]
+
 export default function SavedOpportunityThesesPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [organizationId, setOrganizationId] = useState("")
@@ -108,6 +135,7 @@ export default function SavedOpportunityThesesPage() {
   const [loading, setLoading] = useState(true)
   const [researchingId, setResearchingId] = useState<string | null>(null)
   const [decidingId, setDecidingId] = useState<string | null>(null)
+  const [assessingId, setAssessingId] = useState<string | null>(null)
   const [decisionDraft, setDecisionDraft] = useState<DecisionDraft | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -145,7 +173,7 @@ export default function SavedOpportunityThesesPage() {
   }
 
   async function researchThesis(item: SavedOpportunity) {
-    if (!organizationId || researchingId || decidingId) return
+    if (!organizationId || researchingId || decidingId || assessingId) return
     setResearchingId(item.id)
     setError(null)
     try {
@@ -164,13 +192,33 @@ export default function SavedOpportunityThesesPage() {
     }
   }
 
+  async function assessPrototype(item: SavedOpportunity, outcomeResearchId: string, assessment: PrototypeAssessmentValue) {
+    if (!organizationId || assessingId || researchingId || decidingId) return
+    setAssessingId(item.id)
+    setError(null)
+    try {
+      const response = await fetch(`/api/intelligence/opportunity-theses/${encodeURIComponent(item.id)}/prototype-assessment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ organizationId, outcomeResearchId, assessment }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload.error || "No pudimos clasificar el resultado del prototipo.")
+      await loadTheses(organizationId)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No pudimos clasificar el resultado del prototipo.")
+    } finally {
+      setAssessingId(null)
+    }
+  }
+
   function beginDecision(item: SavedOpportunity, target: DecisionTarget) {
     setDecisionDraft({ opportunityId: item.id, target, rationale: "" })
     setError(null)
   }
 
   async function applyDecision(item: SavedOpportunity) {
-    if (!organizationId || !decisionDraft || decisionDraft.opportunityId !== item.id || decisionDraft.rationale.trim().length < 8 || decidingId || researchingId) return
+    if (!organizationId || !decisionDraft || decisionDraft.opportunityId !== item.id || decisionDraft.rationale.trim().length < 8 || decidingId || researchingId || assessingId) return
     setDecidingId(item.id)
     setError(null)
     try {
@@ -229,8 +277,10 @@ export default function SavedOpportunityThesesPage() {
           isAdmin={isAdmin}
           researching={researchingId === item.id}
           deciding={decidingId === item.id}
+          assessing={assessingId === item.id}
           decisionDraft={decisionDraft?.opportunityId === item.id ? decisionDraft : null}
           onResearch={() => void researchThesis(item)}
+          onAssessPrototype={(outcomeResearchId, assessment) => void assessPrototype(item, outcomeResearchId, assessment)}
           onBeginDecision={target => beginDecision(item, target)}
           onDecisionRationale={rationale => setDecisionDraft(current => current?.opportunityId === item.id ? { ...current, rationale } : current)}
           onCancelDecision={() => setDecisionDraft(null)}
@@ -238,7 +288,7 @@ export default function SavedOpportunityThesesPage() {
         />) : <div className="py-10"><p className="text-sm font-medium text-white">Ninguna tesis ha cruzado todavía el gate humano.</p><p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Ejecuta Opportunity Engine, revisa por qué una propuesta podría funcionar y guárdala sólo si merece seguimiento real.</p><Button asChild size="sm" className="mt-4"><Link href="/oportunidades/descubrir">Descubrir productos</Link></Button></div>}</div> : null}
       </div>
 
-      <aside><OperationalPanel><OperationalSectionHeader eyebrow="Gobernanza" title="Score ≠ decisión." /><div className="mt-5 space-y-4 text-sm leading-6 text-muted-foreground"><p><span className="text-foreground">Vigilar</span> es una decisión operativa disponible a miembros. Prototipar y descartar requieren rol administrador.</p><p className="border-t border-border/80 pt-4">Toda decisión exige una razón escrita y genera un snapshot <span className="text-foreground">human_review</span>. Scores y confianza permanecen intactos.</p><p className="border-t border-border/80 pt-4">Un resultado de prototipo entra como <span className="text-foreground">evidencia de ejecución</span>; no valida mercado ni altera la curva de convicción hasta una nueva investigación.</p><p className="border-t border-border/80 pt-4">El research conserva noticias como contexto; <span className="text-foreground">noticias nunca suben score por volumen</span>.</p></div></OperationalPanel></aside>
+      <aside><OperationalPanel><OperationalSectionHeader eyebrow="Gobernanza" title="Score ≠ decisión." /><div className="mt-5 space-y-4 text-sm leading-6 text-muted-foreground"><p><span className="text-foreground">Vigilar</span> es una decisión operativa disponible a miembros. Prototipar y descartar requieren rol administrador.</p><p className="border-t border-border/80 pt-4">Toda decisión exige una razón escrita y genera un snapshot <span className="text-foreground">human_review</span>. Scores y confianza permanecen intactos.</p><p className="border-t border-border/80 pt-4">Un resultado de prototipo entra como <span className="text-foreground">evidencia de ejecución</span>. Sólo una clasificación humana explícita puede darle dirección y sólo el siguiente research puede incorporarla al score, dentro de los límites existentes.</p><p className="border-t border-border/80 pt-4">El research conserva noticias como contexto; <span className="text-foreground">noticias nunca suben score por volumen</span>.</p></div></OperationalPanel></aside>
     </section>
   </OperationalPage>
 }
@@ -248,8 +298,10 @@ function ThesisRow({
   isAdmin,
   researching,
   deciding,
+  assessing,
   decisionDraft,
   onResearch,
+  onAssessPrototype,
   onBeginDecision,
   onDecisionRationale,
   onCancelDecision,
@@ -259,8 +311,10 @@ function ThesisRow({
   isAdmin: boolean
   researching: boolean
   deciding: boolean
+  assessing: boolean
   decisionDraft: DecisionDraft | null
   onResearch: () => void
+  onAssessPrototype: (outcomeResearchId: string, assessment: PrototypeAssessmentValue) => void
   onBeginDecision: (target: DecisionTarget) => void
   onDecisionRationale: (rationale: string) => void
   onCancelDecision: () => void
@@ -270,6 +324,7 @@ function ThesisRow({
   const comparison = latestComparison(item.research_history)
   const humanDecision = latestHumanDecision(item.research_history)
   const prototypeLearning = latestPrototypeLearning(item.research_history)
+  const prototypeAssessment = prototypeLearning ? latestPrototypeAssessment(item.research_history, prototypeLearning.researchId) : null
   const closed = item.status === "rejected" || item.status === "archived"
   const prototypeWarning = item.evidence_strength < 60 || item.confidence < 0.65 || item.evidence_state === "hypothesis"
 
@@ -298,6 +353,19 @@ function ThesisRow({
             </div>
             {prototypeLearning.outcome.case_id ? <Button asChild variant="outline" size="sm" className="shrink-0"><Link href={`/casos/${prototypeLearning.outcome.case_id}/equipo`}>Abrir caso <ExternalLink className="h-3.5 w-3.5" /></Link></Button> : null}
           </div>
+          <div className="mt-4 border-t border-[#96B5A6]/20 pt-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">Clasificación del aprendizaje</p>
+                <p className="mt-1 text-xs text-foreground">{prototypeAssessment ? prototypeAssessmentLabel(prototypeAssessment.assessment) : "Pendiente de evaluación humana"}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">{prototypeAssessment ? (prototypeAssessment.consumed ? "Ya incorporada por un research posterior; el snapshot conserva su trazabilidad." : "Pendiente de la próxima re-investigación; todavía no modifica convicción.") : "Clasificar no cambia el score. Sólo prepara evidencia direccional para el próximo research."}</p>
+              </div>
+              {isAdmin ? <div className="flex flex-wrap gap-1.5">{prototypeAssessmentOptions.map(option => {
+                const selected = prototypeAssessment?.assessment === option.value
+                return <Button key={option.value} type="button" size="sm" variant="outline" className={selected ? assessmentTone(option.value) : ""} disabled={assessing || selected} onClick={() => onAssessPrototype(prototypeLearning.researchId, option.value)}>{assessing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}{option.label}</Button>
+              })}</div> : null}
+            </div>
+          </div>
         </div> : null}
 
         {decisionDraft ? <div className="mt-6 border-y border-border/80 bg-card/20 py-4">
@@ -313,11 +381,11 @@ function ThesisRow({
         <p>{item.last_researched_at ? `Investigada ${formatDate(item.last_researched_at)}` : "Sin research persistido adicional"}</p>
         <p className="mt-2">Guardada {formatDate(item.created_at)}</p>
         <a href={item.source_website_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-foreground hover:text-white">Fuente web <ExternalLink className="h-3 w-3" /></a>
-        {!closed ? <Button type="button" variant="outline" size="sm" className="mt-4 w-full" disabled={researching || deciding} onClick={onResearch}>{researching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}{researching ? "Investigando…" : "Re-investigar"}</Button> : null}
-        {item.status !== "watching" && item.status !== "archived" ? <Button type="button" variant="ghost" size="sm" className="mt-2 w-full justify-start" disabled={deciding} onClick={() => onBeginDecision("watching")}><Eye className="h-3.5 w-3.5" /> Vigilar</Button> : null}
-        {isAdmin && item.status !== "prototype" && item.status !== "archived" ? <Button type="button" variant="ghost" size="sm" className="mt-1 w-full justify-start" disabled={deciding} onClick={() => onBeginDecision("prototype")}><FlaskConical className="h-3.5 w-3.5" /> Prototipar</Button> : null}
-        {isAdmin && item.status !== "rejected" && item.status !== "archived" ? <Button type="button" variant="ghost" size="sm" className="mt-1 w-full justify-start text-[#E0B987] hover:text-[#E0B987]" disabled={deciding} onClick={() => onBeginDecision("rejected")}><X className="h-3.5 w-3.5" /> Descartar</Button> : null}
-        {isAdmin && item.status === "rejected" ? <Button type="button" variant="ghost" size="sm" className="mt-1 w-full justify-start" disabled={deciding} onClick={() => onBeginDecision("exploring")}><RotateCcw className="h-3.5 w-3.5" /> Reabrir análisis</Button> : null}
+        {!closed ? <Button type="button" variant="outline" size="sm" className="mt-4 w-full" disabled={researching || deciding || assessing} onClick={onResearch}>{researching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}{researching ? "Investigando…" : "Re-investigar"}</Button> : null}
+        {item.status !== "watching" && item.status !== "archived" ? <Button type="button" variant="ghost" size="sm" className="mt-2 w-full justify-start" disabled={deciding || assessing} onClick={() => onBeginDecision("watching")}><Eye className="h-3.5 w-3.5" /> Vigilar</Button> : null}
+        {isAdmin && item.status !== "prototype" && item.status !== "archived" ? <Button type="button" variant="ghost" size="sm" className="mt-1 w-full justify-start" disabled={deciding || assessing} onClick={() => onBeginDecision("prototype")}><FlaskConical className="h-3.5 w-3.5" /> Prototipar</Button> : null}
+        {isAdmin && item.status !== "rejected" && item.status !== "archived" ? <Button type="button" variant="ghost" size="sm" className="mt-1 w-full justify-start text-[#E0B987] hover:text-[#E0B987]" disabled={deciding || assessing} onClick={() => onBeginDecision("rejected")}><X className="h-3.5 w-3.5" /> Descartar</Button> : null}
+        {isAdmin && item.status === "rejected" ? <Button type="button" variant="ghost" size="sm" className="mt-1 w-full justify-start" disabled={deciding || assessing} onClick={() => onBeginDecision("exploring")}><RotateCcw className="h-3.5 w-3.5" /> Reabrir análisis</Button> : null}
       </div>
     </div>
   </article>
@@ -377,6 +445,7 @@ function latestPrototypeLearning(history: ResearchRun[]): PrototypeLearning | nu
     const outcome = run.evidence_summary?.prototype_outcome
     if (!outcome || typeof outcome !== "object" || !outcome.outcome?.trim()) continue
     return {
+      researchId: run.id,
       outcome,
       actorRole: run.evidence_summary?.actor_role,
       convictionEffect: run.evidence_summary?.conviction_effect,
@@ -384,6 +453,38 @@ function latestPrototypeLearning(history: ResearchRun[]): PrototypeLearning | nu
     }
   }
   return null
+}
+
+function latestPrototypeAssessment(history: ResearchRun[], sourceResearchId: string): PrototypeAssessmentView | null {
+  for (const run of history) {
+    if (run.run_type !== "human_review") continue
+    const assessment = run.evidence_summary?.prototype_assessment
+    if (!assessment || assessment.source_research_id !== sourceResearchId || !isPrototypeAssessment(assessment.assessment)) continue
+    return {
+      researchId: run.id,
+      assessment: assessment.assessment,
+      actorRole: assessment.actor_role,
+      consumed: history.some(candidate => candidate.evidence_summary?.prototype_assessment_id === run.id),
+    }
+  }
+  return null
+}
+
+function isPrototypeAssessment(value: string | undefined): value is PrototypeAssessmentValue {
+  return value === "supports" || value === "mixed" || value === "refutes" || value === "inconclusive"
+}
+
+function prototypeAssessmentLabel(value: PrototypeAssessmentValue) {
+  if (value === "supports") return "Apoya la tesis"
+  if (value === "mixed") return "Evidencia mixta"
+  if (value === "refutes") return "Refuta la tesis"
+  return "Inconcluso"
+}
+
+function assessmentTone(value: PrototypeAssessmentValue) {
+  if (value === "supports") return "border-[#96B5A6]/40 bg-[#173B37]/45 text-[#B8D0C2]"
+  if (value === "refutes") return "border-[#D6A46F]/40 bg-[#332C24]/45 text-[#E0B987]"
+  return "border-border bg-card/30 text-foreground"
 }
 
 function decisionTitle(target: DecisionTarget) {

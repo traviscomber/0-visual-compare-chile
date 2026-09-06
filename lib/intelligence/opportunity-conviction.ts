@@ -12,6 +12,8 @@ export type ConvictionScores = {
   overall: number
 }
 
+export type PrototypeAssessment = "supports" | "mixed" | "refutes" | "inconclusive"
+
 export type OpportunityMarketState = {
   observed_at: string
   query: string
@@ -37,6 +39,7 @@ export type OpportunityMarketState = {
 
 export type ConvictionComparison = {
   baseline: boolean
+  market_baseline?: boolean
   evidence_delta: number
   timing_delta: number
   confidence_delta: number
@@ -44,6 +47,7 @@ export type ConvictionComparison = {
   direction: "strengthening" | "weakening" | "stable" | "baseline"
   reasons: string[]
   news_non_scoring: true
+  prototype_assessment: PrototypeAssessment | null
 }
 
 export async function observeOpportunityMarketState(query: string): Promise<{ state: OpportunityMarketState; facts: string[] }> {
@@ -79,21 +83,26 @@ export function compareOpportunityMarketStates(
   current: OpportunityMarketState,
   beforeScores: ConvictionScores,
   beforeConfidence: number,
+  prototypeAssessment: PrototypeAssessment | null = null,
 ): { comparison: ConvictionComparison; scores: ConvictionScores; confidence: number } {
   if (!previous) {
-    return {
-      comparison: {
-        baseline: true,
-        evidence_delta: 0,
-        timing_delta: 0,
-        confidence_delta: 0,
-        overall_delta: 0,
-        direction: "baseline",
-        reasons: ["Baseline estructurado establecido. La primera observación persistente no mueve la convicción."],
-        news_non_scoring: true,
-      },
-      scores: { ...beforeScores, overall: weightedOverall(beforeScores) },
-      confidence: beforeConfidence,
+    if (!prototypeAssessment) {
+      return {
+        comparison: {
+          baseline: true,
+          market_baseline: true,
+          evidence_delta: 0,
+          timing_delta: 0,
+          confidence_delta: 0,
+          overall_delta: 0,
+          direction: "baseline",
+          reasons: ["Baseline estructurado establecido. La primera observación persistente no mueve la convicción."],
+          news_non_scoring: true,
+          prototype_assessment: null,
+        },
+        scores: { ...beforeScores, overall: weightedOverall(beforeScores) },
+        confidence: beforeConfidence,
+      }
     }
   }
 
@@ -101,60 +110,79 @@ export function compareOpportunityMarketStates(
   let timingDelta = 0
   const reasons: string[] = []
 
-  // Corroboration only moves conviction when both observations had both hard axes available.
-  if (previous.available_axes >= 2 && current.available_axes >= 2) {
-    const corroborationDelta = corroborationRank(current.corroboration_status) - corroborationRank(previous.corroboration_status)
-    if (corroborationDelta > 0) {
-      evidenceDelta += 4
-      timingDelta += 2
-      reasons.push(`Corroboración mejoró de ${previous.corroboration_status} a ${current.corroboration_status}.`)
-    } else if (corroborationDelta < 0) {
-      evidenceDelta -= 5
-      timingDelta -= 2
-      reasons.push(`Corroboración bajó de ${previous.corroboration_status} a ${current.corroboration_status}.`)
+  if (!previous) {
+    reasons.push("Baseline estructurado establecido. La primera observación persistente de mercado no mueve la convicción por sí sola.")
+  } else {
+    // Corroboration only moves conviction when both observations had both hard axes available.
+    if (previous.available_axes >= 2 && current.available_axes >= 2) {
+      const corroborationDelta = corroborationRank(current.corroboration_status) - corroborationRank(previous.corroboration_status)
+      if (corroborationDelta > 0) {
+        evidenceDelta += 4
+        timingDelta += 2
+        reasons.push(`Corroboración mejoró de ${previous.corroboration_status} a ${current.corroboration_status}.`)
+      } else if (corroborationDelta < 0) {
+        evidenceDelta -= 5
+        timingDelta -= 2
+        reasons.push(`Corroboración bajó de ${previous.corroboration_status} a ${current.corroboration_status}.`)
+      }
+    } else if (previous.available_axes >= 2 && current.available_axes < 2) {
+      reasons.push("Una fuente dura no estuvo disponible; VIDENTIA no penaliza la tesis por indisponibilidad de fuente.")
     }
-  } else if (previous.available_axes >= 2 && current.available_axes < 2) {
-    reasons.push("Una fuente dura no estuvo disponible; VIDENTIA no penaliza la tesis por indisponibilidad de fuente.")
-  }
 
-  if (previous.sources.inapi_patents && current.sources.inapi_patents) {
-    const patentDelta = current.patent_recent_matches - previous.patent_recent_matches
-    if (patentDelta > 0) {
-      const step = Math.min(4, patentDelta * 2)
-      evidenceDelta += step
-      timingDelta += Math.min(3, patentDelta)
-      reasons.push(`Coincidencias patentarias recientes subieron de ${previous.patent_recent_matches} a ${current.patent_recent_matches}.`)
-    } else if (patentDelta < 0) {
-      const step = Math.min(4, Math.abs(patentDelta) * 2)
-      evidenceDelta -= step
-      timingDelta -= Math.min(3, Math.abs(patentDelta))
-      reasons.push(`Coincidencias patentarias recientes bajaron de ${previous.patent_recent_matches} a ${current.patent_recent_matches}.`)
-    }
-  }
-
-  if (previous.sources.openalex && current.sources.openalex) {
-    const trendDelta = trendRank(current.trend) - trendRank(previous.trend)
-    if (trendDelta > 0) {
-      evidenceDelta += 2
-      timingDelta += 3
-      reasons.push(`Momentum científico mejoró de ${previous.trend} a ${current.trend}.`)
-    } else if (trendDelta < 0) {
-      evidenceDelta -= 2
-      timingDelta -= 3
-      reasons.push(`Momentum científico se debilitó de ${previous.trend} a ${current.trend}.`)
-    } else if (current.current_publications !== null && previous.current_publications !== null) {
-      const publicationDelta = current.current_publications - previous.current_publications
-      const materialThreshold = Math.max(2, Math.ceil(Math.max(1, previous.current_publications) * 0.2))
-      if (publicationDelta >= materialThreshold) {
-        evidenceDelta += 2
-        timingDelta += 1
-        reasons.push(`Actividad científica observable aumentó de ${previous.current_publications} a ${current.current_publications} publicaciones en la ventana.`)
-      } else if (publicationDelta <= -materialThreshold) {
-        evidenceDelta -= 2
-        timingDelta -= 1
-        reasons.push(`Actividad científica observable cayó de ${previous.current_publications} a ${current.current_publications} publicaciones en la ventana.`)
+    if (previous.sources.inapi_patents && current.sources.inapi_patents) {
+      const patentDelta = current.patent_recent_matches - previous.patent_recent_matches
+      if (patentDelta > 0) {
+        const step = Math.min(4, patentDelta * 2)
+        evidenceDelta += step
+        timingDelta += Math.min(3, patentDelta)
+        reasons.push(`Coincidencias patentarias recientes subieron de ${previous.patent_recent_matches} a ${current.patent_recent_matches}.`)
+      } else if (patentDelta < 0) {
+        const step = Math.min(4, Math.abs(patentDelta) * 2)
+        evidenceDelta -= step
+        timingDelta -= Math.min(3, Math.abs(patentDelta))
+        reasons.push(`Coincidencias patentarias recientes bajaron de ${previous.patent_recent_matches} a ${current.patent_recent_matches}.`)
       }
     }
+
+    if (previous.sources.openalex && current.sources.openalex) {
+      const trendDelta = trendRank(current.trend) - trendRank(previous.trend)
+      if (trendDelta > 0) {
+        evidenceDelta += 2
+        timingDelta += 3
+        reasons.push(`Momentum científico mejoró de ${previous.trend} a ${current.trend}.`)
+      } else if (trendDelta < 0) {
+        evidenceDelta -= 2
+        timingDelta -= 3
+        reasons.push(`Momentum científico se debilitó de ${previous.trend} a ${current.trend}.`)
+      } else if (current.current_publications !== null && previous.current_publications !== null) {
+        const publicationDelta = current.current_publications - previous.current_publications
+        const materialThreshold = Math.max(2, Math.ceil(Math.max(1, previous.current_publications) * 0.2))
+        if (publicationDelta >= materialThreshold) {
+          evidenceDelta += 2
+          timingDelta += 1
+          reasons.push(`Actividad científica observable aumentó de ${previous.current_publications} a ${current.current_publications} publicaciones en la ventana.`)
+        } else if (publicationDelta <= -materialThreshold) {
+          evidenceDelta -= 2
+          timingDelta -= 1
+          reasons.push(`Actividad científica observable cayó de ${previous.current_publications} a ${current.current_publications} publicaciones en la ventana.`)
+        }
+      }
+    }
+  }
+
+  if (prototypeAssessment === "supports") {
+    evidenceDelta += 6
+    timingDelta += 2
+    reasons.push("La evaluación humana del prototipo apoya la tesis; VIDENTIA incorpora esa evidencia de ejecución con efecto acotado.")
+  } else if (prototypeAssessment === "mixed") {
+    evidenceDelta += 1
+    reasons.push("La evaluación humana del prototipo fue mixta; VIDENTIA registra una señal positiva mínima y mantiene cautela.")
+  } else if (prototypeAssessment === "refutes") {
+    evidenceDelta -= 8
+    timingDelta -= 3
+    reasons.push("La evaluación humana del prototipo refuta la tesis; VIDENTIA incorpora esa evidencia de ejecución con efecto negativo acotado.")
+  } else if (prototypeAssessment === "inconclusive") {
+    reasons.push("El prototipo fue clasificado como inconcluso; el resultado queda trazado pero no mueve la convicción.")
   }
 
   evidenceDelta = clamp(Math.round(evidenceDelta), -8, 8)
@@ -177,13 +205,14 @@ export function compareOpportunityMarketStates(
       : "stable"
 
   if (!reasons.length) reasons.push("No apareció un cambio material en los ejes duros respecto del snapshot anterior.")
-  if (current.news_context_count !== previous.news_context_count) {
+  if (previous && current.news_context_count !== previous.news_context_count) {
     reasons.push("El cambio en noticias se conserva como contexto y no altera el score de convicción.")
   }
 
   return {
     comparison: {
-      baseline: false,
+      baseline: !previous && !prototypeAssessment,
+      market_baseline: !previous,
       evidence_delta: evidenceDelta,
       timing_delta: timingDelta,
       confidence_delta: confidenceDelta,
@@ -191,6 +220,7 @@ export function compareOpportunityMarketStates(
       direction,
       reasons,
       news_non_scoring: true,
+      prototype_assessment: prototypeAssessment,
     },
     scores,
     confidence,

@@ -5,6 +5,7 @@ import {
   observeOpportunityMarketState,
   type ConvictionScores,
   type OpportunityMarketState,
+  type PrototypeAssessment,
 } from "@/lib/intelligence/opportunity-conviction"
 import { createOpportunityConvictionNotifications } from "@/lib/intelligence/opportunity-notifications"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -12,6 +13,13 @@ import { createAdminClient } from "@/lib/supabase/admin"
 export type OpportunityResearchRunType = "live_research" | "scheduled_research"
 
 type AdminClient = ReturnType<typeof createAdminClient>
+type PendingPrototypeAssessment = {
+  id: string
+  assessment: PrototypeAssessment
+  sourceResearchId: string
+  actionId: string | null
+  outcomeAt: string | null
+}
 
 export class OpportunityResearchError extends Error {
   constructor(message: string, public readonly status: number, public readonly code: string) {
@@ -60,7 +68,9 @@ export async function researchPersistedOpportunity(input: {
     throw new OpportunityResearchError("No pudimos reconstruir el historial de convicción.", 500, "history_failed")
   }
 
-  const previousState = findLatestMarketState((historyRows ?? []) as Array<Record<string, unknown>>)
+  const history = (historyRows ?? []) as Array<Record<string, unknown>>
+  const previousState = findLatestMarketState(history)
+  const pendingPrototypeAssessment = findPendingPrototypeAssessment(history)
   let observation: Awaited<ReturnType<typeof observeOpportunityMarketState>>
   try {
     observation = await observeOpportunityMarketState(query)
@@ -83,7 +93,13 @@ export async function researchPersistedOpportunity(input: {
     overall: Number(thesisRow.overall_score),
   }
   const beforeConfidence = Number(thesisRow.confidence)
-  const { comparison, scores, confidence } = compareOpportunityMarketStates(previousState, observation.state, beforeScores, beforeConfidence)
+  const { comparison, scores, confidence } = compareOpportunityMarketStates(
+    previousState,
+    observation.state,
+    beforeScores,
+    beforeConfidence,
+    pendingPrototypeAssessment?.assessment ?? null,
+  )
   const currentDecision = thesisRow.decision as "build" | "investigate" | "watch" | "reject"
   const evidenceState = thesisRow.evidence_state as "observed" | "mixed" | "hypothesis"
   const nextEvidenceState = evidenceState === "hypothesis" && observation.state.available_axes > 0 ? "mixed" as const : evidenceState
@@ -154,6 +170,13 @@ export async function researchPersistedOpportunity(input: {
         decision_before: currentDecision,
         decision_after: decision,
         decision_degraded: decision !== currentDecision,
+        prototype_assessment_id: pendingPrototypeAssessment?.id ?? null,
+        prototype_assessment_applied: pendingPrototypeAssessment ? {
+          assessment: pendingPrototypeAssessment.assessment,
+          source_research_id: pendingPrototypeAssessment.sourceResearchId,
+          action_id: pendingPrototypeAssessment.actionId,
+          outcome_at: pendingPrototypeAssessment.outcomeAt,
+        } : null,
         news_non_scoring: true,
         trigger: runType === "scheduled_research" ? "vercel_cron" : "explicit_user_action",
       },
@@ -219,6 +242,48 @@ function findLatestMarketState(rows: Array<Record<string, unknown>>): Opportunit
     if (isOpportunityMarketState(evidence.market_state)) return evidence.market_state
   }
   return null
+}
+
+function findPendingPrototypeAssessment(rows: Array<Record<string, unknown>>): PendingPrototypeAssessment | null {
+  let latestOutcomeRunId: string | null = null
+  for (const row of rows) {
+    const evidence = asRecord(row.evidence_summary)
+    const outcome = asRecord(evidence.prototype_outcome)
+    if (String(outcome.action_id ?? "") && String(outcome.outcome_at ?? "") && String(outcome.outcome ?? "").trim()) {
+      latestOutcomeRunId = String(row.id)
+      break
+    }
+  }
+  if (!latestOutcomeRunId) return null
+
+  const consumed = new Set<string>()
+  for (const row of rows) {
+    const evidence = asRecord(row.evidence_summary)
+    const assessmentId = String(evidence.prototype_assessment_id ?? "")
+    if (assessmentId) consumed.add(assessmentId)
+  }
+
+  for (const row of rows) {
+    const evidence = asRecord(row.evidence_summary)
+    const assessment = asRecord(evidence.prototype_assessment)
+    if (String(assessment.source_research_id ?? "") !== latestOutcomeRunId) continue
+    const assessmentId = String(row.id)
+    if (consumed.has(assessmentId)) return null
+    const value = String(assessment.assessment ?? "")
+    if (!isPrototypeAssessment(value)) return null
+    return {
+      id: assessmentId,
+      assessment: value,
+      sourceResearchId: latestOutcomeRunId,
+      actionId: assessment.action_id ? String(assessment.action_id) : null,
+      outcomeAt: assessment.outcome_at ? String(assessment.outcome_at) : null,
+    }
+  }
+  return null
+}
+
+function isPrototypeAssessment(value: string): value is PrototypeAssessment {
+  return value === "supports" || value === "mixed" || value === "refutes" || value === "inconclusive"
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
