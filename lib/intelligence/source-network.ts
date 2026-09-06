@@ -16,6 +16,7 @@ export type SourceDefinition = {
   purpose: string
   automationPolicy: AutomationPolicy
   credentialEnv?: string[]
+  credentialAnyOf?: string[]
   note?: string
 }
 
@@ -25,6 +26,7 @@ export const SOURCE_NETWORK: SourceDefinition[] = [
   { key: "registro_empresas", layer: "empresas", purpose: "Resolución exacta de identidad societaria y RUT mediante el dataset oficial del Registro de Empresas y Sociedades en datos.gob.cl.", automationPolicy: "allowed", note: "Conector bajo demanda; no implica una réplica mensual completa del registro." },
   { key: "cmf", layer: "empresas", purpose: "Condición regulatoria y presencia de entidades fiscalizadas por la CMF.", automationPolicy: "allowed" },
   { key: "cmf_norms", layer: "regulacion", purpose: "Normativa reciente publicada por la Comisión para el Mercado Financiero para vigilancia regulatoria.", automationPolicy: "allowed" },
+  { key: "cmf_market", layer: "mercado", purpose: "Indicadores oficiales de mercado (dólar, UF, euro e IPC) desde la API CMF/SBIF.", automationPolicy: "credentials_required", credentialAnyOf: ["CMF_API_KEY", "SBIF_API_KEY"], note: "El cliente acepta cualquiera de las dos variables por compatibilidad con la API CMF/SBIF." },
   { key: "bcn_norms", layer: "regulacion", purpose: "Normas chilenas consultadas desde el endpoint SPARQL oficial de la Biblioteca del Congreso Nacional.", automationPolicy: "allowed" },
   { key: "diario_oficial", layer: "regulacion", purpose: "Publicaciones regulatorias y actos oficiales de las ediciones electrónicas del Diario Oficial de Chile.", automationPolicy: "allowed" },
   { key: "snifa_sma", layer: "regulacion", purpose: "Sanciones, procedimientos, medidas provisionales y programas de cumplimiento publicados por SNIFA/SMA.", automationPolicy: "allowed" },
@@ -33,18 +35,25 @@ export const SOURCE_NETWORK: SourceDefinition[] = [
   { key: "openalex", layer: "ciencia_tecnologia", purpose: "Publicaciones, autores, instituciones y dinámica científica para medir evolución tecnológica.", automationPolicy: "allowed", credentialEnv: ["OPENALEX_API_KEY"], note: "La clave es opcional para uso básico y recomendable para operación continua." },
   { key: "crossref", layer: "ciencia_tecnologia", purpose: "Metadatos DOI y publicaciones para corroborar actividad científica y tecnológica.", automationPolicy: "allowed", credentialEnv: ["CROSSREF_MAILTO"], note: "CROSSREF_MAILTO no es obligatorio, pero habilita el polite pool recomendado por Crossref." },
   { key: "epo_ops", layer: "patentes", purpose: "Datos mundiales de patentes, familias, bibliografía y estado legal mediante EPO OPS.", automationPolicy: "credentials_required", credentialEnv: ["EPO_OPS_CONSUMER_KEY", "EPO_OPS_CONSUMER_SECRET"], note: "Requiere una aplicación registrada en EPO OPS y aceptación de sus términos." },
+  { key: "wipo_patentscope_rss", layer: "patentes", purpose: "Monitoreo de nuevas publicaciones de patentes mediante feeds RSS públicos de consultas guardadas en WIPO PATENTSCOPE.", automationPolicy: "allowed", note: "WIPO documenta RSS como mecanismo de sindicación para búsquedas PATENTSCOPE. VIDENTIA sólo acepta feeds HTTPS públicos en patentscope.wipo.int." },
   { key: "google_news_rss", layer: "noticias", purpose: "Contexto noticioso reciente para búsquedas y vigilancias estratégicas de VIDENTIA.", automationPolicy: "allowed", note: "Fuente contextual, no evidencia canónica ni eje de scoring. Se usa para artículos recientes; no sustituye el raw feed canónico de GDELT." },
   { key: "gdelt", layer: "noticias", purpose: "GDELT DOC API para búsqueda de artículos y contexto cuando el endpoint esté disponible desde el runtime.", automationPolicy: "allowed", note: "El endpoint DOC permanece desactivado operativamente por timeout/rate limit desde Vercel; no se usa como fuente canónica ni como dependencia de Technology Intelligence." },
   { key: "gdelt_raw_feed", layer: "noticias", purpose: "Eventos globales GDELT 2.0 normalizados desde el raw feed oficial, preservando cada observación y su evidencia de origen.", automationPolicy: "allowed", note: "Fuente canónica automatizada por GLOBALEVENTID; el transporte raw se publica aproximadamente cada 15 minutos." },
   { key: "gdelt_mentions", layer: "noticias", purpose: "Menciones documentales GDELT 2.0 para medir propagación, diversidad de fuentes, confianza y contexto por evento.", automationPolicy: "allowed", note: "Se une a Events por GLOBALEVENTID y al GKG por MentionIdentifier = V2DOCUMENTIDENTIFIER." },
   { key: "gdelt_gkg", layer: "noticias", purpose: "Global Knowledge Graph 2.1 proyectado a documentos enlazados desde Mentions para extraer organizaciones, personas, temas, lugares y tono.", automationPolicy: "allowed", note: "VIDENTIA no replica todo el GKG: materializa sólo documentos enlazados por evidencia de Mentions y conserva provenance del artifact." },
+  { key: "superir", layer: "empresas", purpose: "Referencia oficial sobre procedimientos concursales y quiebras de personas y empresas en Chile.", automationPolicy: "manual_only", note: "SuperIR ofrece Boletín Concursal y certificados oficiales, pero no se identificó una API pública documentada para automatizar consultas empresariales; certificados requieren Clave Única." },
+  { key: "wipo_lex_cl", layer: "regulacion", purpose: "Legislación, tratados y sentencias de propiedad intelectual para Chile en WIPO Lex.", automationPolicy: "manual_only", note: "Las condiciones de WIPO Lex prohíben consultas automatizadas y web scraping. Se mantiene como referencia manual." },
   { key: "wipo_global_brand_db", layer: "propiedad_industrial", purpose: "Referencia internacional de marcas y similitud visual de WIPO.", automationPolicy: "manual_only", note: "WIPO prohíbe consultas automatizadas y scraping de la Global Brand Database; no se usa como conector automático." },
 ]
 
 export function runtimeSourceStatus(definition: SourceDefinition) {
   if (definition.automationPolicy === "manual_only") return { status: "manual_only" as const, configured: false, missing: [] as string[] }
   const required = definition.credentialEnv ?? []
-  const missing = required.filter(name => !String(process.env[name] ?? "").trim())
+  const missingRequired = required.filter(name => !String(process.env[name] ?? "").trim())
+  const alternatives = definition.credentialAnyOf ?? []
+  const hasAlternative = alternatives.length === 0 || alternatives.some(name => String(process.env[name] ?? "").trim())
+  const missingAlternative = hasAlternative ? [] : [alternatives.join(" o ")]
+  const missing = [...missingRequired, ...missingAlternative]
   if (definition.key === "openalex" || definition.key === "crossref") return { status: missing.length ? "ready_basic" as const : "ready" as const, configured: true, missing }
   if (definition.automationPolicy === "credentials_required" && missing.length) return { status: "credentials_required" as const, configured: false, missing }
   return { status: "ready" as const, configured: true, missing }
