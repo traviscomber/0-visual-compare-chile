@@ -13,19 +13,32 @@ if (marksNavigation.includes('"/portfolio"')) {
 }
 
 for (const needle of [
-  '{href:"/portfolio",label:"Portafolio"}',
-  '{href:"/casos",label:"Casos"}',
-  '{href:"/oportunidades",label:"Oportunidades"}',
-  '{href:"/empresas",label:"Empresas"}',
-  '{href:"/espacios",label:"Espacios"}',
-  '{href:"/brechas",label:"Brechas"}',
-  '{href:"/fuentes",label:"Fuentes"}',
-  '{href:"/notificaciones",label:"Notificaciones"}',
-  '{href:"/settings",label:"Configuración"}',
+  '"/portfolio":"Portafolio"',
+  '"/casos":"Casos"',
+  '"/oportunidades":"Oportunidades"',
+  '"/empresas":"Empresas"',
+  '"/espacios":"Espacios"',
+  '"/brechas":"Brechas"',
+  '"/fuentes":"Fuentes"',
+  '"/notificaciones":"Notificaciones"',
+  '"/settings":"Configuración"',
+  'const sectionLabels:Readonly<Record<string,string>>',
   'function currentSectionLabel(pathname:string)',
+  'Object.entries(sectionLabels)',
   '{currentSectionLabel(pathname)}',
 ]) {
   if (!source.includes(needle)) fail(`missing shell context invariant: ${needle}`)
 }
 
-console.log("App shell section context regression PASS: operational workspaces keep exact section labels and Portfolio is no longer presented as Marcas.")
+for (const forbidden of [
+  'href:"/portfolio",label:',
+  'href:"/casos",label:',
+  'href:"/empresas",label:',
+  'href:"/espacios",label:',
+  'href:"/brechas",label:',
+  'href:"/oportunidades",label:',
+]) {
+  if (source.includes(forbidden)) fail(`operational context leaked into primary navigation syntax: ${forbidden}`)
+}
+
+console.log("App shell section context regression PASS: operational workspaces keep exact shell labels without becoming primary navigation items, and Portfolio is no longer presented as Marcas.")
