@@ -1,11 +1,12 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { Activity, ArrowRight, BellRing, BriefcaseBusiness, Building2, CheckCircle2, Clock3, Compass, Eye, Radar, Search, Sparkles, TrendingUp } from "lucide-react"
+import { Activity, ArrowRight, BellRing, BriefcaseBusiness, Building2, CheckCircle2, Clock3, Compass, Eye, FlaskConical, Radar, RefreshCw, Search, Sparkles, TrendingUp } from "lucide-react"
 import { OperationalHeader, OperationalMetric, OperationalMetricRail, OperationalPage, OperationalPanel, OperationalSectionHeader } from "@/components/app/operational-ui"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { buildCaseIntelligence, type CaseItemType, type CaseStatus } from "@/lib/cases/intelligence"
 import { strategicAnalysisHref } from "@/lib/intelligence/navigation-context"
+import { getPrototypeLearningAttention, type OpportunityResearchHistoryRun, type PrototypeAssessment } from "@/lib/intelligence/opportunity-thesis-attention"
 import { listPortfolioOrganizations } from "@/lib/intelligence/portfolio-access"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
@@ -20,6 +21,11 @@ type StrategicSignal = { id:string; watch_id:string; source_key:string; event_ty
 type CaseItem = { item_type:CaseItemType; title:string; created_at:string; metadata:Record<string,unknown>|null }
 type CaseRow = { id:string; title:string; status:CaseStatus; priority:"low"|"normal"|"high"; context_type:string; decision_summary:string|null; notes:string|null; last_reviewed_at:string|null; updated_at:string; case_items:CaseItem[]|null }
 type RecommendationSummary = { id:string; score:number; tier:"alta"|"media"|"observacion"; headline:string; recommended_action:string; status:"new"|"reviewed"|"accepted"|"discarded"|"converted_to_action"; case_id:string|null; action_id:string|null; updated_at:string }
+type ProductThesisSummary = { id:string; title:string; status:"exploring"|"watching"|"prototype"|"rejected"|"archived"; overall_score:number; evidence_strength:number; updated_at:string; research_history:OpportunityResearchHistoryRun[] }
+type ThesisHistoryRow = OpportunityResearchHistoryRun & { opportunity_id:string }
+type DashboardThesisAttention = { thesis:ProductThesisSummary; kind:"needs_assessment"|"needs_research"; assessment:PrototypeAssessment|null }
+
+const assessmentLabels:Record<PrototypeAssessment,string>={supports:"Apoya la tesis",mixed:"Resultado mixto",refutes:"Refuta la tesis",inconclusive:"Inconcluso"}
 
 function relative(value?:string|null){if(!value)return "Sin fecha";const date=new Date(value);if(Number.isNaN(date.getTime()))return value;const diff=Date.now()-date.getTime();const mins=Math.max(0,Math.floor(diff/60000));if(mins<1)return "Ahora";if(mins<60)return `Hace ${mins} min`;const hours=Math.floor(mins/60);if(hours<24)return `Hace ${hours} h`;const days=Math.floor(hours/24);if(days<7)return `Hace ${days} d`;return new Intl.DateTimeFormat("es-CL",{dateStyle:"medium"}).format(date)}
 function stale(value:string){return Date.now()-Date.parse(value)>14*86400000}
@@ -43,19 +49,32 @@ export default async function DashboardPage(){
 
   const opportunityOrganization=portfolioOrganizations[0]??null
   let recommendations:RecommendationSummary[]=[]
+  let productTheses:ProductThesisSummary[]=[]
   let opportunitiesAvailable=true
+  let productThesesAvailable=true
   if(opportunityOrganization){
-    const recommendationResult=await admin
-      .from("intelligence_recommendations")
-      .select("id,score,tier,headline,recommended_action,status,case_id,action_id,updated_at")
-      .eq("organization_id",opportunityOrganization.id)
-      .order("updated_at",{ascending:false})
-      .limit(50)
+    const [recommendationResult,thesisResult,thesisHistoryResult]=await Promise.all([
+      admin.from("intelligence_recommendations").select("id,score,tier,headline,recommended_action,status,case_id,action_id,updated_at").eq("organization_id",opportunityOrganization.id).order("updated_at",{ascending:false}).limit(50),
+      admin.from("innovation_opportunity_theses").select("id,title,status,overall_score,evidence_strength,updated_at").eq("organization_id",opportunityOrganization.id).order("updated_at",{ascending:false}).limit(100),
+      admin.from("innovation_opportunity_research_runs").select("id,opportunity_id,evidence_summary,observed_at").eq("organization_id",opportunityOrganization.id).order("observed_at",{ascending:false}).limit(1000),
+    ])
     if(recommendationResult.error){
       opportunitiesAvailable=false
       console.error("[dashboard:opportunities]",recommendationResult.error)
     }else{
       recommendations=(recommendationResult.data??[]) as RecommendationSummary[]
+    }
+    if(thesisResult.error||thesisHistoryResult.error){
+      productThesesAvailable=false
+      console.error("[dashboard:product-theses]",thesisResult.error??thesisHistoryResult.error)
+    }else{
+      const historyByOpportunity=new Map<string,OpportunityResearchHistoryRun[]>()
+      for(const row of (thesisHistoryResult.data??[]) as ThesisHistoryRow[]){
+        const bucket=historyByOpportunity.get(row.opportunity_id)??[]
+        if(bucket.length<20)bucket.push({id:row.id,evidence_summary:row.evidence_summary,observed_at:row.observed_at})
+        historyByOpportunity.set(row.opportunity_id,bucket)
+      }
+      productTheses=((thesisResult.data??[]) as Omit<ProductThesisSummary,"research_history">[]).map(thesis=>({...thesis,research_history:historyByOpportunity.get(thesis.id)??[]}))
     }
   }
 
@@ -79,6 +98,9 @@ export default async function DashboardPage(){
   const activeRecommendations=recommendations.filter(item=>!["discarded","converted_to_action"].includes(item.status))
   const highRecommendations=activeRecommendations.filter(item=>item.tier==="alta")
   const acceptedRecommendations=activeRecommendations.filter(item=>item.status==="accepted")
+  const activeTheses=productTheses.filter(item=>!["rejected","archived"].includes(item.status))
+  const prototypeTheses=activeTheses.filter(item=>item.status==="prototype")
+  const thesisAttention=prototypeTheses.map(thesis=>{const attention=getPrototypeLearningAttention(thesis.research_history);return attention?{thesis,kind:attention.kind,assessment:attention.assessment}:null}).filter((item):item is DashboardThesisAttention=>Boolean(item))
   const recommendationRank:Record<RecommendationSummary["tier"],number>={alta:3,media:2,observacion:1}
   const priorityRecommendations=[...activeRecommendations].sort((a,b)=>Number(b.status==="accepted")-Number(a.status==="accepted")||recommendationRank[b.tier]-recommendationRank[a.tier]||b.score-a.score||Date.parse(b.updated_at)-Date.parse(a.updated_at))
   const readyCaseIds=new Set(ready.map(item=>item.caseRow.id))
@@ -92,13 +114,15 @@ export default async function DashboardPage(){
   const otherStrategicSignals=newStrategicSignals.filter(item=>item.relevance!=="alta")
   const highTrademarkSignals=newSignals.filter(item=>item.relevance==="alta")
   const otherTrademarkSignals=newSignals.filter(item=>item.relevance!=="alta")
-  const decisionNow=ready.length+acceptedRecommendations.length
-  const attention=attentionCaseIds.size+newSignals.length+newStrategicSignals.length+(opportunitiesAvailable?activeRecommendations.length:0)
+  const decisionNow=ready.length+acceptedRecommendations.length+thesisAttention.length
+  const attention=attentionCaseIds.size+newSignals.length+newStrategicSignals.length+(opportunitiesAvailable?activeRecommendations.length:0)+(productThesesAvailable?thesisAttention.length:0)
+  const combinedOpportunityCount=(opportunitiesAvailable?activeRecommendations.length:0)+(productThesesAvailable?activeTheses.length:0)
   const displayName=(typeof user.user_metadata?.full_name==="string"&&user.user_metadata.full_name)||(typeof user.user_metadata?.name==="string"&&user.user_metadata.name)||user.email?.split("@")[0]||"equipo"
 
   const queue=[
     ...ready.map(item=>({href:`/casos/${item.caseRow.id}`,icon:CheckCircle2,kicker:"Listo para decidir",title:item.caseRow.title,detail:item.intelligence.pendingDecision,action:"Preparar decisión",tone:"warm" as const})),
     ...acceptedPriorityRecommendations.map(item=>({href:"/oportunidades",icon:Compass,kicker:"Oportunidad aceptada",title:item.headline,detail:item.recommended_action,action:"Llevar a ejecución",tone:"warm" as const})),
+    ...thesisAttention.map(item=>({href:"/oportunidades/tesis",icon:item.kind==="needs_assessment"?FlaskConical:RefreshCw,kicker:item.kind==="needs_assessment"?"Prototipo · Clasificar resultado":"Prototipo · Re-investigar aprendizaje",title:item.thesis.title,detail:item.kind==="needs_assessment"?"Existe un outcome atribuible que necesita clasificación humana antes de entrar al research.":`${item.assessment?assessmentLabels[item.assessment]:"Evaluación registrada"}. El aprendizaje está pendiente de ser consumido por una nueva investigación.`,action:item.kind==="needs_assessment"?"Clasificar":"Re-investigar",tone:"warm" as const})),
     ...otherPriorityRecommendations.filter(item=>item.tier==="alta").map(item=>({href:"/oportunidades",icon:Compass,kicker:"Oportunidad · Prioridad alta",title:item.headline,detail:item.recommended_action,action:"Revisar oportunidad",tone:"warm" as const})),
     ...changedOnly.map(item=>({href:`/casos/${item.caseRow.id}`,icon:BriefcaseBusiness,kicker:"Evidencia nueva",title:item.caseRow.title,detail:`${item.intelligence.newEvidenceCount} evidencia${item.intelligence.newEvidenceCount===1?"":"s"} nueva${item.intelligence.newEvidenceCount===1?"":"s"} desde la última revisión.`,action:"Revisar caso",tone:"primary" as const})),
     ...highStrategicSignals.map(item=>{const watch=strategicWatchMap.get(item.watch_id);return {href:watch?strategicAnalysisHref(watch.watch_type,watch.query):"/monitorear/estrategico",icon:Radar,kicker:`${item.source_key} · Cambio estratégico · Alta`,title:item.title,detail:watch?`${watch.query} · ${item.event_type}`:item.event_type,action:watch?"Abrir análisis":"Revisar cambio",tone:"warm" as const}}),
@@ -115,7 +139,7 @@ export default async function DashboardPage(){
     {number:"03",href:"/empresas",icon:TrendingUp,title:"¿Dónde está llevando su tecnología?",detail:"Lee cuatro ventanas trimestrales y distingue actividad emergente, aceleración, núcleo persistente, declive y señales experimentales.",meta:"Trayectoria · 4 trimestres"},
     {number:"04",href:"/espacios",icon:Radar,title:"¿Quién está entrando en mi espacio?",detail:"Analiza un código IPC o Niza. Entrante exige al menos dos expedientes actuales y ninguno en la ventana anterior.",meta:"IPC / Niza · actores nuevos"},
     {number:"05",href:"/tecnologias",icon:Sparkles,title:"¿Qué tecnologías están acelerándose?",detail:"Contrasta publicaciones, actividad científica y señales públicas sin convertir crecimiento documental en predicción.",meta:"OpenAlex · Crossref · GDELT"},
-    {number:"06",href:"/oportunidades",icon:Compass,title:"¿Dónde aparecen oportunidades?",detail:opportunitiesAvailable&&activeRecommendations.length?`${activeRecommendations.length} recomendación${activeRecommendations.length===1?"":"es"} activa${activeRecommendations.length===1?"":"s"}; ${highRecommendations.length} de prioridad alta y ${acceptedRecommendations.length} aceptada${acceptedRecommendations.length===1?"":"s"}.`:`Revisa recomendaciones persistidas, priorizadas y auditables antes de convertirlas en trabajo.`,meta:"Oportunidades · lifecycle persistido"},
+    {number:"06",href:"/oportunidades",icon:Compass,title:"¿Dónde aparecen oportunidades?",detail:opportunitiesAvailable||productThesesAvailable?`${opportunitiesAvailable?`${activeRecommendations.length} recomendaciones activas`:"Recommendation Engine degradado"}; ${productThesesAvailable?`${activeTheses.length} tesis activas y ${thesisAttention.length} aprendizajes por actuar`:"Opportunity Engine degradado"}.`:`No pudimos cargar los lifecycles de oportunidades.`,meta:"Oportunidades · dos lifecycles canónicos"},
   ]
 
   const latestResearch=research[0]??null
@@ -125,14 +149,14 @@ export default async function DashboardPage(){
     <OperationalHeader
       eyebrow="VIDENTIA / Resumen ejecutivo"
       title={decisionNow?`${decisionNow} prioridad${decisionNow===1?"":"es"} lista${decisionNow===1?"":"s"} para actuar.`:attention?`${attention} elemento${attention===1?"":"s"} requiere${attention===1?"":"n"} revisión.`:"No hay cambios que requieran atención."}
-      description={<>Hola, {displayName}. {attentionCaseIds.size?`${attentionCaseIds.size} caso${attentionCaseIds.size===1?"":"s"} concentra${attentionCaseIds.size===1?"":"n"} cambios, decisión o falta de movimiento. `:""}La bandeja prioriza decisiones y acciones aceptadas antes que señales informativas.</>}
+      description={<>Hola, {displayName}. {attentionCaseIds.size?`${attentionCaseIds.size} caso${attentionCaseIds.size===1?"":"s"} concentra${attentionCaseIds.size===1?"":"n"} cambios, decisión o falta de movimiento. `:""}La bandeja prioriza decisiones, acciones aceptadas y aprendizaje de prototipo antes que señales informativas.</>}
       actions={<><Button asChild variant="outline"><Link href="/oportunidades">Oportunidades</Link></Button><Button asChild><Link href="/investigar">Nueva investigación <Search className="ml-1 h-4 w-4"/></Link></Button></>}
     />
 
     <OperationalMetricRail>
-      <OperationalMetric value={decisionNow} label="Prioridades para actuar" detail={`${ready.length} decisiones · ${acceptedRecommendations.length} oportunidades aceptadas`} tone={decisionNow?"warning":"neutral"}/>
+      <OperationalMetric value={decisionNow} label="Prioridades para actuar" detail={`${ready.length} decisiones · ${acceptedRecommendations.length} oportunidades aceptadas · ${thesisAttention.length} aprendizajes`} tone={decisionNow?"warning":"neutral"}/>
       <OperationalMetric value={changed.length} label="Casos con evidencia nueva" detail={`${attentionCaseIds.size} casos únicos requieren atención`}/>
-      <OperationalMetric value={opportunitiesAvailable?activeRecommendations.length:"—"} label="Oportunidades activas" detail={opportunitiesAvailable?`${highRecommendations.length} prioridad alta · ${acceptedRecommendations.length} aceptadas`:"No pudimos cargar el lifecycle"} tone={opportunitiesAvailable&&highRecommendations.length?"warning":"neutral"}/>
+      <OperationalMetric value={opportunitiesAvailable||productThesesAvailable?combinedOpportunityCount:"—"} label="Oportunidades activas" detail={`${opportunitiesAvailable?`${activeRecommendations.length} recomendaciones`:"recomendaciones no disponibles"} · ${productThesesAvailable?`${activeTheses.length} tesis · ${thesisAttention.length} por actuar`:"tesis no disponibles"}`} tone={(opportunitiesAvailable&&highRecommendations.length)||(productThesesAvailable&&thesisAttention.length)?"warning":"neutral"}/>
       <OperationalMetric value={newSignals.length+newStrategicSignals.length} label="Señales nuevas" detail={`${newStrategicSignals.length} estratégicas · ${newSignals.length} marcarias`} tone={newSignals.length+newStrategicSignals.length?"warning":"neutral"}/>
     </OperationalMetricRail>
 
@@ -168,7 +192,7 @@ export default async function DashboardPage(){
       <aside>
         <OperationalPanel>
           <OperationalSectionHeader eyebrow="Contexto reciente" title="Última actividad" />
-          <div className="mt-5 divide-y divide-border/80 border-t border-border/80">{opportunitiesAvailable&&activeRecommendations.length?<ContextRow icon={Compass} title={`${activeRecommendations.length} oportunidad${activeRecommendations.length===1?"":"es"} activa${activeRecommendations.length===1?"":"s"}`} detail={`${highRecommendations.length} prioridad alta · ${acceptedRecommendations.length} aceptadas`} href="/oportunidades"/>:null}{latestResearch?<ContextRow icon={Search} title={`Búsqueda: ${latestResearch.query}`} detail={`${latestResearch.results_count} resultados`} href={`/investigar?q=${encodeURIComponent(latestResearch.query)}`}/>:null}{latestSignal?<ContextRow icon={BellRing} title={latestSignal.mark_name} detail={`${latestSignal.source} · ${watchMap.get(latestSignal.watch_id)?.query??"Vigilancia"}`} href="/monitorear"/>:null}{activeStrategicWatches.length?<ContextRow icon={Radar} title={`${activeStrategicWatches.length} vigilancia${activeStrategicWatches.length===1?"":"s"} estratégica${activeStrategicWatches.length===1?"":"s"}`} detail="Empresas, competidores y tecnologías" href="/monitorear/estrategico"/>:null}{activeWatches.length?<ContextRow icon={Eye} title={`${activeWatches.length} vigilancia${activeWatches.length===1?"":"s"} activa${activeWatches.length===1?"":"s"}`} detail="Marcas y titulares" href="/monitorear"/>:null}{!latestResearch&&!latestSignal&&!activeWatches.length&&!activeStrategicWatches.length&&!activeRecommendations.length?<Empty href="/investigar" icon={Search} title="Aún no hay actividad" action="Empezar" compact/>:null}</div>
+          <div className="mt-5 divide-y divide-border/80 border-t border-border/80">{opportunitiesAvailable&&activeRecommendations.length?<ContextRow icon={Compass} title={`${activeRecommendations.length} recomendación${activeRecommendations.length===1?"":"es"} activa${activeRecommendations.length===1?"":"s"}`} detail={`${highRecommendations.length} prioridad alta · ${acceptedRecommendations.length} aceptadas`} href="/oportunidades"/>:null}{productThesesAvailable&&activeTheses.length?<ContextRow icon={FlaskConical} title={`${activeTheses.length} tesis de producto activa${activeTheses.length===1?"":"s"}`} detail={`${prototypeTheses.length} prototipo${prototypeTheses.length===1?"":"s"} · ${thesisAttention.length} aprendizaje${thesisAttention.length===1?"":"s"} por actuar`} href="/oportunidades/tesis"/>:null}{latestResearch?<ContextRow icon={Search} title={`Búsqueda: ${latestResearch.query}`} detail={`${latestResearch.results_count} resultados`} href={`/investigar?q=${encodeURIComponent(latestResearch.query)}`}/>:null}{latestSignal?<ContextRow icon={BellRing} title={latestSignal.mark_name} detail={`${latestSignal.source} · ${watchMap.get(latestSignal.watch_id)?.query??"Vigilancia"}`} href="/monitorear"/>:null}{activeStrategicWatches.length?<ContextRow icon={Radar} title={`${activeStrategicWatches.length} vigilancia${activeStrategicWatches.length===1?"":"s"} estratégica${activeStrategicWatches.length===1?"":"s"}`} detail="Empresas, competidores y tecnologías" href="/monitorear/estrategico"/>:null}{activeWatches.length?<ContextRow icon={Eye} title={`${activeWatches.length} vigilancia${activeWatches.length===1?"":"s"} activa${activeWatches.length===1?"":"s"}`} detail="Marcas y titulares" href="/monitorear"/>:null}{!latestResearch&&!latestSignal&&!activeWatches.length&&!activeStrategicWatches.length&&!activeRecommendations.length&&!activeTheses.length?<Empty href="/investigar" icon={Search} title="Aún no hay actividad" action="Empezar" compact/>:null}</div>
         </OperationalPanel>
       </aside>
     </section>
