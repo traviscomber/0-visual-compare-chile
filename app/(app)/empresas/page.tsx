@@ -266,7 +266,7 @@ function GraphSection({ graph }: { graph: NonNullable<TrajectoryResult["graph"]>
     <OperationalMetricRail className="mt-6 border-t border-border/80">
       <OperationalMetric value={activity.total_12m} label="Expedientes / 12m" detail={`${activity.patents_12m} patentes · ${activity.trademarks_12m} marcas`} />
       <OperationalMetric value={activity.classification_count} label="Clases distintas" detail="IPC + Niza observadas en los últimos 12 meses" />
-      <OperationalMetric value={graph.legacy.brandCount} label="Marcas históricas" detail={`${graph.legacy.linkedEntities} enlaces legacy exactos`} />
+      <OperationalMetric value={graph.legacy.brandCount.toLocaleString("es-CL")} label="Marcas históricas" detail={`${graph.legacy.linkedEntities} enlaces legacy exactos`} />
       <OperationalMetric value={graph.corporateRelationships.length} label="Relaciones corporativas verificadas" detail="Matriz, filiales o grupo con evidencia explícita" />
     </OperationalMetricRail>
     <div className="mt-8 grid gap-8 xl:grid-cols-[1.05fr_.95fr]">
