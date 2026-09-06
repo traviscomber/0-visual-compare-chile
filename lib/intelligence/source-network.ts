@@ -23,6 +23,8 @@ export type SourceDefinition = {
 export const SOURCE_NETWORK: SourceDefinition[] = [
   { key: "inapi_open_data", layer: "propiedad_industrial", purpose: "Marcas, solicitudes, titulares, estados, clases de Niza y evidencia oficial de Chile.", automationPolicy: "allowed" },
   { key: "tdpi", layer: "jurisprudencia", purpose: "Señales procesales y jurisprudencia del Tribunal de Propiedad Industrial.", automationPolicy: "allowed" },
+  { key: "tdlc_jurisprudence", layer: "jurisprudencia", purpose: "Sentencias y resoluciones recientes publicadas por el Tribunal de Defensa de la Libre Competencia.", automationPolicy: "allowed", note: "Conector on-demand sobre las páginas oficiales de jurisprudencia; la publicación web no reemplaza la notificación legal." },
+  { key: "fne_competition", layer: "mercado", purpose: "Documentos oficiales de investigaciones y operaciones de concentración publicados por la Fiscalía Nacional Económica.", automationPolicy: "allowed", note: "Conector on-demand por partes involucradas; conserva el documento oficial FNE como evidencia primaria." },
   { key: "registro_empresas", layer: "empresas", purpose: "Resolución exacta de identidad societaria y RUT mediante el dataset oficial del Registro de Empresas y Sociedades en datos.gob.cl.", automationPolicy: "allowed", note: "Conector bajo demanda; no implica una réplica mensual completa del registro." },
   { key: "cmf", layer: "empresas", purpose: "Condición regulatoria y presencia de entidades fiscalizadas por la CMF.", automationPolicy: "allowed" },
   { key: "cmf_norms", layer: "regulacion", purpose: "Normativa reciente publicada por la Comisión para el Mercado Financiero para vigilancia regulatoria.", automationPolicy: "allowed" },
