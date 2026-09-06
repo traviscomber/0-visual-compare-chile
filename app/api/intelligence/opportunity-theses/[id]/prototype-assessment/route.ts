@@ -76,7 +76,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const thesisTitle = String(thesis.title)
   const thesisCreatorUserId = String(thesis.created_by)
 
-  async function syncPrototypeLearningNotifications(assessmentId: string) {
+  async function syncPrototypeLearningNotifications(assessmentId: string, supersededAssessmentIds: string[]) {
     let notificationsResolved = 0
     let notificationsCreated = 0
 
@@ -86,9 +86,22 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         stage: "assessment",
         sourceId: outcomeResearchId,
       })
-      notificationsResolved = resolution.resolved
+      notificationsResolved += resolution.resolved
     } catch (notificationError) {
       console.error("[opportunity-theses:prototype-assessment:notification-resolution]", notificationError)
+    }
+
+    for (const supersededAssessmentId of supersededAssessmentIds) {
+      try {
+        const resolution = await resolveOpportunityPrototypeLearningNotifications(admin, {
+          opportunityId: id,
+          stage: "research",
+          sourceId: supersededAssessmentId,
+        })
+        notificationsResolved += resolution.resolved
+      } catch (notificationError) {
+        console.error("[opportunity-theses:prototype-assessment:superseded-notification-resolution]", notificationError)
+      }
     }
 
     try {
@@ -123,10 +136,20 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: "No pudimos verificar evaluaciones anteriores." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
-  for (const row of priorRows ?? []) {
+  const priorAssessments = (priorRows ?? []).filter(row => {
     const existing = asRecord(asRecord(row.evidence_summary).prototype_assessment)
-    if (existing.source_research_id === outcomeRun.id && existing.assessment === assessmentValue) {
-      const notificationSync = await syncPrototypeLearningNotifications(String(row.id))
+    return String(existing.source_research_id ?? "") === outcomeResearchId
+  })
+  const priorAssessmentIds = priorAssessments.map(row => String(row.id))
+
+  for (const row of priorAssessments) {
+    const existing = asRecord(asRecord(row.evidence_summary).prototype_assessment)
+    if (existing.assessment === assessmentValue) {
+      const assessmentId = String(row.id)
+      const notificationSync = await syncPrototypeLearningNotifications(
+        assessmentId,
+        priorAssessmentIds.filter(priorAssessmentId => priorAssessmentId !== assessmentId),
+      )
       return NextResponse.json({ assessment: row, created: false, ...notificationSync }, { headers: PRIVATE_NO_STORE_HEADERS })
     }
   }
@@ -174,7 +197,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: "No pudimos registrar la evaluación del prototipo." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
-  const notificationSync = await syncPrototypeLearningNotifications(String(assessmentRun.id))
+  const notificationSync = await syncPrototypeLearningNotifications(String(assessmentRun.id), priorAssessmentIds)
   return NextResponse.json({ assessment: assessmentRun, created: true, ...notificationSync }, { status: 201, headers: PRIVATE_NO_STORE_HEADERS })
 }
 
