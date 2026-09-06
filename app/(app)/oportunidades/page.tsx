@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { ArrowRight, BrainCircuit, BriefcaseBusiness, CheckCircle2, CircleDot, GitCompareArrows, Loader2, Radar, ShieldCheck } from "lucide-react"
+import { ArrowRight, BrainCircuit, BriefcaseBusiness, CheckCircle2, CircleDot, FlaskConical, GitCompareArrows, Loader2, Radar, RefreshCw, ShieldCheck } from "lucide-react"
 import { OperationalHeader, OperationalMetric, OperationalMetricRail, OperationalPage, OperationalPanel, OperationalSectionHeader } from "@/components/app/operational-ui"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -31,6 +31,36 @@ type Recommendation = {
   updated_at: string
   competitor: { id: string; canonical_name: string; country: string | null } | null
 }
+type PrototypeAssessment = "supports" | "mixed" | "refutes" | "inconclusive"
+type ThesisResearchRun = {
+  id: string
+  run_type: string
+  evidence_summary?: {
+    prototype_outcome?: { action_id?: string; outcome_at?: string; outcome?: string }
+    prototype_assessment?: { source_research_id?: string; assessment?: PrototypeAssessment }
+    prototype_assessment_id?: string | null
+  }
+  observed_at: string
+}
+type ProductThesis = {
+  id: string
+  title: string
+  status: "exploring" | "watching" | "prototype" | "rejected" | "archived"
+  decision: "build" | "investigate" | "watch" | "reject"
+  evidence_state: "observed" | "mixed" | "hypothesis"
+  confidence: number
+  overall_score: number
+  evidence_strength: number
+  timing_score: number
+  last_researched_at: string | null
+  updated_at: string
+  research_history: ThesisResearchRun[]
+}
+type ThesisAttention = {
+  thesis: ProductThesis
+  kind: "needs_assessment" | "needs_research"
+  assessment: PrototypeAssessment | null
+}
 
 const statusLabels: Record<Status, string> = {
   new: "Nueva",
@@ -40,16 +70,25 @@ const statusLabels: Record<Status, string> = {
   converted_to_action: "En acción",
 }
 
+const assessmentLabels: Record<PrototypeAssessment, string> = {
+  supports: "Apoya la tesis",
+  mixed: "Resultado mixto",
+  refutes: "Refuta la tesis",
+  inconclusive: "Inconcluso",
+}
+
 export default function OpportunitiesPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [organizationId, setOrganizationId] = useState("")
   const [items, setItems] = useState<Recommendation[]>([])
+  const [theses, setTheses] = useState<ProductThesis[]>([])
+  const [thesesAvailable, setThesesAvailable] = useState(true)
   const [filter, setFilter] = useState<"active" | "all" | Status>("active")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => { void loadOrganizations() }, [])
-  useEffect(() => { if (organizationId) void loadRecommendations(organizationId) }, [organizationId])
+  useEffect(() => { if (organizationId) void loadOpportunityWorkspace(organizationId) }, [organizationId])
 
   async function loadOrganizations() {
     setLoading(true)
@@ -68,14 +107,26 @@ export default function OpportunitiesPage() {
     }
   }
 
-  async function loadRecommendations(nextOrganizationId: string) {
+  async function loadOpportunityWorkspace(nextOrganizationId: string) {
     setLoading(true)
     setError(null)
+    setThesesAvailable(true)
     try {
-      const response = await fetch(`/api/intelligence/recommendations?organizationId=${encodeURIComponent(nextOrganizationId)}`, { cache: "no-store" })
-      const payload = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(payload.error || "No pudimos cargar las oportunidades.")
-      setItems((payload.recommendations ?? []) as Recommendation[])
+      const [recommendationResponse, thesisResponse] = await Promise.all([
+        fetch(`/api/intelligence/recommendations?organizationId=${encodeURIComponent(nextOrganizationId)}`, { cache: "no-store" }),
+        fetch(`/api/intelligence/opportunity-theses?organizationId=${encodeURIComponent(nextOrganizationId)}`, { cache: "no-store" }),
+      ])
+      const recommendationPayload = await recommendationResponse.json().catch(() => ({}))
+      if (!recommendationResponse.ok) throw new Error(recommendationPayload.error || "No pudimos cargar las oportunidades.")
+      setItems((recommendationPayload.recommendations ?? []) as Recommendation[])
+
+      const thesisPayload = await thesisResponse.json().catch(() => ({}))
+      if (thesisResponse.ok) {
+        setTheses((thesisPayload.opportunities ?? []) as ProductThesis[])
+      } else {
+        setTheses([])
+        setThesesAvailable(false)
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No pudimos cargar las oportunidades.")
     } finally {
@@ -98,28 +149,43 @@ export default function OpportunitiesPage() {
     action: items.filter(item => item.status === "converted_to_action").length,
   }), [items])
 
+  const activeTheses = useMemo(() => theses.filter(item => !["rejected", "archived"].includes(item.status)), [theses])
+  const prototypeTheses = useMemo(() => activeTheses.filter(item => item.status === "prototype"), [activeTheses])
+  const thesisAttention = useMemo(() => prototypeTheses.map(getThesisAttention).filter((item): item is ThesisAttention => Boolean(item)), [prototypeTheses])
+  const needsAssessment = thesisAttention.filter(item => item.kind === "needs_assessment").length
+  const needsResearch = thesisAttention.filter(item => item.kind === "needs_research").length
   const selectedOrganization = organizations.find(item => item.id === organizationId) ?? null
-  const actionNow = metrics.accepted
+  const actionNow = metrics.accepted + thesisAttention.length
 
   return <OperationalPage>
     <OperationalHeader
       eyebrow="VIDENTIA / Oportunidades"
-      title={actionNow ? `${actionNow} oportunidad${actionNow === 1 ? "" : "es"} lista${actionNow === 1 ? "" : "s"} para ejecutar.` : metrics.active ? `${metrics.active} oportunidad${metrics.active === 1 ? "" : "es"} requiere${metrics.active === 1 ? "" : "n"} decisión.` : "No hay oportunidades pendientes."}
-      description={<>Esta bandeja conserva oportunidades persistidas. El Opportunity Engine abre una segunda vía: descubrir productos nuevos desde las capacidades reales de la empresa y señales autorizadas del OS.</>}
-      meta={<><span>Persistidas</span><span>Priorizadas</span><span>Auditables</span><span>Accionables</span></>}
-      actions={<div className="flex flex-wrap gap-2"><Button asChild><Link href="/oportunidades/descubrir"><BrainCircuit className="h-4 w-4" />Descubrir productos</Link></Button><Button asChild variant="outline"><Link href="/brechas">Brechas IP <GitCompareArrows className="ml-1 h-4 w-4" /></Link></Button></div>}
+      title={actionNow ? `${actionNow} decisión${actionNow === 1 ? "" : "es"} requiere${actionNow === 1 ? "" : "n"} acción.` : metrics.active || activeTheses.length ? "No hay decisiones críticas pendientes." : "No hay oportunidades pendientes."}
+      description={<>Una sola bandeja coordina dos ciclos distintos sin mezclar sus fuentes: recomendaciones persistidas del Recommendation Engine y tesis de producto gobernadas por Opportunity Engine.</>}
+      meta={<><span>Recommendations</span><span>Product theses</span><span>Human-gated</span><span>Canonical</span></>}
+      actions={<div className="flex flex-wrap gap-2"><Button asChild><Link href="/oportunidades/tesis"><FlaskConical className="h-4 w-4" />Tesis de producto</Link></Button><Button asChild variant="outline"><Link href="/oportunidades/descubrir"><BrainCircuit className="h-4 w-4" />Descubrir</Link></Button></div>}
     />
 
     <OperationalMetricRail>
-      <OperationalMetric value={metrics.accepted} label="Listas para ejecutar" detail="Aceptadas y pendientes de llevar a trabajo" tone={metrics.accepted ? "warning" : "neutral"} />
-      <OperationalMetric value={metrics.high} label="Prioridad alta" detail="Activas que requieren revisión prioritaria" tone={metrics.high ? "warning" : "neutral"} />
-      <OperationalMetric value={metrics.active} label="Activas" detail="Pendientes de decisión o aceptación" tone={metrics.active ? "warning" : "neutral"} />
-      <OperationalMetric value={metrics.action} label="En acción" detail="Ya vinculadas a una tarea" tone={metrics.action ? "success" : "neutral"} />
+      <OperationalMetric value={actionNow} label="Para actuar" detail={`${metrics.accepted} recomendación${metrics.accepted === 1 ? "" : "es"} aceptada${metrics.accepted === 1 ? "" : "s"} · ${thesisAttention.length} aprendizaje${thesisAttention.length === 1 ? "" : "s"} pendiente${thesisAttention.length === 1 ? "" : "s"}`} tone={actionNow ? "warning" : "success"} />
+      <OperationalMetric value={metrics.active} label="Recomendaciones activas" detail={`${metrics.high} de prioridad alta`} tone={metrics.high ? "warning" : metrics.active ? "neutral" : "success"} />
+      <OperationalMetric value={activeTheses.length} label="Tesis activas" detail="Exploración, vigilancia y prototipo" tone={activeTheses.length ? "neutral" : "success"} />
+      <OperationalMetric value={prototypeTheses.length} label="Prototipos" detail={`${needsAssessment} por clasificar · ${needsResearch} por re-investigar`} tone={thesisAttention.length ? "warning" : prototypeTheses.length ? "success" : "neutral"} />
     </OperationalMetricRail>
+
+    <section className="border-b border-border/80 py-8">
+      <OperationalSectionHeader eyebrow="01 / Opportunity Engine" title="Aprendizaje de prototipo que todavía necesita una decisión." meta={thesesAvailable ? `${activeTheses.length} tesis activas` : "Fuente degradada"} />
+      {!thesesAvailable ? <div className="mt-5 border-y border-[#7A5B41]/45 bg-[#332C24]/35 px-4 py-4 text-sm text-[#D6C3A8]">El lifecycle de recomendaciones sigue disponible. La lectura de tesis está temporalmente degradada y no se reemplaza con datos inferidos.</div> : null}
+      {thesesAvailable && thesisAttention.length ? <div className="mt-5 divide-y divide-border/70 border-y border-border/70">
+        {thesisAttention.slice(0, 4).map(item => <ThesisAttentionRow key={item.thesis.id} item={item} />)}
+      </div> : null}
+      {thesesAvailable && !thesisAttention.length && activeTheses.length ? <div className="mt-5 flex flex-col gap-4 border-y border-border/70 py-5 md:flex-row md:items-center md:justify-between"><div><p className="text-sm font-medium text-white">Ninguna tesis requiere intervención de aprendizaje ahora.</p><p className="mt-1 text-sm leading-6 text-muted-foreground">{prototypeTheses.length ? "Los resultados de prototipo clasificados ya fueron consumidos o aún no existe un outcome atribuible pendiente." : "Las tesis activas todavía no han llegado a prototipo."}</p></div><Button asChild size="sm" variant="outline"><Link href="/oportunidades/tesis">Ver tesis <ArrowRight className="h-4 w-4" /></Link></Button></div> : null}
+      {thesesAvailable && !activeTheses.length ? <div className="mt-5 flex flex-col gap-4 border-y border-border/70 py-5 md:flex-row md:items-center md:justify-between"><div><p className="text-sm font-medium text-white">Todavía no hay tesis de producto activas.</p><p className="mt-1 text-sm leading-6 text-muted-foreground">Opportunity Engine puede descubrir hipótesis desde capacidades y señales reales; sólo una persona decide persistirlas.</p></div><Button asChild size="sm"><Link href="/oportunidades/descubrir">Descubrir productos <ArrowRight className="h-4 w-4" /></Link></Button></div> : null}
+    </section>
 
     <section className="grid gap-8 border-b border-border/80 py-8 xl:grid-cols-[minmax(0,1.3fr)_minmax(300px,0.7fr)] xl:gap-10">
       <div>
-        <OperationalSectionHeader eyebrow="01 / Bandeja" title="Primero actúa. Después revisa." meta={`${filtered.length} visibles`} />
+        <OperationalSectionHeader eyebrow="02 / Recommendation Engine" title="Recomendaciones persistidas que deben avanzar por su lifecycle." meta={`${filtered.length} visibles`} />
 
         {organizations.length > 1 ? <label className="mt-5 block max-w-md"><span className="mb-2 block text-xs text-muted-foreground">Organización</span><select value={organizationId} onChange={event => setOrganizationId(event.target.value)} className="h-11 w-full rounded-[10px] border border-border bg-card/40 px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/45">{organizations.map(org => <option key={org.id} value={org.id}>{org.name}</option>)}</select></label> : null}
 
@@ -136,22 +202,57 @@ export default function OpportunitiesPage() {
         {error ? <div role="alert" className="mt-6 rounded-[10px] bg-[#2E2922] p-4 text-sm text-[#D9B27C]">{error}</div> : null}
 
         {!loading && !error ? <div className="mt-5 divide-y divide-border/80 border-y border-border/80">
-          {filtered.length ? filtered.map(item => <OpportunityRow key={item.id} item={item} />) : <div className="py-10"><ShieldCheck className="h-5 w-5 text-primary" /><p className="mt-3 text-sm font-medium text-white">No hay oportunidades persistidas en este estado.</p><p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">Puedes guardar señales desde Brechas IP o abrir Opportunity Engine para descubrir nuevas tesis de producto antes de llevarlas al lifecycle operativo.</p><Button asChild size="sm" className="mt-4"><Link href="/oportunidades/descubrir">Abrir Opportunity Engine <ArrowRight className="h-4 w-4" /></Link></Button></div>}
+          {filtered.length ? filtered.map(item => <OpportunityRow key={item.id} item={item} />) : <div className="py-10"><ShieldCheck className="h-5 w-5 text-primary" /><p className="mt-3 text-sm font-medium text-white">No hay recomendaciones persistidas en este estado.</p><p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">Puedes guardar señales desde Brechas IP o abrir Opportunity Engine para descubrir nuevas tesis de producto antes de llevarlas al lifecycle operativo.</p><Button asChild size="sm" className="mt-4"><Link href="/oportunidades/descubrir">Abrir Opportunity Engine <ArrowRight className="h-4 w-4" /></Link></Button></div>}
         </div> : null}
       </div>
 
       <aside>
         <OperationalPanel>
-          <OperationalSectionHeader eyebrow="Control" title="Una sola fuente de verdad" />
+          <OperationalSectionHeader eyebrow="Control" title="Dos lifecycles. Una lectura ejecutiva." />
           <div className="mt-5 space-y-4 text-sm leading-6 text-muted-foreground">
-            <p>Esta pantalla no inventa oportunidades. Lee el lifecycle persistido del Recommendation Engine y conserva el mismo score, evidencia y estado.</p>
+            <p><span className="text-foreground">Recommendation Engine</span> conserva su score, evidencia, estado y vínculo a casos. Esta pantalla nunca lo recalcula.</p>
+            <p className="border-t border-border/80 pt-4"><span className="text-foreground">Opportunity Engine</span> conserva tesis, research, decisiones humanas, outcomes y evaluaciones como un lineage separado. Un outcome no valida una tesis automáticamente.</p>
             <p className="border-t border-border/80 pt-4">{selectedOrganization?.binding ? <>Portafolio vinculado a <span className="text-foreground">{selectedOrganization.binding.canonical_name}</span>.</> : "La organización todavía no tiene una identidad propia vinculada."}</p>
-            <p className="text-xs leading-5">Opportunity Engine genera hipótesis separadas de este lifecycle hasta que el equipo decide investigarlas, persistirlas o convertirlas en trabajo.</p>
+            <Button asChild size="sm" variant="ghost" className="px-0"><Link href="/brechas">Abrir Brechas IP <GitCompareArrows className="h-4 w-4" /></Link></Button>
           </div>
         </OperationalPanel>
       </aside>
     </section>
   </OperationalPage>
+}
+
+function ThesisAttentionRow({ item }: { item: ThesisAttention }) {
+  const { thesis } = item
+  const isAssessment = item.kind === "needs_assessment"
+  return <article className="flex flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between">
+    <div className="min-w-0">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="outline" className={`rounded-md ${isAssessment ? "border-[#D6A46F]/30 bg-[#332C24]/65 text-[#E0B987]" : "border-[#7E9CAB]/25 bg-[#13272D]/70 text-[#A9C0CA]"}`}>{isAssessment ? "Clasificar resultado" : "Re-investigar aprendizaje"}</Badge>
+        <Badge variant="outline" className="rounded-md">{thesis.overall_score}/100</Badge>
+        <Badge variant="outline" className="rounded-md">Evidencia {thesis.evidence_strength}</Badge>
+      </div>
+      <h3 className="mt-2 text-base font-medium text-white">{thesis.title}</h3>
+      <p className="mt-1 text-sm leading-6 text-muted-foreground">{isAssessment ? "Existe un outcome atribuible de prototipo que aún necesita clasificación humana antes de poder entrar al siguiente research." : `${item.assessment ? assessmentLabels[item.assessment] : "Evaluación registrada"}. La evaluación está pendiente de ser consumida por una nueva investigación.`}</p>
+    </div>
+    <Button asChild size="sm" variant={isAssessment ? "default" : "outline"}><Link href="/oportunidades/tesis">{isAssessment ? <FlaskConical className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}{isAssessment ? "Clasificar" : "Re-investigar"}</Link></Button>
+  </article>
+}
+
+function getThesisAttention(thesis: ProductThesis): ThesisAttention | null {
+  const outcomeRun = thesis.research_history.find(run => {
+    const outcome = run.evidence_summary?.prototype_outcome
+    return Boolean(outcome?.action_id && outcome?.outcome_at && outcome?.outcome?.trim())
+  })
+  if (!outcomeRun) return null
+
+  const assessmentRun = thesis.research_history.find(run => run.evidence_summary?.prototype_assessment?.source_research_id === outcomeRun.id)
+  if (!assessmentRun) return { thesis, kind: "needs_assessment", assessment: null }
+
+  const consumed = thesis.research_history.some(run => run.evidence_summary?.prototype_assessment_id === assessmentRun.id)
+  if (consumed) return null
+
+  const assessment = assessmentRun.evidence_summary?.prototype_assessment?.assessment ?? null
+  return { thesis, kind: "needs_research", assessment }
 }
 
 function FilterButton({ active, children, onClick }: { active: boolean; children: React.ReactNode; onClick: () => void }) {
