@@ -21,6 +21,10 @@
       "schedule": "40 * * * *"
     },
     {
+      "path": "/api/cron/juan-actionable-signals",
+      "schedule": "44 * * * *"
+    },
+    {
       "path": "/api/cron/sea-seia-watches",
       "schedule": "50 */6 * * *"
     },
