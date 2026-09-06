@@ -21,6 +21,35 @@ type EvolutionRow = {
   updated_at: string
 }
 
+type ActionableSignalType = "competitor" | "applicable_technology" | "product_opportunity" | "integration" | "threat" | "research_frontier"
+
+type ActionableSignal = {
+  id: string
+  productKey: string
+  productName: string
+  title: string
+  sourceKey: string
+  sourceUrl: string | null
+  lastSeenAt: string | null
+  signalType: ActionableSignalType
+  reason: string | null
+}
+
+type WatchRow = {
+  id: string
+  metadata: Record<string, unknown> | null
+}
+
+type WatchEventRow = {
+  id: string
+  watch_id: string | null
+  title: string
+  source_key: string
+  source_url: string | null
+  payload: Record<string, unknown> | null
+  last_seen_at: string | null
+}
+
 type ChileEvidenceItem = {
   title?: string
   source?: string
@@ -90,6 +119,8 @@ type EvidenceSnapshot = {
   }
 }
 
+const ACTIONABLE_TYPES = new Set<ActionableSignalType>(["competitor", "applicable_technology", "product_opportunity", "integration", "threat", "research_frontier"])
+
 export async function JuanProductEvolutionStrip({ userId }: { userId: string }) {
   const admin = createAdminClient()
   const organizations = await listPortfolioOrganizations(admin, userId).catch(() => [])
@@ -114,6 +145,8 @@ export async function JuanProductEvolutionStrip({ userId }: { userId: string }) 
   const rows = (data ?? []) as EvolutionRow[]
   if (!rows.length) return null
 
+  const productNames = new Map(rows.map(row => [row.product_key, row.product_name]))
+  const signals = await loadActionableSignals(admin, userId, organization.name, productNames)
   const pending = rows.filter(row => row.status === "ready_for_review").slice(0, 4)
   const researching = rows.filter(row => row.status === "researching").slice(0, Math.max(0, 4 - pending.length))
   const accepted = rows.filter(row => row.status === "accepted").slice(0, 3)
@@ -133,10 +166,96 @@ export async function JuanProductEvolutionStrip({ userId }: { userId: string }) 
       </div>
     </div>
 
+    <InstitutionalSignals signals={signals} organizationName={organization.name} />
     {pending.length ? <EvolutionGroup title={`Pendientes de tu decisión · ${pending.length}`} rows={pending} organizationId={organization.id} organizationName={organization.name} decision /> : null}
     {researching.length ? <EvolutionGroup title={`Todavía investigando · ${researching.length}`} rows={researching} organizationId={organization.id} organizationName={organization.name} /> : null}
     {accepted.length ? <EvolutionGroup title={`Aprobadas por ti · ${accepted.length}`} rows={accepted} organizationId={organization.id} organizationName={organization.name} accepted /> : null}
   </section>
+}
+
+async function loadActionableSignals(admin: ReturnType<typeof createAdminClient>, userId: string, organizationName: string, productNames: Map<string, string>) {
+  const { data: watchData, error: watchError } = await admin
+    .from("intelligence_watches")
+    .select("id,metadata")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .limit(100)
+
+  if (watchError) {
+    console.error("[juan-actionable-signals:watches]", watchError)
+    return [] as ActionableSignal[]
+  }
+
+  const watches = ((watchData ?? []) as WatchRow[]).filter(watch => {
+    const metadata = asRecord(watch.metadata)
+    return metadata.purpose === "product_evolution_chile_evidence" && metadata.institution_context === organizationName
+  })
+  if (!watches.length) return [] as ActionableSignal[]
+
+  const watchProduct = new Map(watches.map(watch => {
+    const metadata = asRecord(watch.metadata)
+    return [watch.id, typeof metadata.product_key === "string" ? metadata.product_key : ""]
+  }))
+  const since = new Date(Date.now() - 21 * 86_400_000).toISOString()
+  const { data: eventData, error: eventError } = await admin
+    .from("intelligence_watch_events")
+    .select("id,watch_id,title,source_key,source_url,payload,last_seen_at")
+    .in("watch_id", watches.map(watch => watch.id))
+    .gte("last_seen_at", since)
+    .order("last_seen_at", { ascending: false })
+    .limit(80)
+
+  if (eventError) {
+    console.error("[juan-actionable-signals:events]", eventError)
+    return [] as ActionableSignal[]
+  }
+
+  const signals: ActionableSignal[] = []
+  for (const event of (eventData ?? []) as WatchEventRow[]) {
+    const payload = asRecord(event.payload)
+    const rawType = payload.institutional_signal_type
+    if (payload.institutional_relevance !== "actionable" || typeof rawType !== "string" || !ACTIONABLE_TYPES.has(rawType as ActionableSignalType)) continue
+    const productKey = event.watch_id ? watchProduct.get(event.watch_id) ?? "" : ""
+    if (!productKey) continue
+    signals.push({
+      id: event.id,
+      productKey,
+      productName: productNames.get(productKey) ?? productKey,
+      title: event.title,
+      sourceKey: event.source_key,
+      sourceUrl: event.source_url,
+      lastSeenAt: event.last_seen_at,
+      signalType: rawType as ActionableSignalType,
+      reason: typeof payload.institutional_fit_reason === "string" ? payload.institutional_fit_reason : null,
+    })
+    if (signals.length >= 6) break
+  }
+  return signals
+}
+
+function InstitutionalSignals({ signals, organizationName }: { signals: ActionableSignal[]; organizationName: string }) {
+  return <div className="border-b border-[#294047] bg-[#0C2327] px-4 py-3 sm:px-5">
+    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-2">
+        <Radar className="h-3.5 w-3.5 text-[#96B5A6]" />
+        <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-[#96B5A6]">Señales para {organizationName}</p>
+      </div>
+      <span className="text-[9px] uppercase tracking-[0.1em] text-[#748481]">contexto institucional · no modifica la convicción</span>
+    </div>
+    {!signals.length ? <p className="mt-2 text-[11px] leading-5 text-[#83908F]">Sin señales accionables nuevas. VIDENTIA no encontró movimientos recientes con relación demostrable a las capacidades de {organizationName}.</p> : <div className="mt-3 grid gap-px bg-[#294047] md:grid-cols-2 xl:grid-cols-3">
+      {signals.map(signal => <article key={signal.id} className="bg-[#0B2025] px-3 py-3">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="text-[9px] font-medium uppercase tracking-[0.11em] text-[#96B5A6]">{signalTypeLabel(signal.signalType)}</span>
+          <span className="text-[9px] uppercase tracking-[0.1em] text-[#748481]">{signal.productName}</span>
+        </div>
+        <p className="mt-1.5 text-[12px] leading-5 text-[#D6DDDA]">{compact(signal.title, 150)}</p>
+        <div className="mt-2 flex items-center justify-between gap-3 text-[10px] text-[#748481]">
+          <span>{sourceLabel(signal.sourceKey)}{signal.lastSeenAt ? ` · ${formatSignalDate(signal.lastSeenAt)}` : ""}</span>
+          {signal.sourceUrl ? <a href={signal.sourceUrl} target="_blank" rel="noreferrer" className="shrink-0 text-[#96B5A6] hover:text-white hover:underline">Ver fuente</a> : null}
+        </div>
+      </article>)}
+    </div>}
+  </div>
 }
 
 function EvolutionGroup({ title, rows, organizationId, organizationName, decision = false, accepted = false }: { title: string; rows: EvolutionRow[]; organizationId: string; organizationName: string; decision?: boolean; accepted?: boolean }) {
@@ -241,6 +360,30 @@ function Metric({ label, value, strong = false }: { label: string; value: number
   return <span className="text-[10px] uppercase tracking-[0.09em] text-[#748481]">{label} <span className={`font-semibold ${strong ? "text-[#D5DDD9]" : "text-[#B8C4C1]"}`}>{value}</span></span>
 }
 
+function signalTypeLabel(type: ActionableSignalType) {
+  if (type === "competitor") return "Competidor"
+  if (type === "applicable_technology") return "Tecnología aplicable"
+  if (type === "product_opportunity") return "Oportunidad"
+  if (type === "integration") return "Integración"
+  if (type === "threat") return "Amenaza"
+  return "Research frontier"
+}
+
+function sourceLabel(source: string) {
+  if (source === "inapi_open_data") return "INAPI"
+  if (source === "google_news_rss") return "Google News"
+  if (source === "gdelt_doc") return "GDELT"
+  if (source === "openalex") return "OpenAlex"
+  if (source === "crossref") return "Crossref"
+  return source.replaceAll("_", " ")
+}
+
+function formatSignalDate(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ""
+  return new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short" }).format(date)
+}
+
 function frontierStateLabel(state?: NonNullable<EvidenceSnapshot["world_frontier"]>["state"]) {
   if (state === "early_convergence") return "convergencia temprana"
   if (state === "converging") return "convergente"
@@ -278,6 +421,10 @@ function compact(value: string, max = 150) {
   const clipped = clean.slice(0, max)
   const lastSpace = clipped.lastIndexOf(" ")
   return `${clipped.slice(0, lastSpace > max * 0.7 ? lastSpace : max).trim()}…`
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}
 }
 
 function EvidenceLine({ icon: Icon, label, value }: { icon: typeof Radar; label: string; value: string }) {
