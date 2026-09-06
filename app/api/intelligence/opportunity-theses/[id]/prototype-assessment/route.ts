@@ -70,6 +70,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: "El registro seleccionado no contiene un resultado de prototipo atribuible." }, { status: 409, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
+  const organizationId = parsed.data.organizationId
+  const assessmentValue = parsed.data.assessment
+  const outcomeResearchId = String(outcomeRun.id)
+  const thesisTitle = String(thesis.title)
+  const thesisCreatorUserId = String(thesis.created_by)
+
   async function syncPrototypeLearningNotifications(assessmentId: string) {
     let notificationsResolved = 0
     let notificationsCreated = 0
@@ -78,7 +84,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       const resolution = await resolveOpportunityPrototypeLearningNotifications(admin, {
         opportunityId: id,
         stage: "assessment",
-        sourceId: String(outcomeRun.id),
+        sourceId: outcomeResearchId,
       })
       notificationsResolved = resolution.resolved
     } catch (notificationError) {
@@ -87,13 +93,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     try {
       const notificationResult = await createOpportunityPrototypeLearningNotifications(admin, {
-        organizationId: parsed.data.organizationId,
+        organizationId,
         opportunityId: id,
-        opportunityTitle: String(thesis.title),
-        creatorUserId: String(thesis.created_by),
+        opportunityTitle: thesisTitle,
+        creatorUserId: thesisCreatorUserId,
         stage: "research",
         sourceId: assessmentId,
-        assessment: parsed.data.assessment,
+        assessment: assessmentValue,
       })
       notificationsCreated = notificationResult.created
     } catch (notificationError) {
@@ -107,7 +113,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     .from("innovation_opportunity_research_runs")
     .select("id,evidence_summary,observed_at")
     .eq("opportunity_id", id)
-    .eq("organization_id", parsed.data.organizationId)
+    .eq("organization_id", organizationId)
     .eq("run_type", "human_review")
     .order("observed_at", { ascending: false })
     .limit(50)
@@ -119,7 +125,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   for (const row of priorRows ?? []) {
     const existing = asRecord(asRecord(row.evidence_summary).prototype_assessment)
-    if (existing.source_research_id === outcomeRun.id && existing.assessment === parsed.data.assessment) {
+    if (existing.source_research_id === outcomeRun.id && existing.assessment === assessmentValue) {
       const notificationSync = await syncPrototypeLearningNotifications(String(row.id))
       return NextResponse.json({ assessment: row, created: false, ...notificationSync }, { headers: PRIVATE_NO_STORE_HEADERS })
     }
@@ -140,7 +146,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     .from("innovation_opportunity_research_runs")
     .insert({
       opportunity_id: id,
-      organization_id: parsed.data.organizationId,
+      organization_id: organizationId,
       run_type: "human_review",
       research_queries: [],
       evidence_summary: {
@@ -148,7 +154,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           source_research_id: outcomeRun.id,
           action_id: String(outcome.action_id),
           outcome_at: String(outcome.outcome_at),
-          assessment: parsed.data.assessment,
+          assessment: assessmentValue,
           actor_role: access.role,
         },
         scores_unchanged: true,
