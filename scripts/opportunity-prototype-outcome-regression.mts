@@ -34,13 +34,12 @@ for (const needle of [
   'created_by: userId',
 ]) requireText(helper, needle, "outcome helper")
 
-for (const forbidden of [
-  '.from("innovation_opportunity_theses").update(',
-  'overall_score:',
-  'evidence_strength:',
-  'timing_score:',
-  'decision:',
-]) if (helper.includes(forbidden)) fail(`prototype outcomes must not automatically mutate thesis conviction/lifecycle: ${forbidden}`)
+if (helper.includes('.from("innovation_opportunity_theses").update(') || /\.from\("innovation_opportunity_theses"\)[\s\S]{0,500}\.update\(/.test(helper)) {
+  fail("prototype outcomes must never update the thesis row")
+}
+if (!helper.includes("scoreSnapshot") || !helper.includes("score_snapshot: scoreSnapshot") || !helper.includes("confidence: Number(thesis.confidence)")) {
+  fail("prototype outcomes must preserve the current score/confidence as an immutable snapshot")
+}
 
 for (const needle of [
   'captureOpportunityPrototypeOutcome',
@@ -68,4 +67,4 @@ if (!(updateIndex >= 0 && captureIndex > updateIndex && responseIndex > captureI
   fail("prototype learning must happen after the canonical human action update and remain best-effort before the success response")
 }
 
-console.log("Opportunity prototype outcome regression PASS: only an attributable completed human prototype action can append execution evidence to its exact thesis; case/item/action/actor/timestamp provenance is preserved; action+outcome_at dedupes retries; identical completion retries keep the database-derived timestamp; conviction scores and lifecycle remain unchanged until explicit research; and lineage capture failure never rolls back canonical action completion.")
+console.log("Opportunity prototype outcome regression PASS: only an attributable completed human prototype action can append execution evidence to its exact thesis; case/item/action/actor/timestamp provenance is preserved; action+outcome_at dedupes retries; identical completion retries keep the database-derived timestamp; score/confidence are copied only as immutable snapshots and the thesis row is never mutated; and lineage capture failure never rolls back canonical action completion.")
