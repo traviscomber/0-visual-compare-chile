@@ -2,6 +2,7 @@ import { ArrowRight, BookOpen, Boxes, Building2, Cable, CheckCircle2, FileSearch
 import { listPortfolioOrganizations } from "@/lib/intelligence/portfolio-access"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { JuanProductEvolutionActions } from "@/components/app/juan-product-evolution-actions"
+import { JuanResearchFrontierRefresh } from "@/components/app/juan-research-frontier-refresh"
 
 type EvolutionRow = {
   id: string
@@ -121,7 +122,10 @@ export async function JuanProductEvolutionStrip({ userId }: { userId: string }) 
           <p className="mt-1 max-w-4xl text-sm leading-6 text-[#E7DFCE]">VIDENTIA mira primero la frontera mundial —papers internacionales, patentes y señales tecnológicas— para detectar lo que viene. Chile indica si esa dirección ya tiene evidencia local; {organization.name}, sus activos y MCP definen cómo actuar, sin inflar la convicción.</p>
         </div>
       </div>
-      <span className="text-[10px] uppercase tracking-[0.14em] text-[#748481]">mundo / papers → Chile → institución → decisión humana</span>
+      <div className="flex flex-col items-start gap-2 sm:items-end">
+        <span className="text-[10px] uppercase tracking-[0.14em] text-[#748481]">mundo / papers → Chile → institución → decisión humana</span>
+        <JuanResearchFrontierRefresh />
+      </div>
     </div>
 
     {pending.length ? <EvolutionGroup title={`Pendientes de tu decisión · ${pending.length}`} rows={pending} organizationId={organization.id} organizationName={organization.name} decision /> : null}
