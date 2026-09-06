@@ -106,6 +106,7 @@ for (const needle of [
   'label="Expedientes / 12m"',
   'detail={`${activity.patents_12m} patentes · ${activity.trademarks_12m} marcas`}',
   'label="Clases distintas"',
+  'graph.legacy.brandCount.toLocaleString("es-CL")',
   'label="Marcas históricas"',
   'label="Relaciones corporativas verificadas"',
 ]) {
@@ -115,4 +116,4 @@ for (const forbidden of ["#3A2525", "#E8AAA3", "function GraphMetric("]) {
   if (companiesPage.includes(forbidden)) fail(`companies page retains legacy visual pattern: ${forbidden}`)
 }
 
-console.log("Company direction regression PASS: identity normalization, co-applicant parsing, six-month classification deltas, sync bounds, duplicate-safe refresh, deduped indexed search, canonical warning treatment, and shared operational graph metrics.")
+console.log("Company direction regression PASS: identity normalization, co-applicant parsing, six-month classification deltas, sync bounds, duplicate-safe refresh, deduped indexed search, canonical warning treatment, locale-safe counts, and shared operational graph metrics.")
