@@ -188,11 +188,17 @@ function SignalRow({signal,feedback,busy,onReview}:{signal:CommonSignal;feedback
   const external=signal.href.startsWith("http")
   const isHigh=signal.relevance==="alta"
   const decided=feedback==="relevant"||feedback==="irrelevant"||feedback==="false_match"
-  return <article className="grid gap-4 py-5 sm:grid-cols-[120px_minmax(0,1fr)]">
+  const guidance=taskGuidance(signal)
+  return <article className="grid gap-4 py-6 sm:grid-cols-[120px_minmax(0,1fr)]">
     <div><Badge variant="outline">{TYPE_LABEL[signal.type]}</Badge><p className="mt-2 text-[11px] text-muted-foreground">{humanizeSource(signal.source)}</p></div>
     <div>
       <div className="flex flex-wrap items-center gap-2">{!decided&&signal.isNew?<Badge className="bg-[#173B37] text-[#96B5A6] hover:bg-[#173B37]">Pendiente</Badge>:null}{feedback==="relevant"?<Badge className="bg-[#173B37] text-[#96B5A6] hover:bg-[#173B37]">Validada</Badge>:null}{feedback==="irrelevant"||feedback==="false_match"?<Badge variant="secondary">Descartada</Badge>:null}<Badge className={isHigh?"border-[#D6A46F]/25 bg-[#332C24]/65 text-[#E0B987]":""} variant={isHigh?"outline":"secondary"}>{isHigh?"Importante":signal.relevance}</Badge>{signal.timeline?<Badge variant="outline">{signal.timeline.milestones.length} hitos</Badge>:null}</div>
       <h3 className="mt-3 text-sm font-medium leading-6 text-white">{signal.title}</h3><p className="mt-1 text-xs text-[#96B5A6]">{signal.watchQuery}</p>{signal.detail?<p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{signal.detail}</p>:null}<p className="mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground"><Clock3 className="h-3 w-3"/>{formatDate(signal.occurredAt||signal.firstSeenAt)}</p>{signal.timeline?<RegulatoryTimelineDetails timeline={signal.timeline}/>:null}
+      {!decided?<div className="mt-4 grid gap-px overflow-hidden rounded-[10px] border border-border/70 bg-border/70 lg:grid-cols-3">
+        <div className="bg-[#0D2329] p-3"><p className="text-[10px] font-medium uppercase tracking-[0.13em] text-[#96B5A6]">Por qué está aquí</p><p className="mt-1.5 text-xs leading-5 text-muted-foreground">{guidance.why}</p></div>
+        <div className="bg-[#0D2329] p-3"><p className="text-[10px] font-medium uppercase tracking-[0.13em] text-[#96B5A6]">Si validas</p><p className="mt-1.5 text-xs leading-5 text-muted-foreground">{guidance.validate}</p></div>
+        <div className="bg-[#0D2329] p-3"><p className="text-[10px] font-medium uppercase tracking-[0.13em] text-muted-foreground">Si descartas</p><p className="mt-1.5 text-xs leading-5 text-muted-foreground">{guidance.discard}</p></div>
+      </div>:null}
       <div className="mt-4 flex flex-wrap gap-2">
         <Button asChild variant="outline" size="sm"><Link href={signal.href} target={external?"_blank":undefined} rel={external?"noreferrer":undefined}>Revisar evidencia{external?<ExternalLink className="h-3.5 w-3.5"/>:null}</Link></Button>
         {!decided?<><Button size="sm" onClick={()=>void onReview(signal,"relevant")} disabled={busy}>{busy?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Check className="h-3.5 w-3.5"/>}Validar</Button><Button variant="ghost" size="sm" onClick={()=>void onReview(signal,"irrelevant")} disabled={busy}><Trash2 className="h-3.5 w-3.5"/>Descartar</Button></>:null}
@@ -203,6 +209,40 @@ function SignalRow({signal,feedback,busy,onReview}:{signal:CommonSignal;feedback
 
 function RegulatoryTimelineDetails({timeline}:{timeline:RegulatoryTimeline}){
   return <details className="group mt-4 border-y border-border/70 py-3"><summary className="cursor-pointer list-none text-xs font-medium text-[#96B5A6] marker:content-none">Ver línea regulatoria · {timeline.expediente}{timeline.canonicalCompanyName?` · ${timeline.canonicalCompanyName}`:""}</summary><div className="mt-4 border-l border-[#355C55] pl-5">{timeline.milestones.map((milestone,index)=><div key={milestone.id} className="relative pb-5 last:pb-0"><span aria-hidden="true" className="absolute -left-[23px] top-1.5 h-1.5 w-1.5 rounded-full bg-[#96B5A6]"/><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="font-mono text-[10px] text-[#96B5A6]">{String(index+1).padStart(2,"0")}</span><span className="text-xs font-medium text-white">{milestone.label}</span><Badge variant="secondary">{milestone.relevance}</Badge>{milestone.occurredAt?<span className="text-[11px] text-muted-foreground">{formatDate(milestone.occurredAt)}</span>:null}</div><p className="mt-1 text-sm leading-6 text-white/90">{milestone.title}</p>{milestone.detail?<p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">{milestone.detail}</p>:null}{milestone.href?<Link className="mt-2 inline-flex items-center gap-1 text-xs text-[#96B5A6] hover:text-white" href={milestone.href} target="_blank" rel="noreferrer">Evidencia SMA<ExternalLink className="h-3 w-3"/></Link>:null}</div>)}</div></details>
+}
+
+function taskGuidance(signal:CommonSignal){
+  const source=signal.source.toLowerCase()
+  if(signal.type==="brand")return {
+    why:`Apareció una señal de marca relacionada con “${signal.watchQuery}” que necesita confirmar si realmente afecta tu vigilancia.`,
+    validate:"Queda registrada como evidencia relevante y sale de la cola pendiente.",
+    discard:"Queda registrada como no relevante y sale de la cola sin borrar la evidencia histórica.",
+  }
+  if(signal.type==="patent")return {
+    why:`La publicación coincide con el seguimiento “${signal.watchQuery}” y puede aportar evidencia tecnológica o competitiva.`,
+    validate:"La publicación queda confirmada como evidencia relevante del seguimiento.",
+    discard:"Se conserva en el historial, pero deja de requerir revisión humana.",
+  }
+  if(source.includes("sma")||source.includes("snifa"))return {
+    why:"Hay un movimiento regulatorio nuevo asociado al seguimiento y conviene confirmar si cambia su nivel de atención.",
+    validate:"El movimiento queda confirmado como evidencia regulatoria relevante.",
+    discard:"El movimiento se conserva como antecedente, pero deja de formar parte de tu trabajo pendiente.",
+  }
+  if(source.includes("sea"))return {
+    why:"Se detectó actividad ambiental o de proyecto relacionada con la empresa o tema que estás siguiendo.",
+    validate:"El proyecto queda confirmado como evidencia útil para el seguimiento.",
+    discard:"Se mantiene como antecedente documental, pero no vuelve a pedirte una decisión.",
+  }
+  if(source.includes("google_news"))return {
+    why:`Una fuente pública reportó un cambio relacionado con “${signal.watchQuery}”. VIDENTIA necesita tu criterio para separar señal útil de ruido editorial.`,
+    validate:"La noticia queda registrada como evidencia relevante para este seguimiento.",
+    discard:"La noticia queda registrada como descartada y desaparece de la cola pendiente.",
+  }
+  return {
+    why:`VIDENTIA detectó un cambio relacionado con “${signal.watchQuery}” que supera el umbral para revisión humana.`,
+    validate:"La señal queda confirmada como evidencia relevante en el historial.",
+    discard:"La señal se conserva para trazabilidad, pero deja de requerir tu atención.",
+  }
 }
 
 function placeholder(type:WatchType,subtype:string){if(type==="brand")return subtype==="owner"?"Ej: EMPRESA SPA":"Ej: N3URALIA";if(type==="patent")return subtype==="ipc"?"Ej: A61K":"Ej: NESTLE";if(subtype==="technology")return "Ej: agentes de IA empresariales";if(subtype==="company")return "Ej: SQM";if(subtype==="competitor")return "Ej: NotCo";if(subtype==="regulator")return "Ej: Comisión para el Mercado Financiero";if(subtype==="tender")return "Ej: almacenamiento energético";if(subtype==="market")return "Ej: litio Chile";return "Ej: protección de datos personales"}
