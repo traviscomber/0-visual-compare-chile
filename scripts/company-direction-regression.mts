@@ -107,7 +107,7 @@ for (const needle of [
   'detail={`${activity.patents_12m} patentes · ${activity.trademarks_12m} marcas`}',
   'label="Clases distintas"',
   'label="Marcas históricas"',
-  'label="Relaciones verificadas"',
+  'label="Relaciones corporativas verificadas"',
 ]) {
   if (!companiesPage.includes(needle)) fail(`companies operational UI missing ${needle}`)
 }
