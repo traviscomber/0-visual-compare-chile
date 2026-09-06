@@ -110,12 +110,15 @@ export default async function DashboardPage(){
   const stalledOnly=stalled.filter(item=>!readyCaseIds.has(item.caseRow.id)&&!changedCaseIds.has(item.caseRow.id))
   const acceptedPriorityRecommendations=priorityRecommendations.filter(item=>item.status==="accepted")
   const otherPriorityRecommendations=priorityRecommendations.filter(item=>item.status!=="accepted")
-  const highStrategicSignals=newStrategicSignals.filter(item=>item.relevance==="alta")
-  const otherStrategicSignals=newStrategicSignals.filter(item=>item.relevance!=="alta")
+  const reviewStrategicSignals=newStrategicSignals.filter(item=>item.relevance!=="baja")
+  const informationalStrategicSignals=newStrategicSignals.filter(item=>item.relevance==="baja")
+  const highStrategicSignals=reviewStrategicSignals.filter(item=>item.relevance==="alta")
+  const mediumStrategicSignals=reviewStrategicSignals.filter(item=>item.relevance==="media")
   const highTrademarkSignals=newSignals.filter(item=>item.relevance==="alta")
   const otherTrademarkSignals=newSignals.filter(item=>item.relevance!=="alta")
   const decisionNow=ready.length+acceptedRecommendations.length+thesisAttention.length
-  const attention=attentionCaseIds.size+newSignals.length+newStrategicSignals.length+(opportunitiesAvailable?activeRecommendations.length:0)+(productThesesAvailable?thesisAttention.length:0)
+  const signalReviewCount=newSignals.length+reviewStrategicSignals.length
+  const attention=attentionCaseIds.size+signalReviewCount+(opportunitiesAvailable?activeRecommendations.length:0)+(productThesesAvailable?thesisAttention.length:0)
   const combinedOpportunityCount=(opportunitiesAvailable?activeRecommendations.length:0)+(productThesesAvailable?activeTheses.length:0)
   const displayName=(typeof user.user_metadata?.full_name==="string"&&user.user_metadata.full_name)||(typeof user.user_metadata?.name==="string"&&user.user_metadata.name)||user.email?.split("@")[0]||"equipo"
 
@@ -129,12 +132,12 @@ export default async function DashboardPage(){
     ...highTrademarkSignals.map(item=>({href:"/monitorear",icon:BellRing,kicker:`${item.source} · Señal alta`,title:item.mark_name,detail:item.reason||item.applicant_name||"Antecedente nuevo en vigilancia.",action:"Revisar señal",tone:"warm" as const})),
     ...stalledOnly.map(item=>({href:`/casos/${item.caseRow.id}`,icon:Clock3,kicker:"Sin movimiento",title:item.caseRow.title,detail:`Última actividad ${relative(item.caseRow.updated_at).toLowerCase()}.`,action:"Retomar caso",tone:"neutral" as const})),
     ...otherPriorityRecommendations.filter(item=>item.tier!=="alta").map(item=>({href:"/oportunidades",icon:Compass,kicker:"Oportunidad persistida",title:item.headline,detail:item.recommended_action,action:"Revisar oportunidad",tone:"primary" as const})),
-    ...otherStrategicSignals.map(item=>{const watch=strategicWatchMap.get(item.watch_id);return {href:watch?strategicAnalysisHref(watch.watch_type,watch.query):"/monitorear/estrategico",icon:Radar,kicker:`${item.source_key} · Cambio estratégico`,title:item.title,detail:watch?`${watch.query} · ${item.event_type} · relevancia ${item.relevance}`:`${item.event_type} · relevancia ${item.relevance}`,action:watch?"Abrir análisis":"Revisar cambio",tone:"primary" as const}}),
+    ...mediumStrategicSignals.map(item=>{const watch=strategicWatchMap.get(item.watch_id);return {href:watch?strategicAnalysisHref(watch.watch_type,watch.query):"/monitorear/estrategico",icon:Radar,kicker:`${item.source_key} · Cambio estratégico · Media`,title:item.title,detail:watch?`${watch.query} · ${item.event_type}`:item.event_type,action:watch?"Abrir análisis":"Revisar cambio",tone:"primary" as const}}),
     ...otherTrademarkSignals.map(item=>({href:"/monitorear",icon:BellRing,kicker:`${item.source} · Nueva señal`,title:item.mark_name,detail:item.reason||item.applicant_name||"Antecedente nuevo en vigilancia.",action:"Revisar señal",tone:"neutral" as const})),
   ].slice(0,6)
 
   const executiveQuestions=[
-    {number:"01",href:"/monitorear/estrategico",icon:Activity,title:"¿Qué cambió esta semana?",detail:newStrategicSignals.length?`${newStrategicSignals.length} cambio${newStrategicSignals.length===1?"":"s"} nuevo${newStrategicSignals.length===1?"":"s"} en tus vigilancias estratégicas.`:`${activeStrategicWatches.length} vigilancia${activeStrategicWatches.length===1?"":"s"} estratégica${activeStrategicWatches.length===1?"":"s"} activa${activeStrategicWatches.length===1?"":"s"}. El brief separa cambios observados de interpretación.`,meta:"Brief semanal · evidencia observada"},
+    {number:"01",href:"/monitorear/estrategico",icon:Activity,title:"¿Qué cambió esta semana?",detail:newStrategicSignals.length?`${newStrategicSignals.length} señales nuevas: ${reviewStrategicSignals.length} para revisar · ${informationalStrategicSignals.length} informativas.`:`${activeStrategicWatches.length} vigilancia${activeStrategicWatches.length===1?"":"s"} estratégica${activeStrategicWatches.length===1?"":"s"} activa${activeStrategicWatches.length===1?"":"s"}. El brief separa cambios observados de interpretación.`,meta:"Brief semanal · evidencia observada"},
     {number:"02",href:"/empresas",icon:Building2,title:"¿Qué está protegiendo ahora que hace seis meses no protegía?",detail:"Compara 0–180 vs 181–360 días por empresa y detecta nuevas clases IPC/Niza con expedientes de respaldo.",meta:"Empresa · 180 vs 180 días"},
     {number:"03",href:"/empresas",icon:TrendingUp,title:"¿Dónde está llevando su tecnología?",detail:"Lee cuatro ventanas trimestrales y distingue actividad emergente, aceleración, núcleo persistente, declive y señales experimentales.",meta:"Trayectoria · 4 trimestres"},
     {number:"04",href:"/espacios",icon:Radar,title:"¿Quién está entrando en mi espacio?",detail:"Analiza un código IPC o Niza. Entrante exige al menos dos expedientes actuales y ninguno en la ventana anterior.",meta:"IPC / Niza · actores nuevos"},
@@ -157,14 +160,14 @@ export default async function DashboardPage(){
       <OperationalMetric value={decisionNow} label="Prioridades para actuar" detail={`${ready.length} decisiones · ${acceptedRecommendations.length} oportunidades aceptadas · ${thesisAttention.length} aprendizajes`} tone={decisionNow?"warning":"neutral"}/>
       <OperationalMetric value={changed.length} label="Casos con evidencia nueva" detail={`${attentionCaseIds.size} casos únicos requieren atención`}/>
       <OperationalMetric value={opportunitiesAvailable||productThesesAvailable?combinedOpportunityCount:"—"} label="Oportunidades activas" detail={`${opportunitiesAvailable?`${activeRecommendations.length} recomendaciones`:"recomendaciones no disponibles"} · ${productThesesAvailable?`${activeTheses.length} tesis · ${thesisAttention.length} por actuar`:"tesis no disponibles"}`} tone={(opportunitiesAvailable&&highRecommendations.length)||(productThesesAvailable&&thesisAttention.length)?"warning":"neutral"}/>
-      <OperationalMetric value={newSignals.length+newStrategicSignals.length} label="Señales nuevas" detail={`${newStrategicSignals.length} estratégicas · ${newSignals.length} marcarias`} tone={newSignals.length+newStrategicSignals.length?"warning":"neutral"}/>
+      <OperationalMetric value={newSignals.length+newStrategicSignals.length} label="Señales nuevas" detail={`${signalReviewCount} para revisar · ${informationalStrategicSignals.length} informativas`} tone={signalReviewCount?"warning":"neutral"}/>
     </OperationalMetricRail>
 
     <section className="border-b border-border/80 py-9">
       <OperationalSectionHeader
         eyebrow="Bandeja prioritaria"
         title="Primero decide. Después revisa señales."
-        action={attention===0?<Badge variant="outline" className="bg-[#173B37] text-[#96B5A6]">Sin novedades pendientes</Badge>:<span className="text-sm text-muted-foreground">{decisionNow?`${decisionNow} para actuar · `:""}{attention} pendiente{attention===1?"":"s"}{queue.length<attention?` · mostrando ${queue.length}`:""}</span>}
+        action={attention===0?<Badge variant="outline" className="bg-[#173B37] text-[#96B5A6]">Sin revisión prioritaria</Badge>:<span className="text-sm text-muted-foreground">{decisionNow?`${decisionNow} para actuar · `:""}{attention} pendiente{attention===1?"":"s"}{queue.length<attention?` · mostrando ${queue.length}`:""}</span>}
       />
       {queue.length?<div className="mt-5 divide-y divide-border/80 border-y border-border/80">{queue.map((item,index)=>{const Icon=item.icon;return <Link key={`${item.href}-${item.title}-${index}`} href={item.href} className="group grid gap-4 px-2 py-5 outline-none transition-colors hover:bg-secondary/55 focus-visible:bg-secondary/55 sm:grid-cols-[40px_1fr_auto] sm:items-center"><span className={`flex h-9 w-9 items-center justify-center rounded-[9px] ${item.tone==="primary"?"bg-[#173B37] text-[#96B5A6]":item.tone==="warm"?"bg-[#332C24] text-[#D6A46F]":"bg-[#13272D] text-muted-foreground"}`}><Icon className="h-4 w-4"/></span><div className="min-w-0"><p className="text-[10px] font-medium uppercase tracking-[0.13em] text-muted-foreground">{item.kicker}</p><h3 className="mt-1 font-medium text-white">{item.title}</h3><p className="mt-1 text-sm leading-6 text-muted-foreground">{item.detail}</p></div><span className="inline-flex items-center gap-2 text-sm font-medium text-white">{item.action}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1"/></span></Link>})}</div>:<div className="mt-5 border-y border-border/80 py-8"><div className="flex items-start gap-4"><span className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-[#173B37] text-[#96B5A6]"><CheckCircle2 className="h-4 w-4"/></span><div><h3 className="font-medium text-white">No hay nada urgente.</h3><p className="mt-1 text-sm leading-6 text-muted-foreground">Puedes iniciar una investigación o revisar las vigilancias activas.</p></div></div></div>}
     </section>
