@@ -29,6 +29,10 @@
       "schedule": "17 */6 * * *"
     },
     {
+      "path": "/api/cron/juan-project-handoffs",
+      "schedule": "35 */6 * * *"
+    },
+    {
       "path": "/api/cron/opportunity-conviction",
       "schedule": "55 */6 * * *"
     }
