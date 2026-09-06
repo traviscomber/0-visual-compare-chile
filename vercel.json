@@ -21,6 +21,10 @@
       "schedule": "40 * * * *"
     },
     {
+      "path": "/api/cron/sea-seia-watches",
+      "schedule": "50 */6 * * *"
+    },
+    {
       "path": "/api/cron/wipo-patent-watches",
       "schedule": "17 */6 * * *"
     },
