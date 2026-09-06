@@ -30,7 +30,7 @@
     },
     {
       "path": "/api/cron/opportunity-conviction",
-      "schedule": "55 10 * * *"
+      "schedule": "55 */6 * * *"
     }
   ]
 }
