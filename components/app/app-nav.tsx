@@ -11,7 +11,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarSeparator, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 
 type NavigationItem={href:string;label:string;icon:LucideIcon;aliases:readonly string[]}
-type SectionContext={href:string;label:string}
 
 const navigationItems:readonly NavigationItem[]=[
   {href:"/dashboard",label:"Resumen",icon:LayoutDashboard,aliases:[]},
@@ -22,17 +21,17 @@ const navigationItems:readonly NavigationItem[]=[
   {href:"/reportes",label:"Reportes",icon:History,aliases:["/history"]},
 ]
 
-const sectionContexts:readonly SectionContext[]=[
-  {href:"/portfolio",label:"Portafolio"},
-  {href:"/casos",label:"Casos"},
-  {href:"/oportunidades",label:"Oportunidades"},
-  {href:"/empresas",label:"Empresas"},
-  {href:"/espacios",label:"Espacios"},
-  {href:"/brechas",label:"Brechas"},
-  {href:"/fuentes",label:"Fuentes"},
-  {href:"/notificaciones",label:"Notificaciones"},
-  {href:"/settings",label:"Configuración"},
-]
+const sectionLabels:Readonly<Record<string,string>>={
+  "/portfolio":"Portafolio",
+  "/casos":"Casos",
+  "/oportunidades":"Oportunidades",
+  "/empresas":"Empresas",
+  "/espacios":"Espacios",
+  "/brechas":"Brechas",
+  "/fuentes":"Fuentes",
+  "/notificaciones":"Notificaciones",
+  "/settings":"Configuración",
+}
 
 const shellTokens={
   "--sidebar-width":"16rem","--sidebar-width-icon":"3.75rem","--background":"#0F2A33","--foreground":"#E7DFCE","--card":"#13272D","--card-foreground":"#FFFFFF","--popover":"#13272D","--popover-foreground":"#FFFFFF","--primary":"#4A7F74","--primary-foreground":"#FFFFFF","--secondary":"#172F34","--secondary-foreground":"#FFFFFF","--muted":"#172F34","--muted-foreground":"#BDBEBD","--accent":"#20393A","--accent-foreground":"#FFFFFF","--destructive":"#C46A61","--destructive-foreground":"#FFFFFF","--border":"#263D44","--input":"#263D44","--ring":"#96B5A6","--chart-1":"#4A7F74","--chart-2":"#96B5A6","--chart-3":"#456E8E","--chart-4":"#B7D3D1","--chart-5":"#BDBEBD","--sidebar":"#091A20","--sidebar-foreground":"#E7DFCE","--sidebar-primary":"#4A7F74","--sidebar-primary-foreground":"#FFFFFF","--sidebar-accent":"#173B37","--sidebar-accent-foreground":"#FFFFFF","--sidebar-border":"#20363E","--sidebar-ring":"#96B5A6",
@@ -40,7 +39,10 @@ const shellTokens={
 
 function matchesPath(pathname:string,href:string){return pathname===href||(href!=="/dashboard"&&pathname.startsWith(`${href}/`))}
 function currentNavigationItem(pathname:string){return navigationItems.find(item=>matchesPath(pathname,item.href)||item.aliases.some(alias=>matchesPath(pathname,alias)))}
-function currentSectionLabel(pathname:string){return sectionContexts.find(item=>matchesPath(pathname,item.href))?.label??currentNavigationItem(pathname)?.label??"Workspace"}
+function currentSectionLabel(pathname:string){
+  const exact=Object.entries(sectionLabels).find(([href])=>matchesPath(pathname,href))
+  return exact?.[1]??currentNavigationItem(pathname)?.label??"Workspace"
+}
 
 function BrandMark(){return <span className="flex min-w-0 items-center gap-3 group-data-[collapsible=icon]:justify-center"><span className="relative grid size-9 shrink-0 place-items-center rounded-[10px] bg-[#13272D] text-[11px] font-medium tracking-[0.08em] text-[#E7DFCE] ring-1 ring-inset ring-white/[0.05] group-data-[collapsible=icon]:size-8">V<span aria-hidden="true" className="absolute right-[6px] top-[6px] size-1.5 rounded-full bg-[#4A7F74]"/></span><span className="min-w-0 leading-none group-data-[collapsible=icon]:hidden"><span className="block truncate text-[15px] font-normal tracking-[0.22em] text-[#E7DFCE]">ViDENTiA</span><span className="mt-1.5 block truncate text-[7px] font-medium uppercase tracking-[0.16em] text-[#8F9998]">IP & Technology Intelligence</span></span></span>}
 
