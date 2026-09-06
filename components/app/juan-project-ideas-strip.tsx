@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Activity, ArrowRight, BookOpen, FileSearch, Github, Lightbulb, Radar } from "lucide-react"
+import { Activity, ArrowRight, BookOpen, FileSearch, Github, Lightbulb, Plus, Radar } from "lucide-react"
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
 import { searchOpenAlexWorks } from "@/lib/intelligence/openalex"
 import { listPortfolioOrganizations } from "@/lib/intelligence/portfolio-access"
@@ -39,6 +39,15 @@ type ExternalSignal = {
   relevance: string
   date: string | null
   url: string | null
+}
+
+type ManualEvidence = {
+  idea_key: string
+  evidence_type: string
+  title: string
+  source_url: string | null
+  note: string | null
+  created_at: string
 }
 
 const capabilityIdeas: Idea[] = [
@@ -110,7 +119,7 @@ export async function JuanProjectIdeasStrip({ userId }: { userId: string }) {
   const organization = organizations[0] ?? null
   if (!organization) return null
 
-  const [recommendationsResult, thesesResult, patentCandidatesResult, signalCandidatesResult] = await Promise.all([
+  const [recommendationsResult, thesesResult, patentCandidatesResult, signalCandidatesResult, manualEvidenceResult] = await Promise.all([
     admin
       .from("intelligence_recommendations")
       .select("id,headline,recommended_action,score,tier,status,updated_at")
@@ -140,12 +149,20 @@ export async function JuanProjectIdeasStrip({ userId }: { userId: string }) {
       .in("relevance", ["alta", "media"])
       .order("last_seen_at", { ascending: false })
       .limit(160),
+    admin
+      .from("intelligence_idea_evidence")
+      .select("idea_key,evidence_type,title,source_url,note,created_at")
+      .eq("user_id", userId)
+      .eq("organization_id", organization.id)
+      .order("created_at", { ascending: false })
+      .limit(250),
   ])
 
   const recommendations = recommendationsResult.error ? [] : recommendationsResult.data ?? []
   const theses = thesesResult.error ? [] : thesesResult.data ?? []
   const patentCandidates = patentCandidatesResult.error ? [] : patentCandidatesResult.data ?? []
   const signalCandidates = signalCandidatesResult.error ? [] : signalCandidatesResult.data ?? []
+  const manualEvidence = manualEvidenceResult.error ? [] : (manualEvidenceResult.data ?? []) as ManualEvidence[]
 
   const persistedIdeas: Idea[] = [
     ...recommendations.map(item => ({
@@ -185,13 +202,24 @@ export async function JuanProjectIdeasStrip({ userId }: { userId: string }) {
     const paper = await findPaperEvidence(idea.researchQuery, from, to)
     const patent = findPatentEvidence(patentCandidates, idea.patentSignals)
     const externalSignal = findExternalSignal(signalCandidates, idea.signalTerms)
-    const liveStrength = idea.strength + (paper ? Math.min(8, 3 + Math.log10(Math.max(1, paper.citedByCount + 1)) * 2) : 0) + (patent ? 5 : 0) + (externalSignal ? externalSignal.relevance === "alta" ? 6 : 4 : 0)
-    return { ...idea, paper, patent, externalSignal, liveStrength, whyNow: whyNowText(paper, patent, externalSignal) }
+    const ownEvidence = manualEvidence.filter(item => item.idea_key === idea.key)
+    const liveStrength = idea.strength
+      + (paper ? Math.min(8, 3 + Math.log10(Math.max(1, paper.citedByCount + 1)) * 2) : 0)
+      + (patent ? 5 : 0)
+      + (externalSignal ? externalSignal.relevance === "alta" ? 6 : 4 : 0)
+      + Math.min(6, ownEvidence.length * 2)
+    return {
+      ...idea,
+      paper,
+      patent,
+      externalSignal,
+      ownEvidence,
+      liveStrength,
+      whyNow: whyNowText(paper, patent, externalSignal, ownEvidence.length),
+    }
   }))
 
-  const ideas = enriched
-    .sort((a, b) => b.liveStrength - a.liveStrength)
-    .slice(0, 5)
+  const ideas = enriched.sort((a, b) => b.liveStrength - a.liveStrength).slice(0, 5)
 
   return (
     <section className="mx-auto mt-4 w-[calc(100%-2rem)] max-w-[1480px] border-y border-[#294047] bg-[#0D2329] sm:w-[calc(100%-3rem)]">
@@ -200,16 +228,15 @@ export async function JuanProjectIdeasStrip({ userId }: { userId: string }) {
           <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-[#173B37] text-[#96B5A6]"><Lightbulb className="h-4 w-4" /></span>
           <div>
             <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]">Ideas para proyectos · Juan</p>
-            <p className="mt-1 text-sm text-[#E7DFCE]">Capacidades N3uralia cruzadas con papers, patentes y señales externas. Son hipótesis para investigar, no oportunidades confirmadas.</p>
+            <p className="mt-1 text-sm text-[#E7DFCE]">Capacidades N3uralia cruzadas con papers, patentes, señales externas y datos que tú agregas. VIDENTIA sigue completando la evidencia en paralelo.</p>
           </div>
         </div>
-        <Link href="/oportunidades/descubrir" className="inline-flex items-center gap-2 text-sm font-medium text-[#96B5A6] hover:text-white">
-          Buscar más <ArrowRight className="h-4 w-4" />
-        </Link>
+        <Link href="/oportunidades/descubrir" className="inline-flex items-center gap-2 text-sm font-medium text-[#96B5A6] hover:text-white">Buscar más <ArrowRight className="h-4 w-4" /></Link>
       </div>
       <div className="divide-y divide-[#294047] xl:grid xl:grid-cols-5 xl:divide-x xl:divide-y-0">
-        {ideas.map(idea => (
-          <article key={idea.key} className="px-4 py-4 sm:px-5">
+        {ideas.map(idea => {
+          const evidenceHref = `/oportunidades/evidencia?ideaKey=${encodeURIComponent(idea.key)}&ideaTitle=${encodeURIComponent(idea.title)}`
+          return <article key={idea.key} className="px-4 py-4 sm:px-5">
             <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.12em] text-[#83908F]"><span className="flex items-center gap-2"><Radar className="h-3 w-3" />{idea.source}</span><span>{Math.round(idea.liveStrength)}</span></div>
             <h2 className="mt-2 text-sm font-medium leading-6 text-white">{idea.title}</h2>
             <p className="mt-1.5 text-xs leading-5 text-[#AEB6B4]">{idea.detail}</p>
@@ -220,11 +247,15 @@ export async function JuanProjectIdeasStrip({ userId }: { userId: string }) {
               {idea.paper ? <EvidenceLink icon={BookOpen} label={`Paper · ${idea.paper.source}`} text={`${idea.paper.title}${idea.paper.date ? ` · ${idea.paper.date}` : ""}`} href={idea.paper.url} /> : <EvidenceLine icon={BookOpen} label="Papers" text="Sin coincidencia suficientemente precisa en la ventana reciente." muted />}
               {idea.patent ? <EvidenceLine icon={FileSearch} label="Patente" text={`${idea.patent.title}${idea.patent.applicants ? ` · ${idea.patent.applicants}` : ""}${idea.patent.date ? ` · ${idea.patent.date}` : ""}`} /> : <EvidenceLine icon={FileSearch} label="Patentes" text="Sin coincidencia fuerte en el corpus INAPI observado." muted />}
               {idea.externalSignal ? <EvidenceLink icon={Activity} label={`Señal · ${humanSource(idea.externalSignal.sourceKey)}`} text={`${idea.externalSignal.title}${idea.externalSignal.date ? ` · ${idea.externalSignal.date}` : ""}`} href={idea.externalSignal.url} /> : <EvidenceLine icon={Activity} label="Señales" text="Sin señal alta/media suficientemente relacionada en tus seguimientos actuales." muted />}
+              <EvidenceLine icon={Plus} label="Datos tuyos" text={idea.ownEvidence.length ? `${idea.ownEvidence.length} evidencia${idea.ownEvidence.length === 1 ? "" : "s"} agregada${idea.ownEvidence.length === 1 ? "" : "s"}.` : "Todavía no agregaste contexto manual."} muted={!idea.ownEvidence.length} />
             </div>
 
-            <Link href={idea.href} className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-[#96B5A6] hover:text-white">Investigar qué falta <ArrowRight className="h-3.5 w-3.5" /></Link>
+            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
+              <Link href={idea.href} className="inline-flex items-center gap-1.5 text-xs font-medium text-[#96B5A6] hover:text-white">Investigar qué falta <ArrowRight className="h-3.5 w-3.5" /></Link>
+              <Link href={evidenceHref} className="inline-flex items-center gap-1.5 text-xs font-medium text-[#D6DDDA] hover:text-white"><Plus className="h-3.5 w-3.5" />Agregar dato</Link>
+            </div>
           </article>
-        ))}
+        })}
       </div>
     </section>
   )
@@ -278,9 +309,14 @@ function findExternalSignal(rows: Array<Record<string, unknown>>, terms: string[
   return scored[0] ?? null
 }
 
-function whyNowText(paper: PaperEvidence | null, patent: PatentEvidence | null, signal: ExternalSignal | null) {
-  const layers = [paper ? "hay actividad científica reciente" : null, patent ? "existe actividad patentaria relacionada" : null, signal ? "tus seguimientos ya muestran una señal externa relevante" : null].filter(Boolean)
-  return layers.length ? `${layers.join(" y ")}. Conviene comprobar problema, usuario y disposición a actuar antes de tratarlo como oportunidad.` : "La capacidad interna existe, pero todavía falta evidencia externa suficiente. Conviene investigar antes de priorizarla."
+function whyNowText(paper: PaperEvidence | null, patent: PatentEvidence | null, signal: ExternalSignal | null, manualEvidenceCount: number) {
+  const layers = [
+    paper ? "hay actividad científica reciente" : null,
+    patent ? "existe actividad patentaria relacionada" : null,
+    signal ? "tus seguimientos ya muestran una señal externa relevante" : null,
+    manualEvidenceCount ? `ya agregaste ${manualEvidenceCount} dato${manualEvidenceCount === 1 ? "" : "s"} propio${manualEvidenceCount === 1 ? "" : "s"}` : null,
+  ].filter(Boolean)
+  return layers.length ? `${layers.join(" y ")}. Conviene seguir completando problema, usuario y evidencia antes de tratarlo como oportunidad confirmada.` : "La capacidad interna existe, pero todavía falta evidencia externa suficiente. Conviene investigar antes de priorizarla."
 }
 
 function significantPhrases(value: string) {

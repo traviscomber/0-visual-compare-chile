@@ -6,7 +6,7 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
 
-const CLAIM_LIMIT = 4
+const CLAIM_LIMIT = 5
 
 type ClaimedThesis = {
   id: string
