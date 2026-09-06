@@ -14,12 +14,24 @@ type NavigationItem={href:string;label:string;icon:LucideIcon;aliases:readonly s
 
 const navigationItems:readonly NavigationItem[]=[
   {href:"/dashboard",label:"Resumen",icon:LayoutDashboard,aliases:[]},
-  {href:"/investigar",label:"Marcas",icon:Search,aliases:["/evaluar","/agente","/compare","/comparisons","/consulta-inapi","/consulta","/portfolio"]},
+  {href:"/investigar",label:"Marcas",icon:Search,aliases:["/evaluar","/agente","/compare","/comparisons","/consulta-inapi","/consulta"]},
   {href:"/patentes",label:"Patentes",icon:FlaskConical,aliases:[]},
   {href:"/tecnologias",label:"Tecnologías",icon:Activity,aliases:["/empresas","/espacios","/brechas","/oportunidades"]},
   {href:"/monitorear",label:"Seguimientos",icon:BellRing,aliases:["/monitorear/estrategico","/patentes/alertas","/notificaciones"]},
   {href:"/reportes",label:"Reportes",icon:History,aliases:["/history"]},
 ]
+
+const sectionLabels:Readonly<Record<string,string>>={
+  "/portfolio":"Portafolio",
+  "/casos":"Casos",
+  "/oportunidades":"Oportunidades",
+  "/empresas":"Empresas",
+  "/espacios":"Espacios",
+  "/brechas":"Brechas",
+  "/fuentes":"Fuentes",
+  "/notificaciones":"Notificaciones",
+  "/settings":"Configuración",
+}
 
 const shellTokens={
   "--sidebar-width":"16rem","--sidebar-width-icon":"3.75rem","--background":"#0F2A33","--foreground":"#E7DFCE","--card":"#13272D","--card-foreground":"#FFFFFF","--popover":"#13272D","--popover-foreground":"#FFFFFF","--primary":"#4A7F74","--primary-foreground":"#FFFFFF","--secondary":"#172F34","--secondary-foreground":"#FFFFFF","--muted":"#172F34","--muted-foreground":"#BDBEBD","--accent":"#20393A","--accent-foreground":"#FFFFFF","--destructive":"#C46A61","--destructive-foreground":"#FFFFFF","--border":"#263D44","--input":"#263D44","--ring":"#96B5A6","--chart-1":"#4A7F74","--chart-2":"#96B5A6","--chart-3":"#456E8E","--chart-4":"#B7D3D1","--chart-5":"#BDBEBD","--sidebar":"#091A20","--sidebar-foreground":"#E7DFCE","--sidebar-primary":"#4A7F74","--sidebar-primary-foreground":"#FFFFFF","--sidebar-accent":"#173B37","--sidebar-accent-foreground":"#FFFFFF","--sidebar-border":"#20363E","--sidebar-ring":"#96B5A6",
@@ -27,6 +39,10 @@ const shellTokens={
 
 function matchesPath(pathname:string,href:string){return pathname===href||(href!=="/dashboard"&&pathname.startsWith(`${href}/`))}
 function currentNavigationItem(pathname:string){return navigationItems.find(item=>matchesPath(pathname,item.href)||item.aliases.some(alias=>matchesPath(pathname,alias)))}
+function currentSectionLabel(pathname:string){
+  const exact=Object.entries(sectionLabels).find(([href])=>matchesPath(pathname,href))
+  return exact?.[1]??currentNavigationItem(pathname)?.label??"Workspace"
+}
 
 function BrandMark(){return <span className="flex min-w-0 items-center gap-3 group-data-[collapsible=icon]:justify-center"><span className="relative grid size-9 shrink-0 place-items-center rounded-[10px] bg-[#13272D] text-[11px] font-medium tracking-[0.08em] text-[#E7DFCE] ring-1 ring-inset ring-white/[0.05] group-data-[collapsible=icon]:size-8">V<span aria-hidden="true" className="absolute right-[6px] top-[6px] size-1.5 rounded-full bg-[#4A7F74]"/></span><span className="min-w-0 leading-none group-data-[collapsible=icon]:hidden"><span className="block truncate text-[15px] font-normal tracking-[0.22em] text-[#E7DFCE]">ViDENTiA</span><span className="mt-1.5 block truncate text-[7px] font-medium uppercase tracking-[0.16em] text-[#8F9998]">IP & Technology Intelligence</span></span></span>}
 
@@ -41,7 +57,7 @@ function AccountMenu({userEmail,fullName,companyName}:{userEmail:string;fullName
   return <DropdownMenu><DropdownMenuTrigger asChild><SidebarMenuButton size="lg" className="rounded-[10px] bg-[#0D222A] ring-1 ring-inset ring-white/[0.04] data-[state=open]:bg-[#13272D]"><Avatar className="size-8 rounded-full ring-1 ring-inset ring-[#29434A]"><AvatarFallback className="bg-[#173B37] text-[10px] font-semibold text-[#E7DFCE]">{initials||"U"}</AvatarFallback></Avatar><span className="min-w-0 flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden"><span className="block truncate text-xs font-medium text-[#E7DFCE]">{fullName??userEmail}</span><span className="mt-1 block truncate text-[10px] text-[#83908F]">{companyName??userEmail}</span></span></SidebarMenuButton></DropdownMenuTrigger><DropdownMenuContent side="right" align="end" className="w-72 border-[#294047] bg-[#13272D]"><DropdownMenuLabel className="font-normal"><span className="block text-sm font-medium text-popover-foreground">{fullName??"Usuario"}</span><span className="mt-1 block truncate text-xs text-muted-foreground">{userEmail}</span>{companyName?<span className="mt-1 block truncate text-xs text-muted-foreground">{companyName}</span>:null}</DropdownMenuLabel><DropdownMenuSeparator/><DropdownMenuGroup><DropdownMenuItem asChild><Link href="/settings"><Settings/>Configuración</Link></DropdownMenuItem><DropdownMenuItem onClick={()=>void handleLogout()}><LogOut/>Cerrar sesión</DropdownMenuItem></DropdownMenuGroup></DropdownMenuContent></DropdownMenu>
 }
 
-function CurrentSection(){const pathname=usePathname();const current=currentNavigationItem(pathname);return <div className="hidden min-w-0 md:block"><p className="text-[8px] font-semibold uppercase tracking-[0.18em] text-[#6F807E]">VIDENTIA / INTELLIGENCE OS</p><p className="mt-1 truncate text-[13px] font-medium text-[#E7DFCE]">{current?.label??"Workspace"}</p></div>}
+function CurrentSection(){const pathname=usePathname();return <div className="hidden min-w-0 md:block"><p className="text-[8px] font-semibold uppercase tracking-[0.18em] text-[#6F807E]">VIDENTIA / INTELLIGENCE OS</p><p className="mt-1 truncate text-[13px] font-medium text-[#E7DFCE]">{currentSectionLabel(pathname)}</p></div>}
 
 const mobileNavigationItems=navigationItems.filter(item=>["/dashboard","/investigar","/patentes","/tecnologias"].includes(item.href))
 
