@@ -175,7 +175,7 @@ export async function buildIntelligenceHealth(admin: SupabaseClient): Promise<In
     let status: IntelligenceHealthStatus
     if (!source.is_active) status = definition?.automationPolicy === "manual_only" ? "manual" : "inactive"
     else if (runtime.status === "credentials_required") status = "credentials_required"
-    else if (source.freshness_policy === "bajo_demanda") status = "on_demand"
+    else if (isOnDemandPolicy(source.freshness_policy)) status = "on_demand"
     else if (!state?.last_success_at) status = "initializing"
     else if (state.circuit_state === "open" || Number(state.consecutive_failures ?? 0) > 0 || state.last_error) status = "degraded"
     else if (slaHours !== null && ageHours !== null && ageHours > slaHours) status = "stale"
@@ -323,6 +323,11 @@ function objectValue(value: Record<string, unknown> | null, key: string) {
 function metadataText(metadata: Record<string, unknown> | null, key: string) {
   const value = metadata?.[key]
   return typeof value === "string" && value.trim() ? value : null
+}
+
+function isOnDemandPolicy(value: string | null) {
+  const normalized = String(value ?? "").trim().toLowerCase().replace(/[-\s]+/g, "_")
+  return normalized === "bajo_demanda" || normalized === "on_demand" || normalized.startsWith("on_demand;")
 }
 
 function numeric(value: unknown) {
