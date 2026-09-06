@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
+import { captureOpportunityPrototypeOutcome } from "@/lib/intelligence/opportunity-prototype-outcome"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -138,10 +139,20 @@ export async function PATCH(request: Request) {
       status,
       outcome: status === "done" ? outcome : null,
       updated_at: new Date().toISOString(),
-    }).eq("id", body.id).select("id").maybeSingle()
+    }).eq("id", body.id).select("id,case_id,status,outcome,outcome_at,outcome_by,completed_at").maybeSingle()
     if (error) return NextResponse.json({ error: "No pudimos actualizar la acción." }, { status: 403, headers: PRIVATE_NO_STORE_HEADERS })
     if (!data) return NextResponse.json({ error: "No tienes permisos para actualizar esta acción." }, { status: 403, headers: PRIVATE_NO_STORE_HEADERS })
-    return NextResponse.json({ ok: true }, { headers: PRIVATE_NO_STORE_HEADERS })
+
+    let prototypeOutcomeCapture: Awaited<ReturnType<typeof captureOpportunityPrototypeOutcome>> | null = null
+    if (status === "done") {
+      try {
+        prototypeOutcomeCapture = await captureOpportunityPrototypeOutcome(auth.supabase, auth.user.id, data)
+      } catch (captureError) {
+        console.error("[case-action:prototype-outcome]", captureError)
+      }
+    }
+
+    return NextResponse.json({ ok: true, prototypeOutcomeCapture }, { headers: PRIVATE_NO_STORE_HEADERS })
   }
 
   return NextResponse.json({ error: "Tipo de operación inválido." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
