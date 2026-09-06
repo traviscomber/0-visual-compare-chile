@@ -93,30 +93,37 @@ for (const needle of [
   "const outcomeResearchId = String(outcomeRun.id)",
   "const thesisTitle = String(thesis.title)",
   "const thesisCreatorUserId = String(thesis.created_by)",
-  "syncPrototypeLearningNotifications",
+  "syncPrototypeLearningNotifications(assessmentId: string, supersededAssessmentIds: string[])",
   "resolveOpportunityPrototypeLearningNotifications(admin",
   'stage: "assessment"',
   "sourceId: outcomeResearchId",
-  'console.error("[opportunity-theses:prototype-assessment:notification-resolution]"',
-  "createOpportunityPrototypeLearningNotifications(admin",
+  "for (const supersededAssessmentId of supersededAssessmentIds)",
   'stage: "research"',
+  "sourceId: supersededAssessmentId",
+  'console.error("[opportunity-theses:prototype-assessment:superseded-notification-resolution]"',
+  "createOpportunityPrototypeLearningNotifications(admin",
   "sourceId: assessmentId",
   "assessment: assessmentValue",
+  "const priorAssessments = (priorRows ?? []).filter(row =>",
+  'String(existing.source_research_id ?? "") === outcomeResearchId',
+  "const priorAssessmentIds = priorAssessments.map(row => String(row.id))",
+  "priorAssessmentIds.filter(priorAssessmentId => priorAssessmentId !== assessmentId)",
+  "syncPrototypeLearningNotifications(String(assessmentRun.id), priorAssessmentIds)",
   'console.error("[opportunity-theses:prototype-assessment:notification]"',
   "created: false, ...notificationSync",
   "created: true, ...notificationSync",
 ]) requireText(assessment, needle, "prototype assessment notification lifecycle")
 
 const assessmentInsert = assessment.indexOf('.insert({')
-const assessmentSync = assessment.indexOf("syncPrototypeLearningNotifications(String(assessmentRun.id))", assessmentInsert)
+const assessmentSync = assessment.indexOf("syncPrototypeLearningNotifications(String(assessmentRun.id), priorAssessmentIds)", assessmentInsert)
 if (!(assessmentInsert >= 0 && assessmentSync > assessmentInsert)) {
-  fail("new assessment must persist canonical lineage before resolving the outcome notification and creating the re-research notification")
+  fail("new assessment must persist canonical lineage before resolving old work and creating the current re-research notification")
 }
 
 const duplicateReturn = assessment.indexOf("created: false, ...notificationSync")
-const duplicateSync = assessment.lastIndexOf("syncPrototypeLearningNotifications(String(row.id))", duplicateReturn)
-if (!(duplicateSync >= 0 && duplicateReturn > duplicateSync)) {
-  fail("idempotent assessment retry must reconcile notification side effects before returning the existing assessment")
+const duplicateReconcile = assessment.lastIndexOf("priorAssessmentIds.filter(priorAssessmentId => priorAssessmentId !== assessmentId)", duplicateReturn)
+if (!(duplicateReconcile >= 0 && duplicateReturn > duplicateReconcile)) {
+  fail("idempotent assessment retry must reconcile superseded notification side effects before returning the existing assessment")
 }
 
 for (const needle of [
@@ -128,4 +135,4 @@ for (const needle of [
   'nunca valida ni mueve convicción automáticamente',
 ]) requireText(page, needle, "notification UI")
 
-console.log("Opportunity notification regression PASS: material weakening remains selective; prototype outcomes notify only admins to classify; assessments automatically resolve their outcome notifications and create deduplicated re-research work; research that consumes an assessment automatically resolves that work; retries reconcile notification side effects; all notification maintenance is best-effort after canonical lineage persistence; and no notification action moves conviction automatically.")
+console.log("Opportunity notification regression PASS: material weakening remains selective; prototype outcomes notify only admins to classify; assessments resolve their outcome notification, retire superseded assessment notifications for the same outcome, and create one deduplicated re-research task for the current classification; research consumption resolves that task; retries reconcile side effects; all notification maintenance is best-effort after canonical lineage persistence; and no notification action moves conviction automatically.")
