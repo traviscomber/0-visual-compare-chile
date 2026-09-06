@@ -45,6 +45,8 @@ jobs:
         run: node scripts/portfolio-analytics-coverage-regression.mts
       - name: App shell section context regression
         run: node scripts/app-shell-section-context-regression.mts
+      - name: Source health notification resolution regression
+        run: node scripts/source-health-notification-resolution-regression.mts
       - name: Company direction regression
         run: node scripts/company-direction-regression.mts
       - name: Company identity quality benchmark
