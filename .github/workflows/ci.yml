@@ -41,6 +41,8 @@ jobs:
         run: node scripts/case-collaboration-security-regression.mts
       - name: Case brief evidence regression
         run: node scripts/case-brief-evidence-regression.mts
+      - name: Portfolio analytics coverage regression
+        run: node scripts/portfolio-analytics-coverage-regression.mts
       - name: Company direction regression
         run: node scripts/company-direction-regression.mts
       - name: Company identity quality benchmark
