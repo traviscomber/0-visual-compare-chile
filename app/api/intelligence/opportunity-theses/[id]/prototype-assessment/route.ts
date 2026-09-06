@@ -141,16 +141,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return String(existing.source_research_id ?? "") === outcomeResearchId
   })
   const priorAssessmentIds = priorAssessments.map(row => String(row.id))
-
-  for (const row of priorAssessments) {
-    const existing = asRecord(asRecord(row.evidence_summary).prototype_assessment)
-    if (existing.assessment === assessmentValue) {
-      const assessmentId = String(row.id)
+  const latestPriorAssessment = priorAssessments[0] ?? null
+  if (latestPriorAssessment) {
+    const latestExisting = asRecord(asRecord(latestPriorAssessment.evidence_summary).prototype_assessment)
+    if (latestExisting.assessment === assessmentValue) {
+      const assessmentId = String(latestPriorAssessment.id)
       const notificationSync = await syncPrototypeLearningNotifications(
         assessmentId,
         priorAssessmentIds.filter(priorAssessmentId => priorAssessmentId !== assessmentId),
       )
-      return NextResponse.json({ assessment: row, created: false, ...notificationSync }, { headers: PRIVATE_NO_STORE_HEADERS })
+      return NextResponse.json({ assessment: latestPriorAssessment, created: false, ...notificationSync }, { headers: PRIVATE_NO_STORE_HEADERS })
     }
   }
 
