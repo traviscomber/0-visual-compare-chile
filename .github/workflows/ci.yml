@@ -81,6 +81,8 @@ jobs:
         run: node scripts/opportunity-prototype-execution-regression.mts
       - name: Opportunity prototype outcome regression
         run: node scripts/opportunity-prototype-outcome-regression.mts
+      - name: Opportunity prototype assessment regression
+        run: node scripts/opportunity-prototype-assessment-regression.mts
       - name: Dashboard opportunities regression
         run: node scripts/dashboard-opportunities-regression.mts
       - name: Executive flow gates regression
@@ -106,7 +108,7 @@ jobs:
       - name: Patent prior-art regression
         run: node scripts/patent-prior-art-regression.mts
       - name: WIPO patent watch regression
-        run: node scripts/wipo-patent-watch-regression.mts
+        run: node scripts/wipo-patent-regression.mts
       - name: Common intelligence reports regression
         run: node scripts/common-reports-regression.mts
       - name: Positioning regression
