@@ -401,7 +401,7 @@ function findPatents(rows: Array<Record<string, unknown>>, terms: string[]) {
   return rows.flatMap(row => {
     const title = text(row.title)
     if (!title) return []
-    const normalized = normalize(title)
+    const normalized = normalizeSearchText(title)
     const score = terms.reduce((total, term) => total + (containsAnchor(normalized, term) ? Math.max(1, normalize(term).split(" ").length) : 0), 0)
     return score > 0 ? [{
       score,
