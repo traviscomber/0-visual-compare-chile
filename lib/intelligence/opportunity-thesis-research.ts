@@ -7,7 +7,10 @@ import {
   type OpportunityMarketState,
   type PrototypeAssessment,
 } from "@/lib/intelligence/opportunity-conviction"
-import { createOpportunityConvictionNotifications } from "@/lib/intelligence/opportunity-notifications"
+import {
+  createOpportunityConvictionNotifications,
+  resolveOpportunityPrototypeLearningNotifications,
+} from "@/lib/intelligence/opportunity-notifications"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 export type OpportunityResearchRunType = "live_research" | "scheduled_research"
@@ -199,6 +202,20 @@ export async function researchPersistedOpportunity(input: {
     throw new OpportunityResearchError("No pudimos guardar la trazabilidad del research; el cambio de convicción fue revertido.", 500, "snapshot_failed")
   }
 
+  let notificationsResolved = 0
+  if (pendingPrototypeAssessment) {
+    try {
+      const resolution = await resolveOpportunityPrototypeLearningNotifications(admin, {
+        opportunityId,
+        stage: "research",
+        sourceId: pendingPrototypeAssessment.id,
+      })
+      notificationsResolved = resolution.resolved
+    } catch (notificationError) {
+      console.error("[opportunity-theses:research:notification-resolution]", notificationError)
+    }
+  }
+
   let notificationsCreated = 0
   try {
     const notificationResult = await createOpportunityConvictionNotifications(admin, {
@@ -232,6 +249,7 @@ export async function researchPersistedOpportunity(input: {
     },
     research: researchRun,
     comparison,
+    notificationsResolved,
     notificationsCreated,
   }
 }
