@@ -51,6 +51,7 @@ type ChileEvidenceItem = {
   observed_at: string | null
   matched_query: string | null
   search_scope: string | null
+  role: string | null
   direction: EvidenceDirection
   delta: number
   reason: string
@@ -162,8 +163,8 @@ export async function GET(request: Request) {
       contradiction_count: contradicting.length,
       neutral_count: neutral.length,
       items: candidates,
-      quality_gate: "Only events from the product-specific Chile watch with explicit Chile geography/institution markers are eligible. Neutral matches never change conviction.",
-      note: "Low-relevance public news can contribute only a bounded delta when direction is explicit. Absence of Chile evidence remains neutral, never negative.",
+      quality_gate: "Only product-specific Chile-watch events with explicit Chile geography/institution markers are eligible. Events marked context_only remain visible but can never change conviction.",
+      note: "Context-only public news is non-scoring regardless of directional wording. Only non-context evidence with stronger provenance may strengthen or weaken conviction. Absence of Chile evidence remains neutral, never negative.",
       generated_at: new Date().toISOString(),
     }
     snapshot.conviction = {
@@ -204,7 +205,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    scoreModel: "chile_evidence_v3.3",
+    scoreModel: "chile_evidence_v3.3.1",
     recommendations: results,
     durationMs: Date.now() - startedAt,
   })
@@ -224,17 +225,22 @@ function classifyEvent(event: EventRow, terms: string[]): ChileEvidenceItem | nu
   const officialSource = Boolean(payload.official_source) || /inapi|bcn|cmf|diario_oficial|mercado_publico|snifa|sma|sernageomin|sernapesca/.test(normalize(event.source_key))
   if (!officialSource && !chileMarkers.length) return null
 
-  const direction = classifyDirection(text)
+  const role = typeof payload.role === "string" ? payload.role : null
+  const contextOnly = role === "context_only"
+  const inferredDirection = classifyDirection(text)
+  const direction: EvidenceDirection = contextOnly ? "neutral" : inferredDirection
   const relevanceWeight = event.relevance === "alta" ? 2 : event.relevance === "media" ? 1 : 0
   const provenanceWeight = officialSource ? 1 : 0
   const specificityWeight = termHits.length >= 2 ? 1 : 0
   const magnitude = Math.min(3, 1 + relevanceWeight + provenanceWeight + specificityWeight)
-  const delta = direction === "strengthen" ? magnitude : direction === "weaken" ? -magnitude : 0
-  const reason = direction === "strengthen"
-    ? "Señal chilena específica con lenguaje explícito de adopción, expansión, inversión, implementación o crecimiento."
-    : direction === "weaken"
-      ? "Señal chilena específica con lenguaje explícito de caída, cancelación, prohibición, rechazo o contracción."
-      : "Coincidencia chilena observada, pero sin dirección suficientemente explícita; queda como contexto y no modifica convicción."
+  const delta = contextOnly ? 0 : direction === "strengthen" ? magnitude : direction === "weaken" ? -magnitude : 0
+  const reason = contextOnly
+    ? "La fuente está marcada por el collector como context_only: se conserva como evidencia chilena contextual, pero no puede modificar convicción."
+    : direction === "strengthen"
+      ? "Señal chilena específica con mayor proveniencia y lenguaje explícito de adopción, expansión, inversión, implementación o crecimiento."
+      : direction === "weaken"
+        ? "Señal chilena específica con mayor proveniencia y lenguaje explícito de caída, cancelación, prohibición, rechazo o contracción."
+        : "Coincidencia chilena observada, pero sin dirección suficientemente explícita; queda como contexto y no modifica convicción."
 
   return {
     event_id: event.id,
@@ -248,6 +254,7 @@ function classifyEvent(event: EventRow, terms: string[]): ChileEvidenceItem | nu
     observed_at: event.last_seen_at,
     matched_query: typeof payload.matched_query === "string" ? payload.matched_query : null,
     search_scope: searchScope,
+    role,
     direction,
     delta,
     reason,
@@ -258,7 +265,7 @@ function classifyEvent(event: EventRow, terms: string[]): ChileEvidenceItem | nu
 
 function classifyDirection(text: string): EvidenceDirection {
   const weaken = /\b(cae|caida|disminuye|disminucion|contrae|contraccion|cancela|cancelacion|suspende|suspension|prohibe|prohibicion|rechaza|rechazo|retrocede|abandona|cierre|desacelera|decline|declines|cancel|cancels|ban|bans|reject|rejection|shutdown|contraction)\b/.test(text)
-  const strengthen = /\b(crece|crecimiento|aumenta|aumento|expande|expansion|adopta|adopcion|invierte|inversion|licitacion|demanda|moderniza|modernizacion|digitaliza|digitalizacion|automatiza|automatizacion|implementa|implementacion|despliega|despliegue|lanza|lanzamiento|integra|integracion|renovacion|llega|llegada|amplia|ampliacion|grows|growth|expands|expansion|adopts|adoption|invests|investment|deploys|deployment|launches|launch|implements|implementation|integrates|integration)\b/.test(text)
+  const strengthen = /\b(crece|crecimiento|aumenta|aumento|expande|expansion|adopta|adopcion|invierte|inversion|licitacion|demanda|moderniza|modernizacion|digitaliza|digitalizacion|automatiza|automatizacion|implementa|implementacion|despliega|despliegue|lanza|lanzamiento|integra|integracion|renovacion|llega|llegada|amplia|ampliacion|grows|growth|expands|adopts|adoption|invests|investment|deploys|deployment|launches|launch|implements|implementation|integrates|integration)\b/.test(text)
   if (weaken && strengthen) return "neutral"
   if (weaken) return "weaken"
   if (strengthen) return "strengthen"

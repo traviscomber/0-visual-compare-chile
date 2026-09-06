@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { Loader2, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-const AUTO_REFRESH_KEY = "videntia:juan-frontier-v33:last-refresh"
+const AUTO_REFRESH_KEY = "videntia:juan-frontier-v331:last-refresh"
 const AUTO_REFRESH_MS = 4 * 60 * 60 * 1000
 
 export function JuanResearchFrontierRefresh() {
