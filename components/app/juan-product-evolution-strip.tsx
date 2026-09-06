@@ -1,4 +1,4 @@
-import { ArrowRight, BookOpen, Boxes, Cable, CheckCircle2, FileSearch, Github, Radar, Sparkles } from "lucide-react"
+import { ArrowRight, BookOpen, Boxes, Building2, Cable, CheckCircle2, FileSearch, Github, Radar, Sparkles } from "lucide-react"
 import { listPortfolioOrganizations } from "@/lib/intelligence/portfolio-access"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { JuanProductEvolutionActions } from "@/components/app/juan-product-evolution-actions"
@@ -20,15 +20,46 @@ type EvolutionRow = {
   updated_at: string
 }
 
+type ChileEvidenceItem = {
+  title?: string
+  source?: string
+  url?: string | null
+  relevance?: string
+  direction?: "strengthen" | "weaken" | "neutral"
+  delta?: number
+  reason?: string
+}
+
 type EvidenceSnapshot = {
   repo?: string
   paper?: { source?: string; title?: string; url?: string; date?: string | null } | null
   patent?: { title?: string; applicants?: string | null; url?: string | null; date?: string | null } | null
-  chile_signal?: { title?: string; source?: string; url?: string | null; relevance?: string } | null
+  chile_signal?: ChileEvidenceItem | null
+  chile_evidence?: {
+    state?: "supporting_evidence" | "contradicting_evidence" | "mixed_evidence" | "insufficient_evidence" | "not_observed"
+    delta?: number
+    items?: ChileEvidenceItem[]
+    support_count?: number
+    contradiction_count?: number
+    neutral_count?: number
+  }
   global_signal?: { title?: string; source?: string; url?: string | null; relevance?: string } | null
+  conviction?: {
+    base?: number
+    paper_delta?: number
+    patent_delta?: number
+    global_delta?: number
+    chile_delta?: number
+    effective?: number
+  }
   reuse_assets?: Array<{ title?: string; url?: string; reuse?: string }>
   integrations?: string[]
-  dimensions?: { outcome?: number; reuse_advantage?: number; integration_leverage?: number; agentic_mcp_potential?: number; chile_fit?: number }
+  dimensions?: {
+    institutional_fit?: number
+    integration_feasibility?: number
+    outcome_potential?: number
+    agentic_mcp_potential?: number
+  }
 }
 
 export async function JuanProductEvolutionStrip({ userId }: { userId: string }) {
@@ -64,59 +95,77 @@ export async function JuanProductEvolutionStrip({ userId }: { userId: string }) 
       <div className="flex items-start gap-3">
         <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-[#173B37] text-[#96B5A6]"><Sparkles className="h-4 w-4" /></span>
         <div>
-          <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]">Evolución de productos · Juan</p>
-          <p className="mt-1 max-w-4xl text-sm leading-6 text-[#E7DFCE]">VIDENTIA cruza necesidades de Chile, frontera tecnológica, papers, patentes y lo que N3uralia ya construyó para proponer el siguiente salto de cada producto.</p>
+          <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]">Evolución de productos · {organization.name}</p>
+          <p className="mt-1 max-w-4xl text-sm leading-6 text-[#E7DFCE]">VIDENTIA separa la evidencia que valida una oportunidad de la capacidad institucional para ejecutarla. Mundo y Chile cambian convicción; {organization.name}, sus activos y MCP definen cómo actuar.</p>
         </div>
       </div>
-      <span className="text-[10px] uppercase tracking-[0.14em] text-[#748481]">investigación automática · decisión humana</span>
+      <span className="text-[10px] uppercase tracking-[0.14em] text-[#748481]">evidencia → capacidad institucional → decisión humana</span>
     </div>
 
-    {pending.length ? <EvolutionGroup title={`Pendientes de tu decisión · ${pending.length}`} rows={pending} organizationId={organization.id} decision /> : null}
-    {researching.length ? <EvolutionGroup title={`Todavía investigando · ${researching.length}`} rows={researching} organizationId={organization.id} /> : null}
-    {accepted.length ? <EvolutionGroup title={`Aprobadas · ${accepted.length}`} rows={accepted} organizationId={organization.id} accepted /> : null}
+    {pending.length ? <EvolutionGroup title={`Pendientes de tu decisión · ${pending.length}`} rows={pending} organizationId={organization.id} organizationName={organization.name} decision /> : null}
+    {researching.length ? <EvolutionGroup title={`Todavía investigando · ${researching.length}`} rows={researching} organizationId={organization.id} organizationName={organization.name} /> : null}
+    {accepted.length ? <EvolutionGroup title={`Aprobadas · ${accepted.length}`} rows={accepted} organizationId={organization.id} organizationName={organization.name} accepted /> : null}
   </section>
 }
 
-function EvolutionGroup({ title, rows, organizationId, decision = false, accepted = false }: { title: string; rows: EvolutionRow[]; organizationId: string; decision?: boolean; accepted?: boolean }) {
+function EvolutionGroup({ title, rows, organizationId, organizationName, decision = false, accepted = false }: { title: string; rows: EvolutionRow[]; organizationId: string; organizationName: string; decision?: boolean; accepted?: boolean }) {
   return <div className="border-b border-[#294047] last:border-b-0">
     <div className="flex items-center gap-2 border-b border-[#294047] px-4 py-2.5 sm:px-5">
       {accepted ? <CheckCircle2 className="h-3.5 w-3.5 text-[#96B5A6]" /> : <Radar className="h-3.5 w-3.5 text-[#83908F]" />}
       <p className={`text-[10px] font-medium uppercase tracking-[0.14em] ${decision || accepted ? "text-[#96B5A6]" : "text-[#83908F]"}`}>{title}</p>
     </div>
     <div className={`divide-y divide-[#294047] ${rows.length > 1 ? "xl:grid xl:grid-cols-4 xl:divide-x xl:divide-y-0" : ""}`}>
-      {rows.map(row => <EvolutionCard key={row.id} row={row} organizationId={organizationId} decision={decision} accepted={accepted} />)}
+      {rows.map(row => <EvolutionCard key={row.id} row={row} organizationId={organizationId} organizationName={organizationName} decision={decision} accepted={accepted} />)}
     </div>
   </div>
 }
 
-function EvolutionCard({ row, organizationId, decision, accepted }: { row: EvolutionRow; organizationId: string; decision: boolean; accepted: boolean }) {
+function EvolutionCard({ row, organizationId, organizationName, decision, accepted }: { row: EvolutionRow; organizationId: string; organizationName: string; decision: boolean; accepted: boolean }) {
   const evidence = (row.evidence_snapshot ?? {}) as EvidenceSnapshot
+  const conviction = evidence.conviction ?? {}
   const dimensions = evidence.dimensions ?? {}
+  const chile = evidence.chile_evidence
   const repoHref = typeof evidence.repo === "string" ? evidence.repo : null
+  const effective = typeof conviction.effective === "number" ? conviction.effective : row.score
+  const base = typeof conviction.base === "number" ? conviction.base : null
+  const chileDelta = typeof chile?.delta === "number" ? chile.delta : typeof conviction.chile_delta === "number" ? conviction.chile_delta : null
   const topDimensions = [
-    ["Outcome", dimensions.outcome],
-    ["Chile", dimensions.chile_fit],
-    ["Reuse", dimensions.reuse_advantage],
+    ["Fit institucional", dimensions.institutional_fit],
+    ["Integración", dimensions.integration_feasibility],
+    ["Outcome", dimensions.outcome_potential],
     ["MCP", dimensions.agentic_mcp_potential],
   ].filter((item): item is [string, number] => typeof item[1] === "number")
 
   return <article className={`px-4 py-4 sm:px-5 ${decision ? "bg-[#102A2C]" : accepted ? "bg-[#0F2728]/55" : ""}`}>
     <div className="flex items-center justify-between gap-3">
       <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">{row.product_name}</span>
-      <span className={`text-sm font-semibold ${row.score >= 90 ? "text-[#B8D5C6]" : "text-[#D5DDD9]"}`}>{row.score}</span>
+      <div className="text-right">
+        <span className={`text-sm font-semibold ${effective >= 90 ? "text-[#B8D5C6]" : "text-[#D5DDD9]"}`}>{effective}</span>
+        <p className="text-[9px] uppercase tracking-[0.1em] text-[#748481]">convicción</p>
+      </div>
     </div>
     <h2 className="mt-2 text-sm font-medium leading-6 text-white">{row.title}</h2>
     <p className="mt-2 text-xs leading-5 text-[#AEB6B4]"><span className="font-medium text-[#D6DDDA]">Outcome:</span> {row.outcome}</p>
 
-    {topDimensions.length ? <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-y border-[#294047] py-2">{topDimensions.map(([label, value]) => <span key={label} className="text-[10px] uppercase tracking-[0.09em] text-[#748481]">{label} <span className="font-semibold text-[#B8C4C1]">{value}</span></span>)}</div> : null}
+    <div className="mt-3 border-y border-[#294047] py-2">
+      <div className="flex flex-wrap gap-x-3 gap-y-1">
+        {base !== null ? <Metric label="Base" value={base} /> : null}
+        {chileDelta !== null ? <Metric label="Chile Δ" value={formatDelta(chileDelta)} /> : null}
+        <Metric label="Efectiva" value={effective} strong />
+      </div>
+      {chile?.state ? <p className="mt-1.5 text-[10px] leading-4 text-[#748481]">Chile: {stateLabel(chile.state)}. Sin evidencia o evidencia insuficiente no resta convicción.</p> : null}
+    </div>
+
+    {topDimensions.length ? <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">{topDimensions.map(([label, value]) => <Metric key={label} label={label} value={value} />)}</div> : null}
 
     <div className="mt-3 space-y-2">
-      {row.chile_need ? <EvidenceLine icon={Radar} label="Chile" value={row.chile_need} /> : null}
+      {row.chile_need ? <EvidenceLine icon={Radar} label="Hipótesis Chile" value={row.chile_need} /> : null}
       {evidence.paper?.title ? <EvidenceLink icon={BookOpen} label={`Paper${evidence.paper.source ? ` · ${evidence.paper.source}` : ""}`} value={evidence.paper.title} href={evidence.paper.url ?? null} /> : null}
       {evidence.patent?.title ? <EvidenceLink icon={FileSearch} label="Patente" value={evidence.patent.title} href={evidence.patent.url ?? null} /> : null}
-      {evidence.global_signal?.title ? <EvidenceLink icon={Sparkles} label="Afuera" value={evidence.global_signal.title} href={evidence.global_signal.url ?? null} /> : null}
-      {evidence.chile_signal?.title ? <EvidenceLink icon={Radar} label="Señal Chile" value={evidence.chile_signal.title} href={evidence.chile_signal.url ?? null} /> : null}
-      {row.reuse_summary ? <EvidenceLine icon={Github} label="Reciclar" value={row.reuse_summary} /> : null}
+      {evidence.global_signal?.title ? <EvidenceLink icon={Sparkles} label="Mundo" value={evidence.global_signal.title} href={evidence.global_signal.url ?? null} /> : null}
+      {chile?.items?.slice(0, 2).map((item, index) => item.title ? <EvidenceLink key={`${item.url ?? item.title}-${index}`} icon={Radar} label={`Chile · ${directionLabel(item.direction)}`} value={`${item.title}${typeof item.delta === "number" ? ` (${formatDelta(item.delta)})` : ""}`} href={item.url ?? null} /> : null)}
+      <EvidenceLine icon={Building2} label="Institución" value={`${organizationName} · capacidad de ejecución separada de la evidencia`} />
+      {row.reuse_summary ? <EvidenceLine icon={Github} label="Capacidad reutilizable" value={row.reuse_summary} /> : null}
       {row.integration_summary ? <EvidenceLine icon={Cable} label="MCP / conexiones" value={row.integration_summary} /> : null}
       <EvidenceLine icon={Boxes} label="Esfuerzo" value={row.effort ?? "por estimar"} />
     </div>
@@ -125,8 +174,30 @@ function EvolutionCard({ row, organizationId, decision, accepted }: { row: Evolu
     {repoHref ? <a href={repoHref} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-[11px] text-[#738180] hover:text-white">Abrir producto en GitHub <ArrowRight className="h-3 w-3" /></a> : null}
 
     {decision ? <div className="mt-4 border-t border-[#294047] pt-4"><JuanProductEvolutionActions recommendationId={row.id} organizationId={organizationId} /></div> : null}
-    {accepted ? <div className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-[#B8D5C6]"><CheckCircle2 className="h-3.5 w-3.5" />Aprobado · VIDENTIA puede seguir enriqueciendo la evidencia sin cambiar tu decisión.</div> : null}
+    {accepted ? <div className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-[#B8D5C6]"><CheckCircle2 className="h-3.5 w-3.5" />Aprobado · nueva evidencia puede pedir revisión, pero no cambia tu decisión automáticamente.</div> : null}
   </article>
+}
+
+function Metric({ label, value, strong = false }: { label: string; value: number | string; strong?: boolean }) {
+  return <span className="text-[10px] uppercase tracking-[0.09em] text-[#748481]">{label} <span className={`font-semibold ${strong ? "text-[#D5DDD9]" : "text-[#B8C4C1]"}`}>{value}</span></span>
+}
+
+function stateLabel(state: NonNullable<EvidenceSnapshot["chile_evidence"]>["state"]) {
+  if (state === "supporting_evidence") return "evidencia de apoyo"
+  if (state === "contradicting_evidence") return "evidencia en contra"
+  if (state === "mixed_evidence") return "evidencia mixta"
+  if (state === "not_observed") return "no observada"
+  return "insuficiente / neutral"
+}
+
+function directionLabel(direction?: ChileEvidenceItem["direction"]) {
+  if (direction === "strengthen") return "apoya"
+  if (direction === "weaken") return "debilita"
+  return "neutral"
+}
+
+function formatDelta(value: number) {
+  return value > 0 ? `+${value}` : String(value)
 }
 
 function compact(value: string, max = 150) {
