@@ -11,6 +11,7 @@ export const maxDuration = 300
 const JUAN_EMAIL = "juan@n3uralia.com"
 const READY_THRESHOLD = 90
 const MAX_PER_LAYER = 3
+const MAX_EVIDENCE_TITLE_LENGTH = 320
 const SCOREABLE_EVIDENCE_TYPES = new Set(["paper", "patent", "news", "market", "regulation"])
 
 type ReuseAsset = { title: string; url: string; reuse: string }
@@ -262,6 +263,8 @@ export async function GET(request: Request) {
       research_mode: "deep_auto_v3_domain_evidence",
       evidence_quality: {
         paper_signal_gate: "all_domain_anchor_groups_required",
+        max_title_length: MAX_EVIDENCE_TITLE_LENGTH,
+        signal_dedupe: "normalized_title",
         anchor_groups: idea.evidenceAnchorGroups,
         curated_evidence_bonus: "scoreable, non-automatic evidence only; live-title duplicates excluded",
       },
@@ -380,6 +383,7 @@ async function findPapers(query: string, anchorGroups: string[][], from: Date, t
   const seen = new Set<string>()
   return combined
     .flatMap(item => {
+      if (!isPlausibleEvidenceTitle(item.title)) return []
       const anchorHits = matchAnchorGroups(item.evidenceText, anchorGroups)
       return anchorHits ? [{ ...item, anchorHits }] : []
     })
@@ -410,9 +414,10 @@ function findPatents(rows: Array<Record<string, unknown>>, terms: string[]) {
 }
 
 function findSignals(rows: Array<Record<string, unknown>>, anchorGroups: string[][]) {
+  const seen = new Set<string>()
   return rows.flatMap(row => {
     const title = text(row.title)
-    if (!title) return []
+    if (!title || !isPlausibleEvidenceTitle(title)) return []
     const sourceKey = text(row.source_key) ?? "external"
     const evidenceText = [title, text(row.summary)].filter(Boolean).join(" ")
     const anchorHits = matchAnchorGroups(evidenceText, anchorGroups)
@@ -428,7 +433,12 @@ function findSignals(rows: Array<Record<string, unknown>>, anchorGroups: string[
       date: text(row.occurred_at) ?? text(row.last_seen_at),
       anchorHits,
     }]
-  }).sort((a, b) => b.score - a.score || String(b.date ?? "").localeCompare(String(a.date ?? ""))).slice(0, MAX_PER_LAYER)
+  }).sort((a, b) => b.score - a.score || String(b.date ?? "").localeCompare(String(a.date ?? ""))).filter(item => {
+    const key = normalize(item.title)
+    if (!key || seen.has(key)) return false
+    seen.add(key)
+    return true
+  }).slice(0, MAX_PER_LAYER)
 }
 
 function matchAnchorGroups(value: string, groups: string[][]) {
@@ -441,6 +451,11 @@ function containsAnchor(normalizedValue: string, anchor: string) {
   const normalizedAnchor = normalizeSearchText(anchor)
   if (!normalizedAnchor) return false
   return ` ${normalizedValue} `.includes(` ${normalizedAnchor} `)
+}
+
+function isPlausibleEvidenceTitle(value: string) {
+  const length = value.trim().length
+  return length >= 12 && length <= MAX_EVIDENCE_TITLE_LENGTH
 }
 
 function isCuratedEvidence(row: Record<string, unknown>) {
