@@ -22,6 +22,17 @@ const RESEARCH_QUERIES: Record<string, string> = {
   "black-swan": "agentic AI agriculture farm operations sensors maintenance digital twin workflow edge",
 }
 
+// Canonical evidence-only starting conviction. These are intentionally independent
+// from N3uralia assets, integration leverage and execution capability.
+const BASE_CONVICTION: Record<string, number> = {
+  motil: 74,
+  pescamar: 72,
+  kumplio: 75,
+  chileflota: 70,
+  "property-partners": 69,
+  "black-swan": 68,
+}
+
 const RESEARCH_ANCHORS: Record<string, string[]> = {
   motil: ["mining", "mine", "mineral", "geology", "geological"],
   pescamar: ["seafood", "aquaculture", "aquatic", "fish", "salmon", "marine"],
@@ -29,6 +40,15 @@ const RESEARCH_ANCHORS: Record<string, string[]> = {
   chileflota: ["fleet", "vehicle", "automotive", "telematics", "transportation"],
   "property-partners": ["real estate", "property", "valuation", "housing", "housing market"],
   "black-swan": ["agriculture", "agricultural", "farm", "crop", "orchard", "horticulture"],
+}
+
+const TECHNOLOGY_ANCHORS: Record<string, string[]> = {
+  motil: ["agentic", "artificial intelligence", "machine learning", "predictive maintenance", "automation", "autonomous", "digital twin", "large language model", "llm", "mcp"],
+  pescamar: ["agentic", "artificial intelligence", "machine learning", "computer vision", "multimodal", "automation", "autonomous", "digital twin", "predictive", "traceability"],
+  kumplio: ["agentic", "artificial intelligence", "machine learning", "rag", "retrieval augmented", "automation", "autonomous", "workflow", "policy as code"],
+  chileflota: ["agentic", "artificial intelligence", "machine learning", "predictive maintenance", "automation", "autonomous", "digital twin", "telematics"],
+  "property-partners": ["agentic", "artificial intelligence", "machine learning", "automated valuation", "automation", "predictive", "large language model", "llm"],
+  "black-swan": ["agentic", "artificial intelligence", "machine learning", "computer vision", "automation", "autonomous", "digital twin", "sensor", "iot", "edge"],
 }
 
 type FrontierPaper = {
@@ -43,6 +63,7 @@ type FrontierPaper = {
   institutions: string[]
   publisher: string | null
   anchorHits: string[]
+  technologyHits: string[]
   ageDays: number | null
   recencyScore: number
   citationScore: number
@@ -95,21 +116,30 @@ export async function GET(request: Request) {
     if (!query) continue
 
     const anchors = RESEARCH_ANCHORS[row.product_key] ?? []
-    const frontier = await buildResearchFrontier(row.product_key, query, anchors, from, to)
+    const technologyAnchors = TECHNOLOGY_ANCHORS[row.product_key] ?? []
+    const frontier = await buildResearchFrontier(row.product_key, query, anchors, technologyAnchors, from, to)
     const snapshot = { ...(row.evidence_snapshot ?? {}) } as Record<string, any>
     const conviction = { ...(snapshot.conviction ?? {}) }
-    const previousPaperDelta = numberOrZero(conviction.paper_delta)
-    const patentDelta = numberOrZero(conviction.patent_delta)
-    const rawGlobalDelta = numberOrZero(conviction.global_delta)
-    const chileDelta = numberOrZero(conviction.chile_delta)
-    const base = typeof conviction.base === "number"
-      ? conviction.base
-      : clamp(Math.round(Number(row.score) - previousPaperDelta - patentDelta - rawGlobalDelta - chileDelta), 0, 100)
+
+    // Never bootstrap from the legacy row score. Older scores mixed evidence with
+    // institutional capability; v3.2 deliberately rebases to the evidence-only baseline.
+    const base = BASE_CONVICTION[row.product_key] ?? clamp(numberOrZero(conviction.base), 0, 100)
+    const patentDelta = typeof conviction.patent_delta === "number"
+      ? conviction.patent_delta
+      : snapshot.patent ? 5 : 0
+    const chileDelta = typeof conviction.chile_delta === "number"
+      ? conviction.chile_delta
+      : numberOrZero(snapshot.chile_evidence?.delta)
 
     const frontierDelta = scoreFrontierDelta(frontier)
     const globalSignalText = normalizeKey(String(snapshot.global_signal?.title ?? ""))
-    const globalSignalAnchorHits = anchors.filter(anchor => globalSignalText.includes(normalizeKey(anchor)))
-    const globalDelta = globalSignalAnchorHits.length ? rawGlobalDelta : 0
+    const globalSignalAnchorHits = anchors.filter(anchor => containsAnchor(globalSignalText, anchor))
+    const globalSignalTechnologyHits = technologyAnchors.filter(anchor => containsAnchor(globalSignalText, anchor))
+    const globalSignalQualified = globalSignalAnchorHits.length > 0 && globalSignalTechnologyHits.length > 0
+    const globalDelta = globalSignalQualified
+      ? snapshot.global_signal?.relevance === "alta" ? 5 : 3
+      : 0
+
     const effective = clamp(Math.round(base + frontierDelta + patentDelta + globalDelta + chileDelta), 0, 100)
     const lockedDecision = row.status === "accepted" || row.status === "rejected"
     const nextStatus = lockedDecision ? row.status : effective >= REVIEW_THRESHOLD ? "ready_for_review" : "researching"
@@ -128,6 +158,7 @@ export async function GET(request: Request) {
       generated_at: new Date().toISOString(),
       query,
       anchors,
+      technology_anchors: technologyAnchors,
       window_days: 720,
       delta: frontierDelta,
       state: frontierState(frontier, sources.length, institutions.length),
@@ -138,17 +169,18 @@ export async function GET(request: Request) {
       sources,
       institutions,
       papers: frontier,
-      quality_gate: "Only papers with explicit domain-anchor evidence in title/topic/subjects contribute to conviction.",
-      note: "Recent, relevant papers can rank as early signals before citation counts mature. Frontier evidence changes world conviction only; institutional capability remains separate.",
+      quality_gate: "A paper contributes only when it contains both explicit domain evidence and explicit technology/method evidence. Same-title publications are deduplicated.",
+      note: "Recent domain-and-technology-qualified papers can rank as early signals before citation counts mature. Institutional capability remains separate from evidence conviction.",
     }
     snapshot.global_signal_quality = {
       scoring: globalDelta > 0,
       anchor_hits: globalSignalAnchorHits,
+      technology_hits: globalSignalTechnologyHits,
       reason: globalDelta > 0
-        ? "Global signal has explicit domain-specific evidence and may contribute to world conviction."
-        : "Global signal lacks explicit domain-specific evidence; it remains visible as context but contributes zero conviction.",
+        ? "Global signal contains both domain and technology evidence and may contribute to world conviction."
+        : "Global signal does not satisfy both domain and technology evidence gates; it remains context with zero conviction contribution.",
     }
-    snapshot.score_model = "evidence_conviction_v3.1: base + domain-qualified world research frontier + patent + domain-qualified global signal + Chile evidence; institution/integration excluded"
+    snapshot.score_model = "evidence_conviction_v3.2: canonical evidence-only base + domain-and-technology-qualified world frontier + patent + qualified global signal + Chile evidence; institution/integration excluded"
     snapshot.conviction = {
       ...conviction,
       base,
@@ -179,8 +211,11 @@ export async function GET(request: Request) {
     results.push({
       productKey: row.product_key,
       ok: true,
+      base,
       frontierDelta,
+      patentDelta,
       globalDelta,
+      chileDelta,
       effective,
       status: nextStatus,
       papers: frontier.length,
@@ -193,14 +228,14 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    scoreModel: "evidence_conviction_v3.1",
+    scoreModel: "evidence_conviction_v3.2",
     frontierLimit: FRONTIER_LIMIT,
     recommendations: results,
     durationMs: Date.now() - startedAt,
   })
 }
 
-async function buildResearchFrontier(productKey: string, query: string, anchors: string[], from: Date, to: Date): Promise<FrontierPaper[]> {
+async function buildResearchFrontier(productKey: string, query: string, anchors: string[], technologyAnchors: string[], from: Date, to: Date): Promise<FrontierPaper[]> {
   const [openAlexResult, crossrefResult] = await Promise.allSettled([
     searchOpenAlexWorks(query, from, to, 12),
     searchCrossrefWorks(query, from, to, 12),
@@ -212,23 +247,23 @@ async function buildResearchFrontier(productKey: string, query: string, anchors:
   if (crossrefResult.status === "rejected") console.warn(`[juan-research-frontier:${productKey}:crossref]`, crossrefResult.reason)
 
   const merged = [
-    ...openAlex.map(item => normalizeOpenAlex(item, anchors)),
-    ...crossref.map(item => normalizeCrossref(item, anchors)),
-  ].filter(item => item.anchorHits.length > 0)
+    ...openAlex.map(item => normalizeOpenAlex(item, anchors, technologyAnchors)),
+    ...crossref.map(item => normalizeCrossref(item, anchors, technologyAnchors)),
+  ].filter(item => item.anchorHits.length > 0 && item.technologyHits.length > 0)
 
-  const deduped = new Map<string, FrontierPaper>()
+  const byTitle = new Map<string, FrontierPaper>()
   for (const paper of merged) {
-    const key = normalizeKey(paper.doi || paper.title)
-    const existing = deduped.get(key)
-    if (!existing || paper.rankScore > existing.rankScore) deduped.set(key, paper)
+    const key = normalizeKey(paper.title)
+    const existing = byTitle.get(key)
+    if (!existing || paper.rankScore > existing.rankScore) byTitle.set(key, paper)
   }
 
-  return [...deduped.values()]
+  return [...byTitle.values()]
     .sort((a, b) => b.rankScore - a.rankScore || (b.date ?? "").localeCompare(a.date ?? ""))
     .slice(0, FRONTIER_LIMIT)
 }
 
-function normalizeOpenAlex(item: OpenAlexWorkSignal, anchors: string[]): FrontierPaper {
+function normalizeOpenAlex(item: OpenAlexWorkSignal, anchors: string[], technologyAnchors: string[]): FrontierPaper {
   const evidenceText = [item.title, item.topic].filter(Boolean).join(" ")
   return rankPaper({
     source: "OpenAlex",
@@ -242,10 +277,11 @@ function normalizeOpenAlex(item: OpenAlexWorkSignal, anchors: string[]): Frontie
     institutions: item.institutions,
     publisher: null,
     anchorHits: findAnchorHits(evidenceText, anchors),
+    technologyHits: findAnchorHits(evidenceText, technologyAnchors),
   })
 }
 
-function normalizeCrossref(item: CrossrefWorkSignal, anchors: string[]): FrontierPaper {
+function normalizeCrossref(item: CrossrefWorkSignal, anchors: string[], technologyAnchors: string[]): FrontierPaper {
   const evidenceText = [item.title, ...item.subjects].join(" ")
   return rankPaper({
     source: "Crossref",
@@ -259,6 +295,7 @@ function normalizeCrossref(item: CrossrefWorkSignal, anchors: string[]): Frontie
     institutions: [],
     publisher: item.publisher,
     anchorHits: findAnchorHits(evidenceText, anchors),
+    technologyHits: findAnchorHits(evidenceText, technologyAnchors),
   })
 }
 
@@ -267,8 +304,9 @@ function rankPaper(input: Omit<FrontierPaper, "ageDays" | "recencyScore" | "cita
   const recencyScore = ageDays === null ? 1 : ageDays <= 90 ? 6 : ageDays <= 180 ? 5 : ageDays <= 365 ? 3 : 1
   const citationScore = Math.min(5, Math.round(Math.log10(Math.max(1, input.citedByCount + 1)) * 2))
   const earlySignal = ageDays !== null && ageDays <= 180
-  const domainSpecificityScore = Math.min(4, input.anchorHits.length * 2)
-  const rankScore = recencyScore * 2 + citationScore + domainSpecificityScore + (earlySignal ? 2 : 0)
+  const domainSpecificityScore = Math.min(3, input.anchorHits.length)
+  const technologySpecificityScore = Math.min(3, input.technologyHits.length)
+  const rankScore = recencyScore * 2 + citationScore + domainSpecificityScore + technologySpecificityScore + (earlySignal ? 2 : 0)
   return { ...input, ageDays, recencyScore, citationScore, rankScore, earlySignal }
 }
 
@@ -277,13 +315,15 @@ function scoreFrontierDelta(frontier: FrontierPaper[]) {
   const sources = new Set(frontier.map(item => item.source)).size
   const institutions = unique(frontier.flatMap(item => item.institutions)).length
   const earlySignals = frontier.filter(item => item.earlySignal).length
-  const recent = frontier.filter(item => item.ageDays !== null && item.ageDays <= 365).length
-  const breadth = Math.min(3, Math.max(0, frontier.length - 1))
+  const highlySpecific = frontier.filter(item => item.anchorHits.length >= 2 && item.technologyHits.length >= 2).length
+  const cited = frontier.filter(item => item.citedByCount > 0).length
+  const breadth = frontier.length >= 4 ? 4 : frontier.length >= 2 ? 3 : 2
   const sourceConvergence = sources >= 2 ? 1 : 0
   const institutionConvergence = institutions >= 3 ? 2 : institutions >= 2 ? 1 : 0
   const earlyMomentum = earlySignals >= 2 ? 2 : earlySignals === 1 ? 1 : 0
-  const recency = recent >= 3 ? 2 : recent >= 1 ? 1 : 0
-  return clamp(2 + breadth + sourceConvergence + institutionConvergence + earlyMomentum + recency, 0, FRONTIER_DELTA_CAP)
+  const specificity = highlySpecific >= 2 ? 1 : 0
+  const validation = cited >= 2 ? 1 : 0
+  return clamp(breadth + sourceConvergence + institutionConvergence + earlyMomentum + specificity + validation, 0, FRONTIER_DELTA_CAP)
 }
 
 function frontierState(frontier: FrontierPaper[], sourceCount: number, institutionCount: number) {
@@ -297,7 +337,12 @@ function frontierState(frontier: FrontierPaper[], sourceCount: number, instituti
 
 function findAnchorHits(value: string, anchors: string[]) {
   const normalized = normalizeKey(value)
-  return anchors.filter(anchor => normalized.includes(normalizeKey(anchor)))
+  return anchors.filter(anchor => containsAnchor(normalized, anchor))
+}
+
+function containsAnchor(normalizedValue: string, anchor: string) {
+  const normalizedAnchor = normalizeKey(anchor)
+  return ` ${normalizedValue} `.includes(` ${normalizedAnchor} `)
 }
 
 function normalizeKey(value: string) {
