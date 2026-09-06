@@ -96,10 +96,10 @@ export async function JuanProductEvolutionStrip({ userId }: { userId: string }) 
         <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-[#173B37] text-[#96B5A6]"><Sparkles className="h-4 w-4" /></span>
         <div>
           <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]">Evolución de productos · {organization.name}</p>
-          <p className="mt-1 max-w-4xl text-sm leading-6 text-[#E7DFCE]">VIDENTIA separa la evidencia que valida una oportunidad de la capacidad institucional para ejecutarla. Mundo y Chile cambian convicción; {organization.name}, sus activos y MCP definen cómo actuar.</p>
+          <p className="mt-1 max-w-4xl text-sm leading-6 text-[#E7DFCE]">VIDENTIA mira primero la frontera mundial —papers internacionales, patentes y señales tecnológicas— para detectar lo que viene. Chile indica si esa dirección ya tiene evidencia local; {organization.name}, sus activos y MCP definen cómo actuar, sin inflar la convicción.</p>
         </div>
       </div>
-      <span className="text-[10px] uppercase tracking-[0.14em] text-[#748481]">evidencia → capacidad institucional → decisión humana</span>
+      <span className="text-[10px] uppercase tracking-[0.14em] text-[#748481]">mundo / papers → Chile → institución → decisión humana</span>
     </div>
 
     {pending.length ? <EvolutionGroup title={`Pendientes de tu decisión · ${pending.length}`} rows={pending} organizationId={organization.id} organizationName={organization.name} decision /> : null}
@@ -129,6 +129,10 @@ function EvolutionCard({ row, organizationId, organizationName, decision, accept
   const effective = typeof conviction.effective === "number" ? conviction.effective : row.score
   const base = typeof conviction.base === "number" ? conviction.base : null
   const chileDelta = typeof chile?.delta === "number" ? chile.delta : typeof conviction.chile_delta === "number" ? conviction.chile_delta : null
+  const worldDelta = [conviction.paper_delta, conviction.patent_delta, conviction.global_delta]
+    .filter((value): value is number => typeof value === "number")
+    .reduce((sum, value) => sum + value, 0)
+  const hasWorldDelta = [conviction.paper_delta, conviction.patent_delta, conviction.global_delta].some(value => typeof value === "number")
   const topDimensions = [
     ["Fit institucional", dimensions.institutional_fit],
     ["Integración", dimensions.integration_feasibility],
@@ -150,19 +154,21 @@ function EvolutionCard({ row, organizationId, organizationName, decision, accept
     <div className="mt-3 border-y border-[#294047] py-2">
       <div className="flex flex-wrap gap-x-3 gap-y-1">
         {base !== null ? <Metric label="Base" value={base} /> : null}
+        {hasWorldDelta ? <Metric label="Mundo Δ" value={formatDelta(worldDelta)} /> : null}
         {chileDelta !== null ? <Metric label="Chile Δ" value={formatDelta(chileDelta)} /> : null}
         <Metric label="Efectiva" value={effective} strong />
       </div>
-      {chile?.state ? <p className="mt-1.5 text-[10px] leading-4 text-[#748481]">Chile: {stateLabel(chile.state)}. Sin evidencia o evidencia insuficiente no resta convicción.</p> : null}
+      <p className="mt-1.5 text-[10px] leading-4 text-[#748481]">Mundo anticipa dirección con papers, patentes y señales globales. Chile confirma, contradice o deja todavía abierta la hipótesis local.</p>
+      {chile?.state ? <p className="mt-1 text-[10px] leading-4 text-[#748481]">Chile: {stateLabel(chile.state)}. Sin evidencia o evidencia insuficiente no resta convicción.</p> : null}
     </div>
 
     {topDimensions.length ? <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">{topDimensions.map(([label, value]) => <Metric key={label} label={label} value={value} />)}</div> : null}
 
     <div className="mt-3 space-y-2">
+      {evidence.paper?.title ? <EvidenceLink icon={BookOpen} label={`Frontera mundial · Paper${evidence.paper.source ? ` · ${evidence.paper.source}` : ""}`} value={evidence.paper.title} href={evidence.paper.url ?? null} /> : null}
+      {evidence.patent?.title ? <EvidenceLink icon={FileSearch} label="Frontera mundial · Patente" value={evidence.patent.title} href={evidence.patent.url ?? null} /> : null}
+      {evidence.global_signal?.title ? <EvidenceLink icon={Sparkles} label="Frontera mundial · Señal" value={evidence.global_signal.title} href={evidence.global_signal.url ?? null} /> : null}
       {row.chile_need ? <EvidenceLine icon={Radar} label="Hipótesis Chile" value={row.chile_need} /> : null}
-      {evidence.paper?.title ? <EvidenceLink icon={BookOpen} label={`Paper${evidence.paper.source ? ` · ${evidence.paper.source}` : ""}`} value={evidence.paper.title} href={evidence.paper.url ?? null} /> : null}
-      {evidence.patent?.title ? <EvidenceLink icon={FileSearch} label="Patente" value={evidence.patent.title} href={evidence.patent.url ?? null} /> : null}
-      {evidence.global_signal?.title ? <EvidenceLink icon={Sparkles} label="Mundo" value={evidence.global_signal.title} href={evidence.global_signal.url ?? null} /> : null}
       {chile?.items?.slice(0, 2).map((item, index) => item.title ? <EvidenceLink key={`${item.url ?? item.title}-${index}`} icon={Radar} label={`Chile · ${directionLabel(item.direction)}`} value={`${item.title}${typeof item.delta === "number" ? ` (${formatDelta(item.delta)})` : ""}`} href={item.url ?? null} /> : null)}
       <EvidenceLine icon={Building2} label="Institución" value={`${organizationName} · capacidad de ejecución separada de la evidencia`} />
       {row.reuse_summary ? <EvidenceLine icon={Github} label="Capacidad reutilizable" value={row.reuse_summary} /> : null}
