@@ -32,10 +32,16 @@ for (const needle of [
   "createOpportunityPrototypeLearningNotifications",
   'input.stage === "assessment" ? "admins_only" : "creator_and_admins"',
   '"opportunity_prototype_learning"',
+  "prototypeLearningHref(input)",
   'outcome=${encodeURIComponent(input.sourceId)}',
   'assessment=${encodeURIComponent(input.sourceId)}',
   'Resultado de prototipo por clasificar ·',
   'Aprendizaje de prototipo listo para re-investigar ·',
+  "resolveOpportunityPrototypeLearningNotifications",
+  '.update({ read_at: resolvedAt })',
+  '.eq("kind", "opportunity_prototype_learning")',
+  '.is("read_at", null)',
+  'Could not resolve prototype learning notifications',
 ]) requireText(helper, needle, "notification helper")
 
 for (const forbidden of [
@@ -47,15 +53,22 @@ for (const forbidden of [
 for (const needle of [
   'created_by,title,status,decision',
   "createOpportunityConvictionNotifications(admin",
+  "resolveOpportunityPrototypeLearningNotifications(admin",
+  'stage: "research"',
+  "sourceId: pendingPrototypeAssessment.id",
+  'console.error("[opportunity-theses:research:notification-resolution]"',
   'console.error("[opportunity-theses:research:notification]"',
+  "notificationsResolved",
   "notificationsCreated",
 ]) requireText(research, needle, "research integration")
 
-const notificationCall = research.indexOf("createOpportunityConvictionNotifications(admin")
-const notificationCatch = research.indexOf('console.error("[opportunity-theses:research:notification]"')
-const researchReturn = research.indexOf("notificationsCreated,", notificationCatch)
-if (!(notificationCall >= 0 && notificationCatch > notificationCall && researchReturn > notificationCatch)) {
-  fail("conviction notification delivery must be best-effort after canonical research persistence, not a rollback condition")
+const researchRollbackGuard = research.indexOf("if (runError || !researchRun)")
+const researchResolutionCall = research.indexOf("resolveOpportunityPrototypeLearningNotifications(admin", researchRollbackGuard)
+const notificationCall = research.indexOf("createOpportunityConvictionNotifications(admin", researchResolutionCall)
+const notificationCatch = research.indexOf('console.error("[opportunity-theses:research:notification]"', notificationCall)
+const researchReturn = research.indexOf("notificationsResolved,", notificationCatch)
+if (!(researchRollbackGuard >= 0 && researchResolutionCall > researchRollbackGuard && notificationCall > researchResolutionCall && notificationCatch > notificationCall && researchReturn > notificationCatch)) {
+  fail("research must resolve consumed prototype-learning work only after canonical snapshot persistence, then deliver conviction notifications best-effort")
 }
 
 for (const needle of [
@@ -75,18 +88,46 @@ if (!(outcomeInsert >= 0 && outcomeNotification > outcomeInsert && outcomeCatch 
 
 for (const needle of [
   'select("id,title,created_by,status,confidence',
-  "createOpportunityPrototypeLearningNotifications(admin",
+  "const organizationId = parsed.data.organizationId",
+  "const assessmentValue = parsed.data.assessment",
+  "const outcomeResearchId = String(outcomeRun.id)",
+  "const thesisTitle = String(thesis.title)",
+  "const thesisCreatorUserId = String(thesis.created_by)",
+  "syncPrototypeLearningNotifications(assessmentId: string, supersededAssessmentIds: string[])",
+  "resolveOpportunityPrototypeLearningNotifications(admin",
+  'stage: "assessment"',
+  "sourceId: outcomeResearchId",
+  "for (const supersededAssessmentId of supersededAssessmentIds)",
   'stage: "research"',
-  'sourceId: String(assessmentRun.id)',
-  "assessment: parsed.data.assessment",
+  "sourceId: supersededAssessmentId",
+  'console.error("[opportunity-theses:prototype-assessment:superseded-notification-resolution]"',
+  "createOpportunityPrototypeLearningNotifications(admin",
+  "sourceId: assessmentId",
+  "assessment: assessmentValue",
+  "const priorAssessments = (priorRows ?? []).filter(row =>",
+  'String(existing.source_research_id ?? "") === outcomeResearchId',
+  "const priorAssessmentIds = priorAssessments.map(row => String(row.id))",
+  "const latestPriorAssessment = priorAssessments[0] ?? null",
+  "if (latestPriorAssessment)",
+  "latestExisting.assessment === assessmentValue",
+  "const assessmentId = String(latestPriorAssessment.id)",
+  "priorAssessmentIds.filter(priorAssessmentId => priorAssessmentId !== assessmentId)",
+  "assessment: latestPriorAssessment, created: false",
+  "syncPrototypeLearningNotifications(String(assessmentRun.id), priorAssessmentIds)",
   'console.error("[opportunity-theses:prototype-assessment:notification]"',
-]) requireText(assessment, needle, "prototype assessment notification")
+  "created: true, ...notificationSync",
+]) requireText(assessment, needle, "prototype assessment notification lifecycle")
 
-const assessmentInsert = assessment.indexOf('.from("innovation_opportunity_research_runs")')
-const assessmentNotification = assessment.indexOf("createOpportunityPrototypeLearningNotifications(admin", assessmentInsert)
-const assessmentCatch = assessment.indexOf('console.error("[opportunity-theses:prototype-assessment:notification]"', assessmentNotification)
-if (!(assessmentInsert >= 0 && assessmentNotification > assessmentInsert && assessmentCatch > assessmentNotification)) {
-  fail("prototype assessment notifications must be best-effort after canonical assessment persistence")
+const assessmentInsert = assessment.indexOf('.insert({')
+const assessmentSync = assessment.indexOf("syncPrototypeLearningNotifications(String(assessmentRun.id), priorAssessmentIds)", assessmentInsert)
+if (!(assessmentInsert >= 0 && assessmentSync > assessmentInsert)) {
+  fail("new assessment must persist canonical lineage before resolving old work and creating the current re-research notification")
+}
+
+const latestDuplicateCheck = assessment.indexOf("latestExisting.assessment === assessmentValue")
+const newAssessmentInsert = assessment.indexOf('.insert({', latestDuplicateCheck)
+if (!(latestDuplicateCheck >= 0 && newAssessmentInsert > latestDuplicateCheck)) {
+  fail("only the latest assessment may be treated as an idempotent retry; reverting to an older classification must append new lineage")
 }
 
 for (const needle of [
@@ -98,4 +139,4 @@ for (const needle of [
   'nunca valida ni mueve convicción automáticamente',
 ]) requireText(page, needle, "notification UI")
 
-console.log("Opportunity notification regression PASS: material weakening remains selective; prototype outcomes notify only admins to classify; assessed prototype learning notifies admins plus the thesis creator to re-research; exact source-linked hrefs deduplicate delivery; all notification delivery is best-effort after canonical lineage persistence; and the notification workspace treats prototype learning as actionable without implying automatic validation or score movement.")
+console.log("Opportunity notification regression PASS: material weakening remains selective; prototype outcomes notify only admins to classify; assessments resolve the outcome task, retire superseded assessment notifications for the same outcome, preserve chronological reclassification by only treating the latest identical assessment as a retry, and create one deduplicated re-research task for the current classification; research consumption resolves that task; all notification maintenance is best-effort after canonical lineage persistence; and no notification action moves conviction automatically.")

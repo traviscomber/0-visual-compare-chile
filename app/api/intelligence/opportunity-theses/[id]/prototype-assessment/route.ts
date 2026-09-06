@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
-import { createOpportunityPrototypeLearningNotifications } from "@/lib/intelligence/opportunity-notifications"
+import {
+  createOpportunityPrototypeLearningNotifications,
+  resolveOpportunityPrototypeLearningNotifications,
+} from "@/lib/intelligence/opportunity-notifications"
 import { assertPortfolioOrganizationAccess } from "@/lib/intelligence/portfolio-access"
 import { createAdminClient } from "@/lib/supabase/admin"
 
@@ -67,11 +70,63 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: "El registro seleccionado no contiene un resultado de prototipo atribuible." }, { status: 409, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
+  const organizationId = parsed.data.organizationId
+  const assessmentValue = parsed.data.assessment
+  const outcomeResearchId = String(outcomeRun.id)
+  const thesisTitle = String(thesis.title)
+  const thesisCreatorUserId = String(thesis.created_by)
+
+  async function syncPrototypeLearningNotifications(assessmentId: string, supersededAssessmentIds: string[]) {
+    let notificationsResolved = 0
+    let notificationsCreated = 0
+
+    try {
+      const resolution = await resolveOpportunityPrototypeLearningNotifications(admin, {
+        opportunityId: id,
+        stage: "assessment",
+        sourceId: outcomeResearchId,
+      })
+      notificationsResolved += resolution.resolved
+    } catch (notificationError) {
+      console.error("[opportunity-theses:prototype-assessment:notification-resolution]", notificationError)
+    }
+
+    for (const supersededAssessmentId of supersededAssessmentIds) {
+      try {
+        const resolution = await resolveOpportunityPrototypeLearningNotifications(admin, {
+          opportunityId: id,
+          stage: "research",
+          sourceId: supersededAssessmentId,
+        })
+        notificationsResolved += resolution.resolved
+      } catch (notificationError) {
+        console.error("[opportunity-theses:prototype-assessment:superseded-notification-resolution]", notificationError)
+      }
+    }
+
+    try {
+      const notificationResult = await createOpportunityPrototypeLearningNotifications(admin, {
+        organizationId,
+        opportunityId: id,
+        opportunityTitle: thesisTitle,
+        creatorUserId: thesisCreatorUserId,
+        stage: "research",
+        sourceId: assessmentId,
+        assessment: assessmentValue,
+      })
+      notificationsCreated = notificationResult.created
+    } catch (notificationError) {
+      console.error("[opportunity-theses:prototype-assessment:notification]", notificationError)
+    }
+
+    return { notificationsResolved, notificationsCreated }
+  }
+
   const { data: priorRows, error: priorError } = await admin
     .from("innovation_opportunity_research_runs")
     .select("id,evidence_summary,observed_at")
     .eq("opportunity_id", id)
-    .eq("organization_id", parsed.data.organizationId)
+    .eq("organization_id", organizationId)
     .eq("run_type", "human_review")
     .order("observed_at", { ascending: false })
     .limit(50)
@@ -81,10 +136,21 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: "No pudimos verificar evaluaciones anteriores." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
-  for (const row of priorRows ?? []) {
+  const priorAssessments = (priorRows ?? []).filter(row => {
     const existing = asRecord(asRecord(row.evidence_summary).prototype_assessment)
-    if (existing.source_research_id === outcomeRun.id && existing.assessment === parsed.data.assessment) {
-      return NextResponse.json({ assessment: row, created: false }, { headers: PRIVATE_NO_STORE_HEADERS })
+    return String(existing.source_research_id ?? "") === outcomeResearchId
+  })
+  const priorAssessmentIds = priorAssessments.map(row => String(row.id))
+  const latestPriorAssessment = priorAssessments[0] ?? null
+  if (latestPriorAssessment) {
+    const latestExisting = asRecord(asRecord(latestPriorAssessment.evidence_summary).prototype_assessment)
+    if (latestExisting.assessment === assessmentValue) {
+      const assessmentId = String(latestPriorAssessment.id)
+      const notificationSync = await syncPrototypeLearningNotifications(
+        assessmentId,
+        priorAssessmentIds.filter(priorAssessmentId => priorAssessmentId !== assessmentId),
+      )
+      return NextResponse.json({ assessment: latestPriorAssessment, created: false, ...notificationSync }, { headers: PRIVATE_NO_STORE_HEADERS })
     }
   }
 
@@ -103,7 +169,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     .from("innovation_opportunity_research_runs")
     .insert({
       opportunity_id: id,
-      organization_id: parsed.data.organizationId,
+      organization_id: organizationId,
       run_type: "human_review",
       research_queries: [],
       evidence_summary: {
@@ -111,7 +177,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           source_research_id: outcomeRun.id,
           action_id: String(outcome.action_id),
           outcome_at: String(outcome.outcome_at),
-          assessment: parsed.data.assessment,
+          assessment: assessmentValue,
           actor_role: access.role,
         },
         scores_unchanged: true,
@@ -131,23 +197,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: "No pudimos registrar la evaluación del prototipo." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
-  let notificationsCreated = 0
-  try {
-    const notificationResult = await createOpportunityPrototypeLearningNotifications(admin, {
-      organizationId: parsed.data.organizationId,
-      opportunityId: id,
-      opportunityTitle: String(thesis.title),
-      creatorUserId: String(thesis.created_by),
-      stage: "research",
-      sourceId: String(assessmentRun.id),
-      assessment: parsed.data.assessment,
-    })
-    notificationsCreated = notificationResult.created
-  } catch (notificationError) {
-    console.error("[opportunity-theses:prototype-assessment:notification]", notificationError)
-  }
-
-  return NextResponse.json({ assessment: assessmentRun, created: true, notificationsCreated }, { status: 201, headers: PRIVATE_NO_STORE_HEADERS })
+  const notificationSync = await syncPrototypeLearningNotifications(String(assessmentRun.id), priorAssessmentIds)
+  return NextResponse.json({ assessment: assessmentRun, created: true, ...notificationSync }, { status: 201, headers: PRIVATE_NO_STORE_HEADERS })
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
