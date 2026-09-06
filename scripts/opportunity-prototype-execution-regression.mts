@@ -39,6 +39,11 @@ for (const needle of [
   'humanReviewId: String(audit.id)',
   'decisionMakerUserId: auth.user.id',
   'console.error("[opportunity-theses:decision:prototype-execution]"',
+  'findLatestPrototypeReview',
+  '.eq("run_type", "human_review")',
+  'decision.to_status !== "prototype"',
+  'console.error("[opportunity-theses:decision:prototype-execution-retry]"',
+  'changed: false, execution',
   'execution,',
 ]) requireText(route, needle, "decision route")
 
@@ -46,12 +51,20 @@ if (!/if \(parsed\.data\.target === "prototype"\) \{[\s\S]*?ensureOpportunityPro
   fail("prototype execution must be guarded by the explicit prototype target")
 }
 
-const auditInsert = route.indexOf('.from("innovation_opportunity_research_runs")')
-const executionCall = route.indexOf("ensureOpportunityPrototypeExecution(auth.supabase")
+const humanAuditInsert = route.indexOf('.insert({\n      opportunity_id: id')
+const firstDecisionExecution = route.indexOf("ensureOpportunityPrototypeExecution(auth.supabase", humanAuditInsert)
 const executionCatch = route.indexOf('console.error("[opportunity-theses:decision:prototype-execution]"')
 const response = route.indexOf("execution,", executionCatch)
-if (!(auditInsert >= 0 && executionCall > auditInsert && executionCatch > executionCall && response > executionCatch)) {
-  fail("prototype execution must occur after immutable human-review persistence and remain best-effort")
+if (!(humanAuditInsert >= 0 && firstDecisionExecution > humanAuditInsert && executionCatch > firstDecisionExecution && response > executionCatch)) {
+  fail("new prototype execution must occur after immutable human-review persistence and remain best-effort")
 }
 
-console.log("Opportunity prototype execution regression PASS: only explicit admin prototype approval bridges into the existing accountable case/action layer, the decision maker becomes the initial assignee, no deadline or high urgency is invented, exact opportunity evidence is preserved, and execution delivery failure never rolls back the audited human decision.")
+const unchangedBranch = route.indexOf("if (current.status === parsed.data.target && current.decision === nextDecision)")
+const retryReview = route.indexOf("findLatestPrototypeReview", unchangedBranch)
+const retryExecution = route.indexOf("ensureOpportunityPrototypeExecution(auth.supabase", retryReview)
+const unchangedResponse = route.indexOf("changed: false, execution", retryExecution)
+if (!(unchangedBranch >= 0 && retryReview > unchangedBranch && retryExecution > retryReview && unchangedResponse > retryExecution)) {
+  fail("an idempotent repeated prototype decision must retry canonical execution without creating a new human decision")
+}
+
+console.log("Opportunity prototype execution regression PASS: only explicit admin prototype approval bridges into the existing accountable case/action layer, the decision maker becomes the initial assignee, no deadline or high urgency is invented, exact opportunity evidence is preserved, execution delivery failure never rolls back the audited human decision, and a repeated prototype request safely retries the idempotent execution bridge without duplicating human-review state.")
