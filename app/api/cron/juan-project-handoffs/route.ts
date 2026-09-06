@@ -10,7 +10,9 @@ export const maxDuration = 300
 
 const JUAN_EMAIL = "juan@n3uralia.com"
 const READY_THRESHOLD = 90
+const MAX_PER_LAYER = 3
 
+type ReuseAsset = { title: string; url: string; reuse: string }
 type ProjectIdea = {
   key: string
   title: string
@@ -19,6 +21,14 @@ type ProjectIdea = {
   researchQuery: string
   patentSignals: string[]
   signalTerms: string[]
+  reuseAssets: ReuseAsset[]
+}
+
+type ExistingHandoff = {
+  idea_key: string
+  status: "ready_for_n3uralia" | "accepted" | "paused" | "closed"
+  rationale: string
+  evidence_snapshot: Record<string, unknown> | null
 }
 
 const PROJECT_IDEAS: ProjectIdea[] = [
@@ -27,45 +37,60 @@ const PROJECT_IDEAS: ProjectIdea[] = [
     title: "Agentic Operations Control Plane",
     strength: 78,
     capability: "Open Agent Builder + MCP + Vertical OS",
-    researchQuery: "AI agents human in the loop workflow orchestration",
-    patentSignals: ["asignación de tareas", "gestión de asignación de tareas", "restricciones críticas"],
-    signalTerms: ["agent", "agentic", "workflow", "autonomous", "automation", "orchestration"],
+    researchQuery: "AI agents human in the loop workflow orchestration governance control plane",
+    patentSignals: ["asignación de tareas", "gestión de asignación de tareas", "restricciones críticas", "agentes", "orquestación"],
+    signalTerms: ["agent", "agentic", "workflow", "autonomous", "automation", "orchestration", "governance", "control plane"],
+    reuseAssets: [
+      { title: "Open Agent Builder", url: "https://github.com/traviscomber/open-agent-buildercrawler", reuse: "Workflows visuales, LangGraph, MCP, loops, streaming y aprobación humana." },
+      { title: "Hermes Agent", url: "https://github.com/traviscomber/hermes-agent", reuse: "Patrones de agente autónomo y ejecución de herramientas." },
+      { title: "Agency Agents", url: "https://github.com/traviscomber/agency-agents", reuse: "Catálogo y patrones multiagente reutilizables." },
+      { title: "VIDENTIA", url: "https://github.com/traviscomber/0-visual-compare-chile", reuse: "Evidencia, provenance, monitoreo, decisiones y trazabilidad." },
+    ],
   },
   {
     key: "capability:agentic-compliance",
     title: "Agentic Compliance Operator",
     strength: 76,
-    capability: "Kumplio + ChileFlota + PermisologIA + agentes",
-    researchQuery: "agentic AI regulatory compliance autonomous workflow",
-    patentSignals: ["consultas jurídicas", "tributarios y contadores", "control de marca personal"],
-    signalTerms: ["compliance", "regulation", "regulatory", "norm", "legal", "fne", "tdlc", "bcn"],
+    capability: "Kumplio + ChileFlota + VIDENTIA + agentes",
+    researchQuery: "agentic AI regulatory compliance autonomous workflow evidence human oversight",
+    patentSignals: ["consultas jurídicas", "tributarios y contadores", "cumplimiento", "regulación", "control"],
+    signalTerms: ["compliance", "regulation", "regulatory", "norm", "legal", "privacy", "audit", "evidence"],
+    reuseAssets: [
+      { title: "Kumplio", url: "https://github.com/traviscomber/kumplio", reuse: "Obligaciones, brechas, acciones, responsables, evidencia, revisión y cierre trazable." },
+      { title: "ChileFlota", url: "https://github.com/traviscomber/v0-transport-certificates-automation", reuse: "Cumplimiento operacional, documentos, vencimientos, tareas y automatización." },
+      { title: "VIDENTIA", url: "https://github.com/traviscomber/0-visual-compare-chile", reuse: "Fuentes, vigilancia, evidence graph, decisiones y provenance." },
+      { title: "Open Agent Builder", url: "https://github.com/traviscomber/open-agent-buildercrawler", reuse: "Orquestación de agentes, MCP y human-in-the-loop." },
+    ],
   },
   {
     key: "capability:physical-intelligence",
     title: "Physical Intelligence Operator",
     strength: 74,
     capability: "Edge Intelligence + Clar1ty + MOTIL + agro/seafood",
-    researchQuery: "multimodal AI computer vision edge autonomous systems",
-    patentSignals: ["multimodal", "microscopía óptica", "campo de visión", "cámara con obturador", "reconocimiento de especies"],
+    researchQuery: "multimodal AI computer vision edge autonomous systems industrial operations",
+    patentSignals: ["multimodal", "microscopía óptica", "campo de visión", "cámara", "reconocimiento de especies"],
     signalTerms: ["computer vision", "multimodal", "camera", "sensor", "edge", "vision", "image"],
+    reuseAssets: [],
   },
   {
     key: "capability:industrial-reliability",
     title: "Industrial AI Reliability Operator",
     strength: 73,
     capability: "MOTIL + Facility Core + Edge Intelligence + mantenimiento operacional",
-    researchQuery: "industrial AI predictive maintenance asset reliability machine learning",
+    researchQuery: "industrial AI predictive maintenance asset reliability machine learning operations",
     patentSignals: ["gestión de activos", "predecir fallas", "restricciones críticas", "equipos de minería"],
     signalTerms: ["maintenance", "asset", "reliability", "mining", "equipment", "industrial", "failure"],
+    reuseAssets: [],
   },
   {
     key: "capability:environmental-operations",
     title: "Environmental Operations Intelligence",
     strength: 72,
     capability: "VIDENTIA + Kumplio + SEA/SEIA + SNIFA/SMA + agentes",
-    researchQuery: "AI environmental compliance industrial monitoring regulation",
+    researchQuery: "AI environmental compliance industrial monitoring regulation operations",
     patentSignals: ["monitoreo de variables", "sistema autónomo", "fuente de fluido", "instalación solar"],
     signalTerms: ["seia", "sea", "snifa", "sma", "environment", "ambiental", "permit", "environmental"],
+    reuseAssets: [],
   },
 ]
 
@@ -83,6 +108,7 @@ export async function GET(request: Request) {
     console.error("[cron/juan-project-handoffs:users]", usersError)
     return NextResponse.json({ ok: false, error: "Could not resolve target user." }, { status: 500 })
   }
+
   const juan = users.users.find(user => user.email?.toLowerCase() === JUAN_EMAIL)
   if (!juan) return NextResponse.json({ ok: false, error: "Target user not found." }, { status: 404 })
 
@@ -90,104 +116,174 @@ export async function GET(request: Request) {
   const organization = organizations[0] ?? null
   if (!organization) return NextResponse.json({ ok: false, error: "Target organization not found." }, { status: 404 })
 
-  const [patentsResult, signalsResult, manualResult] = await Promise.all([
+  const [patentsResult, signalsResult, evidenceResult, handoffsResult] = await Promise.all([
     admin
       .from("patent_records")
-      .select("title,applicants,filing_date,publication_date")
-      .or("title.ilike.%inteligencia artificial%,title.ilike.%aprendizaje automático%,title.ilike.%sistema autónomo%,title.ilike.%multimodal%,title.ilike.%asignación de tareas%,title.ilike.%microscopía%,title.ilike.%gestión de activos%,title.ilike.%monitoreo%")
+      .select("title,applicants,filing_date,publication_date,source_url")
+      .or("title.ilike.%inteligencia artificial%,title.ilike.%aprendizaje automático%,title.ilike.%sistema autónomo%,title.ilike.%multimodal%,title.ilike.%asignación de tareas%,title.ilike.%microscopía%,title.ilike.%gestión de activos%,title.ilike.%monitoreo%,title.ilike.%cumplimiento%,title.ilike.%regulación%")
       .order("publication_date", { ascending: false, nullsFirst: false })
-      .limit(160),
+      .limit(240),
     admin
       .from("intelligence_watch_events")
       .select("title,summary,source_key,relevance,source_url,occurred_at,last_seen_at")
       .eq("user_id", juan.id)
       .in("relevance", ["alta", "media"])
       .order("last_seen_at", { ascending: false })
-      .limit(220),
+      .limit(320),
     admin
       .from("intelligence_idea_evidence")
-      .select("idea_key,title,source_url")
+      .select("idea_key,evidence_type,title,source_url")
       .eq("user_id", juan.id)
       .eq("organization_id", organization.id)
-      .limit(1000),
+      .limit(2000),
+    admin
+      .from("intelligence_project_handoffs")
+      .select("idea_key,status,rationale,evidence_snapshot")
+      .eq("user_id", juan.id)
+      .eq("organization_id", organization.id),
   ])
 
   const patents = patentsResult.error ? [] : patentsResult.data ?? []
   const signals = signalsResult.error ? [] : signalsResult.data ?? []
-  const existing = manualResult.error ? [] : manualResult.data ?? []
-  const existingKeys = new Set(existing.map(row => `${String(row.idea_key)}|${normalize(String(row.title ?? ""))}|${String(row.source_url ?? "")}`))
+  const existingEvidence = evidenceResult.error ? [] : evidenceResult.data ?? []
+  const existingHandoffs = handoffsResult.error ? [] : (handoffsResult.data ?? []) as ExistingHandoff[]
+  const handoffByIdea = new Map(existingHandoffs.map(row => [row.idea_key, row]))
+  const existingKeys = new Set(existingEvidence.map(row => `${String(row.idea_key)}|${normalize(String(row.title ?? ""))}|${String(row.source_url ?? "")}`))
 
-  const from = new Date(Date.now() - 540 * 86_400_000)
+  const from = new Date(Date.now() - 730 * 86_400_000)
   const to = new Date()
-  const scored = [] as Array<Record<string, unknown>>
+  const scored: Array<Record<string, unknown>> = []
   const evidenceToInsert: Array<Record<string, unknown>> = []
 
   for (const idea of PROJECT_IDEAS) {
-    const paper = await findPaper(idea.researchQuery, from, to)
-    const patent = findPatent(patents, idea.patentSignals)
-    const signal = findSignal(signals, idea.signalTerms)
-    const ownCount = existing.filter(row => row.idea_key === idea.key).length
+    const [papers, patentMatches, signalMatches] = await Promise.all([
+      findPapers(idea.researchQuery, from, to),
+      Promise.resolve(findPatents(patents, idea.patentSignals)),
+      Promise.resolve(findSignals(signals, idea.signalTerms)),
+    ])
+
+    const ownEvidence = existingEvidence.filter(row => row.idea_key === idea.key)
+    const humanEvidenceCount = ownEvidence.filter(row => !String(row.title ?? "").startsWith("Código reutilizable ·")).length
+    const reuseBoost = Math.min(6, idea.reuseAssets.length * 1.5)
     const liveScore = Math.min(100, Math.round(
       idea.strength
-      + (paper ? Math.min(8, 3 + Math.log10(Math.max(1, paper.citedByCount + 1)) * 2) : 0)
-      + (patent ? 5 : 0)
-      + (signal ? signal.relevance === "alta" ? 6 : 4 : 0)
-      + Math.min(6, ownCount * 2),
+      + (papers.length ? Math.min(8, 3 + Math.log10(Math.max(1, papers[0].citedByCount + 1)) * 2) : 0)
+      + (patentMatches.length ? 5 : 0)
+      + (signalMatches.length ? signalMatches[0].relevance === "alta" ? 6 : 4 : 0)
+      + Math.min(4, humanEvidenceCount)
+      + reuseBoost,
     ))
 
-    if (paper) addEvidence(evidenceToInsert, existingKeys, {
+    for (const paper of papers) addEvidence(evidenceToInsert, existingKeys, {
       user_id: juan.id,
       organization_id: organization.id,
       idea_key: idea.key,
+      idea_title: idea.title,
       evidence_type: "paper",
       title: paper.title,
       source_url: paper.url,
-      note: `Encontrado automáticamente por VIDENTIA · ${paper.source}${paper.date ? ` · ${paper.date}` : ""}`,
+      note: `Encontrado automáticamente por VIDENTIA · ${paper.source}${paper.date ? ` · ${paper.date}` : ""} · ${paper.citedByCount} citas`,
+      observed_at: paper.date ? `${paper.date}T00:00:00.000Z` : null,
     })
-    if (patent) addEvidence(evidenceToInsert, existingKeys, {
+
+    for (const patent of patentMatches) addEvidence(evidenceToInsert, existingKeys, {
       user_id: juan.id,
       organization_id: organization.id,
       idea_key: idea.key,
+      idea_title: idea.title,
       evidence_type: "patent",
       title: patent.title,
-      source_url: null,
+      source_url: patent.url,
       note: `Encontrado automáticamente en el corpus de patentes${patent.applicants ? ` · ${patent.applicants}` : ""}${patent.date ? ` · ${patent.date}` : ""}`,
+      observed_at: patent.date ? `${patent.date}T00:00:00.000Z` : null,
     })
-    if (signal) addEvidence(evidenceToInsert, existingKeys, {
+
+    for (const signal of signalMatches) addEvidence(evidenceToInsert, existingKeys, {
       user_id: juan.id,
       organization_id: organization.id,
       idea_key: idea.key,
+      idea_title: idea.title,
       evidence_type: signal.sourceKey.includes("news") ? "news" : "market",
       title: signal.title,
       source_url: signal.url,
       note: `Señal ${signal.relevance} encontrada automáticamente · ${humanSource(signal.sourceKey)}`,
+      observed_at: signal.date,
     })
 
-    const ready = liveScore > READY_THRESHOLD
-    if (ready) {
-      const { error: handoffError } = await admin.from("intelligence_project_handoffs").upsert({
-        user_id: juan.id,
-        organization_id: organization.id,
-        idea_key: idea.key,
-        idea_title: idea.title,
-        score: liveScore,
-        status: "ready_for_n3uralia",
-        rationale: "Superó el umbral de 90 con evidencia tecnológica y señales externas suficientes para preparar el traspaso a N3uralia.",
-        capability_summary: idea.capability,
-        evidence_snapshot: {
-          threshold: READY_THRESHOLD,
-          rule: "score > 90",
-          paper: paper ? { source: paper.source, title: paper.title, url: paper.url, date: paper.date } : null,
-          patent: patent ? { title: patent.title, applicants: patent.applicants, date: patent.date } : null,
-          signal: signal ? { title: signal.title, source: signal.sourceKey, url: signal.url, relevance: signal.relevance } : null,
-          observed_at: new Date().toISOString(),
-        },
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "organization_id,idea_key" })
-      if (handoffError) console.error(`[cron/juan-project-handoffs:handoff:${idea.key}]`, handoffError)
+    for (const asset of idea.reuseAssets) addEvidence(evidenceToInsert, existingKeys, {
+      user_id: juan.id,
+      organization_id: organization.id,
+      idea_key: idea.key,
+      idea_title: idea.title,
+      evidence_type: "other",
+      title: `Código reutilizable · ${asset.title}`,
+      source_url: asset.url,
+      note: `N3uralia Reuse Advantage · ${asset.reuse}`,
+      observed_at: new Date().toISOString(),
+    })
+
+    const previous = handoffByIdea.get(idea.key) ?? null
+    const humanDecisionLocked = previous?.status === "accepted" || previous?.status === "closed"
+    const nextStatus = humanDecisionLocked
+      ? previous.status
+      : liveScore > READY_THRESHOLD
+        ? "ready_for_n3uralia"
+        : previous?.status === "ready_for_n3uralia"
+          ? "paused"
+          : previous?.status ?? "paused"
+
+    const researchSnapshot = {
+      threshold: READY_THRESHOLD,
+      rule: "research score > 90 enters human decision",
+      research_mode: "deep_auto_v1",
+      research_summary: {
+        papers: papers.length,
+        patents: patentMatches.length,
+        signals: signalMatches.length,
+        reuse_assets: idea.reuseAssets.length,
+      },
+      papers: papers.map(item => ({ source: item.source, title: item.title, url: item.url, date: item.date, cited_by_count: item.citedByCount })),
+      patents: patentMatches.map(item => ({ title: item.title, applicants: item.applicants, date: item.date, url: item.url })),
+      signals: signalMatches.map(item => ({ title: item.title, source: item.sourceKey, url: item.url, relevance: item.relevance, date: item.date })),
+      reuse_assets: idea.reuseAssets,
+      reuse_advantage: {
+        score_boost: reuseBoost,
+        approach: "reuse_adapt_extract_build_buy_connect",
+      },
+      evidence_gaps: inferEvidenceGaps(papers.length, patentMatches.length, signalMatches.length, idea.reuseAssets.length),
+      observed_at: new Date().toISOString(),
+      human_decision: previous?.evidence_snapshot && typeof previous.evidence_snapshot === "object" ? (previous.evidence_snapshot as Record<string, unknown>).human_decision ?? null : null,
     }
 
-    scored.push({ key: idea.key, title: idea.title, score: liveScore, ready, paper: Boolean(paper), patent: Boolean(patent), signal: Boolean(signal) })
+    const rationale = liveScore > READY_THRESHOLD
+      ? `VIDENTIA completó un estudio automático con ${papers.length} papers, ${patentMatches.length} patentes, ${signalMatches.length} señales y ${idea.reuseAssets.length} activos N3uralia reutilizables. La decisión final queda exclusivamente en Juan.`
+      : `VIDENTIA sigue investigando: el research score está en ${liveScore}/100 y todavía no alcanza el umbral de decisión.`
+
+    const { error: handoffError } = await admin.from("intelligence_project_handoffs").upsert({
+      user_id: juan.id,
+      organization_id: organization.id,
+      idea_key: idea.key,
+      idea_title: idea.title,
+      score: liveScore,
+      status: nextStatus,
+      rationale: humanDecisionLocked && previous?.rationale ? previous.rationale : rationale,
+      capability_summary: idea.capability,
+      evidence_snapshot: researchSnapshot,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "organization_id,idea_key" })
+    if (handoffError) console.error(`[cron/juan-project-handoffs:handoff:${idea.key}]`, handoffError)
+
+    scored.push({
+      key: idea.key,
+      title: idea.title,
+      score: liveScore,
+      status: nextStatus,
+      humanDecisionLocked,
+      papers: papers.length,
+      patents: patentMatches.length,
+      signals: signalMatches.length,
+      reuseAssets: idea.reuseAssets.length,
+    })
   }
 
   let insertedEvidence = 0
@@ -200,8 +296,9 @@ export async function GET(request: Request) {
   const response = {
     ok: true,
     threshold: READY_THRESHOLD,
+    researchMode: "deep_auto_v1",
     ideas: scored,
-    ready: scored.filter(item => item.ready).length,
+    awaitingDecision: scored.filter(item => item.status === "ready_for_n3uralia").length,
     evidenceAdded: insertedEvidence,
     durationMs: Date.now() - startedAt,
   }
@@ -209,37 +306,52 @@ export async function GET(request: Request) {
   return NextResponse.json(response)
 }
 
-async function findPaper(query: string, from: Date, to: Date) {
+async function findPapers(query: string, from: Date, to: Date) {
+  const combined: Array<{ source: "OpenAlex" | "Crossref"; title: string; date: string | null; url: string; citedByCount: number }> = []
   try {
-    const works = await searchOpenAlexWorks(query, from, to, 4)
-    const best = [...works].sort((a, b) => b.citedByCount - a.citedByCount)[0]
-    if (best) return { source: "OpenAlex" as const, title: best.title, date: best.date, url: best.url, citedByCount: best.citedByCount }
+    const works = await searchOpenAlexWorks(query, from, to, 8)
+    for (const work of works) combined.push({ source: "OpenAlex", title: work.title, date: work.date, url: work.url, citedByCount: work.citedByCount })
   } catch (error) {
     console.warn("[cron/juan-project-handoffs:openalex]", error)
   }
-  try {
-    const works = await searchCrossrefWorks(query, from, to, 4)
-    const best = [...works].sort((a, b) => b.citedByCount - a.citedByCount)[0]
-    if (best) return { source: "Crossref" as const, title: best.title, date: best.date, url: best.url, citedByCount: best.citedByCount }
-  } catch (error) {
-    console.warn("[cron/juan-project-handoffs:crossref]", error)
+  if (combined.length < MAX_PER_LAYER) {
+    try {
+      const works = await searchCrossrefWorks(query, from, to, 8)
+      for (const work of works) combined.push({ source: "Crossref", title: work.title, date: work.date, url: work.url, citedByCount: work.citedByCount })
+    } catch (error) {
+      console.warn("[cron/juan-project-handoffs:crossref]", error)
+    }
   }
-  return null
+  const seen = new Set<string>()
+  return combined
+    .sort((a, b) => b.citedByCount - a.citedByCount || String(b.date ?? "").localeCompare(String(a.date ?? "")))
+    .filter(item => {
+      const key = normalize(item.title)
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .slice(0, MAX_PER_LAYER)
 }
 
-function findPatent(rows: Array<Record<string, unknown>>, terms: string[]) {
-  const matches = rows.flatMap(row => {
+function findPatents(rows: Array<Record<string, unknown>>, terms: string[]) {
+  return rows.flatMap(row => {
     const title = text(row.title)
     if (!title) return []
     const normalized = normalize(title)
     const score = terms.reduce((total, term) => total + (normalized.includes(normalize(term)) ? Math.max(1, normalize(term).split(" ").length) : 0), 0)
-    return score > 0 ? [{ score, title, applicants: text(row.applicants), date: text(row.publication_date) ?? text(row.filing_date) }] : []
-  })
-  return matches.sort((a, b) => b.score - a.score || String(b.date ?? "").localeCompare(String(a.date ?? "")))[0] ?? null
+    return score > 0 ? [{
+      score,
+      title,
+      applicants: text(row.applicants),
+      date: text(row.publication_date) ?? text(row.filing_date),
+      url: text(row.source_url),
+    }] : []
+  }).sort((a, b) => b.score - a.score || String(b.date ?? "").localeCompare(String(a.date ?? ""))).slice(0, MAX_PER_LAYER)
 }
 
-function findSignal(rows: Array<Record<string, unknown>>, terms: string[]) {
-  const matches = rows.flatMap(row => {
+function findSignals(rows: Array<Record<string, unknown>>, terms: string[]) {
+  return rows.flatMap(row => {
     const title = text(row.title)
     if (!title) return []
     const sourceKey = text(row.source_key) ?? "external"
@@ -247,9 +359,25 @@ function findSignal(rows: Array<Record<string, unknown>>, terms: string[]) {
     const termScore = terms.reduce((total, term) => total + (haystack.includes(normalize(term)) ? Math.max(1, normalize(term).split(" ").length) : 0), 0)
     if (termScore <= 0) return []
     const relevance = text(row.relevance) ?? "media"
-    return [{ score: termScore + (relevance === "alta" ? 2 : 0), title, sourceKey, relevance, url: text(row.source_url), date: text(row.occurred_at) ?? text(row.last_seen_at) }]
-  })
-  return matches.sort((a, b) => b.score - a.score || String(b.date ?? "").localeCompare(String(a.date ?? "")))[0] ?? null
+    return [{
+      score: termScore + (relevance === "alta" ? 2 : 0),
+      title,
+      sourceKey,
+      relevance,
+      url: text(row.source_url),
+      date: text(row.occurred_at) ?? text(row.last_seen_at),
+    }]
+  }).sort((a, b) => b.score - a.score || String(b.date ?? "").localeCompare(String(a.date ?? ""))).slice(0, MAX_PER_LAYER)
+}
+
+function inferEvidenceGaps(papers: number, patents: number, signals: number, reuseAssets: number) {
+  const gaps: string[] = []
+  if (!signals) gaps.push("Confirmar demanda, comprador o señal de mercado reciente.")
+  if (!papers) gaps.push("Buscar evidencia científica o técnica reciente.")
+  if (!patents) gaps.push("Completar landscape patentario y prior art.")
+  if (!reuseAssets) gaps.push("Mapear código N3uralia reutilizable antes de diseñar desde cero.")
+  if (!gaps.length) gaps.push("Validar problema real, willingness-to-pay y diferenciación antes de construir.")
+  return gaps
 }
 
 function addEvidence(target: Array<Record<string, unknown>>, existing: Set<string>, row: Record<string, unknown>) {
