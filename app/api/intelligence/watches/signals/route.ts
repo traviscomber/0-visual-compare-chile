@@ -4,6 +4,7 @@ import { buildExecutiveAttentionQueue, sortExecutiveAttentionItems } from "@/lib
 import { buildOpportunityAttentionItems } from "@/lib/intelligence/opportunity-attention"
 import { listPortfolioOrganizations } from "@/lib/intelligence/portfolio-access"
 import { collapseSnifaRegulatoryEvents } from "@/lib/intelligence/snifa-regulatory-timeline"
+import { triageWatchTasks } from "@/lib/intelligence/watch-task-triage"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 export const runtime = "nodejs"
@@ -46,6 +47,8 @@ type CommonSignal = {
   isNew: boolean
   href: string
   timeline?: RegulatoryTimeline | null
+  duplicateCount?: number
+  groupedKeys?: string[]
 }
 
 export async function GET() {
@@ -74,7 +77,7 @@ export async function GET() {
   const technologyWatches = new Map((technologyWatchesResult.data ?? []).map(item => [item.id, item]))
   const technologyEvents = collapseSnifaRegulatoryEvents((technologyEventsResult.data ?? []).map(row => ({ ...row, relevance: row.relevance ?? null })))
 
-  const signals: CommonSignal[] = [
+  const rawSignals: CommonSignal[] = [
     ...(brandEventsResult.data ?? []).flatMap(row => {
       const watch = brandWatches.get(row.watch_id)
       if (!watch?.is_active) return []
@@ -135,12 +138,18 @@ export async function GET() {
     }),
   ].sort((a, b) => Number(b.isNew) - Number(a.isNew) || relevanceRank(b.relevance) - relevanceRank(a.relevance) || Date.parse(b.firstSeenAt) - Date.parse(a.firstSeenAt))
 
+  const triage = triageWatchTasks(rawSignals)
+  const historical = rawSignals.filter(item => !item.isNew)
+  const informational = triage.information.map(item => ({ ...item, isNew: false }))
+  const signals: CommonSignal[] = [...triage.tasks, ...informational, ...historical]
+    .sort((a, b) => Number(b.isNew) - Number(a.isNew) || relevanceRank(b.relevance) - relevanceRank(a.relevance) || Date.parse(b.firstSeenAt) - Date.parse(a.firstSeenAt))
+
   const opportunityAttention = await loadOpportunityAttention(admin, portfolioOrganizations.map(item => item.id))
-  const newSignals = signals.filter(item => item.isNew)
   const attentionQueue = sortExecutiveAttentionItems([
     ...buildExecutiveAttentionQueue(signals),
     ...opportunityAttention,
   ])
+
   return NextResponse.json({
     signals,
     attentionQueue,
@@ -151,9 +160,15 @@ export async function GET() {
       medium: attentionQueue.filter(item => item.priority === "media").length,
       opportunity: opportunityAttention.length,
     },
+    triage: {
+      rawPending: triage.rawPendingCount,
+      actionableTasks: triage.tasks.length,
+      informational: triage.information.length,
+      duplicatesCollapsed: triage.hiddenDuplicateCount,
+    },
     summary: {
-      new: newSignals.length,
-      high: newSignals.filter(item => item.relevance === "alta").length,
+      new: triage.tasks.length,
+      high: triage.tasks.filter(item => item.relevance === "alta").length,
       total: signals.length,
       brand: signals.filter(item => item.type === "brand").length,
       patent: signals.filter(item => item.type === "patent").length,
