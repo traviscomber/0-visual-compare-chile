@@ -29,9 +29,8 @@ const typeLabels: Record<EvidenceType, string> = {
 }
 
 export default function OpportunityEvidencePage() {
-  const params = typeof window === "undefined" ? null : new URLSearchParams(window.location.search)
-  const ideaKey = params?.get("ideaKey")?.trim() || ""
-  const ideaTitle = params?.get("ideaTitle")?.trim() || "Idea"
+  const [ideaKey, setIdeaKey] = useState("")
+  const [ideaTitle, setIdeaTitle] = useState("Idea")
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [organizationId, setOrganizationId] = useState("")
   const [items, setItems] = useState<EvidenceRow[]>([])
@@ -44,7 +43,12 @@ export default function OpportunityEvidencePage() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
-  useEffect(() => { void loadOrganizations() }, [])
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    setIdeaKey(params.get("ideaKey")?.trim() || "")
+    setIdeaTitle(params.get("ideaTitle")?.trim() || "Idea")
+    void loadOrganizations()
+  }, [])
   useEffect(() => { if (organizationId && ideaKey) void loadEvidence(organizationId) }, [organizationId, ideaKey])
 
   async function loadOrganizations() {
