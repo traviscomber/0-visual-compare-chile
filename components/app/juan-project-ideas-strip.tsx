@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Activity, ArrowRight, BookOpen, CheckCircle2, FileSearch, GitBranch, Github, Lightbulb, Plus, Radar, XCircle } from "lucide-react"
+import { Activity, ArrowRight, BookOpen, CheckCircle2, FileSearch, GitBranch, Github, Lightbulb, Plus, Radar } from "lucide-react"
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
 import { searchOpenAlexWorks } from "@/lib/intelligence/openalex"
 import { listPortfolioOrganizations } from "@/lib/intelligence/portfolio-access"
@@ -17,10 +17,10 @@ type Idea = {
   patentSignals: string[]
   signalTerms: string[]
 }
-type PaperEvidence = { source: "OpenAlex" | "Crossref"; title: string; date: string | null; url: string; citedByCount: number }
+type PaperEvidence = { source: "OpenAlex" | "Crossref" | "VIDENTIA"; title: string; date: string | null; url: string; citedByCount: number }
 type PatentEvidence = { title: string; applicants: string | null; date: string | null; url?: string | null }
 type ExternalSignal = { title: string; summary: string | null; sourceKey: string; relevance: string; date: string | null; url: string | null }
-type ManualEvidence = { idea_key: string; evidence_type: string; title: string; source_url: string | null; note: string | null; created_at: string }
+type ManualEvidence = { idea_key: string; evidence_type: string; title: string; source_url: string | null; note: string | null; observed_at: string | null; created_at: string }
 type ReuseAsset = { title?: string; url?: string; reuse?: string }
 type ProjectHandoff = {
   idea_key: string
@@ -105,7 +105,7 @@ export async function JuanProjectIdeasStrip({ userId }: { userId: string }) {
     admin.from("innovation_opportunity_theses").select("id,title,overall_score,evidence_strength,status,updated_at").eq("organization_id", organization.id).not("status", "in", '("rejected","archived")').order("overall_score", { ascending: false }).limit(4),
     admin.from("patent_records").select("title,applicants,filing_date,publication_date,source_url").or("title.ilike.%inteligencia artificial%,title.ilike.%aprendizaje automático%,title.ilike.%sistema autónomo%,title.ilike.%multimodal%,title.ilike.%asignación de tareas%,title.ilike.%gestión de activos%,title.ilike.%monitoreo%,title.ilike.%cumplimiento%").order("publication_date", { ascending: false, nullsFirst: false }).limit(160),
     admin.from("intelligence_watch_events").select("title,summary,source_key,relevance,source_url,occurred_at,last_seen_at").eq("user_id", userId).in("relevance", ["alta", "media"]).order("last_seen_at", { ascending: false }).limit(220),
-    admin.from("intelligence_idea_evidence").select("idea_key,evidence_type,title,source_url,note,created_at").eq("user_id", userId).eq("organization_id", organization.id).order("created_at", { ascending: false }).limit(500),
+    admin.from("intelligence_idea_evidence").select("idea_key,evidence_type,title,source_url,note,observed_at,created_at").eq("user_id", userId).eq("organization_id", organization.id).order("created_at", { ascending: false }).limit(500),
     admin.from("intelligence_project_handoffs").select("idea_key,score,status,rationale,evidence_snapshot,updated_at").eq("user_id", userId).eq("organization_id", organization.id).order("score", { ascending: false }),
   ])
 
@@ -130,15 +130,25 @@ export async function JuanProjectIdeasStrip({ userId }: { userId: string }) {
   const from = new Date(Date.now() - 730 * 86_400_000)
   const to = new Date()
   const enriched = await Promise.all(candidates.map(async idea => {
-    const paper = await findPaperEvidence(idea.researchQuery, from, to)
-    const patent = findPatentEvidence(patents, idea.patentSignals)
-    const externalSignal = findExternalSignal(signals, idea.signalTerms)
-    const ownEvidence = evidence.filter(item => item.idea_key === idea.key)
+    const autoPaper = await findPaperEvidence(idea.researchQuery, from, to)
+    const autoPatent = findPatentEvidence(patents, idea.patentSignals)
+    const autoExternalSignal = findExternalSignal(signals, idea.signalTerms)
+    const ownEvidence = evidence
+      .filter(item => item.idea_key === idea.key)
+      .sort((a, b) => evidenceTimestamp(b).localeCompare(evidenceTimestamp(a)) || a.title.localeCompare(b.title))
+    const canonicalPaper = ownEvidence.find(item => item.evidence_type === "paper") ?? null
+    const canonicalPatent = ownEvidence.find(item => item.evidence_type === "patent") ?? null
+    const canonicalSignal = ownEvidence.find(item => ["market", "regulation", "signal"].includes(item.evidence_type)) ?? null
+    const paper = canonicalPaper ? manualPaperEvidence(canonicalPaper) : null
+    const patent = canonicalPatent ? manualPatentEvidence(canonicalPatent) : null
+    const externalSignal = canonicalSignal ? manualExternalSignal(canonicalSignal) : null
     const handoff = handoffByIdea.get(idea.key) ?? null
+    // Preserve the existing score inputs. Canonical selection changes presentation only,
+    // never conviction, handoff state or a human decision.
     const computedScore = Math.min(100, idea.strength
-      + (paper ? Math.min(8, 3 + Math.log10(Math.max(1, paper.citedByCount + 1)) * 2) : 0)
-      + (patent ? 5 : 0)
-      + (externalSignal ? externalSignal.relevance === "alta" ? 6 : 4 : 0)
+      + (autoPaper ? Math.min(8, 3 + Math.log10(Math.max(1, autoPaper.citedByCount + 1)) * 2) : 0)
+      + (autoPatent ? 5 : 0)
+      + (autoExternalSignal ? autoExternalSignal.relevance === "alta" ? 6 : 4 : 0)
       + Math.min(6, ownEvidence.length))
     const liveStrength = handoff ? Number(handoff.score) : computedScore
     const reuseAssets = readReuseAssets(handoff?.evidence_snapshot)
@@ -157,7 +167,7 @@ export async function JuanProjectIdeasStrip({ userId }: { userId: string }) {
     <div className="flex flex-col gap-3 border-b border-[#294047] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
       <div className="flex items-start gap-3">
         <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-[#173B37] text-[#96B5A6]"><Lightbulb className="h-4 w-4" /></span>
-        <div><p className="text-[10px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]">Ideas para proyectos · Juan</p><p className="mt-1 text-sm text-[#E7DFCE]">VIDENTIA investiga, enlaza fuentes y busca código N3uralia reutilizable automáticamente. Tú decides cuando el estudio está listo.</p></div>
+        <div><p className="text-[10px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]">Nuevas oportunidades institucionales · Juan</p><p className="mt-1 text-sm text-[#E7DFCE]">VIDENTIA investiga evidencia específica para cada oportunidad y enlaza capacidad N3uralia por separado. Tú decides cuando el estudio está listo.</p></div>
       </div>
       <Link href="/oportunidades/descubrir" className="inline-flex items-center gap-2 text-sm font-medium text-[#96B5A6] hover:text-white">Buscar más <ArrowRight className="h-4 w-4" /></Link>
     </div>
@@ -207,9 +217,9 @@ function IdeaCard({ idea, tone }: { idea: EnrichedIdea; tone: GroupTone }) {
     <div className="mt-3 space-y-2 border-t border-[#294047] pt-3">
       <EvidenceLine icon={Github} label="Qué ya tenemos" text={idea.capability} />
       {idea.reuseAssets.length ? <EvidenceLine icon={GitBranch} label="Código reciclable" text={`${idea.reuseAssets.length} repos/componentes enlazados en el expediente.`} /> : null}
-      {idea.paper ? <EvidenceLink icon={BookOpen} label={`Paper · ${idea.paper.source}`} text={compactEvidence(idea.paper.title)} meta={idea.paper.date} href={idea.paper.url} /> : <EvidenceLine icon={BookOpen} label="Papers" text="VIDENTIA sigue buscando una coincidencia fuerte." muted />}
-      {idea.patent ? <EvidenceLink icon={FileSearch} label="Patente" text={compactEvidence(idea.patent.title)} meta={[idea.patent.applicants, idea.patent.date].filter(Boolean).join(" · ")} href={idea.patent.url ?? null} /> : <EvidenceLine icon={FileSearch} label="Patentes" text="Landscape todavía incompleto." muted />}
-      {idea.externalSignal ? <EvidenceLink icon={Activity} label={`Señal · ${humanSource(idea.externalSignal.sourceKey)}`} text={compactEvidence(idea.externalSignal.title)} meta={idea.externalSignal.date} href={idea.externalSignal.url} /> : <EvidenceLine icon={Activity} label="Señales" text="VIDENTIA sigue buscando demanda, mercado o regulación." muted />}
+      {idea.paper ? <EvidenceLink icon={BookOpen} label={`Paper · ${idea.paper.source}`} text={compactEvidence(idea.paper.title)} meta={idea.paper.date} href={idea.paper.url} /> : <EvidenceLine icon={BookOpen} label="Papers" text="Sin paper específico validado para esta oportunidad todavía." muted />}
+      {idea.patent ? <EvidenceLink icon={FileSearch} label="Patente" text={compactEvidence(idea.patent.title)} meta={[idea.patent.applicants, idea.patent.date].filter(Boolean).join(" · ")} href={idea.patent.url ?? null} /> : <EvidenceLine icon={FileSearch} label="Patentes" text="Sin patente específica validada para esta oportunidad todavía." muted />}
+      {idea.externalSignal ? <EvidenceLink icon={Activity} label={`Señal · ${humanSource(idea.externalSignal.sourceKey)}`} text={compactEvidence(idea.externalSignal.title)} meta={idea.externalSignal.date} href={idea.externalSignal.url} /> : <EvidenceLine icon={Activity} label="Señales" text="Sin señal específica validada para esta oportunidad todavía." muted />}
     </div>
 
     <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
@@ -258,14 +268,26 @@ function findExternalSignal(rows: Array<Record<string, unknown>>, terms: string[
   return matches.sort((a, b) => b.score - a.score || String(b.date ?? "").localeCompare(String(a.date ?? "")))[0] ?? null
 }
 
+function evidenceTimestamp(item: ManualEvidence) {
+  return item.observed_at || item.created_at || ""
+}
+function manualPaperEvidence(item: ManualEvidence): PaperEvidence {
+  return { source: "VIDENTIA", title: item.title, date: item.observed_at ?? item.created_at, url: item.source_url ?? "", citedByCount: 0 }
+}
+function manualPatentEvidence(item: ManualEvidence): PatentEvidence {
+  return { title: item.title, applicants: null, date: item.observed_at ?? item.created_at, url: item.source_url }
+}
+function manualExternalSignal(item: ManualEvidence): ExternalSignal {
+  return { title: item.title, summary: item.note, sourceKey: item.evidence_type, relevance: "alta", date: item.observed_at ?? item.created_at, url: item.source_url }
+}
 function readReuseAssets(snapshot: Record<string, unknown> | null | undefined): ReuseAsset[] {
   if (!snapshot || typeof snapshot !== "object") return []
   const value = snapshot.reuse_assets
   return Array.isArray(value) ? value.filter(item => item && typeof item === "object") as ReuseAsset[] : []
 }
 function whyNowText(paper: PaperEvidence | null, patent: PatentEvidence | null, signal: ExternalSignal | null, evidenceCount: number) {
-  const layers = [paper ? "actividad científica" : null, patent ? "actividad patentaria" : null, signal ? "una señal externa" : null, evidenceCount ? `${evidenceCount} evidencias acumuladas` : null].filter(Boolean)
-  return layers.length ? `VIDENTIA ya observa ${layers.join(", ")}; sigue profundizando antes de pedir una decisión.` : "La capacidad interna existe, pero VIDENTIA todavía está completando evidencia externa y reutilización."
+  const layers = [paper ? "actividad científica específica" : null, patent ? "actividad patentaria específica" : null, signal ? "una señal externa específica" : null, evidenceCount ? `${evidenceCount} evidencias canónicas acumuladas` : null].filter(Boolean)
+  return layers.length ? `VIDENTIA ya observa ${layers.join(", ")}; sigue profundizando antes de pedir una decisión.` : "La capacidad interna existe, pero VIDENTIA todavía no tiene evidencia externa específica validada para esta oportunidad."
 }
 function significantPhrases(value: string) { return normalize(value).split(/[^a-z0-9]+/).filter(token => token.length >= 6).slice(0, 6) }
 function normalize(value: string) { return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim() }
