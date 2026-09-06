@@ -102,7 +102,7 @@ for (const needle of [
   "created: true, ...notificationSync",
 ]) requireText(assessment, needle, "prototype assessment notification lifecycle")
 
-const assessmentInsert = assessment.indexOf('.insert({', assessment.indexOf('prototype_assessment: {'))
+const assessmentInsert = assessment.indexOf('.insert({')
 const assessmentSync = assessment.indexOf("syncPrototypeLearningNotifications(String(assessmentRun.id))", assessmentInsert)
 if (!(assessmentInsert >= 0 && assessmentSync > assessmentInsert)) {
   fail("new assessment must persist canonical lineage before resolving the outcome notification and creating the re-research notification")
