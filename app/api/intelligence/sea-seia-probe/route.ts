@@ -4,56 +4,54 @@ const SEA_BASE = "https://seia.sea.gob.cl"
 
 export async function GET(request: NextRequest) {
   const query = String(request.nextUrl.searchParams.get("q") ?? "Codelco").trim().slice(0, 80)
-  const summaryUrl = new URL("/busqueda/buscarProyectoResumen.php", SEA_BASE)
-  summaryUrl.searchParams.set("nombre", query)
-
-  const summaryResponse = await fetch(summaryUrl, {
-    cache: "no-store",
-    headers: {
-      Accept: "text/html,application/xhtml+xml",
-      "User-Agent": "VIDENTIA/1.0 source-validation",
-    },
-    signal: AbortSignal.timeout(12_000),
-  })
-  const html = await summaryResponse.text()
-
   const actionUrl = new URL("/busqueda/buscarProyectoResumenAction.php", SEA_BASE)
-  actionUrl.searchParams.set("nombre", query)
-  actionUrl.searchParams.set("draw", "1")
-  actionUrl.searchParams.set("start", "0")
-  actionUrl.searchParams.set("length", "10")
+  const body = new URLSearchParams({
+    nombre: query,
+    titular: "",
+    folio: "",
+    selectRegion: "",
+    selectComuna: "",
+    tipoPresentacion: "",
+    projectStatus: "",
+    PresentacionMin: "",
+    PresentacionMax: "",
+    CalificaMin: "",
+    CalificaMax: "",
+    sectores_economicos: "",
+    razoningreso: "",
+    id_tipoexpediente: "",
+    offset: "1",
+    limit: "10",
+    orderColumn: "FECHA_PRESENTACION",
+    orderDir: "desc",
+  })
 
-  const actionResponse = await fetch(actionUrl, {
+  const response = await fetch(actionUrl, {
+    method: "POST",
     cache: "no-store",
     headers: {
       Accept: "application/json,text/plain,*/*",
-      Referer: summaryUrl.toString(),
+      "Content-Type": "application/x-www-form-urlencoded",
       "User-Agent": "VIDENTIA/1.0 source-validation",
       "X-Requested-With": "XMLHttpRequest",
     },
+    body: body.toString(),
     signal: AbortSignal.timeout(12_000),
   })
-  const actionText = await actionResponse.text()
-  let actionJson: unknown = null
-  try { actionJson = JSON.parse(actionText) } catch {}
+  const buffer = await response.arrayBuffer()
+  const text = new TextDecoder("iso-8859-1").decode(buffer)
+  let json: any = null
+  try { json = JSON.parse(text) } catch {}
 
   return NextResponse.json({
-    summary: {
-      ok: summaryResponse.ok,
-      status: summaryResponse.status,
-      finalUrl: summaryResponse.url,
-      contentType: summaryResponse.headers.get("content-type"),
-      htmlBytes: Buffer.byteLength(html),
-      endpointPresent: html.includes("buscarProyectoResumenAction.php"),
-    },
-    action: {
-      ok: actionResponse.ok,
-      status: actionResponse.status,
-      finalUrl: actionResponse.url,
-      contentType: actionResponse.headers.get("content-type"),
-      bytes: Buffer.byteLength(actionText),
-      json: actionJson,
-      prefix: actionJson ? null : actionText.slice(0, 1200),
-    },
+    ok: response.ok,
+    status: response.status,
+    finalUrl: response.url,
+    contentType: response.headers.get("content-type"),
+    bytes: buffer.byteLength,
+    totalRegistros: json?.totalRegistros ?? null,
+    rows: Array.isArray(json?.data) ? json.data.slice(0, 3) : null,
+    keys: Array.isArray(json?.data) && json.data[0] ? Object.keys(json.data[0]) : null,
+    prefix: json ? null : text.slice(0, 1200),
   })
 }
