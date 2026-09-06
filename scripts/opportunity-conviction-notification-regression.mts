@@ -107,10 +107,14 @@ for (const needle of [
   "const priorAssessments = (priorRows ?? []).filter(row =>",
   'String(existing.source_research_id ?? "") === outcomeResearchId',
   "const priorAssessmentIds = priorAssessments.map(row => String(row.id))",
+  "const latestPriorAssessment = priorAssessments[0] ?? null",
+  "if (latestPriorAssessment)",
+  "latestExisting.assessment === assessmentValue",
+  "const assessmentId = String(latestPriorAssessment.id)",
   "priorAssessmentIds.filter(priorAssessmentId => priorAssessmentId !== assessmentId)",
+  "assessment: latestPriorAssessment, created: false",
   "syncPrototypeLearningNotifications(String(assessmentRun.id), priorAssessmentIds)",
   'console.error("[opportunity-theses:prototype-assessment:notification]"',
-  "created: false, ...notificationSync",
   "created: true, ...notificationSync",
 ]) requireText(assessment, needle, "prototype assessment notification lifecycle")
 
@@ -120,10 +124,10 @@ if (!(assessmentInsert >= 0 && assessmentSync > assessmentInsert)) {
   fail("new assessment must persist canonical lineage before resolving old work and creating the current re-research notification")
 }
 
-const duplicateReturn = assessment.indexOf("created: false, ...notificationSync")
-const duplicateReconcile = assessment.lastIndexOf("priorAssessmentIds.filter(priorAssessmentId => priorAssessmentId !== assessmentId)", duplicateReturn)
-if (!(duplicateReconcile >= 0 && duplicateReturn > duplicateReconcile)) {
-  fail("idempotent assessment retry must reconcile superseded notification side effects before returning the existing assessment")
+const latestDuplicateCheck = assessment.indexOf("latestExisting.assessment === assessmentValue")
+const newAssessmentInsert = assessment.indexOf('.insert({', latestDuplicateCheck)
+if (!(latestDuplicateCheck >= 0 && newAssessmentInsert > latestDuplicateCheck)) {
+  fail("only the latest assessment may be treated as an idempotent retry; reverting to an older classification must append new lineage")
 }
 
 for (const needle of [
@@ -135,4 +139,4 @@ for (const needle of [
   'nunca valida ni mueve convicción automáticamente',
 ]) requireText(page, needle, "notification UI")
 
-console.log("Opportunity notification regression PASS: material weakening remains selective; prototype outcomes notify only admins to classify; assessments resolve their outcome notification, retire superseded assessment notifications for the same outcome, and create one deduplicated re-research task for the current classification; research consumption resolves that task; retries reconcile side effects; all notification maintenance is best-effort after canonical lineage persistence; and no notification action moves conviction automatically.")
+console.log("Opportunity notification regression PASS: material weakening remains selective; prototype outcomes notify only admins to classify; assessments resolve the outcome task, retire superseded assessment notifications for the same outcome, preserve chronological reclassification by only treating the latest identical assessment as a retry, and create one deduplicated re-research task for the current classification; research consumption resolves that task; all notification maintenance is best-effort after canonical lineage persistence; and no notification action moves conviction automatically.")
