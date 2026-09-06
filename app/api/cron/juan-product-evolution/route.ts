@@ -10,6 +10,7 @@ export const maxDuration = 300
 
 const JUAN_EMAIL = "juan@n3uralia.com"
 const REVIEW_THRESHOLD = 84
+const CHILE_DELTA_CAP = 10
 
 type ReuseAsset = { title: string; url: string; reuse: string }
 type ProductEvolution = {
@@ -45,6 +46,20 @@ type PatentRow = {
   publication_date: string | null
   filing_date: string | null
   source_url: string | null
+}
+
+type EvidenceDirection = "strengthen" | "weaken" | "neutral"
+type MatchedSignal = {
+  score: number
+  title: string
+  summary: string | null
+  source: string
+  relevance: string
+  url: string | null
+  date: string | null
+  direction: EvidenceDirection
+  delta: number
+  reason: string
 }
 
 const EVOLUTIONS: ProductEvolution[] = [
@@ -118,7 +133,7 @@ const EVOLUTIONS: ProductEvolution[] = [
     chileNeed: "Transporte chileno opera con documentación, PRT, permisos, mantenimiento y disponibilidad fragmentados; anticipar indisponibilidad tiene valor operacional inmediato.",
     researchQuery: "fleet management agentic AI predictive maintenance telematics compliance workflow scheduling",
     patentTerms: ["vehículo", "flota", "mantenimiento", "telemática", "control", "predicción"],
-    chileTerms: ["prt", "revision tecnica", "transporte", "vehiculo", "flota", "mtT", "camion"],
+    chileTerms: ["prt", "revision tecnica", "transporte", "vehiculo", "flota", "mtt", "camion"],
     globalTerms: ["fleet", "telematics", "predictive maintenance", "vehicle", "agentic", "scheduling"],
     reuseAssets: [
       { title: "ChileFlota", url: "https://github.com/traviscomber/v0-transport-certificates-automation", reuse: "Documentos, vencimientos y flujo de acciones existentes." },
@@ -216,41 +231,61 @@ export async function GET(request: Request) {
   for (const evolution of EVOLUTIONS) {
     const paper = await findPaper(evolution.researchQuery, from, to)
     const patent = findPatent(patents, evolution.patentTerms)
-    const chileSignal = findSignal(signals, evolution.chileTerms, true)
-    const globalSignal = findSignal(signals, evolution.globalTerms, false)
-    const score = Math.min(100, Math.round(
-      evolution.baseScore
-      + (paper ? Math.min(7, 3 + Math.log10(Math.max(1, paper.citedByCount + 1)) * 2) : 0)
-      + (patent ? 5 : 0)
-      + (chileSignal ? chileSignal.relevance === "alta" ? 7 : 5 : 0)
-      + (globalSignal ? globalSignal.relevance === "alta" ? 5 : 3 : 0)
-      + Math.min(5, evolution.reuseAssets.length + 1),
-    ))
+    const chileEvidence = findSignals(signals, evolution.chileTerms, true, 4)
+    const globalSignal = findSignals(signals, evolution.globalTerms, false, 1)[0] ?? null
+
+    const paperDelta = paper ? Math.min(7, Math.round(3 + Math.log10(Math.max(1, paper.citedByCount + 1)) * 2)) : 0
+    const patentDelta = patent ? 5 : 0
+    const globalDelta = globalSignal ? (globalSignal.relevance === "alta" ? 5 : 3) : 0
+    const chileDelta = clamp(chileEvidence.reduce((sum, item) => sum + item.delta, 0), -CHILE_DELTA_CAP, CHILE_DELTA_CAP)
+    const score = clamp(Math.round(evolution.baseScore + paperDelta + patentDelta + globalDelta + chileDelta), 0, 100)
 
     const key = `${evolution.productKey}|${evolution.title}`
     const previous = existingByKey.get(key)
     const lockedDecision = previous?.status === "accepted" || previous?.status === "rejected"
     const nextStatus = lockedDecision ? previous.status : score >= REVIEW_THRESHOLD ? "ready_for_review" : "researching"
-    const externalSignal = [chileSignal?.title, globalSignal?.title].filter(Boolean).join(" · ") || null
+    const externalSignal = [chileEvidence[0]?.title, globalSignal?.title].filter(Boolean).join(" · ") || null
     const reuseSummary = evolution.reuseAssets.map(asset => asset.title).join(" + ")
     const integrationSummary = evolution.integrations.join(" · ")
+    const chileState = classifyChileState(chileEvidence)
 
     const evidenceSnapshot = {
       generated_at: new Date().toISOString(),
-      score_model: "outcome + Chile need + external frontier + paper + patent + reuse + integrations",
+      score_model: "evidence_conviction_v2: base + paper + patent + global + Chile evidence delta; institutional fit and integration excluded",
       repo: evolution.repo,
       paper,
       patent,
-      chile_signal: chileSignal,
+      chile_signal: chileEvidence[0] ?? null,
+      chile_evidence: {
+        state: chileState,
+        delta: chileDelta,
+        items: chileEvidence,
+        support_count: chileEvidence.filter(item => item.direction === "strengthen").length,
+        contradiction_count: chileEvidence.filter(item => item.direction === "weaken").length,
+        neutral_count: chileEvidence.filter(item => item.direction === "neutral").length,
+      },
       global_signal: globalSignal,
+      conviction: {
+        base: evolution.baseScore,
+        paper_delta: paperDelta,
+        patent_delta: patentDelta,
+        global_delta: globalDelta,
+        chile_delta: chileDelta,
+        effective: score,
+      },
+      institutional_context: {
+        organization_id: organization.id,
+        authenticated_email: juan.email,
+        capability_basis: evolution.reuseAssets,
+        note: "Institutional capability shapes execution paths only; it does not increase evidence conviction.",
+      },
       reuse_assets: evolution.reuseAssets,
       integrations: evolution.integrations,
       dimensions: {
-        outcome: Math.min(100, evolution.baseScore + 15),
-        reuse_advantage: Math.min(100, 55 + evolution.reuseAssets.length * 10),
-        integration_leverage: Math.min(100, 55 + evolution.integrations.length * 7),
+        institutional_fit: Math.min(100, 55 + evolution.reuseAssets.length * 10),
+        integration_feasibility: Math.min(100, 55 + evolution.integrations.length * 7),
+        outcome_potential: Math.min(100, evolution.baseScore + 15),
         agentic_mcp_potential: /MCP|agentic|operador/i.test(`${evolution.title} ${integrationSummary}`) ? 92 : 78,
-        chile_fit: chileSignal ? (chileSignal.relevance === "alta" ? 94 : 86) : 72,
       },
     }
 
@@ -275,11 +310,24 @@ export async function GET(request: Request) {
     }, { onConflict: "organization_id,product_key,title" })
     if (error) console.error(`[cron/juan-product-evolution:${evolution.productKey}]`, error)
 
-    results.push({ product: evolution.productName, score, status: nextStatus, paper: Boolean(paper), patent: Boolean(patent), chileSignal: Boolean(chileSignal), globalSignal: Boolean(globalSignal) })
+    results.push({
+      product: evolution.productName,
+      baseConviction: evolution.baseScore,
+      chileDelta,
+      score,
+      status: nextStatus,
+      chileState,
+      paper: Boolean(paper),
+      patent: Boolean(patent),
+      chileEvidence: chileEvidence.length,
+      globalSignal: Boolean(globalSignal),
+      humanDecisionPreserved: lockedDecision,
+    })
   }
 
   return NextResponse.json({
     ok: true,
+    scoreModel: "evidence_conviction_v2",
     reviewThreshold: REVIEW_THRESHOLD,
     recommendations: results.sort((a, b) => Number(b.score) - Number(a.score)),
     durationMs: Date.now() - startedAt,
@@ -307,28 +355,82 @@ function findPatent(rows: PatentRow[], terms: string[]) {
     if (!title) return []
     const normalizedTitle = normalize(title)
     const hits = normalizedTerms.filter(term => normalizedTitle.includes(term))
-    // Require two specific concepts. This intentionally rejects generic single-word collisions.
     if (hits.length < 2) return []
     return [{ score: hits.reduce((sum, term) => sum + term.split(" ").length, 0), title, applicants: row.applicants, date: row.publication_date ?? row.filing_date, url: row.source_url }]
   })
   return matches.sort((a, b) => b.score - a.score || String(b.date ?? "").localeCompare(String(a.date ?? "")))[0] ?? null
 }
 
-function findSignal(rows: SignalRow[], terms: string[], chileOnly: boolean) {
-  const normalizedTerms = terms.map(normalize)
+function findSignals(rows: SignalRow[], terms: string[], chileOnly: boolean, limit: number): MatchedSignal[] {
+  const normalizedTerms = terms.map(normalize).filter(Boolean)
   const matches = rows.flatMap(row => {
     const source = normalize(row.source_key ?? "")
     const haystack = normalize([row.title, row.summary, row.source_key].filter(Boolean).join(" "))
-    const hits = normalizedTerms.filter(term => term && haystack.includes(term))
+    const hits = normalizedTerms.filter(term => haystack.includes(term))
     if (!hits.length) return []
     const chileSource = /sea|seia|sma|snifa|bcn|fne|tdlc|inapi|chile|sernageomin|sernapesca|dt/.test(source)
     const chileText = /chile|chileno|chilena|codelco|sernageomin|sernapesca|valdivia|los rios|los lagos/.test(haystack)
     if (chileOnly && !chileSource && !chileText) return []
     if (!chileOnly && (chileSource || chileText)) return []
-    const relevanceBoost = row.relevance === "alta" ? 3 : 1
-    return [{ score: hits.length * 2 + relevanceBoost, title: row.title, source: row.source_key, relevance: row.relevance, url: row.source_url, date: row.occurred_at ?? row.last_seen_at }]
+
+    const direction = chileOnly ? classifyDirection(haystack) : "strengthen"
+    const relevanceWeight = row.relevance === "alta" ? 2 : 1
+    const specificityWeight = hits.length >= 3 ? 2 : hits.length >= 2 ? 1 : 0
+    const delta = direction === "strengthen"
+      ? Math.min(4, relevanceWeight + specificityWeight)
+      : direction === "weaken"
+        ? -Math.min(4, relevanceWeight + specificityWeight)
+        : 0
+    const reason = direction === "neutral"
+      ? "Coincidencia temática observada; no hay lenguaje suficientemente explícito para inferir apoyo o contradicción."
+      : direction === "strengthen"
+        ? "La señal contiene lenguaje explícito compatible con adopción, demanda, inversión, modernización o expansión."
+        : "La señal contiene lenguaje explícito compatible con caída, cancelación, prohibición, rechazo o contracción."
+
+    return [{
+      score: hits.length * 2 + relevanceWeight,
+      title: row.title,
+      summary: row.summary,
+      source: row.source_key,
+      relevance: row.relevance,
+      url: row.source_url,
+      date: row.occurred_at ?? row.last_seen_at,
+      direction,
+      delta,
+      reason,
+    } satisfies MatchedSignal]
   })
-  return matches.sort((a, b) => b.score - a.score || String(b.date ?? "").localeCompare(String(a.date ?? "")))[0] ?? null
+
+  const deduped = new Map<string, MatchedSignal>()
+  for (const match of matches.sort((a, b) => b.score - a.score || String(b.date ?? "").localeCompare(String(a.date ?? "")))) {
+    const key = normalize(match.url || match.title)
+    if (!deduped.has(key)) deduped.set(key, match)
+    if (deduped.size >= limit) break
+  }
+  return [...deduped.values()]
+}
+
+function classifyDirection(haystack: string): EvidenceDirection {
+  const weaken = /\b(cae|caida|disminuye|disminucion|contrae|contraccion|cancela|cancelacion|suspende|suspension|prohibe|prohibicion|rechaza|rechazo|retrocede|sin adopcion|abandona|cierre|desacelera)\b/.test(haystack)
+  const strengthen = /\b(crece|crecimiento|aumenta|aumento|expande|expansion|adopta|adopcion|invierte|inversion|licitacion|demanda|moderniza|modernizacion|digitaliza|digitalizacion|automatiza|automatizacion|implementa|implementacion|despliega|despliegue)\b/.test(haystack)
+  if (weaken && strengthen) return "neutral"
+  if (weaken) return "weaken"
+  if (strengthen) return "strengthen"
+  return "neutral"
+}
+
+function classifyChileState(items: MatchedSignal[]) {
+  if (!items.length) return "not_observed"
+  const support = items.some(item => item.direction === "strengthen")
+  const contradiction = items.some(item => item.direction === "weaken")
+  if (support && contradiction) return "mixed_evidence"
+  if (support) return "supporting_evidence"
+  if (contradiction) return "contradicting_evidence"
+  return "insufficient_evidence"
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
 }
 
 function normalize(value: string) {
