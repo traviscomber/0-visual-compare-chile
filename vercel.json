@@ -33,10 +33,6 @@
       "schedule": "35 */6 * * *"
     },
     {
-      "path": "/api/cron/juan-product-evolution",
-      "schedule": "45 */6 * * *"
-    },
-    {
       "path": "/api/cron/juan-chile-evidence",
       "schedule": "52 */6 * * *"
     },
