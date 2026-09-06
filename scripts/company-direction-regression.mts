@@ -78,6 +78,7 @@ const refreshMigration = await readFile("supabase/migrations/20260830211333_refr
 const dedupeMigration = await readFile("supabase/migrations/20260830211627_dedupe_company_activity_refresh_inputs.sql", "utf8")
 const searchDedupeMigration = await readFile("supabase/migrations/20260830211928_dedupe_company_identity_search_results.sql", "utf8")
 const searchPerfMigration = await readFile("supabase/migrations/20260830212212_optimize_company_identity_search.sql", "utf8")
+const companiesPage = await readFile("app/(app)/empresas/page.tsx", "utf8")
 
 for (const needle of [
   "normalize_company_identity",
@@ -99,4 +100,19 @@ if (!searchPerfMigration.includes("canonical_identity_key text")) fail("company 
 if (!searchPerfMigration.includes("intelligence_company_identities_canonical_trgm_idx")) fail("company search lacks canonical trigram index")
 if (!searchPerfMigration.includes("limit 120")) fail("company search does not shortlist candidates before activity aggregation")
 
-console.log("Company direction regression PASS: identity normalization, co-applicant parsing, six-month classification deltas, sync bounds, duplicate-safe refresh, deduped indexed search.")
+for (const needle of [
+  'role="alert" className="mt-6 border border-[#D6A46F]/20 bg-[#332C24]/70 p-4 text-sm text-[#E0B987]"',
+  '<OperationalMetricRail className="mt-6 border-t border-border/80">',
+  'label="Expedientes / 12m"',
+  'detail={`${activity.patents_12m} patentes · ${activity.trademarks_12m} marcas`}',
+  'label="Clases distintas"',
+  'label="Marcas históricas"',
+  'label="Relaciones verificadas"',
+]) {
+  if (!companiesPage.includes(needle)) fail(`companies operational UI missing ${needle}`)
+}
+for (const forbidden of ["#3A2525", "#E8AAA3", "function GraphMetric("]) {
+  if (companiesPage.includes(forbidden)) fail(`companies page retains legacy visual pattern: ${forbidden}`)
+}
+
+console.log("Company direction regression PASS: identity normalization, co-applicant parsing, six-month classification deltas, sync bounds, duplicate-safe refresh, deduped indexed search, canonical warning treatment, and shared operational graph metrics.")
