@@ -30,6 +30,17 @@ type ChileEvidenceItem = {
   reason?: string
 }
 
+type FrontierPaper = {
+  source?: string
+  title?: string
+  url?: string | null
+  date?: string | null
+  citedByCount?: number
+  institutions?: string[]
+  anchorHits?: string[]
+  earlySignal?: boolean
+}
+
 type EvidenceSnapshot = {
   repo?: string
   paper?: { source?: string; title?: string; url?: string; date?: string | null } | null
@@ -43,10 +54,21 @@ type EvidenceSnapshot = {
     contradiction_count?: number
     neutral_count?: number
   }
+  world_frontier?: {
+    state?: "not_observed" | "single_signal" | "emerging" | "converging" | "early_convergence"
+    delta?: number
+    paper_count?: number
+    early_signal_count?: number
+    source_count?: number
+    independent_institution_count?: number
+    papers?: FrontierPaper[]
+  }
   global_signal?: { title?: string; source?: string; url?: string | null; relevance?: string } | null
+  global_signal_quality?: { scoring?: boolean; anchor_hits?: string[]; reason?: string }
   conviction?: {
     base?: number
     paper_delta?: number
+    frontier_delta?: number
     patent_delta?: number
     global_delta?: number
     chile_delta?: number
@@ -125,14 +147,15 @@ function EvolutionCard({ row, organizationId, organizationName, decision, accept
   const conviction = evidence.conviction ?? {}
   const dimensions = evidence.dimensions ?? {}
   const chile = evidence.chile_evidence
+  const frontier = evidence.world_frontier
   const repoHref = typeof evidence.repo === "string" ? evidence.repo : null
   const effective = typeof conviction.effective === "number" ? conviction.effective : row.score
   const base = typeof conviction.base === "number" ? conviction.base : null
   const chileDelta = typeof chile?.delta === "number" ? chile.delta : typeof conviction.chile_delta === "number" ? conviction.chile_delta : null
-  const worldDelta = [conviction.paper_delta, conviction.patent_delta, conviction.global_delta]
+  const worldDelta = [conviction.frontier_delta ?? conviction.paper_delta, conviction.patent_delta, conviction.global_delta]
     .filter((value): value is number => typeof value === "number")
     .reduce((sum, value) => sum + value, 0)
-  const hasWorldDelta = [conviction.paper_delta, conviction.patent_delta, conviction.global_delta].some(value => typeof value === "number")
+  const hasWorldDelta = [conviction.frontier_delta ?? conviction.paper_delta, conviction.patent_delta, conviction.global_delta].some(value => typeof value === "number")
   const topDimensions = [
     ["Fit institucional", dimensions.institutional_fit],
     ["Integración", dimensions.integration_feasibility],
@@ -162,12 +185,23 @@ function EvolutionCard({ row, organizationId, organizationName, decision, accept
       {chile?.state ? <p className="mt-1 text-[10px] leading-4 text-[#748481]">Chile: {stateLabel(chile.state)}. Sin evidencia o evidencia insuficiente no resta convicción.</p> : null}
     </div>
 
+    {frontier ? <div className="mt-3 border-b border-[#294047] pb-3">
+      <div className="flex flex-wrap gap-x-3 gap-y-1">
+        <Metric label="Frontera" value={frontierStateLabel(frontier.state)} strong />
+        <Metric label="Papers" value={frontier.paper_count ?? 0} />
+        <Metric label="Tempranos" value={frontier.early_signal_count ?? 0} />
+        <Metric label="Instituciones" value={frontier.independent_institution_count ?? 0} />
+      </div>
+      <p className="mt-1.5 text-[10px] leading-4 text-[#748481]">Sólo papers con evidencia explícita del dominio participan en la convicción. La convergencia entre fuentes e instituciones pesa más que una señal aislada.</p>
+      {frontier.papers?.slice(0, 3).map((paper, index) => paper.title ? <EvidenceLink key={`${paper.url ?? paper.title}-${index}`} icon={BookOpen} label={`Paper ${index + 1}${paper.earlySignal ? " · señal temprana" : ""}`} value={`${paper.title}${paper.date ? ` · ${paper.date}` : ""}${paper.citedByCount !== undefined ? ` · ${paper.citedByCount} citas` : ""}`} href={paper.url ?? null} /> : null)}
+    </div> : null}
+
     {topDimensions.length ? <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">{topDimensions.map(([label, value]) => <Metric key={label} label={label} value={value} />)}</div> : null}
 
     <div className="mt-3 space-y-2">
-      {evidence.paper?.title ? <EvidenceLink icon={BookOpen} label={`Frontera mundial · Paper${evidence.paper.source ? ` · ${evidence.paper.source}` : ""}`} value={evidence.paper.title} href={evidence.paper.url ?? null} /> : null}
+      {!frontier && evidence.paper?.title ? <EvidenceLink icon={BookOpen} label={`Frontera mundial · Paper${evidence.paper.source ? ` · ${evidence.paper.source}` : ""}`} value={evidence.paper.title} href={evidence.paper.url ?? null} /> : null}
       {evidence.patent?.title ? <EvidenceLink icon={FileSearch} label="Frontera mundial · Patente" value={evidence.patent.title} href={evidence.patent.url ?? null} /> : null}
-      {evidence.global_signal?.title ? <EvidenceLink icon={Sparkles} label="Frontera mundial · Señal" value={evidence.global_signal.title} href={evidence.global_signal.url ?? null} /> : null}
+      {evidence.global_signal?.title ? <EvidenceLink icon={Sparkles} label={`Frontera mundial · Señal${evidence.global_signal_quality?.scoring === false ? " · contexto, no puntúa" : ""}`} value={evidence.global_signal.title} href={evidence.global_signal.url ?? null} /> : null}
       {row.chile_need ? <EvidenceLine icon={Radar} label="Hipótesis Chile" value={row.chile_need} /> : null}
       {chile?.items?.slice(0, 2).map((item, index) => item.title ? <EvidenceLink key={`${item.url ?? item.title}-${index}`} icon={Radar} label={`Chile · ${directionLabel(item.direction)}`} value={`${item.title}${typeof item.delta === "number" ? ` (${formatDelta(item.delta)})` : ""}`} href={item.url ?? null} /> : null)}
       <EvidenceLine icon={Building2} label="Institución" value={`${organizationName} · capacidad de ejecución separada de la evidencia`} />
@@ -186,6 +220,14 @@ function EvolutionCard({ row, organizationId, organizationName, decision, accept
 
 function Metric({ label, value, strong = false }: { label: string; value: number | string; strong?: boolean }) {
   return <span className="text-[10px] uppercase tracking-[0.09em] text-[#748481]">{label} <span className={`font-semibold ${strong ? "text-[#D5DDD9]" : "text-[#B8C4C1]"}`}>{value}</span></span>
+}
+
+function frontierStateLabel(state?: NonNullable<EvidenceSnapshot["world_frontier"]>["state"]) {
+  if (state === "early_convergence") return "convergencia temprana"
+  if (state === "converging") return "convergente"
+  if (state === "emerging") return "emergente"
+  if (state === "single_signal") return "señal aislada"
+  return "no observada"
 }
 
 function stateLabel(state: NonNullable<EvidenceSnapshot["chile_evidence"]>["state"]) {
