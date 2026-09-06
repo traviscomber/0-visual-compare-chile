@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Activity, ArrowRight, BookOpen, FileSearch, Github, Lightbulb, Plus, Radar } from "lucide-react"
+import { Activity, ArrowRight, BookOpen, CheckCircle2, FileSearch, Github, Lightbulb, Plus, Radar } from "lucide-react"
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
 import { searchOpenAlexWorks } from "@/lib/intelligence/openalex"
 import { listPortfolioOrganizations } from "@/lib/intelligence/portfolio-access"
@@ -18,37 +18,13 @@ type Idea = {
   signalTerms: string[]
 }
 
-type PaperEvidence = {
-  source: "OpenAlex" | "Crossref"
-  title: string
-  date: string | null
-  url: string
-  citedByCount: number
-}
+type PaperEvidence = { source: "OpenAlex" | "Crossref"; title: string; date: string | null; url: string; citedByCount: number }
+type PatentEvidence = { title: string; applicants: string | null; date: string | null }
+type ExternalSignal = { title: string; summary: string | null; sourceKey: string; relevance: string; date: string | null; url: string | null }
+type ManualEvidence = { idea_key: string; evidence_type: string; title: string; source_url: string | null; note: string | null; created_at: string }
+type ProjectHandoff = { idea_key: string; score: number; status: string; rationale: string | null; updated_at: string }
 
-type PatentEvidence = {
-  title: string
-  applicants: string | null
-  date: string | null
-}
-
-type ExternalSignal = {
-  title: string
-  summary: string | null
-  sourceKey: string
-  relevance: string
-  date: string | null
-  url: string | null
-}
-
-type ManualEvidence = {
-  idea_key: string
-  evidence_type: string
-  title: string
-  source_url: string | null
-  note: string | null
-  created_at: string
-}
+const READY_THRESHOLD = 90
 
 const capabilityIdeas: Idea[] = [
   {
@@ -119,43 +95,13 @@ export async function JuanProjectIdeasStrip({ userId }: { userId: string }) {
   const organization = organizations[0] ?? null
   if (!organization) return null
 
-  const [recommendationsResult, thesesResult, patentCandidatesResult, signalCandidatesResult, manualEvidenceResult] = await Promise.all([
-    admin
-      .from("intelligence_recommendations")
-      .select("id,headline,recommended_action,score,tier,status,updated_at")
-      .eq("organization_id", organization.id)
-      .not("status", "in", '("discarded","converted_to_action")')
-      .order("score", { ascending: false })
-      .order("updated_at", { ascending: false })
-      .limit(4),
-    admin
-      .from("innovation_opportunity_theses")
-      .select("id,title,overall_score,evidence_strength,status,updated_at")
-      .eq("organization_id", organization.id)
-      .not("status", "in", '("rejected","archived")')
-      .order("overall_score", { ascending: false })
-      .order("updated_at", { ascending: false })
-      .limit(4),
-    admin
-      .from("patent_records")
-      .select("title,applicants,filing_date,publication_date")
-      .or("title.ilike.%inteligencia artificial%,title.ilike.%aprendizaje automático%,title.ilike.%sistema autónomo%,title.ilike.%multimodal%,title.ilike.%asignación de tareas%,title.ilike.%microscopía%,title.ilike.%gestión de activos%,title.ilike.%monitoreo%")
-      .order("publication_date", { ascending: false, nullsFirst: false })
-      .limit(120),
-    admin
-      .from("intelligence_watch_events")
-      .select("title,summary,source_key,relevance,source_url,occurred_at,last_seen_at")
-      .eq("user_id", userId)
-      .in("relevance", ["alta", "media"])
-      .order("last_seen_at", { ascending: false })
-      .limit(160),
-    admin
-      .from("intelligence_idea_evidence")
-      .select("idea_key,evidence_type,title,source_url,note,created_at")
-      .eq("user_id", userId)
-      .eq("organization_id", organization.id)
-      .order("created_at", { ascending: false })
-      .limit(250),
+  const [recommendationsResult, thesesResult, patentCandidatesResult, signalCandidatesResult, manualEvidenceResult, handoffsResult] = await Promise.all([
+    admin.from("intelligence_recommendations").select("id,headline,recommended_action,score,tier,status,updated_at").eq("organization_id", organization.id).not("status", "in", '("discarded","converted_to_action")').order("score", { ascending: false }).order("updated_at", { ascending: false }).limit(4),
+    admin.from("innovation_opportunity_theses").select("id,title,overall_score,evidence_strength,status,updated_at").eq("organization_id", organization.id).not("status", "in", '("rejected","archived")').order("overall_score", { ascending: false }).order("updated_at", { ascending: false }).limit(4),
+    admin.from("patent_records").select("title,applicants,filing_date,publication_date").or("title.ilike.%inteligencia artificial%,title.ilike.%aprendizaje automático%,title.ilike.%sistema autónomo%,title.ilike.%multimodal%,title.ilike.%asignación de tareas%,title.ilike.%microscopía%,title.ilike.%gestión de activos%,title.ilike.%monitoreo%").order("publication_date", { ascending: false, nullsFirst: false }).limit(120),
+    admin.from("intelligence_watch_events").select("title,summary,source_key,relevance,source_url,occurred_at,last_seen_at").eq("user_id", userId).in("relevance", ["alta", "media"]).order("last_seen_at", { ascending: false }).limit(160),
+    admin.from("intelligence_idea_evidence").select("idea_key,evidence_type,title,source_url,note,created_at").eq("user_id", userId).eq("organization_id", organization.id).order("created_at", { ascending: false }).limit(250),
+    admin.from("intelligence_project_handoffs").select("idea_key,score,status,rationale,updated_at").eq("user_id", userId).eq("organization_id", organization.id).eq("status", "ready_for_n3uralia").order("score", { ascending: false }),
   ])
 
   const recommendations = recommendationsResult.error ? [] : recommendationsResult.data ?? []
@@ -163,32 +109,12 @@ export async function JuanProjectIdeasStrip({ userId }: { userId: string }) {
   const patentCandidates = patentCandidatesResult.error ? [] : patentCandidatesResult.data ?? []
   const signalCandidates = signalCandidatesResult.error ? [] : signalCandidatesResult.data ?? []
   const manualEvidence = manualEvidenceResult.error ? [] : (manualEvidenceResult.data ?? []) as ManualEvidence[]
+  const handoffs = handoffsResult.error ? [] : (handoffsResult.data ?? []) as ProjectHandoff[]
+  const handoffByIdea = new Map(handoffs.map(item => [item.idea_key, item]))
 
   const persistedIdeas: Idea[] = [
-    ...recommendations.map(item => ({
-      key: `recommendation:${item.id}`,
-      title: String(item.headline),
-      detail: String(item.recommended_action || "Revisar la evidencia y decidir si merece investigación."),
-      strength: Number(item.score ?? 0),
-      href: "/oportunidades",
-      source: "Señales + evidencia",
-      capability: "Oportunidad ya detectada por VIDENTIA",
-      researchQuery: String(item.headline),
-      patentSignals: significantPhrases(String(item.headline)),
-      signalTerms: significantPhrases(String(item.headline)),
-    })),
-    ...theses.map(item => ({
-      key: `thesis:${item.id}`,
-      title: String(item.title),
-      detail: `Evidencia ${Math.round(Number(item.evidence_strength ?? 0))}/100 · conviene revisar la hipótesis y qué falta confirmar.`,
-      strength: Number(item.overall_score ?? 0),
-      href: "/oportunidades/tesis",
-      source: "Hipótesis investigada",
-      capability: "Hipótesis ya trabajada dentro de VIDENTIA",
-      researchQuery: String(item.title),
-      patentSignals: significantPhrases(String(item.title)),
-      signalTerms: significantPhrases(String(item.title)),
-    })),
+    ...recommendations.map(item => ({ key: `recommendation:${item.id}`, title: String(item.headline), detail: String(item.recommended_action || "Revisar la evidencia y decidir si merece investigación."), strength: Number(item.score ?? 0), href: "/oportunidades", source: "Señales + evidencia", capability: "Oportunidad ya detectada por VIDENTIA", researchQuery: String(item.headline), patentSignals: significantPhrases(String(item.headline)), signalTerms: significantPhrases(String(item.headline)) })),
+    ...theses.map(item => ({ key: `thesis:${item.id}`, title: String(item.title), detail: `Evidencia ${Math.round(Number(item.evidence_strength ?? 0))}/100 · conviene revisar la hipótesis y qué falta confirmar.`, strength: Number(item.overall_score ?? 0), href: "/oportunidades/tesis", source: "Hipótesis investigada", capability: "Hipótesis ya trabajada dentro de VIDENTIA", researchQuery: String(item.title), patentSignals: significantPhrases(String(item.title)), signalTerms: significantPhrases(String(item.title)) })),
   ]
 
   const candidateIdeas = [...persistedIdeas, ...capabilityIdeas]
@@ -203,23 +129,18 @@ export async function JuanProjectIdeasStrip({ userId }: { userId: string }) {
     const patent = findPatentEvidence(patentCandidates, idea.patentSignals)
     const externalSignal = findExternalSignal(signalCandidates, idea.signalTerms)
     const ownEvidence = manualEvidence.filter(item => item.idea_key === idea.key)
-    const liveStrength = idea.strength
+    const liveStrength = Math.min(100, idea.strength
       + (paper ? Math.min(8, 3 + Math.log10(Math.max(1, paper.citedByCount + 1)) * 2) : 0)
       + (patent ? 5 : 0)
       + (externalSignal ? externalSignal.relevance === "alta" ? 6 : 4 : 0)
-      + Math.min(6, ownEvidence.length * 2)
-    return {
-      ...idea,
-      paper,
-      patent,
-      externalSignal,
-      ownEvidence,
-      liveStrength,
-      whyNow: whyNowText(paper, patent, externalSignal, ownEvidence.length),
-    }
+      + Math.min(6, ownEvidence.length * 2))
+    const handoff = handoffByIdea.get(idea.key) ?? null
+    return { ...idea, paper, patent, externalSignal, ownEvidence, liveStrength, handoff, isReady: liveStrength > READY_THRESHOLD || Boolean(handoff), whyNow: whyNowText(paper, patent, externalSignal, ownEvidence.length) }
   }))
 
   const ideas = enriched.sort((a, b) => b.liveStrength - a.liveStrength).slice(0, 5)
+  const readyIdeas = ideas.filter(idea => idea.isReady)
+  const researchIdeas = ideas.filter(idea => !idea.isReady)
 
   return (
     <section className="mx-auto mt-4 w-[calc(100%-2rem)] max-w-[1480px] border-y border-[#294047] bg-[#0D2329] sm:w-[calc(100%-3rem)]">
@@ -228,37 +149,68 @@ export async function JuanProjectIdeasStrip({ userId }: { userId: string }) {
           <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-[#173B37] text-[#96B5A6]"><Lightbulb className="h-4 w-4" /></span>
           <div>
             <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]">Ideas para proyectos · Juan</p>
-            <p className="mt-1 text-sm text-[#E7DFCE]">Capacidades N3uralia cruzadas con papers, patentes, señales externas y datos que tú agregas. VIDENTIA sigue completando la evidencia en paralelo.</p>
+            <p className="mt-1 text-sm text-[#E7DFCE]">VIDENTIA sigue completando cada idea con capacidades N3uralia, papers, patentes, señales externas y tus propios datos.</p>
           </div>
         </div>
         <Link href="/oportunidades/descubrir" className="inline-flex items-center gap-2 text-sm font-medium text-[#96B5A6] hover:text-white">Buscar más <ArrowRight className="h-4 w-4" /></Link>
       </div>
-      <div className="divide-y divide-[#294047] xl:grid xl:grid-cols-5 xl:divide-x xl:divide-y-0">
-        {ideas.map(idea => {
-          const evidenceHref = `/oportunidades/evidencia?ideaKey=${encodeURIComponent(idea.key)}&ideaTitle=${encodeURIComponent(idea.title)}`
-          return <article key={idea.key} className="px-4 py-4 sm:px-5">
-            <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.12em] text-[#83908F]"><span className="flex items-center gap-2"><Radar className="h-3 w-3" />{idea.source}</span><span>{Math.round(idea.liveStrength)}</span></div>
-            <h2 className="mt-2 text-sm font-medium leading-6 text-white">{idea.title}</h2>
-            <p className="mt-1.5 text-xs leading-5 text-[#AEB6B4]">{idea.detail}</p>
-            <p className="mt-3 text-[11px] leading-5 text-[#D5DDD9]"><span className="font-medium text-[#96B5A6]">Por qué ahora:</span> {idea.whyNow}</p>
 
-            <div className="mt-3 space-y-2 border-t border-[#294047] pt-3">
-              <EvidenceLine icon={Github} label="Qué ya tenemos" text={idea.capability} />
-              {idea.paper ? <EvidenceLink icon={BookOpen} label={`Paper · ${idea.paper.source}`} text={compactEvidence(idea.paper.title, 135)} meta={idea.paper.date} href={idea.paper.url} /> : <EvidenceLine icon={BookOpen} label="Papers" text="Sin coincidencia suficientemente precisa en la ventana reciente." muted />}
-              {idea.patent ? <EvidenceLine icon={FileSearch} label="Patente" text={compactEvidence(idea.patent.title, 135)} meta={[idea.patent.applicants, idea.patent.date].filter(Boolean).join(" · ")} /> : <EvidenceLine icon={FileSearch} label="Patentes" text="Sin coincidencia fuerte en el corpus INAPI observado." muted />}
-              {idea.externalSignal ? <EvidenceLink icon={Activity} label={`Señal · ${humanSource(idea.externalSignal.sourceKey)}`} text={compactEvidence(idea.externalSignal.title, 135)} meta={idea.externalSignal.date} href={idea.externalSignal.url} /> : <EvidenceLine icon={Activity} label="Señales" text="Sin señal alta/media suficientemente relacionada en tus seguimientos actuales." muted />}
-              <EvidenceLine icon={Plus} label="Datos tuyos" text={idea.ownEvidence.length ? `${idea.ownEvidence.length} evidencia${idea.ownEvidence.length === 1 ? "" : "s"} agregada${idea.ownEvidence.length === 1 ? "" : "s"}.` : "Todavía no agregaste contexto manual."} muted={!idea.ownEvidence.length} />
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
-              <Link href={idea.href} className="inline-flex items-center gap-1.5 text-xs font-medium text-[#96B5A6] hover:text-white">Investigar qué falta <ArrowRight className="h-3.5 w-3.5" /></Link>
-              <Link href={evidenceHref} className="inline-flex items-center gap-1.5 text-xs font-medium text-[#D6DDDA] hover:text-white"><Plus className="h-3.5 w-3.5" />Agregar dato</Link>
-            </div>
-          </article>
-        })}
-      </div>
+      {readyIdeas.length > 0 ? <IdeaGroup title={`Listos para avanzar · ${readyIdeas.length}`} ready ideas={readyIdeas} /> : null}
+      {researchIdeas.length > 0 ? <IdeaGroup title={`Siguiendo en investigación · ${researchIdeas.length}`} ideas={researchIdeas} /> : null}
     </section>
   )
+}
+
+function IdeaGroup({ title, ideas, ready = false }: { title: string; ideas: Array<EnrichedIdea>; ready?: boolean }) {
+  return <div className={ready ? "border-b border-[#294047]" : ""}>
+    <div className="flex items-center gap-2 border-b border-[#294047] px-4 py-2.5 sm:px-5">
+      {ready ? <CheckCircle2 className="h-3.5 w-3.5 text-[#96B5A6]" /> : <Radar className="h-3.5 w-3.5 text-[#83908F]" />}
+      <p className={`text-[10px] font-medium uppercase tracking-[0.14em] ${ready ? "text-[#96B5A6]" : "text-[#83908F]"}`}>{title}</p>
+    </div>
+    <div className={`divide-y divide-[#294047] ${ideas.length > 1 ? "xl:grid xl:grid-cols-5 xl:divide-x xl:divide-y-0" : ""}`}>
+      {ideas.map(idea => <IdeaCard key={idea.key} idea={idea} ready={ready} />)}
+    </div>
+  </div>
+}
+
+type EnrichedIdea = Idea & {
+  paper: PaperEvidence | null
+  patent: PatentEvidence | null
+  externalSignal: ExternalSignal | null
+  ownEvidence: ManualEvidence[]
+  liveStrength: number
+  handoff: ProjectHandoff | null
+  isReady: boolean
+  whyNow: string
+}
+
+function IdeaCard({ idea, ready }: { idea: EnrichedIdea; ready: boolean }) {
+  const evidenceHref = `/oportunidades/evidencia?ideaKey=${encodeURIComponent(idea.key)}&ideaTitle=${encodeURIComponent(idea.title)}`
+  return <article className={`px-4 py-4 sm:px-5 ${ready ? "bg-[#102A2C]" : ""}`}>
+    <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.12em] text-[#83908F]">
+      <span className="flex min-w-0 items-center gap-2"><Radar className="h-3 w-3 shrink-0" /><span className="truncate">{idea.source}</span></span>
+      <span className={ready ? "font-semibold text-[#B8D5C6]" : ""}>{Math.round(idea.liveStrength)}</span>
+    </div>
+    {ready ? <div className="mt-2 inline-flex items-center gap-1.5 rounded-[6px] bg-[#173B37] px-2 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-[#B8D5C6]"><CheckCircle2 className="h-3 w-3" />Listo para avanzar</div> : null}
+    <h2 className="mt-2 text-sm font-medium leading-6 text-white">{idea.title}</h2>
+    <p className="mt-1.5 text-xs leading-5 text-[#AEB6B4]">{idea.detail}</p>
+    <p className="mt-3 text-[11px] leading-5 text-[#D5DDD9]"><span className="font-medium text-[#96B5A6]">{ready ? "Por qué avanzó:" : "Por qué ahora:"}</span> {ready && idea.handoff?.rationale ? idea.handoff.rationale : idea.whyNow}</p>
+
+    <div className="mt-3 space-y-2 border-t border-[#294047] pt-3">
+      <EvidenceLine icon={Github} label="Qué ya tenemos" text={idea.capability} />
+      {idea.paper ? <EvidenceLink icon={BookOpen} label={`Paper · ${idea.paper.source}`} text={compactEvidence(idea.paper.title, 135)} meta={idea.paper.date} href={idea.paper.url} /> : <EvidenceLine icon={BookOpen} label="Papers" text="Sin coincidencia suficientemente precisa en la ventana reciente." muted />}
+      {idea.patent ? <EvidenceLine icon={FileSearch} label="Patente" text={compactEvidence(idea.patent.title, 135)} meta={[idea.patent.applicants, idea.patent.date].filter(Boolean).join(" · ")} /> : <EvidenceLine icon={FileSearch} label="Patentes" text="Sin coincidencia fuerte en el corpus INAPI observado." muted />}
+      {idea.externalSignal ? <EvidenceLink icon={Activity} label={`Señal · ${humanSource(idea.externalSignal.sourceKey)}`} text={compactEvidence(idea.externalSignal.title, 135)} meta={idea.externalSignal.date} href={idea.externalSignal.url} /> : <EvidenceLine icon={Activity} label="Señales" text="Sin señal alta/media suficientemente relacionada en tus seguimientos actuales." muted />}
+      <EvidenceLine icon={Plus} label="Datos tuyos" text={idea.ownEvidence.length ? `${idea.ownEvidence.length} evidencia${idea.ownEvidence.length === 1 ? "" : "s"} agregada${idea.ownEvidence.length === 1 ? "" : "s"}.` : "Todavía no agregaste contexto manual."} muted={!idea.ownEvidence.length} />
+    </div>
+
+    <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
+      {ready
+        ? <Link href={evidenceHref} className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#B8D5C6] hover:text-white">Abrir proyecto <ArrowRight className="h-3.5 w-3.5" /></Link>
+        : <Link href={idea.href} className="inline-flex items-center gap-1.5 text-xs font-medium text-[#96B5A6] hover:text-white">Investigar qué falta <ArrowRight className="h-3.5 w-3.5" /></Link>}
+      <Link href={evidenceHref} className="inline-flex items-center gap-1.5 text-xs font-medium text-[#D6DDDA] hover:text-white"><Plus className="h-3.5 w-3.5" />Agregar dato</Link>
+    </div>
+  </article>
 }
 
 async function findPaperEvidence(query: string, from: Date, to: Date): Promise<PaperEvidence | null> {
@@ -266,16 +218,12 @@ async function findPaperEvidence(query: string, from: Date, to: Date): Promise<P
     const works = await searchOpenAlexWorks(query, from, to, 4)
     const best = [...works].sort((a, b) => b.citedByCount - a.citedByCount)[0]
     if (best) return { source: "OpenAlex", title: best.title, date: best.date, url: best.url, citedByCount: best.citedByCount }
-  } catch (error) {
-    console.warn("[juan-project-ideas:openalex]", error)
-  }
+  } catch (error) { console.warn("[juan-project-ideas:openalex]", error) }
   try {
     const works = await searchCrossrefWorks(query, from, to, 4)
     const best = [...works].sort((a, b) => b.citedByCount - a.citedByCount)[0]
     if (best) return { source: "Crossref", title: best.title, date: best.date, url: best.url, citedByCount: best.citedByCount }
-  } catch (error) {
-    console.warn("[juan-project-ideas:crossref]", error)
-  }
+  } catch (error) { console.warn("[juan-project-ideas:crossref]", error) }
   return null
 }
 
@@ -310,28 +258,14 @@ function findExternalSignal(rows: Array<Record<string, unknown>>, terms: string[
 }
 
 function whyNowText(paper: PaperEvidence | null, patent: PatentEvidence | null, signal: ExternalSignal | null, manualEvidenceCount: number) {
-  const layers = [
-    paper ? "hay actividad científica reciente" : null,
-    patent ? "existe actividad patentaria relacionada" : null,
-    signal ? "tus seguimientos ya muestran una señal externa relevante" : null,
-    manualEvidenceCount ? `ya agregaste ${manualEvidenceCount} dato${manualEvidenceCount === 1 ? "" : "s"} propio${manualEvidenceCount === 1 ? "" : "s"}` : null,
-  ].filter(Boolean)
+  const layers = [paper ? "hay actividad científica reciente" : null, patent ? "existe actividad patentaria relacionada" : null, signal ? "tus seguimientos ya muestran una señal externa relevante" : null, manualEvidenceCount ? `ya agregaste ${manualEvidenceCount} dato${manualEvidenceCount === 1 ? "" : "s"} propio${manualEvidenceCount === 1 ? "" : "s"}` : null].filter(Boolean)
   return layers.length ? `${layers.join(" y ")}. Conviene seguir completando problema, usuario y evidencia antes de tratarlo como oportunidad confirmada.` : "La capacidad interna existe, pero todavía falta evidencia externa suficiente. Conviene investigar antes de priorizarla."
 }
 
-function significantPhrases(value: string) {
-  return normalize(value).split(/[^a-z0-9]+/).filter(token => token.length >= 6).slice(0, 6)
-}
-
-function normalize(value: string) {
-  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim()
-}
-
+function significantPhrases(value: string) { return normalize(value).split(/[^a-z0-9]+/).filter(token => token.length >= 6).slice(0, 6) }
+function normalize(value: string) { return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim() }
 function compactEvidence(value: string, max = 135) {
-  const clean = value
-    .replace(/^(title|abstract|document type|author|date):\s*/i, "")
-    .replace(/\s+/g, " ")
-    .trim()
+  const clean = value.replace(/^(title|abstract|document type|author|date):\s*/i, "").replace(/\s+/g, " ").trim()
   if (clean.length <= max) return clean
   const firstSentence = clean.match(/^(.{40,180}?[.!?])(?:\s|$)/)?.[1]
   if (firstSentence && firstSentence.length <= max + 20) return firstSentence
@@ -339,7 +273,6 @@ function compactEvidence(value: string, max = 135) {
   const lastSpace = clipped.lastIndexOf(" ")
   return `${clipped.slice(0, lastSpace > max * 0.7 ? lastSpace : max).trim()}…`
 }
-
 function text(value: unknown) { return typeof value === "string" && value.trim() ? value.trim() : null }
 function humanSource(value: string) { return value.replace(/_/g, " ").replace(/\b\w/g, letter => letter.toUpperCase()) }
 
