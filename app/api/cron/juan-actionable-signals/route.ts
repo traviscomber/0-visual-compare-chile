@@ -5,7 +5,7 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const maxDuration = 120
 
-const POLICY_VERSION = "n3uralia-signal-policy-v1"
+const POLICY_VERSION = "n3uralia-signal-policy-v1.1"
 const PURPOSE = "product_evolution_chile_evidence"
 
 type SignalType = "competitor" | "applicable_technology" | "product_opportunity" | "integration" | "threat" | "research_frontier"
@@ -30,12 +30,12 @@ type EventRow = {
 }
 
 const DOMAIN_TERMS: Record<string, string[]> = {
-  motil: ["mineria", "minero", "faena", "codelco", "geologia", "sondaje", "mantenimiento"],
-  pescamar: ["acuicultura", "salmon", "pesca", "seafood", "sernapesca", "planta de proceso"],
-  kumplio: ["cumplimiento", "regulatorio", "regulacion", "laboral", "fiscalizacion", "auditoria"],
+  motil: ["mineria", "minero", "mineral", "mineralogia", "mineralogico", "faena", "codelco", "geologia", "sondaje", "mantenimiento", "litio", "cobre"],
+  pescamar: ["acuicultura", "salmon", "pesca", "seafood", "sernapesca", "planta de proceso", "pez", "peces", "biomasa"],
+  kumplio: ["cumplimiento", "regulatorio", "regulacion", "laboral", "fiscalizacion", "auditoria", "compliance"],
   chileflota: ["flota", "flotas", "vehiculo", "vehiculos", "transporte", "camion", "camiones", "telematica"],
-  "property-partners": ["inmobiliario", "inmobiliaria", "propiedad", "propiedades", "tasacion", "valorizacion", "corredor"],
-  "black-swan": ["agricultura", "agricola", "cultivo", "riego", "campo", "granja", "farm", "orchard"],
+  "property-partners": ["inmobiliario", "inmobiliaria", "propiedad", "propiedades", "tasacion", "valorizacion", "corredor", "real estate"],
+  "black-swan": ["agricultura", "agricola", "cultivo", "riego", "campo", "granja", "farm", "orchard", "agronomia"],
 }
 
 const CAPABILITY_TERMS = [
@@ -50,6 +50,16 @@ const RESEARCH_TERMS = ["estudio", "investigacion", "paper", "universidad", "mod
 const COMPETITOR_TERMS = ["plataforma", "software", "solucion", "startup", "proveedor", "empresa", "lanza", "presenta", "ofrece", "desarrolla"]
 const OPPORTUNITY_TERMS = ["demanda", "adopcion", "inversion", "licitacion", "brecha", "necesita", "crecimiento", "implementa", "despliega"]
 const THREAT_TERMS = ["reemplaza", "sustituye", "desplaza", "competidor", "amenaza", "disrupcion", "captura mercado"]
+
+const INSTITUTIONAL_PAYLOAD_KEYS = new Set([
+  "institution_context",
+  "institutional_signal_type",
+  "institutional_relevance",
+  "institutional_fit_reason",
+  "domain_hits",
+  "capability_hits",
+  "signal_policy_version",
+])
 
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET
@@ -73,7 +83,7 @@ export async function GET(request: Request) {
   })
 
   if (!watches.length) {
-    return NextResponse.json({ ok: true, watches: 0, classified: 0, removed: 0, durationMs: Date.now() - startedAt })
+    return NextResponse.json({ ok: true, watches: 0, classified: 0, removed: 0, declassified: 0, durationMs: Date.now() - startedAt })
   }
 
   const watchById = new Map(watches.map(watch => [watch.id, watch]))
@@ -91,6 +101,7 @@ export async function GET(request: Request) {
 
   let classified = 0
   let removed = 0
+  let declassified = 0
   const byType: Record<SignalType, number> = {
     competitor: 0,
     applicable_technology: 0,
@@ -107,22 +118,38 @@ export async function GET(request: Request) {
     const metadata = watch.metadata && typeof watch.metadata === "object" && !Array.isArray(watch.metadata) ? watch.metadata : {}
     const productKey = typeof metadata.product_key === "string" ? metadata.product_key : ""
     const domainTerms = DOMAIN_TERMS[productKey] ?? []
-    const text = normalize(`${event.title} ${event.summary ?? ""}`)
+    const text = sourceNativeText(event)
     const domainHits = domainTerms.filter(term => contains(text, term))
     const capabilityHits = CAPABILITY_TERMS.filter(term => contains(text, term))
     const isPublicContextNews = event.event_type === "news" && ["google_news_rss", "gdelt_doc"].includes(event.source_key)
+    const hasInstitutionalFit = domainHits.length > 0 && capabilityHits.length > 0
 
-    if (isPublicContextNews && (!domainHits.length || !capabilityHits.length)) {
-      const { error: deleteError } = await admin.from("intelligence_watch_events").delete().eq("id", event.id)
-      if (deleteError) {
-        console.error(`[juan-actionable-signals:${productKey}] delete`, deleteError)
-      } else {
-        removed += 1
+    if (!hasInstitutionalFit) {
+      if (isPublicContextNews) {
+        const { error: deleteError } = await admin.from("intelligence_watch_events").delete().eq("id", event.id)
+        if (deleteError) {
+          console.error(`[juan-actionable-signals:${productKey}] delete`, deleteError)
+        } else {
+          removed += 1
+        }
+        continue
+      }
+
+      const currentPayload = event.payload && typeof event.payload === "object" && !Array.isArray(event.payload) ? event.payload : {}
+      if (hasInstitutionalFields(currentPayload)) {
+        const cleanedPayload = stripInstitutionalFields(currentPayload)
+        const { error: cleanupError } = await admin
+          .from("intelligence_watch_events")
+          .update({ payload: cleanedPayload, updated_at: new Date().toISOString() })
+          .eq("id", event.id)
+        if (cleanupError) {
+          console.error(`[juan-actionable-signals:${productKey}] declassify`, cleanupError)
+        } else {
+          declassified += 1
+        }
       }
       continue
     }
-
-    if (!domainHits.length || !capabilityHits.length) continue
 
     const signalType = classifySignal(text)
     const currentPayload = event.payload && typeof event.payload === "object" && !Array.isArray(event.payload) ? event.payload : {}
@@ -131,7 +158,7 @@ export async function GET(request: Request) {
       institution_context: "N3uralia",
       institutional_signal_type: signalType,
       institutional_relevance: "actionable",
-      institutional_fit_reason: `Coincide con ${productKey} y con capacidades de IA/software/automatización aplicables por N3uralia.`,
+      institutional_fit_reason: `La evidencia propia de la fuente coincide con ${productKey} y con capacidades de IA/software/automatizacion aplicables por N3uralia.`,
       domain_hits: domainHits.slice(0, 6),
       capability_hits: capabilityHits.slice(0, 8),
       signal_policy_version: POLICY_VERSION,
@@ -157,9 +184,27 @@ export async function GET(request: Request) {
     watches: watches.length,
     classified,
     removed,
+    declassified,
     byType,
     durationMs: Date.now() - startedAt,
   })
+}
+
+function sourceNativeText(event: EventRow) {
+  // Patent/trademark summaries produced by the scanner can contain the watch query itself.
+  // Never use that synthetic text to establish institutional relevance.
+  if (event.source_key === "inapi_open_data" && ["patent", "trademark"].includes(event.event_type)) {
+    return normalize(event.title)
+  }
+  return normalize(`${event.title} ${event.summary ?? ""}`)
+}
+
+function hasInstitutionalFields(payload: Record<string, unknown>) {
+  return Object.keys(payload).some(key => INSTITUTIONAL_PAYLOAD_KEYS.has(key))
+}
+
+function stripInstitutionalFields(payload: Record<string, unknown>) {
+  return Object.fromEntries(Object.entries(payload).filter(([key]) => !INSTITUTIONAL_PAYLOAD_KEYS.has(key)))
 }
 
 function classifySignal(text: string): SignalType {
