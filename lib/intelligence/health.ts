@@ -47,6 +47,8 @@ export type IntelligenceHealthResult = {
       changes: number
       rejected: number
       duration_ms: number | null
+      validation_only: boolean
+      pipeline: string | null
     }
   }>
   recent_runs: Array<{
@@ -61,6 +63,8 @@ export type IntelligenceHealthResult = {
     changes: number
     rejected: number
     duration_ms: number | null
+    validation_only: boolean
+    pipeline: string | null
     retries: number
     failed_stage: string | null
     error_message: string | null
@@ -284,6 +288,8 @@ function summarizeRun(run: RunRow) {
     changes: Number(run.updated_count ?? 0),
     rejected: Number(run.rejected_count ?? 0),
     duration_ms: run.finished_at ? Math.max(0, new Date(run.finished_at).getTime() - new Date(run.started_at).getTime()) : null,
+    validation_only: run.metadata?.validationOnly === true,
+    pipeline: metadataText(run.metadata, "pipeline"),
   }
 }
 
