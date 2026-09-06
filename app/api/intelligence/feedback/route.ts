@@ -6,15 +6,17 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 type FeedbackType = "relevant" | "irrelevant" | "false_match" | "identity_incorrect"
+type TargetType = "strategic_watch_event" | "watch_signal"
 const FEEDBACK_TYPES = new Set<FeedbackType>(["relevant", "irrelevant", "false_match", "identity_incorrect"])
-const TARGET_TYPE = "strategic_watch_event"
+const TARGET_TYPES = new Set<TargetType>(["strategic_watch_event", "watch_signal"])
+const DEFAULT_TARGET_TYPE: TargetType = "strategic_watch_event"
 
 export async function GET(request: Request) {
   const auth = await requireUser()
   if (!auth.ok) return auth.response
 
-  const targetType = new URL(request.url).searchParams.get("targetType") ?? TARGET_TYPE
-  if (targetType !== TARGET_TYPE) {
+  const targetType = (new URL(request.url).searchParams.get("targetType") ?? DEFAULT_TARGET_TYPE) as TargetType
+  if (!TARGET_TYPES.has(targetType)) {
     return NextResponse.json({ error: "Tipo de feedback no soportado." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
@@ -43,12 +45,12 @@ export async function POST(request: Request) {
     feedbackType?: string
     note?: string
   }
-  const targetType = body.targetType ?? TARGET_TYPE
+  const targetType = (body.targetType ?? DEFAULT_TARGET_TYPE) as TargetType
   const targetKey = body.targetKey?.trim() ?? ""
   const feedbackType = body.feedbackType as FeedbackType | undefined
   const note = body.note?.trim() || null
 
-  if (targetType !== TARGET_TYPE || !targetKey || targetKey.length > 300 || !feedbackType || !FEEDBACK_TYPES.has(feedbackType)) {
+  if (!TARGET_TYPES.has(targetType) || !targetKey || targetKey.length > 300 || !feedbackType || !FEEDBACK_TYPES.has(feedbackType)) {
     return NextResponse.json({ error: "Feedback inválido." }, { status: 400, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
@@ -59,12 +61,12 @@ export async function POST(request: Request) {
     p_target_key: targetKey,
     p_feedback_type: feedbackType,
     p_note: note,
-    p_metadata: { surface: "strategic_monitoring" },
+    p_metadata: { surface: targetType === "watch_signal" ? "common_monitoring" : "strategic_monitoring" },
   })
 
   if (error) {
     const status = error.message.includes("target_not_found") ? 404 : 400
-    return NextResponse.json({ error: status === 404 ? "La señal ya no está disponible." : "No pudimos guardar el feedback." }, { status, headers: PRIVATE_NO_STORE_HEADERS })
+    return NextResponse.json({ error: status === 404 ? "La señal ya no está disponible." : "No pudimos guardar la validación." }, { status, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
   return NextResponse.json({ ok: true, id: data }, { headers: PRIVATE_NO_STORE_HEADERS })
