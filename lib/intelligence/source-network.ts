@@ -6,6 +6,7 @@ export type IntelligenceLayer =
   | "mercado"
   | "noticias"
   | "jurisprudencia"
+  | "regulacion"
 
 export type AutomationPolicy = "allowed" | "credentials_required" | "manual_only"
 
@@ -21,13 +22,17 @@ export type SourceDefinition = {
 export const SOURCE_NETWORK: SourceDefinition[] = [
   { key: "inapi_open_data", layer: "propiedad_industrial", purpose: "Marcas, solicitudes, titulares, estados, clases de Niza y evidencia oficial de Chile.", automationPolicy: "allowed" },
   { key: "tdpi", layer: "jurisprudencia", purpose: "Señales procesales y jurisprudencia del Tribunal de Propiedad Industrial.", automationPolicy: "allowed" },
-  { key: "registro_empresas", layer: "empresas", purpose: "Resolución de identidad societaria y RUT de empresas chilenas.", automationPolicy: "allowed" },
+  { key: "registro_empresas", layer: "empresas", purpose: "Resolución exacta de identidad societaria y RUT mediante el dataset oficial del Registro de Empresas y Sociedades en datos.gob.cl.", automationPolicy: "allowed", note: "Conector bajo demanda; no implica una réplica mensual completa del registro." },
   { key: "cmf", layer: "empresas", purpose: "Condición regulatoria y presencia de entidades fiscalizadas por la CMF.", automationPolicy: "allowed" },
+  { key: "cmf_norms", layer: "regulacion", purpose: "Normativa reciente publicada por la Comisión para el Mercado Financiero para vigilancia regulatoria.", automationPolicy: "allowed" },
+  { key: "bcn_norms", layer: "regulacion", purpose: "Normas chilenas consultadas desde el endpoint SPARQL oficial de la Biblioteca del Congreso Nacional.", automationPolicy: "allowed" },
+  { key: "diario_oficial", layer: "regulacion", purpose: "Publicaciones regulatorias y actos oficiales de las ediciones electrónicas del Diario Oficial de Chile.", automationPolicy: "allowed" },
+  { key: "snifa_sma", layer: "regulacion", purpose: "Sanciones, procedimientos, medidas provisionales y programas de cumplimiento publicados por SNIFA/SMA.", automationPolicy: "allowed" },
   { key: "gleif", layer: "empresas", purpose: "Identidad legal internacional mediante LEI y evidencia oficial de GLEIF para entidades resueltas de forma exacta.", automationPolicy: "allowed", note: "El fuzzy search sólo descubre candidatos; VIDENTIA acepta una identidad GLEIF cuando queda una única coincidencia normalizada exacta." },
   { key: "mercado_publico", layer: "mercado", purpose: "Compras públicas, licitaciones y actividad comercial verificable en Chile.", automationPolicy: "credentials_required", credentialEnv: ["CHILECOMPRA_TICKET"] },
   { key: "openalex", layer: "ciencia_tecnologia", purpose: "Publicaciones, autores, instituciones y dinámica científica para medir evolución tecnológica.", automationPolicy: "allowed", credentialEnv: ["OPENALEX_API_KEY"], note: "La clave es opcional para uso básico y recomendable para operación continua." },
   { key: "crossref", layer: "ciencia_tecnologia", purpose: "Metadatos DOI y publicaciones para corroborar actividad científica y tecnológica.", automationPolicy: "allowed", credentialEnv: ["CROSSREF_MAILTO"], note: "CROSSREF_MAILTO no es obligatorio, pero habilita el polite pool recomendado por Crossref." },
-  { key: "epo_ops", layer: "patentes", purpose: "Datos mundiales de patentes, familias, bibliografía y estado legal mediante EPO OPS.", automationPolicy: "credentials_required", credentialEnv: ["EPO_OPS_CLIENT_ID", "EPO_OPS_CLIENT_SECRET"], note: "Requiere una aplicación registrada en EPO OPS y aceptación de sus términos." },
+  { key: "epo_ops", layer: "patentes", purpose: "Datos mundiales de patentes, familias, bibliografía y estado legal mediante EPO OPS.", automationPolicy: "credentials_required", credentialEnv: ["EPO_OPS_CONSUMER_KEY", "EPO_OPS_CONSUMER_SECRET"], note: "Requiere una aplicación registrada en EPO OPS y aceptación de sus términos." },
   { key: "google_news_rss", layer: "noticias", purpose: "Contexto noticioso reciente para búsquedas y vigilancias estratégicas de VIDENTIA.", automationPolicy: "allowed", note: "Fuente contextual, no evidencia canónica ni eje de scoring. Se usa para artículos recientes; no sustituye el raw feed canónico de GDELT." },
   { key: "gdelt", layer: "noticias", purpose: "GDELT DOC API para búsqueda de artículos y contexto cuando el endpoint esté disponible desde el runtime.", automationPolicy: "allowed", note: "El endpoint DOC permanece desactivado operativamente por timeout/rate limit desde Vercel; no se usa como fuente canónica ni como dependencia de Technology Intelligence." },
   { key: "gdelt_raw_feed", layer: "noticias", purpose: "Eventos globales GDELT 2.0 normalizados desde el raw feed oficial, preservando cada observación y su evidencia de origen.", automationPolicy: "allowed", note: "Fuente canónica automatizada por GLOBALEVENTID; el transporte raw se publica aproximadamente cada 15 minutos." },

@@ -134,6 +134,7 @@ type RunRow = {
 }
 
 const SLA_HOURS: Record<string, number> = {
+  cada_15_min: 1,
   diaria: 36,
   semanal: 24 * 9,
   mensual: 24 * 40,
@@ -169,13 +170,13 @@ export async function buildIntelligenceHealth(admin: SupabaseClient): Promise<In
     const run = latestRuns.get(String(source.id)) ?? null
     const definition = sourceDefinition(source.source_key)
     const runtime = definition ? runtimeSourceStatus(definition) : { status: "ready" as const, configured: true, missing: [] as string[] }
-    const slaHours = source.freshness_policy ? SLA_HOURS[source.freshness_policy] ?? null : null
+    const slaHours = freshnessSlaHours(source.freshness_policy)
     const ageHours = state?.last_success_at ? Math.max(0, (now.getTime() - new Date(state.last_success_at).getTime()) / 3_600_000) : null
 
     let status: IntelligenceHealthStatus
     if (!source.is_active) status = definition?.automationPolicy === "manual_only" ? "manual" : "inactive"
     else if (runtime.status === "credentials_required") status = "credentials_required"
-    else if (source.freshness_policy === "bajo_demanda") status = "on_demand"
+    else if (isOnDemandPolicy(source.freshness_policy)) status = "on_demand"
     else if (!state?.last_success_at) status = "initializing"
     else if (state.circuit_state === "open" || Number(state.consecutive_failures ?? 0) > 0 || state.last_error) status = "degraded"
     else if (slaHours !== null && ageHours !== null && ageHours > slaHours) status = "stale"
@@ -323,6 +324,21 @@ function objectValue(value: Record<string, unknown> | null, key: string) {
 function metadataText(metadata: Record<string, unknown> | null, key: string) {
   const value = metadata?.[key]
   return typeof value === "string" && value.trim() ? value : null
+}
+
+function normalizedFreshnessPolicy(value: string | null) {
+  return String(value ?? "").trim().toLowerCase().replace(/[-\s]+/g, "_")
+}
+
+function isOnDemandPolicy(value: string | null) {
+  const normalized = normalizedFreshnessPolicy(value)
+  return normalized === "bajo_demanda" || normalized === "on_demand" || normalized.startsWith("on_demand;")
+}
+
+function freshnessSlaHours(value: string | null) {
+  const normalized = normalizedFreshnessPolicy(value)
+  if (normalized.startsWith("15_minute_")) return 1
+  return SLA_HOURS[normalized] ?? null
 }
 
 function numeric(value: unknown) {
