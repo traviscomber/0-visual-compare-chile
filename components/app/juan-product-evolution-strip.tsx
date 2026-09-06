@@ -26,6 +26,7 @@ type ChileEvidenceItem = {
   source?: string
   url?: string | null
   relevance?: string
+  role?: string | null
   direction?: "strengthen" | "weaken" | "neutral"
   delta?: number
   reason?: string
@@ -81,7 +82,11 @@ type EvidenceSnapshot = {
     institutional_fit?: number
     integration_feasibility?: number
     outcome_potential?: number
+    reuse_advantage?: number
+    integration_leverage?: number
+    outcome?: number
     agentic_mcp_potential?: number
+    chile_fit?: number
   }
 }
 
@@ -114,23 +119,23 @@ export async function JuanProductEvolutionStrip({ userId }: { userId: string }) 
   const accepted = rows.filter(row => row.status === "accepted").slice(0, 3)
 
   return <section className="mx-auto mt-4 w-[calc(100%-2rem)] max-w-[1480px] border-y border-[#294047] bg-[#0B2025] sm:w-[calc(100%-3rem)]">
-    <div className="flex flex-col gap-3 border-b border-[#294047] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+    <div className="flex flex-col gap-4 border-b border-[#294047] px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5">
       <div className="flex items-start gap-3">
         <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-[#173B37] text-[#96B5A6]"><Sparkles className="h-4 w-4" /></span>
         <div>
           <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]">Evolución de productos · {organization.name}</p>
-          <p className="mt-1 max-w-4xl text-sm leading-6 text-[#E7DFCE]">VIDENTIA mira primero la frontera mundial —papers internacionales, patentes y señales tecnológicas— para detectar lo que viene. Chile indica si esa dirección ya tiene evidencia local; {organization.name}, sus activos y MCP definen cómo actuar, sin inflar la convicción.</p>
+          <p className="mt-1 max-w-4xl text-sm leading-6 text-[#E7DFCE]">VIDENTIA separa dos preguntas: primero, qué tan respaldada está una dirección por evidencia externa; después, qué puede hacer {organization.name} con sus capacidades, integraciones y MCP. La capacidad institucional nunca aumenta la convicción de evidencia.</p>
         </div>
       </div>
-      <div className="flex flex-col items-start gap-2 sm:items-end">
-        <span className="text-[10px] uppercase tracking-[0.14em] text-[#748481]">mundo / papers → Chile → institución → decisión humana</span>
+      <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+        <span className="text-[10px] uppercase tracking-[0.14em] text-[#748481]">evidencia → institución → ejecución → decisión humana</span>
         <JuanResearchFrontierRefresh />
       </div>
     </div>
 
     {pending.length ? <EvolutionGroup title={`Pendientes de tu decisión · ${pending.length}`} rows={pending} organizationId={organization.id} organizationName={organization.name} decision /> : null}
     {researching.length ? <EvolutionGroup title={`Todavía investigando · ${researching.length}`} rows={researching} organizationId={organization.id} organizationName={organization.name} /> : null}
-    {accepted.length ? <EvolutionGroup title={`Aprobadas · ${accepted.length}`} rows={accepted} organizationId={organization.id} organizationName={organization.name} accepted /> : null}
+    {accepted.length ? <EvolutionGroup title={`Aprobadas por ti · ${accepted.length}`} rows={accepted} organizationId={organization.id} organizationName={organization.name} accepted /> : null}
   </section>
 }
 
@@ -155,70 +160,80 @@ function EvolutionCard({ row, organizationId, organizationName, decision, accept
   const repoHref = typeof evidence.repo === "string" ? evidence.repo : null
   const effective = typeof conviction.effective === "number" ? conviction.effective : row.score
   const base = typeof conviction.base === "number" ? conviction.base : null
-  const chileDelta = typeof chile?.delta === "number" ? chile.delta : typeof conviction.chile_delta === "number" ? conviction.chile_delta : null
-  const worldDelta = [conviction.frontier_delta ?? conviction.paper_delta, conviction.patent_delta, conviction.global_delta]
-    .filter((value): value is number => typeof value === "number")
-    .reduce((sum, value) => sum + value, 0)
-  const hasWorldDelta = [conviction.frontier_delta ?? conviction.paper_delta, conviction.patent_delta, conviction.global_delta].some(value => typeof value === "number")
-  const topDimensions = [
-    ["Fit institucional", dimensions.institutional_fit],
-    ["Integración", dimensions.integration_feasibility],
-    ["Outcome", dimensions.outcome_potential],
+  const chileEvaluated = Boolean(chile?.state)
+  const chileDelta = chileEvaluated && typeof chile?.delta === "number" ? chile.delta : null
+  const worldParts = [conviction.frontier_delta ?? conviction.paper_delta, conviction.patent_delta, conviction.global_delta]
+  const worldDelta = worldParts.filter((value): value is number => typeof value === "number").reduce((sum, value) => sum + value, 0)
+  const hasWorldDelta = worldParts.some(value => typeof value === "number")
+  const executionDimensions = [
+    ["Reuso", dimensions.reuse_advantage],
+    ["Integración", dimensions.integration_leverage ?? dimensions.integration_feasibility],
+    ["Outcome", dimensions.outcome ?? dimensions.outcome_potential],
     ["MCP", dimensions.agentic_mcp_potential],
   ].filter((item): item is [string, number] => typeof item[1] === "number")
 
   return <article className={`px-4 py-4 sm:px-5 ${decision ? "bg-[#102A2C]" : accepted ? "bg-[#0F2728]/55" : ""}`}>
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">{row.product_name}</span>
-      <div className="text-right">
-        <span className={`text-sm font-semibold ${effective >= 90 ? "text-[#B8D5C6]" : "text-[#D5DDD9]"}`}>{effective}</span>
-        <p className="text-[9px] uppercase tracking-[0.1em] text-[#748481]">convicción</p>
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">{row.product_name}</span>
+        <h2 className="mt-2 text-sm font-medium leading-6 text-white">{row.title}</h2>
+      </div>
+      <div className="shrink-0 text-right">
+        <span className="text-lg font-semibold tabular-nums text-[#D5DDD9]">{effective}</span>
+        <p className="text-[9px] uppercase tracking-[0.1em] text-[#748481]">evidencia efectiva</p>
       </div>
     </div>
-    <h2 className="mt-2 text-sm font-medium leading-6 text-white">{row.title}</h2>
-    <p className="mt-2 text-xs leading-5 text-[#AEB6B4]"><span className="font-medium text-[#D6DDDA]">Outcome:</span> {row.outcome}</p>
 
-    <div className="mt-3 border-y border-[#294047] py-2">
-      <div className="flex flex-wrap gap-x-3 gap-y-1">
+    <div className="mt-4 border-y border-[#294047] py-3">
+      <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-[#96B5A6]">01 · Convicción de evidencia</p>
+      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
         {base !== null ? <Metric label="Base" value={base} /> : null}
         {hasWorldDelta ? <Metric label="Mundo Δ" value={formatDelta(worldDelta)} /> : null}
-        {chileDelta !== null ? <Metric label="Chile Δ" value={formatDelta(chileDelta)} /> : null}
+        {chileEvaluated ? <Metric label="Chile Δ" value={formatDelta(chileDelta ?? 0)} /> : <Metric label="Chile" value="pendiente" />}
         <Metric label="Efectiva" value={effective} strong />
       </div>
-      <p className="mt-1.5 text-[10px] leading-4 text-[#748481]">Mundo anticipa dirección con papers, patentes y señales globales. Chile confirma, contradice o deja todavía abierta la hipótesis local.</p>
-      {chile?.state ? <p className="mt-1 text-[10px] leading-4 text-[#748481]">Chile: {stateLabel(chile.state)}. Sin evidencia o evidencia insuficiente no resta convicción.</p> : null}
+      <p className="mt-1.5 text-[10px] leading-4 text-[#748481]">Sólo evidencia externa puede cambiar este score. Capacidad propia, código reutilizable, MCP y factibilidad de integración quedan fuera.</p>
+      <p className="mt-1 text-[10px] leading-4 text-[#83908F]">Chile: {chileEvaluated ? stateLabel(chile?.state) : "pendiente de recalculo v3.3.1"}{chileEvaluated && chileDelta === 0 ? " · Δ0" : ""}.</p>
     </div>
 
     {frontier ? <div className="mt-3 border-b border-[#294047] pb-3">
-      <div className="flex flex-wrap gap-x-3 gap-y-1">
-        <Metric label="Frontera" value={frontierStateLabel(frontier.state)} strong />
+      <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-[#83908F]">Frontera mundial</p>
+      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+        <Metric label="Estado" value={frontierStateLabel(frontier.state)} strong />
         <Metric label="Papers" value={frontier.paper_count ?? 0} />
         <Metric label="Tempranos" value={frontier.early_signal_count ?? 0} />
         <Metric label="Instituciones" value={frontier.independent_institution_count ?? 0} />
       </div>
-      <p className="mt-1.5 text-[10px] leading-4 text-[#748481]">Sólo papers con evidencia explícita del dominio participan en la convicción. La convergencia entre fuentes e instituciones pesa más que una señal aislada.</p>
-      {frontier.papers?.slice(0, 3).map((paper, index) => paper.title ? <EvidenceLink key={`${paper.url ?? paper.title}-${index}`} icon={BookOpen} label={`Paper ${index + 1}${paper.earlySignal ? " · señal temprana" : ""}`} value={`${paper.title}${paper.date ? ` · ${paper.date}` : ""}${paper.citedByCount !== undefined ? ` · ${paper.citedByCount} citas` : ""}`} href={paper.url ?? null} /> : null)}
+      {frontier.papers?.slice(0, 2).map((paper, index) => paper.title ? <EvidenceLink key={`${paper.url ?? paper.title}-${index}`} icon={BookOpen} label={`Paper ${index + 1}${paper.earlySignal ? " · señal temprana" : ""}`} value={`${paper.title}${paper.date ? ` · ${paper.date}` : ""}${paper.citedByCount !== undefined ? ` · ${paper.citedByCount} citas` : ""}`} href={paper.url ?? null} /> : null)}
+      {!frontier.papers?.length ? <p className="mt-1.5 text-[10px] leading-4 text-[#748481]">No se observó todavía una señal mundial suficientemente específica para sumar convicción.</p> : null}
     </div> : null}
 
-    {topDimensions.length ? <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">{topDimensions.map(([label, value]) => <Metric key={label} label={label} value={value} />)}</div> : null}
+    <div className="mt-3 border-b border-[#294047] pb-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-[#96B5A6]">02 · Contexto institucional y ejecución</p>
+        <span className="text-[9px] uppercase tracking-[0.1em] text-[#748481]">no puntúa evidencia</span>
+      </div>
+      <EvidenceLine icon={Building2} label="Institución" value={organizationName} />
+      {executionDimensions.length ? <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">{executionDimensions.map(([label, value]) => <Metric key={label} label={label} value={value} />)}</div> : null}
+      {row.reuse_summary ? <EvidenceLine icon={Github} label="Capacidad reutilizable" value={row.reuse_summary} /> : null}
+      {row.integration_summary ? <EvidenceLine icon={Cable} label="Integración / MCP" value={row.integration_summary} /> : null}
+      <EvidenceLine icon={Boxes} label="Esfuerzo" value={row.effort ?? "por estimar"} />
+      <p className="mt-2 text-[11px] leading-5 text-[#AEB6B4]"><span className="font-medium text-[#D6DDDA]">Outcome posible:</span> {compact(row.outcome, 220)}</p>
+    </div>
 
     <div className="mt-3 space-y-2">
       {!frontier && evidence.paper?.title ? <EvidenceLink icon={BookOpen} label={`Frontera mundial · Paper${evidence.paper.source ? ` · ${evidence.paper.source}` : ""}`} value={evidence.paper.title} href={evidence.paper.url ?? null} /> : null}
       {evidence.patent?.title ? <EvidenceLink icon={FileSearch} label="Frontera mundial · Patente" value={evidence.patent.title} href={evidence.patent.url ?? null} /> : null}
       {evidence.global_signal?.title ? <EvidenceLink icon={Sparkles} label={`Frontera mundial · Señal${evidence.global_signal_quality?.scoring === false ? " · contexto, no puntúa" : ""}`} value={evidence.global_signal.title} href={evidence.global_signal.url ?? null} /> : null}
       {row.chile_need ? <EvidenceLine icon={Radar} label="Hipótesis Chile" value={row.chile_need} /> : null}
-      {chile?.items?.slice(0, 2).map((item, index) => item.title ? <EvidenceLink key={`${item.url ?? item.title}-${index}`} icon={Radar} label={`Chile · ${directionLabel(item.direction)}`} value={`${item.title}${typeof item.delta === "number" ? ` (${formatDelta(item.delta)})` : ""}`} href={item.url ?? null} /> : null)}
-      <EvidenceLine icon={Building2} label="Institución" value={`${organizationName} · capacidad de ejecución separada de la evidencia`} />
-      {row.reuse_summary ? <EvidenceLine icon={Github} label="Capacidad reutilizable" value={row.reuse_summary} /> : null}
-      {row.integration_summary ? <EvidenceLine icon={Cable} label="MCP / conexiones" value={row.integration_summary} /> : null}
-      <EvidenceLine icon={Boxes} label="Esfuerzo" value={row.effort ?? "por estimar"} />
+      {chile?.items?.slice(0, 2).map((item, index) => item.title ? <EvidenceLink key={`${item.url ?? item.title}-${index}`} icon={Radar} label={chileItemLabel(item)} value={`${item.title}${typeof item.delta === "number" ? ` (${formatDelta(item.delta)})` : ""}`} href={item.url ?? null} /> : null)}
     </div>
 
     {evidence.reuse_assets?.length ? <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1">{evidence.reuse_assets.slice(0, 4).map(asset => asset.url && asset.title ? <a key={asset.url} href={asset.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] text-[#96B5A6] hover:text-white hover:underline">{asset.title}<ArrowRight className="h-3 w-3" /></a> : null)}</div> : null}
     {repoHref ? <a href={repoHref} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-[11px] text-[#738180] hover:text-white">Abrir producto en GitHub <ArrowRight className="h-3 w-3" /></a> : null}
 
-    {decision ? <div className="mt-4 border-t border-[#294047] pt-4"><JuanProductEvolutionActions recommendationId={row.id} organizationId={organizationId} /></div> : null}
-    {accepted ? <div className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-[#B8D5C6]"><CheckCircle2 className="h-3.5 w-3.5" />Aprobado · nueva evidencia puede pedir revisión, pero no cambia tu decisión automáticamente.</div> : null}
+    {decision ? <div className="mt-4 border-t border-[#294047] pt-4"><p className="mb-3 text-[9px] font-medium uppercase tracking-[0.14em] text-[#96B5A6]">03 · Decisión humana</p><JuanProductEvolutionActions recommendationId={row.id} organizationId={organizationId} /></div> : null}
+    {accepted ? <div className="mt-4 border-t border-[#294047] pt-3"><p className="text-[9px] font-medium uppercase tracking-[0.14em] text-[#96B5A6]">03 · Decisión humana</p><div className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-[#B8D5C6]"><CheckCircle2 className="h-3.5 w-3.5" />Aprobado por ti · nueva evidencia puede pedir revisión, pero no cambia tu decisión automáticamente.</div></div> : null}
   </article>
 }
 
@@ -234,18 +249,23 @@ function frontierStateLabel(state?: NonNullable<EvidenceSnapshot["world_frontier
   return "no observada"
 }
 
-function stateLabel(state: NonNullable<EvidenceSnapshot["chile_evidence"]>["state"]) {
+function stateLabel(state?: NonNullable<EvidenceSnapshot["chile_evidence"]>["state"]) {
   if (state === "supporting_evidence") return "evidencia de apoyo"
   if (state === "contradicting_evidence") return "evidencia en contra"
   if (state === "mixed_evidence") return "evidencia mixta"
   if (state === "not_observed") return "no observada"
-  return "insuficiente / neutral"
+  return "contexto observado / evidencia insuficiente"
 }
 
 function directionLabel(direction?: ChileEvidenceItem["direction"]) {
   if (direction === "strengthen") return "apoya"
   if (direction === "weaken") return "debilita"
   return "neutral"
+}
+
+function chileItemLabel(item: ChileEvidenceItem) {
+  if (item.role === "context_only") return "Chile · contexto · no puntúa"
+  return `Chile · ${directionLabel(item.direction)}`
 }
 
 function formatDelta(value: number) {
@@ -261,9 +281,9 @@ function compact(value: string, max = 150) {
 }
 
 function EvidenceLine({ icon: Icon, label, value }: { icon: typeof Radar; label: string; value: string }) {
-  return <div className="flex items-start gap-2"><Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#6F807E]" /><p className="text-[11px] leading-5 text-[#AEB6B4]"><span className="font-medium text-[#D6DDDA]">{label}:</span> {compact(value)}</p></div>
+  return <div className="mt-1.5 flex items-start gap-2"><Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#6F807E]" /><p className="text-[11px] leading-5 text-[#AEB6B4]"><span className="font-medium text-[#D6DDDA]">{label}:</span> {compact(value)}</p></div>
 }
 
 function EvidenceLink({ icon: Icon, label, value, href }: { icon: typeof Radar; label: string; value: string; href: string | null }) {
-  return <div className="flex items-start gap-2"><Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#6F807E]" /><p className="text-[11px] leading-5 text-[#AEB6B4]"><span className="font-medium text-[#D6DDDA]">{label}:</span> {compact(value)} {href ? <a href={href} target="_blank" rel="noreferrer" className="whitespace-nowrap text-[#96B5A6] hover:text-white hover:underline">Ver fuente</a> : null}</p></div>
+  return <div className="mt-1.5 flex items-start gap-2"><Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#6F807E]" /><p className="text-[11px] leading-5 text-[#AEB6B4]"><span className="font-medium text-[#D6DDDA]">{label}:</span> {compact(value)} {href ? <a href={href} target="_blank" rel="noreferrer" className="whitespace-nowrap text-[#96B5A6] hover:text-white hover:underline">Ver fuente</a> : null}</p></div>
 }
