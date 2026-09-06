@@ -11,27 +11,40 @@ function requireText(haystack: string, needle: string, label: string) {
 
 const page = await readFile("app/(app)/oportunidades/page.tsx", "utf8")
 const route = await readFile("app/api/intelligence/recommendations/route.ts", "utf8")
+const thesisRoute = await readFile("app/api/intelligence/opportunity-theses/route.ts", "utf8")
 const nav = await readFile("components/app/app-nav.tsx", "utf8")
 
 for (const needle of [
   'fetch("/api/intelligence/portfolio-binding"',
   "/api/intelligence/recommendations?organizationId=",
+  "/api/intelligence/opportunity-theses?organizationId=",
+  "Promise.all([",
   'filter === "active"',
   'item.status === "converted_to_action"',
   "/oportunidades/descubrir",
-  "Descubrir productos",
-  "Brechas IP",
+  "/oportunidades/tesis",
+  "Descubrir",
+  "Tesis de producto",
   "Revisar decisión",
   "Abrir tarea",
-  "Una sola fuente de verdad",
+  "getThesisAttention",
+  "prototype_outcome",
+  "prototype_assessment",
+  "prototype_assessment_id",
+  "Clasificar resultado",
+  "Re-investigar aprendizaje",
+  "Dos lifecycles. Una lectura ejecutiva.",
+  "Fuente degradada",
 ]) requireText(page, needle, "opportunities page")
 
 for (const forbidden of [
   "buildPortfolioGap(",
   "scoreRecommendation(",
   "create_intelligence_action",
+  "/prototype-assessment",
+  'method: "POST"',
 ]) {
-  if (page.includes(forbidden)) fail(`opportunities page must not recompute or auto-create persisted work: ${forbidden}`)
+  if (page.includes(forbidden)) fail(`opportunities page must remain a read/control surface and never recompute or mutate persisted work: ${forbidden}`)
 }
 
 for (const needle of [
@@ -40,10 +53,17 @@ for (const needle of [
   "competitor: identityMap.get",
 ]) requireText(route, needle, "recommendations listing API")
 
+for (const needle of [
+  '.from("innovation_opportunity_theses")',
+  '.from("innovation_opportunity_research_runs")',
+  "research_history",
+  "historyByOpportunity",
+]) requireText(thesisRoute, needle, "thesis listing API")
+
 requireText(
   nav,
   'label:"Tecnologías",icon:Activity,aliases:["/empresas","/espacios","/brechas","/oportunidades"]',
   "contextual technology navigation",
 )
 
-console.log("Opportunities workspace regression PASS: persisted recommendations keep their lifecycle and source-of-truth boundaries, while product discovery is exposed as a separate hypothesis workspace before persistence or action creation.")
+console.log("Opportunities workspace regression PASS: the executive workspace reads recommendation and product-thesis lifecycles in parallel, keeps each source canonical, surfaces prototype learning that needs human assessment or re-research, degrades thesis reading without hiding persisted recommendations, and never recomputes scores or mutates either lifecycle from the overview.")
