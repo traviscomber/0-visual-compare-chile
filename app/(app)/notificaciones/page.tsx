@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button"
 
 type Notification = { id:string; kind:string; title:string; body:string|null; href:string|null; read_at:string|null; created_at:string }
 const formatDate=(value:string)=>new Intl.DateTimeFormat("es-CL",{dateStyle:"medium",timeStyle:"short"}).format(new Date(value))
-const KIND_LABELS:Record<string,string>={review_requested:"Revisión solicitada",review_approved:"Aprobación",review_changes_requested:"Cambios solicitados",opportunity_conviction:"Tesis debilitada",mention:"Mención",action_assigned:"Tarea asignada",intelligence_signal:"Señal de inteligencia"}
-const KIND_PRIORITY:Record<string,number>={review_changes_requested:0,opportunity_conviction:1,action_assigned:2,review_requested:3,review_approved:4,mention:5,intelligence_signal:6}
-const ACTIONABLE_KINDS=new Set(["review_changes_requested","opportunity_conviction","action_assigned","review_requested"])
+const KIND_LABELS:Record<string,string>={review_requested:"Revisión solicitada",review_approved:"Aprobación",review_changes_requested:"Cambios solicitados",opportunity_prototype_learning:"Aprendizaje de prototipo",opportunity_conviction:"Tesis debilitada",mention:"Mención",action_assigned:"Tarea asignada",intelligence_signal:"Señal de inteligencia"}
+const KIND_PRIORITY:Record<string,number>={review_changes_requested:0,opportunity_prototype_learning:1,opportunity_conviction:2,action_assigned:3,review_requested:4,review_approved:5,mention:6,intelligence_signal:7}
+const ACTIONABLE_KINDS=new Set(["review_changes_requested","opportunity_prototype_learning","opportunity_conviction","action_assigned","review_requested"])
 
 export default function NotificationsPage(){
   const [items,setItems]=useState<Notification[]>([])
@@ -34,9 +34,10 @@ export default function NotificationsPage(){
   }
 
   const unread=items.filter(item=>!item.read_at).length
-  const reviewed=items.length-unread
   const actionable=items.filter(item=>!item.read_at&&ACTIONABLE_KINDS.has(item.kind)).length
   const weakenedTheses=items.filter(item=>!item.read_at&&item.kind==="opportunity_conviction").length
+  const prototypeLearning=items.filter(item=>!item.read_at&&item.kind==="opportunity_prototype_learning").length
+  const thesisAttention=weakenedTheses+prototypeLearning
   const ranked=useMemo(()=>[...items].sort((a,b)=>{
     if(Boolean(a.read_at)!==Boolean(b.read_at))return a.read_at?1:-1
     const byKind=(KIND_PRIORITY[a.kind]??9)-(KIND_PRIORITY[b.kind]??9)
@@ -49,14 +50,14 @@ export default function NotificationsPage(){
     <OperationalHeader
       eyebrow="VIDENTIA / Notificaciones"
       title={headline}
-      description={<>Cambios solicitados, tesis debilitadas, tareas y revisiones aparecen primero. Sólo movimientos materiales negativos de convicción generan aviso; baselines, estabilidad y fortalecimientos permanecen fuera de esta bandeja.</>}
-      meta={<><span>Acción antes que contexto</span><span>Convicción selectiva</span><span>Revisión explícita</span></>}
+      description={<>Cambios solicitados, aprendizaje de prototipo, tesis debilitadas, tareas y revisiones aparecen primero. El prototipo sólo genera próximos pasos gobernados: clasificar un outcome o re-investigar una evaluación; nunca valida ni mueve convicción automáticamente.</>}
+      meta={<><span>Acción antes que contexto</span><span>Aprendizaje gobernado</span><span>Revisión explícita</span></>}
       actions={<Button variant="outline" disabled={unread===0||marking!==null} onClick={()=>void mark()}>{marking==="all"?<Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none"/>:<CheckCheck className="h-4 w-4"/>}Marcar todo revisado</Button>}
     />
 
     <OperationalMetricRail>
-      <OperationalMetric value={actionable} label="Para actuar" detail="Tesis, tareas, cambios y revisiones pendientes" tone={actionable>0?"warning":"success"}/>
-      <OperationalMetric value={weakenedTheses} label="Tesis debilitadas" detail="Movimiento material negativo sin revisar" tone={weakenedTheses>0?"warning":"neutral"}/>
+      <OperationalMetric value={actionable} label="Para actuar" detail="Aprendizaje, tesis, tareas, cambios y revisiones pendientes" tone={actionable>0?"warning":"success"}/>
+      <OperationalMetric value={thesisAttention} label="Tesis por atender" detail={`${prototypeLearning} aprendizaje prototipo · ${weakenedTheses} debilitadas`} tone={thesisAttention>0?"warning":"neutral"}/>
       <OperationalMetric value={unread} label="Sin revisar" detail="Todos los avisos pendientes" tone={unread>0?"warning":"neutral"}/>
       <OperationalMetric value={unread===0?"Al día":"Atención"} label="Estado" detail={unread===0?"No hay avisos pendientes":"Hay actividad por revisar"} tone={unread===0?"success":"warning"}/>
     </OperationalMetricRail>

@@ -1,6 +1,7 @@
 import "server-only"
 
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { createOpportunityPrototypeLearningNotifications } from "@/lib/intelligence/opportunity-notifications"
 import { assertPortfolioOrganizationAccess } from "@/lib/intelligence/portfolio-access"
 import { createAdminClient } from "@/lib/supabase/admin"
 
@@ -73,7 +74,7 @@ export async function captureOpportunityPrototypeOutcome(
 
   const { data: thesis, error: thesisError } = await admin
     .from("innovation_opportunity_theses")
-    .select("id,status,confidence,overall_score,evidence_strength,timing_score,strategic_fit,capability_reuse_score,novelty_score,defensibility_score")
+    .select("id,title,created_by,status,confidence,overall_score,evidence_strength,timing_score,strategic_fit,capability_reuse_score,novelty_score,defensibility_score")
     .eq("id", opportunityId)
     .eq("organization_id", organizationId)
     .maybeSingle()
@@ -147,6 +148,21 @@ export async function captureOpportunityPrototypeOutcome(
 
   if (insertError || !research) throw new Error(`Could not append prototype outcome lineage: ${insertError?.message ?? "missing research row"}`)
 
+  let notificationsCreated = 0
+  try {
+    const notificationResult = await createOpportunityPrototypeLearningNotifications(admin, {
+      organizationId,
+      opportunityId,
+      opportunityTitle: String(thesis.title),
+      creatorUserId: String(thesis.created_by),
+      stage: "assessment",
+      sourceId: String(research.id),
+    })
+    notificationsCreated = notificationResult.created
+  } catch (notificationError) {
+    console.error("[opportunity-prototype-outcome:notification]", notificationError)
+  }
+
   return {
     matched: true as const,
     captured: true as const,
@@ -154,6 +170,7 @@ export async function captureOpportunityPrototypeOutcome(
     opportunityId,
     organizationId,
     prototypeOutcome,
+    notificationsCreated,
   }
 }
 

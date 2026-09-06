@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
+import { createOpportunityPrototypeLearningNotifications } from "@/lib/intelligence/opportunity-notifications"
 import { assertPortfolioOrganizationAccess } from "@/lib/intelligence/portfolio-access"
 import { createAdminClient } from "@/lib/supabase/admin"
 
@@ -32,7 +33,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   const { data: thesis, error: thesisError } = await admin
     .from("innovation_opportunity_theses")
-    .select("id,status,confidence,overall_score,evidence_strength,timing_score,strategic_fit,capability_reuse_score,novelty_score,defensibility_score")
+    .select("id,title,created_by,status,confidence,overall_score,evidence_strength,timing_score,strategic_fit,capability_reuse_score,novelty_score,defensibility_score")
     .eq("id", id)
     .eq("organization_id", parsed.data.organizationId)
     .maybeSingle()
@@ -130,7 +131,23 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: "No pudimos registrar la evaluación del prototipo." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
-  return NextResponse.json({ assessment: assessmentRun, created: true }, { status: 201, headers: PRIVATE_NO_STORE_HEADERS })
+  let notificationsCreated = 0
+  try {
+    const notificationResult = await createOpportunityPrototypeLearningNotifications(admin, {
+      organizationId: parsed.data.organizationId,
+      opportunityId: id,
+      opportunityTitle: String(thesis.title),
+      creatorUserId: String(thesis.created_by),
+      stage: "research",
+      sourceId: String(assessmentRun.id),
+      assessment: parsed.data.assessment,
+    })
+    notificationsCreated = notificationResult.created
+  } catch (notificationError) {
+    console.error("[opportunity-theses:prototype-assessment:notification]", notificationError)
+  }
+
+  return NextResponse.json({ assessment: assessmentRun, created: true, notificationsCreated }, { status: 201, headers: PRIVATE_NO_STORE_HEADERS })
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
