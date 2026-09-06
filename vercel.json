@@ -37,6 +37,10 @@
       "schedule": "45 */6 * * *"
     },
     {
+      "path": "/api/cron/juan-chile-evidence",
+      "schedule": "52 */6 * * *"
+    },
+    {
       "path": "/api/cron/juan-research-frontier",
       "schedule": "5 1,7,13,19 * * *"
     },
