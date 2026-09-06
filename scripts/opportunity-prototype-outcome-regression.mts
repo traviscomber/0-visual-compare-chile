@@ -12,6 +12,7 @@ function requireText(source: string, needle: string, label: string) {
 const helper = await readFile("lib/intelligence/opportunity-prototype-outcome.ts", "utf8")
 const collaborationRoute = await readFile("app/api/cases/collaboration/route.ts", "utf8")
 const outcomeMigration = await readFile("supabase/migrations/20260831023000_add_case_action_outcomes.sql", "utf8")
+const thesisPage = await readFile("app/(app)/oportunidades/tesis/page.tsx", "utf8")
 
 for (const needle of [
   'action.status !== "done"',
@@ -60,6 +61,25 @@ for (const needle of [
   "new.outcome_by := old.outcome_by",
 ]) requireText(outcomeMigration, needle, "outcome trigger")
 
+for (const needle of [
+  "type PrototypeOutcome = {",
+  "prototype_outcome?: PrototypeOutcome",
+  "actor_role?: string",
+  "conviction_effect?: string",
+  "const prototypeLearning = latestPrototypeLearning(item.research_history)",
+  "Resultado de prototipo",
+  "prototypeLearning.outcome.outcome",
+  "formatDateTime(prototypeLearning.outcome.outcome_at)",
+  "formatActorRole(prototypeLearning.actorRole)",
+  "shortId(prototypeLearning.outcome.outcome_by)",
+  "prototypeLearning.outcome.case_id",
+  "Abrir caso",
+  "Evidencia de ejecución · no altera score ni confianza hasta re-investigar.",
+  "no equivale a validación automática de mercado",
+  "function latestPrototypeLearning(history: ResearchRun[]): PrototypeLearning | null",
+  "convictionEffect: run.evidence_summary?.conviction_effect",
+]) requireText(thesisPage, needle, "thesis learning UI")
+
 const updateIndex = collaborationRoute.indexOf('.from("case_actions").update({')
 const captureIndex = collaborationRoute.indexOf("captureOpportunityPrototypeOutcome(auth.supabase", updateIndex)
 const responseIndex = collaborationRoute.indexOf("prototypeOutcomeCapture },", captureIndex)
@@ -67,4 +87,4 @@ if (!(updateIndex >= 0 && captureIndex > updateIndex && responseIndex > captureI
   fail("prototype learning must happen after the canonical human action update and remain best-effort before the success response")
 }
 
-console.log("Opportunity prototype outcome regression PASS: only an attributable completed human prototype action can append execution evidence to its exact thesis; case/item/action/actor/timestamp provenance is preserved; action+outcome_at dedupes retries; identical completion retries keep the database-derived timestamp; score/confidence are copied only as immutable snapshots and the thesis row is never mutated; and lineage capture failure never rolls back canonical action completion.")
+console.log("Opportunity prototype outcome regression PASS: only an attributable completed human prototype action can append execution evidence to its exact thesis; case/item/action/actor/timestamp provenance is preserved; action+outcome_at dedupes retries; identical completion retries keep the database-derived timestamp; score/confidence are copied only as immutable snapshots and the thesis row is never mutated; the latest prototype result is visible with actor/time/case lineage and an explicit no-auto-conviction warning; and lineage capture failure never rolls back canonical action completion.")
