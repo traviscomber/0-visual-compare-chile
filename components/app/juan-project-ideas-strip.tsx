@@ -244,9 +244,9 @@ export async function JuanProjectIdeasStrip({ userId }: { userId: string }) {
 
             <div className="mt-3 space-y-2 border-t border-[#294047] pt-3">
               <EvidenceLine icon={Github} label="Qué ya tenemos" text={idea.capability} />
-              {idea.paper ? <EvidenceLink icon={BookOpen} label={`Paper · ${idea.paper.source}`} text={`${idea.paper.title}${idea.paper.date ? ` · ${idea.paper.date}` : ""}`} href={idea.paper.url} /> : <EvidenceLine icon={BookOpen} label="Papers" text="Sin coincidencia suficientemente precisa en la ventana reciente." muted />}
-              {idea.patent ? <EvidenceLine icon={FileSearch} label="Patente" text={`${idea.patent.title}${idea.patent.applicants ? ` · ${idea.patent.applicants}` : ""}${idea.patent.date ? ` · ${idea.patent.date}` : ""}`} /> : <EvidenceLine icon={FileSearch} label="Patentes" text="Sin coincidencia fuerte en el corpus INAPI observado." muted />}
-              {idea.externalSignal ? <EvidenceLink icon={Activity} label={`Señal · ${humanSource(idea.externalSignal.sourceKey)}`} text={`${idea.externalSignal.title}${idea.externalSignal.date ? ` · ${idea.externalSignal.date}` : ""}`} href={idea.externalSignal.url} /> : <EvidenceLine icon={Activity} label="Señales" text="Sin señal alta/media suficientemente relacionada en tus seguimientos actuales." muted />}
+              {idea.paper ? <EvidenceLink icon={BookOpen} label={`Paper · ${idea.paper.source}`} text={compactEvidence(idea.paper.title, 135)} meta={idea.paper.date} href={idea.paper.url} /> : <EvidenceLine icon={BookOpen} label="Papers" text="Sin coincidencia suficientemente precisa en la ventana reciente." muted />}
+              {idea.patent ? <EvidenceLine icon={FileSearch} label="Patente" text={compactEvidence(idea.patent.title, 135)} meta={[idea.patent.applicants, idea.patent.date].filter(Boolean).join(" · ")} /> : <EvidenceLine icon={FileSearch} label="Patentes" text="Sin coincidencia fuerte en el corpus INAPI observado." muted />}
+              {idea.externalSignal ? <EvidenceLink icon={Activity} label={`Señal · ${humanSource(idea.externalSignal.sourceKey)}`} text={compactEvidence(idea.externalSignal.title, 135)} meta={idea.externalSignal.date} href={idea.externalSignal.url} /> : <EvidenceLine icon={Activity} label="Señales" text="Sin señal alta/media suficientemente relacionada en tus seguimientos actuales." muted />}
               <EvidenceLine icon={Plus} label="Datos tuyos" text={idea.ownEvidence.length ? `${idea.ownEvidence.length} evidencia${idea.ownEvidence.length === 1 ? "" : "s"} agregada${idea.ownEvidence.length === 1 ? "" : "s"}.` : "Todavía no agregaste contexto manual."} muted={!idea.ownEvidence.length} />
             </div>
 
@@ -327,14 +327,27 @@ function normalize(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim()
 }
 
+function compactEvidence(value: string, max = 135) {
+  const clean = value
+    .replace(/^(title|abstract|document type|author|date):\s*/i, "")
+    .replace(/\s+/g, " ")
+    .trim()
+  if (clean.length <= max) return clean
+  const firstSentence = clean.match(/^(.{40,180}?[.!?])(?:\s|$)/)?.[1]
+  if (firstSentence && firstSentence.length <= max + 20) return firstSentence
+  const clipped = clean.slice(0, max)
+  const lastSpace = clipped.lastIndexOf(" ")
+  return `${clipped.slice(0, lastSpace > max * 0.7 ? lastSpace : max).trim()}…`
+}
+
 function text(value: unknown) { return typeof value === "string" && value.trim() ? value.trim() : null }
 function humanSource(value: string) { return value.replace(/_/g, " ").replace(/\b\w/g, letter => letter.toUpperCase()) }
 
-function EvidenceLine({ icon: Icon, label, text: value, muted = false }: { icon: typeof Github; label: string; text: string; muted?: boolean }) {
-  return <div className="flex items-start gap-2"><Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#6F807E]"/><p className={`text-[11px] leading-5 ${muted ? "text-[#738180]" : "text-[#AEB6B4]"}`}><span className="font-medium text-[#D6DDDA]">{label}:</span> {value}</p></div>
+function EvidenceLine({ icon: Icon, label, text: value, meta, muted = false }: { icon: typeof Github; label: string; text: string; meta?: string | null; muted?: boolean }) {
+  return <div className="flex items-start gap-2"><Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#6F807E]"/><p className={`text-[11px] leading-5 ${muted ? "text-[#738180]" : "text-[#AEB6B4]"}`}><span className="font-medium text-[#D6DDDA]">{label}:</span> {value}{meta ? <span className="text-[#738180]"> · {compactEvidence(meta, 70)}</span> : null}</p></div>
 }
 
-function EvidenceLink({ icon: Icon, label, text: value, href }: { icon: typeof BookOpen; label: string; text: string; href: string | null }) {
-  if (!href) return <EvidenceLine icon={Icon} label={label} text={value} />
-  return <div className="flex items-start gap-2"><Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#6F807E]"/><p className="text-[11px] leading-5 text-[#AEB6B4]"><span className="font-medium text-[#D6DDDA]">{label}:</span> <a href={href} target="_blank" rel="noreferrer" className="hover:text-white hover:underline">{value}</a></p></div>
+function EvidenceLink({ icon: Icon, label, text: value, meta, href }: { icon: typeof BookOpen; label: string; text: string; meta?: string | null; href: string | null }) {
+  if (!href) return <EvidenceLine icon={Icon} label={label} text={value} meta={meta} />
+  return <div className="flex items-start gap-2"><Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#6F807E]"/><p className="text-[11px] leading-5 text-[#AEB6B4]"><span className="font-medium text-[#D6DDDA]">{label}:</span> {value}{meta ? <span className="text-[#738180]"> · {compactEvidence(meta, 70)}</span> : null} <a href={href} target="_blank" rel="noreferrer" className="whitespace-nowrap text-[#96B5A6] hover:text-white hover:underline">Ver fuente</a></p></div>
 }
