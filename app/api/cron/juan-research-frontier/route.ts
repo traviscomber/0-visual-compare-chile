@@ -22,8 +22,6 @@ const RESEARCH_QUERIES: Record<string, string> = {
   "black-swan": "agentic AI agriculture farm operations sensors maintenance digital twin workflow edge",
 }
 
-// Canonical evidence-only starting conviction. These are intentionally independent
-// from N3uralia assets, integration leverage and execution capability.
 const BASE_CONVICTION: Record<string, number> = {
   motil: 74,
   pescamar: 72,
@@ -43,12 +41,12 @@ const RESEARCH_ANCHORS: Record<string, string[]> = {
 }
 
 const TECHNOLOGY_ANCHORS: Record<string, string[]> = {
-  motil: ["agentic", "artificial intelligence", "machine learning", "predictive maintenance", "automation", "autonomous", "digital twin", "large language model", "llm", "mcp"],
-  pescamar: ["agentic", "artificial intelligence", "machine learning", "computer vision", "multimodal", "automation", "autonomous", "digital twin", "predictive", "traceability"],
-  kumplio: ["agentic", "artificial intelligence", "machine learning", "rag", "retrieval augmented", "automation", "autonomous", "workflow", "policy as code"],
-  chileflota: ["agentic", "artificial intelligence", "machine learning", "predictive maintenance", "automation", "autonomous", "digital twin", "telematics"],
-  "property-partners": ["agentic", "artificial intelligence", "machine learning", "automated valuation", "automation", "predictive", "large language model", "llm"],
-  "black-swan": ["agentic", "artificial intelligence", "machine learning", "computer vision", "automation", "autonomous", "digital twin", "sensor", "iot", "edge"],
+  motil: ["ai", "agentic", "artificial intelligence", "machine learning", "predictive maintenance", "automation", "autonomous", "digital twin", "large language model", "llm", "mcp"],
+  pescamar: ["ai", "agentic", "artificial intelligence", "machine learning", "computer vision", "multimodal", "automation", "autonomous", "digital twin", "predictive"],
+  kumplio: ["ai", "agentic", "artificial intelligence", "machine learning", "rag", "retrieval augmented", "automation", "autonomous", "workflow", "policy as code"],
+  chileflota: ["ai", "agentic", "artificial intelligence", "machine learning", "predictive maintenance", "automation", "autonomous", "digital twin", "telematics"],
+  "property-partners": ["ai", "agentic", "artificial intelligence", "machine learning", "automated valuation", "automation", "predictive", "large language model", "llm"],
+  "black-swan": ["ai", "agentic", "artificial intelligence", "machine learning", "computer vision", "automation", "autonomous", "digital twin", "sensor", "iot", "edge"],
 }
 
 type FrontierPaper = {
@@ -121,8 +119,6 @@ export async function GET(request: Request) {
     const snapshot = { ...(row.evidence_snapshot ?? {}) } as Record<string, any>
     const conviction = { ...(snapshot.conviction ?? {}) }
 
-    // Never bootstrap from the legacy row score. Older scores mixed evidence with
-    // institutional capability; v3.2 deliberately rebases to the evidence-only baseline.
     const base = BASE_CONVICTION[row.product_key] ?? clamp(numberOrZero(conviction.base), 0, 100)
     const patentDelta = typeof conviction.patent_delta === "number"
       ? conviction.patent_delta
@@ -169,7 +165,7 @@ export async function GET(request: Request) {
       sources,
       institutions,
       papers: frontier,
-      quality_gate: "A paper contributes only when it contains both explicit domain evidence and explicit technology/method evidence. Same-title publications are deduplicated.",
+      quality_gate: "A paper contributes only when it contains both explicit domain evidence and explicit AI/technology/method evidence. Same-title publications are deduplicated.",
       note: "Recent domain-and-technology-qualified papers can rank as early signals before citation counts mature. Institutional capability remains separate from evidence conviction.",
     }
     snapshot.global_signal_quality = {
@@ -180,7 +176,7 @@ export async function GET(request: Request) {
         ? "Global signal contains both domain and technology evidence and may contribute to world conviction."
         : "Global signal does not satisfy both domain and technology evidence gates; it remains context with zero conviction contribution.",
     }
-    snapshot.score_model = "evidence_conviction_v3.2: canonical evidence-only base + domain-and-technology-qualified world frontier + patent + qualified global signal + Chile evidence; institution/integration excluded"
+    snapshot.score_model = "evidence_conviction_v3.2.1: canonical evidence-only base + domain-and-AI/technology-qualified world frontier + patent + qualified global signal + Chile evidence; institution/integration excluded"
     snapshot.conviction = {
       ...conviction,
       base,
@@ -228,7 +224,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    scoreModel: "evidence_conviction_v3.2",
+    scoreModel: "evidence_conviction_v3.2.1",
     frontierLimit: FRONTIER_LIMIT,
     recommendations: results,
     durationMs: Date.now() - startedAt,
