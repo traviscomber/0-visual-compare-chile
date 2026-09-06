@@ -190,7 +190,7 @@ export default function CompaniesPage() {
       <p className="mt-3 text-xs leading-5 text-muted-foreground">VIDENTIA une variantes tipográficas y jurídicas conservadoras. Relaciones matriz/filial/grupo sólo aparecen cuando existe evidencia explícita; no se infieren por nombre.</p>
     </section>
 
-    {error ? <div role="alert" className="mt-6 rounded-[10px] bg-[#3A2525] p-4 text-sm text-[#E8AAA3]">{error}</div> : null}
+    {error ? <div role="alert" className="mt-6 border border-[#D6A46F]/20 bg-[#332C24]/70 p-4 text-sm text-[#E0B987]">{error}</div> : null}
     {!result && !loading ? <InitialState /> : null}
     {result && !result.selected ? <NoMatch /> : null}
 
@@ -263,14 +263,18 @@ function GraphSection({ graph }: { graph: NonNullable<TrajectoryResult["graph"]>
   const activity = graph.activity12m
   return <section className="border-b border-border/80 py-9">
     <OperationalSectionHeader eyebrow="Entity Graph V2" title="La empresa dentro del grafo de propiedad intelectual" meta={`${graph.legacy.linkedEntities} enlaces legacy exactos`} />
-    <div className="mt-6 grid gap-4 lg:grid-cols-4"><GraphMetric value={activity.total_12m} label="Expedientes / 12m" /><GraphMetric value={activity.classification_count} label="Clases distintas" /><GraphMetric value={graph.legacy.brandCount} label="Marcas históricas enlazadas" /><GraphMetric value={graph.corporateRelationships.length} label="Relaciones corporativas verificadas" /></div>
+    <OperationalMetricRail className="mt-6 border-t border-border/80">
+      <OperationalMetric value={activity.total_12m} label="Expedientes / 12m" detail={`${activity.patents_12m} patentes · ${activity.trademarks_12m} marcas`} />
+      <OperationalMetric value={activity.classification_count} label="Clases distintas" detail="IPC + Niza observadas en los últimos 12 meses" />
+      <OperationalMetric value={graph.legacy.brandCount} label="Marcas históricas" detail={`${graph.legacy.linkedEntities} enlaces legacy exactos`} />
+      <OperationalMetric value={graph.corporateRelationships.length} label="Relaciones verificadas" detail="Matriz, filiales o grupo con evidencia explícita" />
+    </OperationalMetricRail>
     <div className="mt-8 grid gap-8 xl:grid-cols-[1.05fr_.95fr]">
       <div><div className="flex items-center gap-2"><Waypoints className="h-4 w-4 text-[#96B5A6]" /><h3 className="font-medium text-white">Marcas conectadas al titular histórico</h3></div><div className="mt-4 flex flex-wrap gap-2">{graph.legacy.brands.slice(0, 18).map(brand => <Badge key={brand.id} variant="outline" className="bg-[#13272D]">{brand.canonical_name}</Badge>)}</div>{graph.legacy.brandCount > 18 ? <p className="mt-3 text-xs text-muted-foreground">Se muestran 18 de {graph.legacy.brandCount.toLocaleString("es-CL")} marcas enlazadas.</p> : null}</div>
       <div><div className="flex items-center gap-2"><GitBranch className="h-4 w-4 text-[#96B5A6]" /><h3 className="font-medium text-white">Matriz, filiales y grupo</h3></div>{graph.corporateRelationships.length ? <div className="mt-4 divide-y divide-border/80 border-y border-border/80">{graph.corporateRelationships.map(relation => <div key={relation.id} className="py-3"><p className="text-sm font-medium text-white">{relation.related_name}</p><p className="mt-1 text-xs text-muted-foreground">{relation.relationship_type} · confianza {Math.round(relation.confidence * 100)}% · {relation.evidence_source_key ?? "validación manual"}</p></div>)}</div> : <OperationalPanel className="mt-4"><p className="text-sm text-[#D5E0E3]">No hay una relación matriz/filial/grupo suficientemente verificada para esta identidad.</p><p className="mt-2 text-xs leading-5 text-muted-foreground">VIDENTIA no completa este vacío por similitud de nombre. La relación aparecerá cuando exista evidencia societaria, regulatoria o validación explícita.</p></OperationalPanel>}</div>
     </div>
   </section>
 }
-function GraphMetric({ value, label }: { value: number; label: string }) { return <div className="rounded-[10px] bg-[#13272D] p-4"><p className="text-2xl font-light text-[#E7DFCE]">{value.toLocaleString("es-CL")}</p><p className="mt-1 text-xs text-muted-foreground">{label}</p></div> }
 
 function ProtectionDeltaSection({ result }: { result: Result }) {
   return <section className="border-b border-border/80 py-9"><OperationalSectionHeader eyebrow="Cobertura nueva" title="Qué aparece ahora y no aparecía hace seis meses" /><p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Sólo se muestran clasificaciones presentes en los últimos 180 días y ausentes en los 180 días anteriores. Una clase nueva indica expansión observable de cobertura, no necesariamente una tecnología o negocio completamente nuevo.</p><div className="mt-7 grid gap-8 xl:grid-cols-2"><MovementList type="patent" icon={FlaskConical} title="Nuevas áreas técnicas · IPC" items={result.new_ipc} empty="No aparecen nuevas subclases IPC en la ventana actual." /><MovementList type="trademark" icon={Tag} title="Nuevas áreas comerciales · Niza" items={result.new_niza} empty="No aparecen nuevas clases Niza en la ventana actual." /></div></section>
