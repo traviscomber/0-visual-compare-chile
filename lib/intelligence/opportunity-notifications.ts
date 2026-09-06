@@ -87,9 +87,7 @@ export async function createOpportunityPrototypeLearningNotifications(
   const recipientIds = await resolveRecipients(client, input.organizationId, input.creatorUserId, recipientMode)
   if (!recipientIds.length) return { created: 0, eligible: true }
 
-  const href = input.stage === "assessment"
-    ? `/oportunidades/tesis?opportunity=${encodeURIComponent(input.opportunityId)}&outcome=${encodeURIComponent(input.sourceId)}`
-    : `/oportunidades/tesis?opportunity=${encodeURIComponent(input.opportunityId)}&assessment=${encodeURIComponent(input.sourceId)}`
+  const href = prototypeLearningHref(input)
   const pendingRecipients = await unresolvedRecipients(client, recipientIds, "opportunity_prototype_learning", href)
   if (!pendingRecipients.length) return { created: 0, eligible: true }
 
@@ -108,6 +106,34 @@ export async function createOpportunityPrototypeLearningNotifications(
   })
 
   return { created, eligible: true }
+}
+
+export async function resolveOpportunityPrototypeLearningNotifications(
+  client: SupabaseClient,
+  input: {
+    opportunityId: string
+    stage: PrototypeLearningStage
+    sourceId: string
+  },
+) {
+  const href = prototypeLearningHref(input)
+  const resolvedAt = new Date().toISOString()
+  const { data, error } = await client
+    .from("user_notifications")
+    .update({ read_at: resolvedAt })
+    .eq("kind", "opportunity_prototype_learning")
+    .eq("href", href)
+    .is("read_at", null)
+    .select("id")
+  if (error) throw new Error(`Could not resolve prototype learning notifications: ${error.message}`)
+
+  return { resolved: data?.length ?? 0, href, resolvedAt }
+}
+
+function prototypeLearningHref(input: { opportunityId: string; stage: PrototypeLearningStage; sourceId: string }) {
+  return input.stage === "assessment"
+    ? `/oportunidades/tesis?opportunity=${encodeURIComponent(input.opportunityId)}&outcome=${encodeURIComponent(input.sourceId)}`
+    : `/oportunidades/tesis?opportunity=${encodeURIComponent(input.opportunityId)}&assessment=${encodeURIComponent(input.sourceId)}`
 }
 
 async function resolveRecipients(
