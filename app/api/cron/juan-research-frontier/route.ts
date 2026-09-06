@@ -22,6 +22,15 @@ const RESEARCH_QUERIES: Record<string, string> = {
   "black-swan": "agentic AI agriculture farm operations sensors maintenance digital twin workflow edge",
 }
 
+const RESEARCH_ANCHORS: Record<string, string[]> = {
+  motil: ["mining", "mine", "mineral", "geology", "geological"],
+  pescamar: ["seafood", "aquaculture", "aquatic", "fish", "salmon", "marine"],
+  kumplio: ["compliance", "regulatory", "regulation", "policy", "audit", "governance"],
+  chileflota: ["fleet", "vehicle", "automotive", "telematics", "transportation"],
+  "property-partners": ["real estate", "property", "valuation", "housing", "housing market"],
+  "black-swan": ["agriculture", "agricultural", "farm", "crop", "orchard", "horticulture"],
+}
+
 type FrontierPaper = {
   source: "OpenAlex" | "Crossref"
   sourceRecordId: string
@@ -33,6 +42,7 @@ type FrontierPaper = {
   authors: string[]
   institutions: string[]
   publisher: string | null
+  anchorHits: string[]
   ageDays: number | null
   recencyScore: number
   citationScore: number
@@ -84,18 +94,22 @@ export async function GET(request: Request) {
     const query = RESEARCH_QUERIES[row.product_key]
     if (!query) continue
 
-    const frontier = await buildResearchFrontier(query, from, to)
+    const anchors = RESEARCH_ANCHORS[row.product_key] ?? []
+    const frontier = await buildResearchFrontier(row.product_key, query, anchors, from, to)
     const snapshot = { ...(row.evidence_snapshot ?? {}) } as Record<string, any>
     const conviction = { ...(snapshot.conviction ?? {}) }
     const previousPaperDelta = numberOrZero(conviction.paper_delta)
     const patentDelta = numberOrZero(conviction.patent_delta)
-    const globalDelta = numberOrZero(conviction.global_delta)
+    const rawGlobalDelta = numberOrZero(conviction.global_delta)
     const chileDelta = numberOrZero(conviction.chile_delta)
     const base = typeof conviction.base === "number"
       ? conviction.base
-      : clamp(Math.round(Number(row.score) - previousPaperDelta - patentDelta - globalDelta - chileDelta), 0, 100)
+      : clamp(Math.round(Number(row.score) - previousPaperDelta - patentDelta - rawGlobalDelta - chileDelta), 0, 100)
 
     const frontierDelta = scoreFrontierDelta(frontier)
+    const globalSignalText = normalizeKey(String(snapshot.global_signal?.title ?? ""))
+    const globalSignalAnchorHits = anchors.filter(anchor => globalSignalText.includes(normalizeKey(anchor)))
+    const globalDelta = globalSignalAnchorHits.length ? rawGlobalDelta : 0
     const effective = clamp(Math.round(base + frontierDelta + patentDelta + globalDelta + chileDelta), 0, 100)
     const lockedDecision = row.status === "accepted" || row.status === "rejected"
     const nextStatus = lockedDecision ? row.status : effective >= REVIEW_THRESHOLD ? "ready_for_review" : "researching"
@@ -113,6 +127,7 @@ export async function GET(request: Request) {
     snapshot.world_frontier = {
       generated_at: new Date().toISOString(),
       query,
+      anchors,
       window_days: 720,
       delta: frontierDelta,
       state: frontierState(frontier, sources.length, institutions.length),
@@ -123,9 +138,17 @@ export async function GET(request: Request) {
       sources,
       institutions,
       papers: frontier,
+      quality_gate: "Only papers with explicit domain-anchor evidence in title/topic/subjects contribute to conviction.",
       note: "Recent, relevant papers can rank as early signals before citation counts mature. Frontier evidence changes world conviction only; institutional capability remains separate.",
     }
-    snapshot.score_model = "evidence_conviction_v3: base + world research frontier + patent + global signal + Chile evidence; institution/integration excluded"
+    snapshot.global_signal_quality = {
+      scoring: globalDelta > 0,
+      anchor_hits: globalSignalAnchorHits,
+      reason: globalDelta > 0
+        ? "Global signal has explicit domain-specific evidence and may contribute to world conviction."
+        : "Global signal lacks explicit domain-specific evidence; it remains visible as context but contributes zero conviction.",
+    }
+    snapshot.score_model = "evidence_conviction_v3.1: base + domain-qualified world research frontier + patent + domain-qualified global signal + Chile evidence; institution/integration excluded"
     snapshot.conviction = {
       ...conviction,
       base,
@@ -157,6 +180,7 @@ export async function GET(request: Request) {
       productKey: row.product_key,
       ok: true,
       frontierDelta,
+      globalDelta,
       effective,
       status: nextStatus,
       papers: frontier.length,
@@ -169,14 +193,14 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    scoreModel: "evidence_conviction_v3",
+    scoreModel: "evidence_conviction_v3.1",
     frontierLimit: FRONTIER_LIMIT,
     recommendations: results,
     durationMs: Date.now() - startedAt,
   })
 }
 
-async function buildResearchFrontier(query: string, from: Date, to: Date): Promise<FrontierPaper[]> {
+async function buildResearchFrontier(productKey: string, query: string, anchors: string[], from: Date, to: Date): Promise<FrontierPaper[]> {
   const [openAlexResult, crossrefResult] = await Promise.allSettled([
     searchOpenAlexWorks(query, from, to, 12),
     searchCrossrefWorks(query, from, to, 12),
@@ -184,13 +208,13 @@ async function buildResearchFrontier(query: string, from: Date, to: Date): Promi
 
   const openAlex = openAlexResult.status === "fulfilled" ? openAlexResult.value : []
   const crossref = crossrefResult.status === "fulfilled" ? crossrefResult.value : []
-  if (openAlexResult.status === "rejected") console.warn("[juan-research-frontier:openalex]", openAlexResult.reason)
-  if (crossrefResult.status === "rejected") console.warn("[juan-research-frontier:crossref]", crossrefResult.reason)
+  if (openAlexResult.status === "rejected") console.warn(`[juan-research-frontier:${productKey}:openalex]`, openAlexResult.reason)
+  if (crossrefResult.status === "rejected") console.warn(`[juan-research-frontier:${productKey}:crossref]`, crossrefResult.reason)
 
   const merged = [
-    ...openAlex.map(normalizeOpenAlex),
-    ...crossref.map(normalizeCrossref),
-  ]
+    ...openAlex.map(item => normalizeOpenAlex(item, anchors)),
+    ...crossref.map(item => normalizeCrossref(item, anchors)),
+  ].filter(item => item.anchorHits.length > 0)
 
   const deduped = new Map<string, FrontierPaper>()
   for (const paper of merged) {
@@ -204,7 +228,8 @@ async function buildResearchFrontier(query: string, from: Date, to: Date): Promi
     .slice(0, FRONTIER_LIMIT)
 }
 
-function normalizeOpenAlex(item: OpenAlexWorkSignal): FrontierPaper {
+function normalizeOpenAlex(item: OpenAlexWorkSignal, anchors: string[]): FrontierPaper {
+  const evidenceText = [item.title, item.topic].filter(Boolean).join(" ")
   return rankPaper({
     source: "OpenAlex",
     sourceRecordId: item.sourceRecordId,
@@ -216,10 +241,12 @@ function normalizeOpenAlex(item: OpenAlexWorkSignal): FrontierPaper {
     authors: item.authors,
     institutions: item.institutions,
     publisher: null,
+    anchorHits: findAnchorHits(evidenceText, anchors),
   })
 }
 
-function normalizeCrossref(item: CrossrefWorkSignal): FrontierPaper {
+function normalizeCrossref(item: CrossrefWorkSignal, anchors: string[]): FrontierPaper {
+  const evidenceText = [item.title, ...item.subjects].join(" ")
   return rankPaper({
     source: "Crossref",
     sourceRecordId: item.sourceRecordId,
@@ -231,6 +258,7 @@ function normalizeCrossref(item: CrossrefWorkSignal): FrontierPaper {
     authors: item.authors,
     institutions: [],
     publisher: item.publisher,
+    anchorHits: findAnchorHits(evidenceText, anchors),
   })
 }
 
@@ -239,7 +267,8 @@ function rankPaper(input: Omit<FrontierPaper, "ageDays" | "recencyScore" | "cita
   const recencyScore = ageDays === null ? 1 : ageDays <= 90 ? 6 : ageDays <= 180 ? 5 : ageDays <= 365 ? 3 : 1
   const citationScore = Math.min(5, Math.round(Math.log10(Math.max(1, input.citedByCount + 1)) * 2))
   const earlySignal = ageDays !== null && ageDays <= 180
-  const rankScore = recencyScore * 2 + citationScore + (earlySignal ? 2 : 0)
+  const domainSpecificityScore = Math.min(4, input.anchorHits.length * 2)
+  const rankScore = recencyScore * 2 + citationScore + domainSpecificityScore + (earlySignal ? 2 : 0)
   return { ...input, ageDays, recencyScore, citationScore, rankScore, earlySignal }
 }
 
@@ -264,6 +293,11 @@ function frontierState(frontier: FrontierPaper[], sourceCount: number, instituti
   if (sourceCount >= 2 || institutionCount >= 3) return "converging"
   if (frontier.length >= 3) return "emerging"
   return "single_signal"
+}
+
+function findAnchorHits(value: string, anchors: string[]) {
+  const normalized = normalizeKey(value)
+  return anchors.filter(anchor => normalized.includes(normalizeKey(anchor)))
 }
 
 function normalizeKey(value: string) {
