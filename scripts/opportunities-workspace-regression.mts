@@ -10,6 +10,7 @@ function requireText(haystack: string, needle: string, label: string) {
 }
 
 const page = await readFile("app/(app)/oportunidades/page.tsx", "utf8")
+const attention = await readFile("lib/intelligence/opportunity-thesis-attention.ts", "utf8")
 const route = await readFile("app/api/intelligence/recommendations/route.ts", "utf8")
 const thesisRoute = await readFile("app/api/intelligence/opportunity-theses/route.ts", "utf8")
 const nav = await readFile("components/app/app-nav.tsx", "utf8")
@@ -27,15 +28,22 @@ for (const needle of [
   "Tesis de producto",
   "Revisar decisión",
   "Abrir tarea",
-  "getThesisAttention",
-  "prototype_outcome",
-  "prototype_assessment",
-  "prototype_assessment_id",
+  "getPrototypeLearningAttention",
   "Clasificar resultado",
   "Re-investigar aprendizaje",
   "Dos lifecycles. Una lectura ejecutiva.",
   "Fuente degradada",
 ]) requireText(page, needle, "opportunities page")
+
+for (const needle of [
+  "prototype_outcome",
+  "prototype_assessment",
+  "prototype_assessment_id",
+  'kind: "needs_assessment"',
+  'kind: "needs_research"',
+  "source_research_id",
+  "consumed",
+]) requireText(attention, needle, "shared thesis attention")
 
 for (const forbidden of [
   "buildPortfolioGap(",
@@ -66,4 +74,4 @@ requireText(
   "contextual technology navigation",
 )
 
-console.log("Opportunities workspace regression PASS: the executive workspace reads recommendation and product-thesis lifecycles in parallel, keeps each source canonical, surfaces prototype learning that needs human assessment or re-research, degrades thesis reading without hiding persisted recommendations, and never recomputes scores or mutates either lifecycle from the overview.")
+console.log("Opportunities workspace regression PASS: the executive workspace reads recommendation and product-thesis lifecycles in parallel, delegates prototype-learning attention to one shared lineage rule, keeps each source canonical, degrades thesis reading without hiding persisted recommendations, and never recomputes scores or mutates either lifecycle from the overview.")
