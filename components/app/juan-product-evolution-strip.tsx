@@ -156,12 +156,12 @@ export async function JuanProductEvolutionStrip({ userId }: { userId: string }) 
       <div className="flex items-start gap-3">
         <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-[#173B37] text-[#96B5A6]"><Sparkles className="h-4 w-4" /></span>
         <div>
-          <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]">Evolución de productos · {organization.name}</p>
+          <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]">Evolución de productos existentes · {organization.name}</p>
           <p className="mt-1 max-w-4xl text-sm leading-6 text-[#E7DFCE]">VIDENTIA separa dos preguntas: primero, qué tan respaldada está una dirección por evidencia externa; después, qué puede hacer {organization.name} con sus capacidades, integraciones y MCP. La capacidad institucional nunca aumenta la convicción de evidencia.</p>
         </div>
       </div>
       <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
-        <span className="text-[10px] uppercase tracking-[0.14em] text-[#748481]">evidencia → institución → ejecución → decisión humana</span>
+        <span className="text-[10px] uppercase tracking-[0.14em] text-[#748481]">mundo / papers → Chile → institución → decisión humana</span>
         <JuanResearchFrontierRefresh />
       </div>
     </div>
