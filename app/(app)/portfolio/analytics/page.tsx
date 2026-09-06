@@ -9,6 +9,12 @@ import { createClient } from "@/lib/supabase/server"
 export const dynamic="force-dynamic"
 type BatchMember={case_id:string;user_id:string;display_name:string;email:string}
 
+function chunkCaseIds(caseIds:string[],size=100){
+  const chunks:string[][]=[]
+  for(let index=0;index<caseIds.length;index+=size)chunks.push(caseIds.slice(index,index+size))
+  return chunks
+}
+
 export default async function PortfolioAnalyticsPage(){
   const supabase=await createClient()
   const {data:auth}=await supabase.auth.getUser()
@@ -23,15 +29,16 @@ export default async function PortfolioAnalyticsPage(){
   let events:PortfolioEvent[]=[]
   let members:BatchMember[]=[]
   if(caseIds.length){
-    const [reviewResult,eventResult,memberResult]=await Promise.all([
+    const memberBatches=chunkCaseIds(caseIds)
+    const [reviewResult,eventResult,memberResults]=await Promise.all([
       supabase.from("case_review_requests").select("id,case_id,reviewer_id,status,created_at,responded_at,deadline_at,governance_round_id").in("case_id",caseIds).order("created_at",{ascending:true}),
       supabase.from("case_events").select("case_id,event_type,payload,occurred_at").in("case_id",caseIds).order("occurred_at",{ascending:true}),
-      supabase.rpc("get_case_members_batch",{p_case_ids:caseIds.slice(0,100)}),
+      Promise.all(memberBatches.map(batch=>supabase.rpc("get_case_members_batch",{p_case_ids:batch}))),
     ])
-    if(reviewResult.error||eventResult.error||memberResult.error)throw new Error("No pudimos completar las métricas del portafolio.")
+    if(reviewResult.error||eventResult.error||memberResults.some(result=>result.error))throw new Error("No pudimos completar las métricas del portafolio.")
     reviews=(reviewResult.data??[]) as PortfolioReview[]
     events=(eventResult.data??[]) as PortfolioEvent[]
-    members=(memberResult.data??[]) as BatchMember[]
+    members=memberResults.flatMap(result=>(result.data??[]) as BatchMember[])
   }
 
   const reviewerIds=new Set(reviews.map(r=>r.reviewer_id))
