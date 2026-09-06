@@ -1,6 +1,6 @@
 import { queryOpenAlexWindow, type OpenAlexWorkSignal } from "@/lib/intelligence/openalex"
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
-import { searchGdeltNews } from "@/lib/intelligence/gdelt"
+import { searchGoogleNews } from "@/lib/intelligence/google-news"
 import { buildTechnologyCorroboration } from "@/lib/intelligence/technology-corroboration-rules"
 import { buildTechnologyPatentSignal, emptyTechnologyPatentSignal } from "@/lib/intelligence/technology-patent-corroboration"
 import { buildStrategicSearchIntent, type StrategicSearchScope } from "@/lib/intelligence/search-intent"
@@ -27,14 +27,16 @@ export async function buildTechnologySignals(query: string, windowDays = 180, sc
   const disabledOpenAlex: SourceResult<{ count: number; works: OpenAlexWorkSignal[] }> = { ok: false, value: { count: 0, works: [] } }
   const disabledWorks: SourceResult<Awaited<ReturnType<typeof searchCrossrefWorks>>> = { ok: false, value: [] }
   const disabledPatents: SourceResult<ReturnType<typeof emptyTechnologyPatentSignal>> = { ok: false, value: emptyTechnologyPatentSignal() }
-  const disabledNews: SourceResult<Awaited<ReturnType<typeof searchGdeltNews>>> = { ok: false, value: [] }
+
+  const newsQuery = scope === "chile" ? chileQuery : globalQuery
+  const newsMarket = scope === "chile" ? "chile" as const : "global" as const
 
   const [currentOpenAlexResult, previousOpenAlexResult, crossrefWorksResult, patentSignalResult, newsResult] = await Promise.all([
     useGlobal ? captureSource("openalex-current", () => queryOpenAlexWindow(globalQuery, currentFrom, now, 10), { count: 0, works: [] as OpenAlexWorkSignal[] }) : Promise.resolve(disabledOpenAlex),
     useGlobal ? captureSource("openalex-previous", () => queryOpenAlexWindow(globalQuery, previousFrom, previousTo, 1), { count: 0, works: [] as OpenAlexWorkSignal[] }) : Promise.resolve(disabledOpenAlex),
     useGlobal ? captureSource("crossref", () => searchCrossrefWorks(globalQuery, currentFrom, now, 10), []) : Promise.resolve(disabledWorks),
     useChile ? captureSource("inapi-patents", () => buildTechnologyPatentSignal(chileQuery, currentFrom, now), emptyTechnologyPatentSignal()) : Promise.resolve(disabledPatents),
-    captureSource("gdelt", () => searchGdeltNews(scope === "chile" ? `${chileQuery} Chile` : globalQuery, newsFrom, now, 10), []),
+    captureSource("google-news-rss", () => searchGoogleNews(newsQuery, newsFrom, now, 10, newsMarket), []),
   ])
 
   const openAlexAvailable = currentOpenAlexResult.ok && previousOpenAlexResult.ok
@@ -55,6 +57,16 @@ export async function buildTechnologySignals(query: string, windowDays = 180, sc
           : "estable"
 
   const publicationEvidence = dedupePublications(currentOpenAlexResult.value.works, crossrefWorksResult.value)
+  const newsEvidence = newsResult.value.map(item => ({
+    source: item.source,
+    sourceRecordId: item.sourceRecordId,
+    title: item.title,
+    date: item.date,
+    url: item.url,
+    domain: item.publisher,
+    sourceCountry: null,
+    language: null,
+  }))
   const corroboration = buildTechnologyCorroboration({
     researchAvailable: openAlexAvailable,
     currentPublications: currentCount,
@@ -91,7 +103,7 @@ export async function buildTechnologySignals(query: string, windowDays = 180, sc
     evidence: {
       publications: publicationEvidence,
       patents: patentSignalResult.value.evidence,
-      news: newsResult.value,
+      news: newsEvidence,
     },
     patent_signal: {
       available: patentSignalResult.ok,
@@ -109,7 +121,8 @@ export async function buildTechnologySignals(query: string, windowDays = 180, sc
       openalex: { available: openAlexAvailable, evidence_count: currentOpenAlexResult.value.works.length },
       crossref: { available: crossrefWorksResult.ok, evidence_count: crossrefWorksResult.value.length },
       inapi_patents: { available: patentSignalResult.ok, evidence_count: patentSignalResult.value.evidence.length },
-      gdelt: { available: newsResult.ok, evidence_count: newsResult.value.length },
+      google_news_rss: { available: newsResult.ok, evidence_count: newsEvidence.length },
+      gdelt: { available: newsResult.ok, evidence_count: newsEvidence.length, provider: "google_news_rss", compatibility_alias: true },
     },
   }
 }
