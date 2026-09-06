@@ -174,7 +174,10 @@ function classifySignal(text: string): SignalType {
 function contains(text: string, term: string) {
   const normalizedTerm = normalize(term)
   if (!normalizedTerm) return false
-  return ` ${text} `.includes(` ${normalizedTerm} `) || text.includes(normalizedTerm)
+  const paddedText = ` ${text} `
+  const paddedTerm = ` ${normalizedTerm} `
+  if (normalizedTerm.length <= 3) return paddedText.includes(paddedTerm)
+  return paddedText.includes(paddedTerm) || text.includes(normalizedTerm)
 }
 
 function normalize(value: string) {
