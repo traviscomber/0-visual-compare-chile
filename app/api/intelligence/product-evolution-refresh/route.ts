@@ -20,18 +20,35 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "El motor de investigación no está configurado." }, { status: 503, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
-  const target = new URL("/api/cron/juan-research-frontier", request.url)
-  const response = await fetch(target, {
+  const chileTarget = new URL("/api/cron/juan-chile-evidence", request.url)
+  const chileResponse = await fetch(chileTarget, {
     method: "GET",
     headers: { authorization: `Bearer ${secret}` },
     cache: "no-store",
   })
-  const payload = await response.json().catch(() => null)
+  const chilePayload = await chileResponse.json().catch(() => null)
 
-  if (!response.ok || !payload?.ok) {
-    console.error("[product-evolution-refresh]", payload)
-    return NextResponse.json({ error: payload?.error || "No pudimos actualizar la frontera mundial." }, { status: response.status || 500, headers: PRIVATE_NO_STORE_HEADERS })
+  if (!chileResponse.ok || !chilePayload?.ok) {
+    console.error("[product-evolution-refresh:chile]", chilePayload)
+    return NextResponse.json({ error: chilePayload?.error || "No pudimos actualizar la evidencia chilena." }, { status: chileResponse.status || 500, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
-  return NextResponse.json(payload, { headers: PRIVATE_NO_STORE_HEADERS })
+  const frontierTarget = new URL("/api/cron/juan-research-frontier", request.url)
+  const frontierResponse = await fetch(frontierTarget, {
+    method: "GET",
+    headers: { authorization: `Bearer ${secret}` },
+    cache: "no-store",
+  })
+  const frontierPayload = await frontierResponse.json().catch(() => null)
+
+  if (!frontierResponse.ok || !frontierPayload?.ok) {
+    console.error("[product-evolution-refresh:frontier]", frontierPayload)
+    return NextResponse.json({ error: frontierPayload?.error || "No pudimos actualizar la frontera mundial." }, { status: frontierResponse.status || 500, headers: PRIVATE_NO_STORE_HEADERS })
+  }
+
+  return NextResponse.json({
+    ok: true,
+    chile: chilePayload,
+    frontier: frontierPayload,
+  }, { headers: PRIVATE_NO_STORE_HEADERS })
 }
