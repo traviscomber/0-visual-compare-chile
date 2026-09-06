@@ -6,6 +6,7 @@ import { ArrowRight, BrainCircuit, BriefcaseBusiness, CheckCircle2, CircleDot, F
 import { OperationalHeader, OperationalMetric, OperationalMetricRail, OperationalPage, OperationalPanel, OperationalSectionHeader } from "@/components/app/operational-ui"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { getPrototypeLearningAttention, type OpportunityResearchHistoryRun, type PrototypeAssessment } from "@/lib/intelligence/opportunity-thesis-attention"
 
 type Binding = { id: string; identity_id: string; canonical_name: string; country: string | null; resolution_confidence: number; updated_at: string }
 type Organization = { id: string; name: string; slug: string; role: string; binding: Binding | null }
@@ -31,17 +32,7 @@ type Recommendation = {
   updated_at: string
   competitor: { id: string; canonical_name: string; country: string | null } | null
 }
-type PrototypeAssessment = "supports" | "mixed" | "refutes" | "inconclusive"
-type ThesisResearchRun = {
-  id: string
-  run_type: string
-  evidence_summary?: {
-    prototype_outcome?: { action_id?: string; outcome_at?: string; outcome?: string }
-    prototype_assessment?: { source_research_id?: string; assessment?: PrototypeAssessment }
-    prototype_assessment_id?: string | null
-  }
-  observed_at: string
-}
+type ThesisResearchRun = OpportunityResearchHistoryRun
 type ProductThesis = {
   id: string
   title: string
@@ -151,7 +142,10 @@ export default function OpportunitiesPage() {
 
   const activeTheses = useMemo(() => theses.filter(item => !["rejected", "archived"].includes(item.status)), [theses])
   const prototypeTheses = useMemo(() => activeTheses.filter(item => item.status === "prototype"), [activeTheses])
-  const thesisAttention = useMemo(() => prototypeTheses.map(getThesisAttention).filter((item): item is ThesisAttention => Boolean(item)), [prototypeTheses])
+  const thesisAttention = useMemo(() => prototypeTheses.map(thesis => {
+    const attention = getPrototypeLearningAttention(thesis.research_history)
+    return attention ? { thesis, kind: attention.kind, assessment: attention.assessment } : null
+  }).filter((item): item is ThesisAttention => Boolean(item)), [prototypeTheses])
   const needsAssessment = thesisAttention.filter(item => item.kind === "needs_assessment").length
   const needsResearch = thesisAttention.filter(item => item.kind === "needs_research").length
   const selectedOrganization = organizations.find(item => item.id === organizationId) ?? null
@@ -236,23 +230,6 @@ function ThesisAttentionRow({ item }: { item: ThesisAttention }) {
     </div>
     <Button asChild size="sm" variant={isAssessment ? "default" : "outline"}><Link href="/oportunidades/tesis">{isAssessment ? <FlaskConical className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}{isAssessment ? "Clasificar" : "Re-investigar"}</Link></Button>
   </article>
-}
-
-function getThesisAttention(thesis: ProductThesis): ThesisAttention | null {
-  const outcomeRun = thesis.research_history.find(run => {
-    const outcome = run.evidence_summary?.prototype_outcome
-    return Boolean(outcome?.action_id && outcome?.outcome_at && outcome?.outcome?.trim())
-  })
-  if (!outcomeRun) return null
-
-  const assessmentRun = thesis.research_history.find(run => run.evidence_summary?.prototype_assessment?.source_research_id === outcomeRun.id)
-  if (!assessmentRun) return { thesis, kind: "needs_assessment", assessment: null }
-
-  const consumed = thesis.research_history.some(run => run.evidence_summary?.prototype_assessment_id === assessmentRun.id)
-  if (consumed) return null
-
-  const assessment = assessmentRun.evidence_summary?.prototype_assessment?.assessment ?? null
-  return { thesis, kind: "needs_research", assessment }
 }
 
 function FilterButton({ active, children, onClick }: { active: boolean; children: React.ReactNode; onClick: () => void }) {
