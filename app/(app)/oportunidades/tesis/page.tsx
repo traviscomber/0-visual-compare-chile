@@ -27,6 +27,21 @@ type HumanDecision = {
   evidence_warning?: string | null
   actor_role?: string
 }
+type PrototypeOutcome = {
+  case_id?: string
+  item_id?: string
+  action_id?: string
+  outcome?: string
+  outcome_at?: string
+  outcome_by?: string
+  completed_at?: string | null
+}
+type PrototypeLearning = {
+  outcome: PrototypeOutcome
+  actorRole?: string
+  convictionEffect?: string
+  scoresUnchanged?: boolean
+}
 type ResearchRun = {
   id: string
   run_type: "generated" | "live_research" | "scheduled_research" | "human_review"
@@ -35,6 +50,11 @@ type ResearchRun = {
     facts?: string[]
     market_state?: Record<string, unknown>
     human_decision?: HumanDecision
+    prototype_outcome?: PrototypeOutcome
+    actor_role?: string
+    conviction_effect?: string
+    scores_unchanged?: boolean
+    trigger?: string
   }
   score_snapshot?: { overall?: number; evidence_strength?: number; timing?: number }
   confidence: number | null
@@ -218,7 +238,7 @@ export default function SavedOpportunityThesesPage() {
         />) : <div className="py-10"><p className="text-sm font-medium text-white">Ninguna tesis ha cruzado todavía el gate humano.</p><p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Ejecuta Opportunity Engine, revisa por qué una propuesta podría funcionar y guárdala sólo si merece seguimiento real.</p><Button asChild size="sm" className="mt-4"><Link href="/oportunidades/descubrir">Descubrir productos</Link></Button></div>}</div> : null}
       </div>
 
-      <aside><OperationalPanel><OperationalSectionHeader eyebrow="Gobernanza" title="Score ≠ decisión." /><div className="mt-5 space-y-4 text-sm leading-6 text-muted-foreground"><p><span className="text-foreground">Vigilar</span> es una decisión operativa disponible a miembros. Prototipar y descartar requieren rol administrador.</p><p className="border-t border-border/80 pt-4">Toda decisión exige una razón escrita y genera un snapshot <span className="text-foreground">human_review</span>. Scores y confianza permanecen intactos.</p><p className="border-t border-border/80 pt-4">Un administrador puede prototipar pese a evidencia insuficiente; VIDENTIA registra la advertencia en vez de ocultarla o bloquear la decisión.</p><p className="border-t border-border/80 pt-4">El research conserva noticias como contexto; <span className="text-foreground">noticias nunca suben score por volumen</span>.</p></div></OperationalPanel></aside>
+      <aside><OperationalPanel><OperationalSectionHeader eyebrow="Gobernanza" title="Score ≠ decisión." /><div className="mt-5 space-y-4 text-sm leading-6 text-muted-foreground"><p><span className="text-foreground">Vigilar</span> es una decisión operativa disponible a miembros. Prototipar y descartar requieren rol administrador.</p><p className="border-t border-border/80 pt-4">Toda decisión exige una razón escrita y genera un snapshot <span className="text-foreground">human_review</span>. Scores y confianza permanecen intactos.</p><p className="border-t border-border/80 pt-4">Un resultado de prototipo entra como <span className="text-foreground">evidencia de ejecución</span>; no valida mercado ni altera la curva de convicción hasta una nueva investigación.</p><p className="border-t border-border/80 pt-4">El research conserva noticias como contexto; <span className="text-foreground">noticias nunca suben score por volumen</span>.</p></div></OperationalPanel></aside>
     </section>
   </OperationalPage>
 }
@@ -249,6 +269,7 @@ function ThesisRow({
   const scoreTone = item.evidence_strength >= 70 ? "border-[#96B5A6]/30 bg-[#173B37]/65 text-[#B8D0C2]" : item.evidence_strength >= 45 ? "border-[#D6A46F]/30 bg-[#332C24]/65 text-[#E0B987]" : "border-border bg-card/30 text-muted-foreground"
   const comparison = latestComparison(item.research_history)
   const humanDecision = latestHumanDecision(item.research_history)
+  const prototypeLearning = latestPrototypeLearning(item.research_history)
   const closed = item.status === "rejected" || item.status === "archived"
   const prototypeWarning = item.evidence_strength < 60 || item.confidence < 0.65 || item.evidence_state === "hypothesis"
 
@@ -264,6 +285,20 @@ function ThesisRow({
         <div className="mt-5 grid gap-5 md:grid-cols-3"><ListBlock label="Research probes" items={item.research_queries} /><ListBlock label="Triggers" items={item.watch_triggers} /><ListBlock label="Evidencia faltante" items={item.thesis.missing_evidence ?? []} /></div>
         {comparison?.reasons?.length ? <div className="mt-5 border-t border-border/70 pt-4"><p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">Último cambio de convicción</p><div className="mt-2 space-y-1 text-xs leading-5 text-foreground">{comparison.reasons.slice(0, 4).map(reason => <p key={reason}>• {reason}</p>)}</div></div> : null}
         {humanDecision ? <div className="mt-5 border-t border-border/70 pt-4"><p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">Última decisión humana</p><p className="mt-2 text-xs leading-5 text-foreground">{humanDecision.rationale}</p>{humanDecision.evidence_warning ? <p className="mt-2 text-xs leading-5 text-[#E0B987]">{humanDecision.evidence_warning}</p> : null}</div> : null}
+        {prototypeLearning ? <div className="mt-5 border-y border-[#96B5A6]/25 bg-[#173B37]/20 px-4 py-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-[0.13em] text-[#96B5A6]">Resultado de prototipo</p>
+              <p className="mt-2 text-sm leading-6 text-white">{prototypeLearning.outcome.outcome}</p>
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                <span>{prototypeLearning.outcome.outcome_at ? `Cerrado ${formatDateTime(prototypeLearning.outcome.outcome_at)}` : "Resultado atribuible"}</span>
+                <span>{formatActorRole(prototypeLearning.actorRole)} · actor {shortId(prototypeLearning.outcome.outcome_by)}</span>
+              </div>
+              <p className="mt-2 text-[11px] leading-5 text-muted-foreground">{prototypeLearning.convictionEffect === "none_until_research" ? "Evidencia de ejecución · no altera score ni confianza hasta re-investigar." : "Resultado operativo registrado · no equivale a validación automática de mercado."}</p>
+            </div>
+            {prototypeLearning.outcome.case_id ? <Button asChild variant="outline" size="sm" className="shrink-0"><Link href={`/casos/${prototypeLearning.outcome.case_id}/equipo`}>Abrir caso <ExternalLink className="h-3.5 w-3.5" /></Link></Button> : null}
+          </div>
+        </div> : null}
 
         {decisionDraft ? <div className="mt-6 border-y border-border/80 bg-card/20 py-4">
           <div className="flex flex-wrap items-center justify-between gap-3 px-1"><div><p className="text-[10px] uppercase tracking-[0.13em] text-[#96B5A6]">Decisión humana</p><p className="mt-1 text-sm text-white">{decisionTitle(decisionDraft.target)}</p></div><Button type="button" size="sm" variant="ghost" onClick={onCancelDecision}><X className="h-3.5 w-3.5" /> Cancelar</Button></div>
@@ -336,12 +371,40 @@ function latestHumanDecision(history: ResearchRun[]): HumanDecision | null {
   return null
 }
 
+function latestPrototypeLearning(history: ResearchRun[]): PrototypeLearning | null {
+  for (const run of history) {
+    if (run.run_type !== "human_review") continue
+    const outcome = run.evidence_summary?.prototype_outcome
+    if (!outcome || typeof outcome !== "object" || !outcome.outcome?.trim()) continue
+    return {
+      outcome,
+      actorRole: run.evidence_summary?.actor_role,
+      convictionEffect: run.evidence_summary?.conviction_effect,
+      scoresUnchanged: run.evidence_summary?.scores_unchanged,
+    }
+  }
+  return null
+}
+
 function decisionTitle(target: DecisionTarget) {
   if (target === "watching") return "Vigilar esta tesis"
   if (target === "prototype") return "Aprobar un prototipo"
   if (target === "rejected") return "Descartar esta tesis"
   return "Reabrir esta tesis para análisis"
 }
+function formatActorRole(value?: string) {
+  if (value === "admin") return "Administrador"
+  if (value === "owner") return "Responsable"
+  if (value === "editor") return "Editor"
+  if (value === "viewer") return "Observador"
+  return "Miembro"
+}
+function shortId(value?: string) { return value ? value.slice(0, 8) : "sin ID" }
 function Detail({ label, value }: { label: string; value: string }) { return <div><p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">{label}</p><p className="mt-1 text-xs leading-5 text-foreground">{value}</p></div> }
 function ListBlock({ label, items }: { label: string; items: string[] }) { return <div><p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">{label}</p><div className="mt-2 space-y-1 text-xs leading-5 text-foreground">{items.length ? items.map(item => <p key={item}>• {item}</p>) : <p>—</p>}</div></div> }
 function formatDate(value: string) { return new Date(value).toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric" }) }
+function formatDateTime(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "fecha no disponible"
+  return date.toLocaleString("es-CL", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+}
