@@ -38,6 +38,8 @@ type Health = {
       changes: number
       rejected: number
       duration_ms: number | null
+      validation_only: boolean
+      pipeline: string | null
     }
   }>
   recent_runs: Array<{
@@ -52,6 +54,8 @@ type Health = {
     changes: number
     rejected: number
     duration_ms: number | null
+    validation_only: boolean
+    pipeline: string | null
     retries: number
     failed_stage: string | null
     error_message: string | null
@@ -125,7 +129,7 @@ export default function SourcesHealthPage() {
     <OperationalHeader
       eyebrow="VIDENTIA / Confianza operativa"
       title="Saber qué fuente está fresca antes de decidir."
-      description={<>Estado real de ingestión, cobertura y controles de calidad. La antigüedad jurídica de un expediente se mantiene separada de la fecha en que VIDENTIA observó o sincronizó la fuente.</>}
+      description={<>Estado real de ingestión o validación de fuentes, cobertura y controles de calidad. Una validación confirma disponibilidad y vigencia pública; no implica que VIDENTIA haya importado contenido jurídico.</>}
       meta={<><span>Freshness SLA</span><span>Data quality</span><span>Trazabilidad</span><span>Circuit state</span></>}
       actions={<Button variant="outline" onClick={() => void load()} disabled={loading}>{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}Actualizar</Button>}
     />
@@ -164,29 +168,46 @@ export default function SourcesHealthPage() {
               <p className="mt-1 text-xs text-muted-foreground">{source.circuit_state ?? "sin circuito"} · {source.consecutive_failures} fallas consecutivas</p>
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">Última corrida observada</p>
-              {source.latest_run ? <p className="mt-1 text-sm text-[#D5E0E3]">{source.latest_run.fetched.toLocaleString("es-CL")} leídos · {source.latest_run.upserted.toLocaleString("es-CL")} upserts</p> : <p className="mt-1 text-sm text-muted-foreground">Aún sin telemetría de corrida</p>}
-              {source.latest_run?.duration_ms !== null && source.latest_run ? <p className="mt-1 text-xs text-muted-foreground">{formatDuration(source.latest_run.duration_ms)} · {source.latest_run.changes} cambios</p> : null}
+              <p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">{source.latest_run?.validation_only ? "Última validación observada" : "Última corrida observada"}</p>
+              {source.latest_run ? source.latest_run.validation_only
+                ? <p className="mt-1 text-sm text-[#D5E0E3]">Fuente oficial verificada · 0 registros importados</p>
+                : <p className="mt-1 text-sm text-[#D5E0E3]">{source.latest_run.fetched.toLocaleString("es-CL")} leídos · {source.latest_run.upserted.toLocaleString("es-CL")} upserts</p>
+                : <p className="mt-1 text-sm text-muted-foreground">Aún sin telemetría de corrida</p>}
+              {source.latest_run?.duration_ms !== null && source.latest_run ? <p className="mt-1 text-xs text-muted-foreground">{source.latest_run.validation_only ? "Disponibilidad y vigencia pública" : `${formatDuration(source.latest_run.duration_ms)} · ${source.latest_run.changes} cambios`}</p> : null}
             </div>
           </article>)}
         </div>
       </section>
 
       <section className="border-b border-border/80 py-9">
-        <OperationalSectionHeader eyebrow="02 / Ingestión" title="Bitácora de corridas y reconciliación" meta={`${health.recent_runs.length} recientes`} />
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Una corrida completa sólo queda verde después de terminar el pipeline y los controles de calidad. `partial` conserva el último éxito anterior; retries y etapa de fallo quedan visibles para diagnóstico.</p>
+        <OperationalSectionHeader eyebrow="02 / Operación de fuentes" title="Bitácora de ingestión, validación y reconciliación" meta={`${health.recent_runs.length} recientes`} />
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">La bitácora distingue ingestión de contenido y validación de disponibilidad. Una validación puede mantener una fuente dentro de SLA sin afirmar que se importaron nuevos expedientes, decisiones o jurisprudencia.</p>
         <div className="mt-6 divide-y divide-border/80 border-y border-border/80">
           {health.recent_runs.map(run => <article key={run.id} className="grid gap-4 py-5 lg:grid-cols-[minmax(0,1fr)_150px_220px_minmax(0,.8fr)] lg:items-center">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2"><p className="font-medium text-white">{run.source_name}</p><RunStatus status={run.status} /></div>
               <p className="mt-1 text-xs text-muted-foreground">{run.source_key} · Run {run.id.slice(0,8)} · {formatDateTime(run.started_at)}</p>
+              {run.validation_only ? <p className="mt-2 text-xs leading-5 text-[#B7D3D1]">Validación de fuente · no es una ingestión de contenido.</p> : null}
               {run.error_message ? <p className="mt-2 max-w-2xl text-xs leading-5 text-[#E8AAA3]">{run.error_message}</p> : null}
             </div>
             <div><p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">Duración / retries</p><p className="mt-1 text-sm text-[#D5E0E3]">{run.duration_ms === null ? "En curso" : formatDuration(run.duration_ms)}</p><p className="mt-1 text-xs text-muted-foreground">{run.retries} reintento{run.retries===1?"":"s"}</p></div>
-            <div><p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">Conteos</p><p className="mt-1 text-sm text-[#D5E0E3]">{run.fetched.toLocaleString("es-CL")} leídos · {run.upserted.toLocaleString("es-CL")} upserts</p><p className="mt-1 text-xs text-muted-foreground">{run.changes.toLocaleString("es-CL")} cambios · {run.rejected.toLocaleString("es-CL")} rechazados</p></div>
-            <div><p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">Integridad</p><p className="mt-1 text-sm text-[#D5E0E3]">{run.reconciled===true?"Contadores reconciliados":run.reconciled===false?"Revisar discrepancia":"Sin contrato de reconciliación"}</p><p className="mt-1 text-xs text-muted-foreground">{run.failed_stage ? `Etapa: ${run.failed_stage}` : "Pipeline sin etapa fallida"}</p></div>
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">{run.validation_only ? "Validación" : "Conteos"}</p>
+              {run.validation_only ? <>
+                <p className="mt-1 text-sm text-[#D5E0E3]">{run.fetched.toLocaleString("es-CL")} endpoint verificado · 0 registros importados</p>
+                <p className="mt-1 text-xs text-muted-foreground">Sin cambios en contenido canónico</p>
+              </> : <>
+                <p className="mt-1 text-sm text-[#D5E0E3]">{run.fetched.toLocaleString("es-CL")} leídos · {run.upserted.toLocaleString("es-CL")} upserts</p>
+                <p className="mt-1 text-xs text-muted-foreground">{run.changes.toLocaleString("es-CL")} cambios · {run.rejected.toLocaleString("es-CL")} rechazados</p>
+              </>}
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">Integridad</p>
+              <p className="mt-1 text-sm text-[#D5E0E3]">{run.validation_only ? "Disponibilidad verificada" : run.reconciled===true?"Contadores reconciliados":run.reconciled===false?"Revisar discrepancia":"Sin contrato de reconciliación"}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{run.validation_only ? "No implica ingestión de contenido jurídico" : run.failed_stage ? `Etapa: ${run.failed_stage}` : "Pipeline sin etapa fallida"}</p>
+            </div>
           </article>)}
-          {!health.recent_runs.length ? <div className="py-7"><p className="text-sm font-medium text-white">Aún no hay corridas en la bitácora Grade A.</p><p className="mt-1 text-xs leading-5 text-muted-foreground">La próxima ejecución normal del cron INAPI registrará inicio, fin, contadores, retries, estado y reconciliación.</p></div> : null}
+          {!health.recent_runs.length ? <div className="py-7"><p className="text-sm font-medium text-white">Aún no hay corridas en la bitácora Grade A.</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Las próximas ejecuciones registrarán ingestión o validación, inicio, fin, contadores, retries, estado y reconciliación cuando corresponda.</p></div> : null}
         </div>
       </section>
 
