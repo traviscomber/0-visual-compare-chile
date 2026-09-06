@@ -4,6 +4,7 @@ import Link from "next/link"
 import { type FormEvent, useEffect, useMemo, useState } from "react"
 import { Check, Clock3, ExternalLink, Loader2, Pause, Play, Plus, RefreshCw, Trash2 } from "lucide-react"
 import { OperationalMetric, OperationalMetricRail, OperationalPage, OperationalPanel, OperationalSectionHeader } from "@/components/app/operational-ui"
+import { ValidatedSignalActions } from "@/components/app/validated-signal-actions"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -48,15 +49,20 @@ export default function CommonWatchesPage(){
   const [saving,setSaving]=useState(false)
   const [refreshing,setRefreshing]=useState(false)
   const [reviewingKey,setReviewingKey]=useState<string|null>(null)
+  const [recentlyValidatedKey,setRecentlyValidatedKey]=useState<string|null>(null)
   const [error,setError]=useState<string|null>(null)
 
   const active=useMemo(()=>watches.filter(item=>item.isActive),[watches])
   const pendingSignals=useMemo(()=>signals.filter(item=>item.isNew&&!reviews.has(item.key)),[signals,reviews])
   const visibleSignals=useMemo(()=>{
-    const base=showHistory?signals:pendingSignals
+    const base=showHistory?[...signals]:[...pendingSignals]
+    if(!showHistory&&recentlyValidatedKey){
+      const recent=signals.find(item=>item.key===recentlyValidatedKey)
+      if(recent&&!base.some(item=>item.key===recent.key))base.unshift(recent)
+    }
     const rank={alta:3,media:2,baja:1} as const
-    return [...base].sort((a,b)=>rank[b.relevance]-rank[a.relevance]||Date.parse(b.occurredAt||b.firstSeenAt)-Date.parse(a.occurredAt||a.firstSeenAt))
-  },[signals,pendingSignals,showHistory])
+    return base.sort((a,b)=>rank[b.relevance]-rank[a.relevance]||Date.parse(b.occurredAt||b.firstSeenAt)-Date.parse(a.occurredAt||a.firstSeenAt))
+  },[signals,pendingSignals,showHistory,recentlyValidatedKey])
   const counts=useMemo(()=>({brand:active.filter(item=>item.type==="brand").length,patent:active.filter(item=>item.type==="patent").length,technology:active.filter(item=>item.type==="technology").length}),[active])
   const highPending=useMemo(()=>pendingSignals.filter(item=>item.relevance==="alta").length,[pendingSignals])
   const validatedCount=useMemo(()=>[...reviews.values()].filter(item=>item.feedback_type==="relevant").length,[reviews])
@@ -129,6 +135,8 @@ export default function CommonWatchesPage(){
         next.set(signal.key,{id:String(payload.id||signal.key),target_key:signal.key,feedback_type:feedbackType,updated_at:new Date().toISOString()})
         return next
       })
+      if(feedbackType==="relevant")setRecentlyValidatedKey(signal.key)
+      else if(recentlyValidatedKey===signal.key)setRecentlyValidatedKey(null)
     }catch(cause){setError(cause instanceof Error?cause.message:"No pudimos guardar la validación.")}finally{setReviewingKey(null)}
   }
 
@@ -174,7 +182,7 @@ export default function CommonWatchesPage(){
     <section id="novedades" className="grid scroll-mt-6 gap-9 py-9 xl:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.45fr)] xl:gap-10">
       <div>
         <OperationalSectionHeader eyebrow="Cola de revisión" title={showHistory?"Decisiones y evidencia":highPending?"Valida primero las tareas importantes":pendingSignals.length?"Revisa y decide":"No quedan tareas pendientes"} meta={showHistory?`${summary.total} señales · ${reviews.size} decisiones`:pendingSignals.length?`${pendingSignals.length} pendientes · ${highPending} importantes`:"Vigilancia activa"} action={<Button variant="ghost" size="sm" onClick={()=>setShowHistory(value=>!value)}>{showHistory?"Sólo pendientes":"Ver historial"}</Button>}/>
-        {loading?<div className="mt-5 flex items-center gap-2 border-y border-border/80 py-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin"/>Cargando tareas…</div>:visibleSignals.length?<div className="mt-5 divide-y divide-border/80 border-y border-border/80">{visibleSignals.map(signal=><SignalRow key={signal.key} signal={signal} feedback={reviews.get(signal.key)?.feedback_type??null} busy={reviewingKey===signal.key} onReview={reviewSignal}/>)}</div>:<div className="mt-5 border-y border-border/80 py-10"><p className="font-medium text-white">{active.length?"No hay tareas pendientes":"Aún no hay seguimientos activos"}</p><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{active.length?"VIDENTIA seguirá reuniendo evidencia. Cuando aparezca un cambio, llegará aquí como una tarea para validar.":"Activa un seguimiento para comenzar la vigilancia."}</p>{!active.length?<Button className="mt-4" size="sm" onClick={()=>setShowCreate(true)}><Plus className="h-3.5 w-3.5"/>Crear seguimiento</Button>:null}</div>}
+        {loading?<div className="mt-5 flex items-center gap-2 border-y border-border/80 py-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin"/>Cargando tareas…</div>:visibleSignals.length?<div className="mt-5 divide-y divide-border/80 border-y border-border/80">{visibleSignals.map(signal=><SignalRow key={signal.key} signal={signal} feedback={reviews.get(signal.key)?.feedback_type??null} busy={reviewingKey===signal.key} showActions={recentlyValidatedKey===signal.key} onReview={reviewSignal} onActionsDone={()=>setRecentlyValidatedKey(null)}/>)}</div>:<div className="mt-5 border-y border-border/80 py-10"><p className="font-medium text-white">{active.length?"No hay tareas pendientes":"Aún no hay seguimientos activos"}</p><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{active.length?"VIDENTIA seguirá reuniendo evidencia. Cuando aparezca un cambio, llegará aquí como una tarea para validar.":"Activa un seguimiento para comenzar la vigilancia."}</p>{!active.length?<Button className="mt-4" size="sm" onClick={()=>setShowCreate(true)}><Plus className="h-3.5 w-3.5"/>Crear seguimiento</Button>:null}</div>}
       </div>
 
       <aside><OperationalPanel><OperationalSectionHeader eyebrow="En seguimiento" title={`${active.length} activos`}/>{watches.length?<div className="mt-5 divide-y divide-border/80 border-t border-border/80">{watches.map(watch=><div key={watch.key} className="py-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap gap-2"><Badge variant="outline">{TYPE_LABEL[watch.type]}</Badge><Badge className={watch.isActive?"bg-[#173B37] text-[#96B5A6]":""} variant={watch.isActive?undefined:"secondary"}>{watch.isActive?"Activo":"Pausado"}</Badge></div><p className="mt-3 font-medium text-white">{watch.query}</p><p className="mt-1 text-xs text-muted-foreground">{subtypeLabel(watch.type,watch.subtype)}{watch.type==="technology"&&watch.searchScope?` · ${scopeLabel(watch.searchScope)}`:""}{watch.niceClasses.length?` · Niza ${watch.niceClasses.join(", ")}`:""}</p><p className="mt-2 text-[11px] text-muted-foreground">{watch.lastCheckedAt?`Revisado ${formatDate(watch.lastCheckedAt)}`:"Preparando línea base"}</p></div><div className="flex flex-wrap justify-end gap-1"><Button variant="ghost" size="icon-sm" onClick={()=>void toggle(watch)} aria-label={watch.isActive?"Pausar seguimiento":"Activar seguimiento"}>{watch.isActive?<Pause className="h-3.5 w-3.5"/>:<Play className="h-3.5 w-3.5"/>}</Button><Button variant="ghost" size="icon-sm" onClick={()=>void remove(watch.key)} aria-label="Eliminar seguimiento"><Trash2 className="h-4 w-4"/></Button></div></div></div>)}</div>:<p className="mt-5 text-sm leading-6 text-muted-foreground">Todavía no hay seguimientos.</p>}
@@ -184,7 +192,7 @@ export default function CommonWatchesPage(){
   </OperationalPage>
 }
 
-function SignalRow({signal,feedback,busy,onReview}:{signal:CommonSignal;feedback:FeedbackType|null;busy:boolean;onReview:(signal:CommonSignal,feedbackType:"relevant"|"irrelevant")=>Promise<void>}){
+function SignalRow({signal,feedback,busy,showActions,onReview,onActionsDone}:{signal:CommonSignal;feedback:FeedbackType|null;busy:boolean;showActions:boolean;onReview:(signal:CommonSignal,feedbackType:"relevant"|"irrelevant")=>Promise<void>;onActionsDone:()=>void}){
   const external=signal.href.startsWith("http")
   const isHigh=signal.relevance==="alta"
   const decided=feedback==="relevant"||feedback==="irrelevant"||feedback==="false_match"
@@ -203,6 +211,7 @@ function SignalRow({signal,feedback,busy,onReview}:{signal:CommonSignal;feedback
         <Button asChild variant="outline" size="sm"><Link href={signal.href} target={external?"_blank":undefined} rel={external?"noreferrer":undefined}>Revisar evidencia{external?<ExternalLink className="h-3.5 w-3.5"/>:null}</Link></Button>
         {!decided?<><Button size="sm" onClick={()=>void onReview(signal,"relevant")} disabled={busy}>{busy?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Check className="h-3.5 w-3.5"/>}Validar</Button><Button variant="ghost" size="sm" onClick={()=>void onReview(signal,"irrelevant")} disabled={busy}><Trash2 className="h-3.5 w-3.5"/>Descartar</Button></>:null}
       </div>
+      {feedback==="relevant"&&showActions?<ValidatedSignalActions signal={signal} onDone={onActionsDone}/>:null}
     </div>
   </article>
 }
@@ -215,32 +224,32 @@ function taskGuidance(signal:CommonSignal){
   const source=signal.source.toLowerCase()
   if(signal.type==="brand")return {
     why:`Apareció una señal de marca relacionada con “${signal.watchQuery}” que necesita confirmar si realmente afecta tu vigilancia.`,
-    validate:"Queda registrada como evidencia relevante y sale de la cola pendiente.",
+    validate:"Queda registrada como evidencia relevante y podrás llevarla a un caso si requiere trabajo adicional.",
     discard:"Queda registrada como no relevante y sale de la cola sin borrar la evidencia histórica.",
   }
   if(signal.type==="patent")return {
     why:`La publicación coincide con el seguimiento “${signal.watchQuery}” y puede aportar evidencia tecnológica o competitiva.`,
-    validate:"La publicación queda confirmada como evidencia relevante del seguimiento.",
+    validate:"La publicación queda confirmada y podrás crear un caso o agregarla a uno existente.",
     discard:"Se conserva en el historial, pero deja de requerir revisión humana.",
   }
   if(source.includes("sma")||source.includes("snifa"))return {
     why:"Hay un movimiento regulatorio nuevo asociado al seguimiento y conviene confirmar si cambia su nivel de atención.",
-    validate:"El movimiento queda confirmado como evidencia regulatoria relevante.",
+    validate:"El movimiento queda confirmado y puede escalarse a un caso de trabajo.",
     discard:"El movimiento se conserva como antecedente, pero deja de formar parte de tu trabajo pendiente.",
   }
   if(source.includes("sea"))return {
     why:"Se detectó actividad ambiental o de proyecto relacionada con la empresa o tema que estás siguiendo.",
-    validate:"El proyecto queda confirmado como evidencia útil para el seguimiento.",
+    validate:"El proyecto queda confirmado y puede incorporarse a un caso para seguimiento operativo.",
     discard:"Se mantiene como antecedente documental, pero no vuelve a pedirte una decisión.",
   }
   if(source.includes("google_news"))return {
     why:`Una fuente pública reportó un cambio relacionado con “${signal.watchQuery}”. VIDENTIA necesita tu criterio para separar señal útil de ruido editorial.`,
-    validate:"La noticia queda registrada como evidencia relevante para este seguimiento.",
+    validate:"La noticia queda confirmada y podrás decidir si merece convertirse en trabajo de caso.",
     discard:"La noticia queda registrada como descartada y desaparece de la cola pendiente.",
   }
   return {
     why:`VIDENTIA detectó un cambio relacionado con “${signal.watchQuery}” que supera el umbral para revisión humana.`,
-    validate:"La señal queda confirmada como evidencia relevante en el historial.",
+    validate:"La señal queda confirmada y podrás escalarla a un caso si requiere acción.",
     discard:"La señal se conserva para trazabilidad, pero deja de requerir tu atención.",
   }
 }
