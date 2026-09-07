@@ -33,7 +33,7 @@ for(const needle of [
   "decision_reason: reason",
   "decided_by: auth.user.id",
   "evidence_snapshot: draft.snapshot",
-  "no pudimos guardar la decisión",
+  "No pudimos guardar la decisión",
 ])requireText(route,needle,"hypothesis API")
 for(const forbidden of [
   '.from("innovation_opportunity_theses").update',
