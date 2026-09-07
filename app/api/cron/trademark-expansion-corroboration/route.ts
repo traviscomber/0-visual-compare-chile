@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server"
 import {
   CLASS_EXPANSION_PREFIX,
-  buildDomainTerms,
   classifyEvidenceState,
   gatherExternalExpansionCorroboration,
-  matchDomainTerms,
-  matchesCompany,
+  gatherLocalPatentCorroboration,
   parseExpansionClasses,
-  type CorroborationEvidence,
 } from "@/lib/intelligence/competitive-expansion-corroboration"
 import { createAdminClient } from "@/lib/supabase/admin"
 
@@ -33,17 +30,6 @@ type ExistingRun = {
   signal_event_id: string
   status: string
   attempts: number
-}
-
-type PatentRecord = {
-  id: string
-  source: string
-  source_record_id: string
-  title: string
-  applicants: string | null
-  filing_date: string | null
-  publication_date: string | null
-  source_url: string | null
 }
 
 export async function GET(request: Request) {
@@ -177,47 +163,4 @@ async function findRetryableExpansionEvents(admin: ReturnType<typeof createAdmin
   }
 
   return { pending, scanned, error: null as string | null }
-}
-
-async function gatherLocalPatentCorroboration(admin: ReturnType<typeof createAdminClient>, company: string, niceClasses: number[], eventDate: string | null) {
-  const escaped = company.replace(/[\\%_]/g, "\\$&")
-  let query = admin
-    .from("patent_records")
-    .select("id,source,source_record_id,title,applicants,filing_date,publication_date,source_url")
-    .ilike("applicants", `%${escaped}%`)
-    .order("filing_date", { ascending: false, nullsFirst: false })
-    .limit(120)
-
-  if (eventDate) {
-    const from = new Date(`${eventDate}T12:00:00Z`)
-    if (Number.isFinite(from.getTime())) {
-      from.setUTCFullYear(from.getUTCFullYear() - 1)
-      query = query.gte("filing_date", from.toISOString().slice(0, 10))
-    }
-  }
-
-  const { data, error } = await query
-  if (error) {
-    console.warn("[trademark-expansion-corroboration] INAPI patent source unavailable", error)
-    return { evidence: [] as CorroborationEvidence[], coverage: { available: false, evidence_count: 0 } }
-  }
-
-  const domainTerms = buildDomainTerms(niceClasses)
-  const evidence = ((data ?? []) as PatentRecord[]).flatMap(row => {
-    if (!matchesCompany(String(row.applicants ?? ""), company)) return []
-    const matchedTerms = matchDomainTerms(row.title, domainTerms)
-    if (!matchedTerms.length) return []
-    return [{
-      source: row.source === "INAPI" ? "inapi_patents" : `patent:${row.source}`,
-      sourceRecordId: row.source_record_id || row.id,
-      title: row.title,
-      date: row.filing_date ?? row.publication_date,
-      url: row.source_url,
-      activity: "patent" as const,
-      directness: "indirect" as const,
-      matchedTerms,
-    }]
-  }).slice(0, 12)
-
-  return { evidence, coverage: { available: true, evidence_count: evidence.length } }
 }
