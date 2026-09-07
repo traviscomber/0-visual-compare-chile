@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
-import { buildExecutiveAttentionQueue, sortExecutiveAttentionItems } from "@/lib/intelligence/executive-attention"
+import { buildExecutiveAttentionQueue, sortExecutiveAttentionItems, type ExecutiveAttentionItem } from "@/lib/intelligence/executive-attention"
 import { buildOpportunityAttentionItems } from "@/lib/intelligence/opportunity-attention"
 import { listPortfolioOrganizations } from "@/lib/intelligence/portfolio-access"
 import { collapseSnifaRegulatoryEvents } from "@/lib/intelligence/snifa-regulatory-timeline"
@@ -51,6 +51,29 @@ type CommonSignal = {
   timeline?: RegulatoryTimeline | null
   duplicateCount?: number
   groupedKeys?: string[]
+}
+
+type CorroborationEvidence = {
+  source?: unknown
+  sourceRecordId?: unknown
+  title?: unknown
+  date?: unknown
+  url?: unknown
+  activity?: unknown
+  directness?: unknown
+  matchedTerms?: unknown
+}
+
+type CorroborationRow = {
+  signal_event_id: string
+  status: string
+  evidence_state: string | null
+  new_nice_classes: number[] | null
+  activity_types: string[] | null
+  evidence: CorroborationEvidence[] | null
+  source_coverage: Record<string, { available?: unknown; evidence_count?: unknown }> | null
+  last_error: string | null
+  completed_at: string | null
 }
 
 export async function GET() {
@@ -161,10 +184,14 @@ export async function GET() {
     .sort((a, b) => Number(b.isNew) - Number(a.isNew) || relevanceRank(b.relevance) - relevanceRank(a.relevance) || Date.parse(b.firstSeenAt) - Date.parse(a.firstSeenAt))
 
   const opportunityAttention = await loadOpportunityAttention(admin, portfolioOrganizations.map(item => item.id))
-  const attentionQueue = sortExecutiveAttentionItems([
+  const baseAttentionQueue = sortExecutiveAttentionItems([
     ...buildExecutiveAttentionQueue(signals),
     ...opportunityAttention,
   ])
+  const corroborations = await loadExpansionCorroborations(admin, auth.user.id, baseAttentionQueue)
+  const attentionQueue = baseAttentionQueue.map(item => item.kind === "competitive_expansion"
+    ? { ...item, corroboration: corroborations.get(brandEventId(item.signalKey)) ?? null }
+    : item)
 
   return NextResponse.json({
     signals,
@@ -205,6 +232,75 @@ export async function POST() {
   const failed = [brandResult.error, technologyResult.error, patentResult.error].find(Boolean)
   if (failed) { console.error("[common-watch-signals:review]", failed); return NextResponse.json({ error: "No pudimos registrar la revisión completa." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS }) }
   return NextResponse.json({ ok: true, reviewedAt }, { headers: PRIVATE_NO_STORE_HEADERS })
+}
+
+async function loadExpansionCorroborations(admin: ReturnType<typeof createAdminClient>, userId: string, attentionQueue: ExecutiveAttentionItem[]) {
+  const eventIds = attentionQueue
+    .filter(item => item.kind === "competitive_expansion")
+    .map(item => brandEventId(item.signalKey))
+    .filter(Boolean)
+  if (!eventIds.length) return new Map<string, ReturnType<typeof normalizeCorroboration>>()
+
+  const { data, error } = await admin
+    .from("trademark_expansion_corroborations")
+    .select("signal_event_id,status,evidence_state,new_nice_classes,activity_types,evidence,source_coverage,last_error,completed_at")
+    .eq("user_id", userId)
+    .in("signal_event_id", eventIds)
+
+  if (error) {
+    console.error("[common-watch-signals:corroborations]", error)
+    return new Map<string, ReturnType<typeof normalizeCorroboration>>()
+  }
+
+  return new Map(((data ?? []) as CorroborationRow[]).map(row => [row.signal_event_id, normalizeCorroboration(row)]))
+}
+
+function normalizeCorroboration(row: CorroborationRow) {
+  return {
+    status: allowedStatus(row.status),
+    evidenceState: allowedEvidenceState(row.evidence_state),
+    newNiceClasses: Array.isArray(row.new_nice_classes) ? row.new_nice_classes.filter(value => Number.isInteger(value) && value >= 1 && value <= 45) : [],
+    activityTypes: Array.isArray(row.activity_types) ? row.activity_types.filter(value => typeof value === "string").slice(0, 12) : [],
+    evidence: Array.isArray(row.evidence) ? row.evidence.flatMap(item => normalizeEvidence(item)).slice(0, 12) : [],
+    sourceCoverage: normalizeSourceCoverage(row.source_coverage),
+    lastError: typeof row.last_error === "string" ? row.last_error : null,
+    completedAt: typeof row.completed_at === "string" ? row.completed_at : null,
+  }
+}
+
+function normalizeEvidence(item: CorroborationEvidence) {
+  const title = typeof item?.title === "string" ? item.title.trim() : ""
+  if (!title) return []
+  return [{
+    source: typeof item.source === "string" ? item.source : "fuente_externa",
+    title,
+    date: typeof item.date === "string" ? item.date : null,
+    url: typeof item.url === "string" && /^https?:\/\//i.test(item.url) ? item.url : null,
+    activity: typeof item.activity === "string" ? item.activity : null,
+    directness: item.directness === "direct" ? "direct" : "indirect",
+    matchedTerms: Array.isArray(item.matchedTerms) ? item.matchedTerms.filter(value => typeof value === "string").slice(0, 8) : [],
+  }]
+}
+
+function normalizeSourceCoverage(value: CorroborationRow["source_coverage"]) {
+  if (!value || typeof value !== "object") return []
+  return Object.entries(value).slice(0, 12).map(([source, coverage]) => ({
+    source,
+    available: coverage?.available === true,
+    evidenceCount: typeof coverage?.evidence_count === "number" && Number.isFinite(coverage.evidence_count) ? Math.max(0, Math.round(coverage.evidence_count)) : 0,
+  }))
+}
+
+function allowedStatus(value: string) {
+  return (["pending", "running", "completed", "partial", "failed"] as const).find(item => item === value) ?? "pending"
+}
+
+function allowedEvidenceState(value: string | null) {
+  return (["supporting_evidence", "mixed_evidence", "insufficient_evidence", "not_observed"] as const).find(item => item === value) ?? null
+}
+
+function brandEventId(signalKey: string) {
+  return signalKey.startsWith("brand:") ? signalKey.slice("brand:".length) : ""
 }
 
 async function loadOpportunityAttention(admin: ReturnType<typeof createAdminClient>, organizationIds: string[]) {

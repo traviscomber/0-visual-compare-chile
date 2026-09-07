@@ -37,7 +37,7 @@ for (const forbidden of [
 ]) if (helper.includes(forbidden)) fail(`attention helper must not escalate baseline/stable/news volume: ${forbidden}`)
 
 for (const needle of [
-  'kind: "regulatory_case" | "new_high_signal" | "opportunity_conviction"',
+  'kind: "regulatory_case" | "competitive_expansion" | "new_high_signal" | "opportunity_conviction"',
   "sortExecutiveAttentionItems",
 ]) requireText(attention, needle, "executive attention model")
 
@@ -68,4 +68,4 @@ for (const needle of [
   'Revisar cambio de convicción:',
 ]) requireText(page, needle, "executive attention UI")
 
-console.log("Opportunity executive attention regression PASS: only material post-baseline conviction changes enter the existing executive queue, weakening/degradation outrank strengthening, a later human_review resolves thesis attention, organization membership scopes all server-only thesis reads, research preserves decision lineage, and opportunity attention reuses the attributable action layer without scoring news volume.")
+console.log("Opportunity executive attention regression PASS: only material post-baseline conviction changes enter the shared executive queue, competitive Nice expansions remain a separate attention kind, weakening/degradation outrank strengthening, a later human_review resolves thesis attention, organization membership scopes all server-only thesis reads, research preserves decision lineage, and opportunity attention reuses the attributable action layer without scoring news volume.")

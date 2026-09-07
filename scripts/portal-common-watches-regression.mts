@@ -37,19 +37,19 @@ for(const forbidden of [
 for(const needle of [
   'fetch("/api/intelligence/watches"',
   'fetch("/api/intelligence/watches/signals"',
-  'eyebrow="VIDENTIA / Inteligencia externa"',
-  'const highNew=useMemo',
-  'label="Alta prioridad"',
-  'label="Nuevas"',
-  'label="Vigilancias activas"',
-  'label="Evidencia observada"',
-  '01 / Atención',
-  '02 / Cobertura',
-  'Añadir seguimiento',
-  'Activar seguimiento',
+  'VIDENTIA / Tareas de vigilancia',
+  'const highPending=useMemo',
+  'label="Por revisar"',
+  'label="Validadas"',
+  'label="Descartadas"',
+  'label="Seguimientos"',
+  'Cola de revisión',
+  'En seguimiento',
+  'Nuevo seguimiento',
+  'Activar',
   'No pudimos cargar tus seguimientos.',
   'No pudimos crear el seguimiento.',
-  'Marcar revisadas',
+  'Validar',
   '(["brand","patent","technology"] as WatchType[])',
   'SUBTYPE_OPTIONS',
   'aria-label="Dónde buscar"',
@@ -100,4 +100,4 @@ for(const needle of [
 if(watchesApi.includes("createAdminClient")||watchesApi.includes("SUPABASE_SERVICE_ROLE_KEY"))fail("watch API must remain behind authenticated RLS, not service role")
 if(signalsApi.includes("SUPABASE_SERVICE_ROLE_KEY"))fail("signal API must use the shared admin client and never inline the service-role secret")
 
-console.log("Portal/Common Watches regression PASS: External Intelligence remains the canonical monitoring workspace, prioritizes new high-relevance evidence before configuration, preserves scoped watch creation and contextual deep tools, keeps watch CRUD behind authenticated RLS, and permits server-only thesis attention reads only after explicit organization membership scoping.")
+console.log("Portal/Common Watches regression PASS: the task-first monitoring workspace prioritizes pending evidence and explicit user validation, preserves scoped follow-up creation and contextual deep tools, keeps watch CRUD behind authenticated RLS, and permits server-only thesis and corroboration reads only after explicit user/organization scoping.")

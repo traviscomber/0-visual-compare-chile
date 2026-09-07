@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest"
+import assert from "node:assert/strict"
+import { describe, it } from "node:test"
 import { triageWatchTasks } from "./watch-task-triage"
 
 const base = {
@@ -19,10 +20,10 @@ describe("triageWatchTasks", () => {
       { ...base, key: "technology:3", title: "Background story", href: "https://example.com/background", relevance: "baja" as const },
     ])
 
-    expect(result.tasks).toHaveLength(1)
-    expect(result.tasks[0].duplicateCount).toBe(1)
-    expect(result.tasks[0].groupedKeys).toEqual(["technology:1", "technology:2"])
-    expect(result.information).toHaveLength(1)
-    expect(result.hiddenDuplicateCount).toBe(1)
+    assert.equal(result.tasks.length, 1)
+    assert.equal(result.tasks[0].duplicateCount, 1)
+    assert.deepEqual(result.tasks[0].groupedKeys, ["technology:1", "technology:2"])
+    assert.equal(result.information.length, 1)
+    assert.equal(result.hiddenDuplicateCount, 1)
   })
 })
