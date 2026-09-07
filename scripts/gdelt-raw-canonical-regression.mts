@@ -39,12 +39,13 @@ assert.match(rawFeed, /ALLOWED_HOST/, "fallback URLs must retain the provider al
 
 assert.match(route, /CRON_SECRET/, "canonical cron must require Vercel cron authentication")
 assert.match(route, /syncGdeltRawFeed/, "canonical cron must invoke the canonical sync")
-assert.match(sourceNetwork, /key: "gdelt_raw_feed"/, "source network must register the raw feed separately")
-assert.match(sourceNetwork, /GLOBALEVENTID/, "source contract must state canonical identity")
-assert.match(sourceNetwork, /key: "gdelt"[\s\S]*endpoint DOC permanece desactivado/, "DOC transport must remain explicitly separate and disabled operationally")
+assert.match(sourceNetwork, /key: "gdelt_raw_feed"[\s\S]*GLOBALEVENTID/, "source network must register the raw event feed and canonical identity")
+assert.match(sourceNetwork, /key: "gdelt_mentions"/, "GDELT mentions transport must remain a separate source surface")
+assert.match(sourceNetwork, /key: "gdelt_gkg"/, "GDELT GKG enrichment must remain a separate source surface")
+assert.doesNotMatch(sourceNetwork, /key: "gdelt"\s*,/, "legacy monolithic GDELT/DOC source must not silently re-enter the operational source network")
 
 const config = JSON.parse(vercel) as { crons?: Array<{ path: string; schedule: string }> }
 const gdeltCron = config.crons?.find(item => item.path === "/api/cron/gdelt-raw-feed")
 assert.deepEqual(gdeltCron, { path: "/api/cron/gdelt-raw-feed", schedule: "7,22,37,52 * * * *" })
 
-console.log("GDELT raw canonical regression passed")
+console.log("GDELT raw canonical regression passed: raw events, mentions and GKG remain explicit layered sources; GLOBALEVENTID stays canonical and the legacy monolithic DOC transport is not operationally registered.")
