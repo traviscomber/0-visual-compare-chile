@@ -24,6 +24,7 @@ export function assessHypothesisMonitoring(input: {
   baselineEvidence: Array<{ source?: unknown; title?: unknown }>
   sourceCoverage: Record<string, { available: boolean; evidence_count: number }>
   acceptedAt: string | null
+  nextReviewAt?: string | null
   observedAt: string
 }) {
   const baselineKeys = new Set(input.baselineEvidence.flatMap(item => {
@@ -35,7 +36,9 @@ export function assessHypothesisMonitoring(input: {
   const unavailable = Object.entries(input.sourceCoverage).filter(([, value]) => !value.available).map(([source]) => source)
   const acceptedAt = input.acceptedAt ? Date.parse(input.acceptedAt) : Number.NaN
   const observedAt = Date.parse(input.observedAt)
+  const nextReviewAt = input.nextReviewAt ? Date.parse(input.nextReviewAt) : Number.NaN
   const ageDays = Number.isFinite(acceptedAt) && Number.isFinite(observedAt) ? Math.floor((observedAt - acceptedAt) / 86400000) : null
+  const scheduledReviewDue = Number.isFinite(nextReviewAt) && Number.isFinite(observedAt) ? observedAt >= nextReviewAt : ageDays !== null && ageDays >= 90
 
   let assessment: HypothesisMonitoringAssessment = "no_material_change"
   let summary = "No se observaron cambios materiales frente al snapshot aceptado. La hipótesis permanece sujeta a revisión humana."
@@ -48,12 +51,14 @@ export function assessHypothesisMonitoring(input: {
   } else if (unavailable.length) {
     assessment = "source_degradation"
     summary = `La corrida perdió cobertura en ${unavailable.length} fuente${unavailable.length === 1 ? "" : "s"}: ${unavailable.join(", ")}. La degradación de cobertura es neutral y requiere revisión si afecta la decisión.`
-  } else if (ageDays !== null && ageDays >= 90) {
+  } else if (scheduledReviewDue) {
     assessment = "stale_review_due"
-    summary = `La hipótesis aceptada tiene ${ageDays} días sin nueva evidencia material. Esto no la vuelve falsa ni obsoleta; corresponde revisar vigencia y evidencia faltante.`
+    summary = input.nextReviewAt
+      ? "La hipótesis alcanzó su fecha de revalidación programada sin nueva evidencia material. Esto no la vuelve falsa ni obsoleta; corresponde revisar vigencia y evidencia faltante."
+      : `La hipótesis aceptada tiene ${ageDays} días sin nueva evidencia material. Esto no la vuelve falsa ni obsoleta; corresponde revisar vigencia y evidencia faltante.`
   }
 
-  return { assessment, summary, newEvidence, unavailableSources: unavailable, ageDays }
+  return { assessment, summary, newEvidence, unavailableSources: unavailable, ageDays, scheduledReviewDue }
 }
 
 export function evidenceKey(source: string, title: string) {
