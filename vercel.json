@@ -5,6 +5,10 @@
       "schedule": "10 8 * * *"
     },
     {
+      "path": "/api/cron/trademark-owner-watches",
+      "schedule": "30 8 * * *"
+    },
+    {
       "path": "/api/cron/case-automation",
       "schedule": "0 * * * *"
     },
