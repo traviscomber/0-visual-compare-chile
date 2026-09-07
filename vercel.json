@@ -13,6 +13,10 @@
       "schedule": "50 8 * * *"
     },
     {
+      "path": "/api/cron/competitive-hypothesis-monitoring",
+      "schedule": "10 9 * * *"
+    },
+    {
       "path": "/api/cron/case-automation",
       "schedule": "0 * * * *"
     },
