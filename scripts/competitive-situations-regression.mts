@@ -25,25 +25,25 @@ for (const forbidden of ["conviction_delta", "confidence_delta", ".update(", ".i
 
 for (const needle of [
   "Competitive Situations",
-  "Una empresa, una lectura ejecutiva",
-  "Qué cambió",
-  "Señales cruzadas",
+  "Una empresa, una decisión pendiente y un siguiente paso.",
+  "Qué requiere decisión",
+  "Empresa → decisión → siguiente paso",
   "Hipótesis en revisión",
-  "La agrupación es una proyección de lectura",
-  "no aumenta conviction",
   '/api/intelligence/watches/signals',
   '/api/intelligence/actions?',
-  "Responsable",
-  "Acciones",
-  "Próxima revisión",
-  "Decisión pendiente",
-  "Sin responsable",
-  "Sin acción",
+  "Aún sin acción ejecutiva",
+  "Asignar responsable",
+  "Resolver acción",
+  "Ver acción",
+  "Revisar hipótesis",
+  "Definir acción",
+  "Evidencia",
+  "La agrupación es sólo una lectura",
   "Revisar cambio de hipótesis:",
   "Resolver atención regulatoria:",
   "Revisar señal ejecutiva:",
 ]) requireText(page, needle, "situations page")
-for (const forbidden of ["assignedTo:null", "defaultDueAt(", "createAction(", 'method:"POST"', 'method: "POST"']) forbid(page, forbidden, "situations page")
+for (const forbidden of ["assignedTo:null", "defaultDueAt(", "createAction(", 'method:"POST"', 'method: "POST"', "lg:grid-cols-4", "<Fact "]) forbid(page, forbidden, "situations page")
 for (const needle of ["Tareas", "Atención", "Situaciones", "Estratégico", "Hipótesis", '/monitorear/situaciones']) requireText(layout, needle, "monitoring navigation")
 
 const sample = buildCompetitiveSituations([
@@ -57,4 +57,4 @@ if (sample[0].signalCount !== 2) fail(`opportunity conviction leaked into compet
 if (sample[0].competitiveExpansions !== 1 || sample[0].externalSignals !== 1) fail("cross-signal counts are wrong")
 if (!sample[0].decisionQuestion.includes("expansión registral")) fail("decision question does not reflect combined evidence")
 
-console.log("Competitive situations regression PASS: one conservative company-level situation now reuses canonical Executive Attention accountability while keeping source evidence, opportunity conviction and human decisions separate.")
+console.log("Competitive situations regression PASS: each situation stays a conservative projection and now exposes one contextual next action without creating a second task or decision system.")
