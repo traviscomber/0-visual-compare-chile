@@ -49,8 +49,8 @@ for (const needle of [
   "OpenAlex e INAPI no estuvieron disponibles",
 ]) requireText(service, needle, "shared research service")
 
-if (!vercel.includes('"/api/cron/opportunity-conviction"') || !vercel.includes('"55 10 * * *"')) {
-  fail("daily opportunity conviction cron is not scheduled at the intended UTC cadence")
+if (!vercel.includes('"/api/cron/opportunity-conviction"') || !vercel.includes('"55 */6 * * *"')) {
+  fail("opportunity conviction cron is not scheduled at the intended six-hour cadence")
 }
 
-console.log("Opportunity conviction cron regression PASS: due theses are atomically claimed with SKIP LOCKED, stale claims recover after 30 minutes, the batch is capped at four and executed sequentially, scheduled runs reuse the manual conviction service, client roles cannot call the claim RPC, and Vercel runs the job once daily without fabricating thesis data.")
+console.log("Opportunity conviction cron regression PASS: due theses are atomically claimed with SKIP LOCKED, stale claims recover after 30 minutes, the batch is capped at four and executed sequentially, scheduled runs reuse the manual conviction service, client roles cannot call the claim RPC, and Vercel checks for due work every six hours without fabricating thesis data.")
