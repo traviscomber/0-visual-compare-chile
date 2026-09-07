@@ -1,5 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
+import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { tryGetSupabaseUrl, tryGetSupabaseAnonKey } from "@/lib/supabase/env"
 import { AppNav } from "@/components/app/app-nav"
@@ -16,6 +17,9 @@ export const metadata: Metadata = {
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabaseReady = !!(tryGetSupabaseUrl() && tryGetSupabaseAnonKey())
   if (!supabaseReady) redirect("/auth/login?error=configuration")
+
+  const requestHeaders = await headers()
+  const pathname = requestHeaders.get("x-videntia-pathname") ?? ""
 
   let user = null
   let profile: { full_name: string | null; company_name: string | null } | null = null
@@ -66,6 +70,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const metadataName = typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : null
   const metadataCompany = typeof user.user_metadata?.company_name === "string" ? user.user_metadata.company_name : null
   const showJuanIntelligence = user.email?.trim().toLowerCase() === "juan@n3uralia.com"
+  const showJuanContextStrips = showJuanIntelligence && pathname !== "/asistente"
 
   return (
     <AppNav
@@ -79,8 +84,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <p className="mt-1 text-xs leading-5 text-white/58">VIDENTIA ya usa este contexto para orientar investigaciones, señales y oportunidades. Puedes ajustarlo más adelante.</p>
         </div>
       ) : null}
-      {showJuanIntelligence ? <JuanProjectIdeasStrip userId={user.id} /> : null}
-      {showJuanIntelligence ? <JuanProductEvolutionStrip userId={user.id} /> : null}
+      {showJuanContextStrips ? <JuanProjectIdeasStrip userId={user.id} /> : null}
+      {showJuanContextStrips ? <JuanProductEvolutionStrip userId={user.id} /> : null}
       {children}
       <VidentiaAssistantLauncher />
     </AppNav>
