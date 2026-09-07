@@ -6,6 +6,7 @@ import { AppNav } from "@/components/app/app-nav"
 import { FreePreviewShell } from "@/components/app/free-preview-shell"
 import { JuanProjectIdeasStrip } from "@/components/app/juan-project-ideas-strip"
 import { JuanProductEvolutionStrip } from "@/components/app/juan-product-evolution-strip"
+import { VidentiaAssistantLauncher } from "@/components/app/videntia-assistant-launcher"
 import { isFreeAccessUser } from "@/lib/free-research-quota"
 
 export const metadata: Metadata = {
@@ -81,6 +82,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {showJuanIntelligence ? <JuanProjectIdeasStrip userId={user.id} /> : null}
       {showJuanIntelligence ? <JuanProductEvolutionStrip userId={user.id} /> : null}
       {children}
+      <VidentiaAssistantLauncher />
     </AppNav>
   )
 }
