@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { buildNiceExpansionInterpretation, NICE_CLASS_SOURCE_VERSION } from "@/lib/intelligence/nice-class-intelligence"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 export const runtime = "nodejs"
@@ -113,6 +114,7 @@ export async function GET(request: Request) {
       const previousClasses = [...historicalNiceClasses].sort((a, b) => a - b)
       const isClassExpansion = expansionClasses.length > 0
       if (isClassExpansion) expansions += 1
+      const expansionInterpretation = isClassExpansion ? buildNiceExpansionInterpretation(previousClasses, expansionClasses) : null
 
       candidates.push({
         user_id: watch.user_id,
@@ -128,7 +130,7 @@ export async function GET(request: Request) {
         source_url: row.source_url,
         relevance: isClassExpansion ? "alta" : "media",
         reason: isClassExpansion
-          ? `${CLASS_EXPANSION_PREFIX} ${watch.query} incorpora por primera vez ${formatNiceClasses(expansionClasses)}. Historial previo observado: ${previousClasses.length ? formatNiceClasses(previousClasses) : "sin clases previas comparables"}.`
+          ? `${CLASS_EXPANSION_PREFIX} ${watch.query} incorpora por primera vez ${formatNiceClasses(expansionClasses)}. Historial previo observado: ${previousClasses.length ? formatNiceClasses(previousClasses) : "sin clases previas comparables"}. Lectura competitiva: ${expansionInterpretation} Fuente de clasificación: ${NICE_CLASS_SOURCE_VERSION}.`
           : `Nueva actividad asociada al titular vigilado ${watch.query}.`,
         last_seen_at: scanStartedAt,
         updated_at: scanStartedAt,
