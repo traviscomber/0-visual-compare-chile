@@ -38,8 +38,10 @@ export type ExecutiveAttentionItem = {
   reason: string
   occurredAt: string | null
   isNew: boolean
-  kind: "regulatory_case" | "new_high_signal" | "opportunity_conviction"
+  kind: "regulatory_case" | "competitive_expansion" | "new_high_signal" | "opportunity_conviction"
 }
+
+const COMPETITIVE_EXPANSION_SOURCE = "INAPI · Expansión competitiva"
 
 export function buildExecutiveAttentionQueue(signals: ExecutiveAttentionSignal[]): ExecutiveAttentionItem[] {
   return sortExecutiveAttentionItems(signals.flatMap(signal => toAttentionItem(signal)))
@@ -74,6 +76,24 @@ function toAttentionItem(signal: ExecutiveAttentionSignal): ExecutiveAttentionIt
   }
 
   if (!signal.isNew || signal.relevance !== "alta") return []
+
+  if (signal.source === COMPETITIVE_EXPANSION_SOURCE) {
+    return [{
+      key: `attention:${signal.key}`,
+      signalKey: signal.key,
+      watchKey: signal.watchKey,
+      title: signal.title,
+      subject: signal.watchQuery,
+      source: signal.source,
+      href: signal.href,
+      priority: "alta",
+      reason: "El titular vigilado amplió su cobertura registral a una clase Nice no observada previamente. Revisar la solicitud y buscar señales comerciales, de producto o tecnológicas independientes antes de inferir entrada efectiva al mercado.",
+      occurredAt: signal.occurredAt || signal.firstSeenAt,
+      isNew: true,
+      kind: "competitive_expansion",
+    }]
+  }
+
   return [{
     key: `attention:${signal.key}`,
     signalKey: signal.key,
@@ -102,7 +122,8 @@ function compareAttention(a: ExecutiveAttentionItem, b: ExecutiveAttentionItem) 
   const rank = { critica: 3, alta: 2, media: 1 } as const
   const priorityDelta = rank[b.priority] - rank[a.priority]
   if (priorityDelta) return priorityDelta
-  const kindDelta = Number(b.kind === "regulatory_case") - Number(a.kind === "regulatory_case")
+  const kindRank = { regulatory_case: 3, competitive_expansion: 2, opportunity_conviction: 1, new_high_signal: 0 } as const
+  const kindDelta = kindRank[b.kind] - kindRank[a.kind]
   if (kindDelta) return kindDelta
   const newDelta = Number(b.isNew) - Number(a.isNew)
   if (newDelta) return newDelta
