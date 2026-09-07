@@ -119,6 +119,9 @@ function SituationRow({ situation, index }: { situation: CompetitiveSituation; i
   const dueDates = openActions.map(entry => entry.value.action?.due_at).filter((value): value is string => Boolean(value)).sort((a, b) => Date.parse(a) - Date.parse(b))
   const checking = Object.values(actions).some(value => value.loading)
   const primary = [...openActions].sort((a, b) => {
+    const aOverdue = Boolean(a.value.action?.due_at && Date.parse(a.value.action.due_at) < Date.now())
+    const bOverdue = Boolean(b.value.action?.due_at && Date.parse(b.value.action.due_at) < Date.now())
+    if (aOverdue !== bOverdue) return Number(bOverdue) - Number(aOverdue)
     const aUnassigned = a.value.action?.assigned_to ? 1 : 0
     const bUnassigned = b.value.action?.assigned_to ? 1 : 0
     if (aUnassigned !== bUnassigned) return aUnassigned - bUnassigned
@@ -133,17 +136,15 @@ function SituationRow({ situation, index }: { situation: CompetitiveSituation; i
         ? "Sin acciones abiertas"
         : "Aún sin acción ejecutiva"
   const primaryHref = primary?.value.href || (situation.activeHypothesisReviews ? "/monitorear/hipotesis" : "/monitorear/atencion")
-  const primaryLabel = checking
-    ? "Verificando"
-    : primary
-      ? !primary.value.action?.assigned_to
-        ? "Asignar responsable"
-        : overdue
-          ? "Resolver acción"
-          : "Ver acción"
-      : situation.activeHypothesisReviews
-        ? "Revisar hipótesis"
-        : "Definir acción"
+  const primaryLabel = primary
+    ? !primary.value.action?.assigned_to
+      ? "Asignar responsable"
+      : overdue
+        ? "Resolver acción"
+        : "Ver acción"
+    : situation.activeHypothesisReviews
+      ? "Revisar hipótesis"
+      : "Definir acción"
 
   return <article className="py-5">
     <div className="grid gap-4 md:grid-cols-[64px_minmax(0,1fr)_auto] md:items-start">
@@ -155,7 +156,7 @@ function SituationRow({ situation, index }: { situation: CompetitiveSituation; i
         <p className="mt-2 text-xs text-muted-foreground">{statusLine}</p>
       </div>
       <div className="flex flex-wrap gap-2 md:justify-end">
-        <Button asChild size="sm" disabled={checking}><Link href={primaryHref}>{primaryLabel}</Link></Button>
+        {checking ? <Button size="sm" disabled>Verificando</Button> : <Button asChild size="sm"><Link href={primaryHref}>{primaryLabel}</Link></Button>}
         <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(value => !value)}>{open ? "Ocultar" : "Evidencia"}</Button>
       </div>
     </div>
