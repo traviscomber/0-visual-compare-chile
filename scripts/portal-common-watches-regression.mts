@@ -38,13 +38,17 @@ for(const needle of [
   'fetch("/api/intelligence/watches"',
   'fetch("/api/intelligence/watches/signals"',
   'VIDENTIA / Tareas de vigilancia',
-  'const highPending=useMemo',
+  'setAttention(Array.isArray(signalPayload.attentionQueue)',
+  'const priorityItems=useMemo(()=>attention.slice(0,3)',
+  'Qué requiere mi atención ahora',
+  'Máximo 3 prioridades',
+  'label="Para decidir"',
   'label="Por revisar"',
   'label="Validadas"',
-  'label="Descartadas"',
   'label="Seguimientos"',
-  'Cola de revisión',
-  'En seguimiento',
+  '02 / Revisión',
+  '03 / Operación',
+  'Seguimientos y configuración',
   'Nuevo seguimiento',
   'Activar',
   'No pudimos cargar tus seguimientos.',
@@ -57,7 +61,9 @@ for(const needle of [
   '<option value="global">Global</option>',
   '<option value="both">Ambos</option>',
   'rank={alta:3,media:2,baja:1}',
+  'href="/monitorear/situaciones"',
   'href="/monitorear/atencion"',
+  'href="/monitorear/hipotesis"',
   'href="/monitorear/estrategico"',
   'href="/patentes/alertas"',
 ])requireText(page,needle,"common watch workspace")
@@ -68,7 +74,9 @@ for(const forbidden of [
   'No pudimos crear la vigilancia.',
   'bg-[#3A2525]',
   'text-[#E8AAA3]',
-])if(page.includes(forbidden))fail(`stale monitoring terminology or alert palette must not remain user-facing: ${forbidden}`)
+  'attention.slice(0,4)',
+  'attention.slice(0,5)',
+])if(page.includes(forbidden))fail(`stale monitoring terminology or hierarchy must not remain user-facing: ${forbidden}`)
 
 for(const needle of [
   'from("trademark_watches")',
@@ -87,6 +95,8 @@ for(const needle of [
   'from("trademark_watch_signal_events")',
   'from("patent_alert_events")',
   'from("intelligence_watch_events")',
+  'attentionQueue',
+  'attentionSummary',
   'last_reviewed_at: reviewedAt',
   'read_at: reviewedAt',
   '.eq("user_id", auth.user.id)',
@@ -100,4 +110,4 @@ for(const needle of [
 if(watchesApi.includes("createAdminClient")||watchesApi.includes("SUPABASE_SERVICE_ROLE_KEY"))fail("watch API must remain behind authenticated RLS, not service role")
 if(signalsApi.includes("SUPABASE_SERVICE_ROLE_KEY"))fail("signal API must use the shared admin client and never inline the service-role secret")
 
-console.log("Portal/Common Watches regression PASS: the task-first monitoring workspace prioritizes pending evidence and explicit user validation, preserves scoped follow-up creation and contextual deep tools, keeps watch CRUD behind authenticated RLS, and permits server-only thesis and corroboration reads only after explicit user/organization scoping.")
+console.log("Portal/Common Watches regression PASS: /monitorear is decision-first with at most three canonical Executive Attention priorities, while signal validation and watch administration remain available as secondary operations behind authenticated scope.")
