@@ -154,7 +154,7 @@ export async function GET(request: Request) {
     if (!watch.last_checked_at) {
       const { error: baselineMarkError } = await admin
         .from("trademark_watches")
-        .update({ last_reviewed_at: scanStartedAt })
+        .update({ last_reviewed_at: new Date().toISOString() })
         .eq("id", watch.id)
       if (baselineMarkError) console.error("[trademark-owner-watches:baseline]", { watchId: watch.id, error: baselineMarkError })
     }
