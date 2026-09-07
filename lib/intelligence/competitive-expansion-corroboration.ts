@@ -42,6 +42,10 @@ const DOMAIN_STOPWORDS = new Set([
   "clase", "nice", "servicios", "productos", "artículos", "actividad", "cubierta", "por", "para", "con", "del", "las", "los", "una", "unos", "unas", "y", "e", "de", "en", "a",
 ])
 
+const LEGAL_SUFFIXES = new Set([
+  "spa", "ltda", "limitada", "sa", "saa", "sac", "inc", "incorporated", "corp", "corporation", "company", "co", "llc", "ltd", "limited", "plc", "gmbh", "ag", "sas", "bv", "nv",
+])
+
 export function parseExpansionClasses(reason: string) {
   if (!reason.startsWith(CLASS_EXPANSION_PREFIX)) return []
   const match = reason.match(/incorpora por primera vez clase(?:s)? Nice ([0-9, ]+)\./i)
@@ -62,8 +66,7 @@ export function classifyEvidenceState(evidence: CorroborationEvidence[], sourceC
     return independentFamilies.size >= 2 || direct.length >= 2 ? "supporting_evidence" : "mixed_evidence"
   }
   if (evidence.some(item => item.activity === "patent" || item.activity === "research")) return "mixed_evidence"
-  const availableCount = Object.values(sourceCoverage).filter(item => item.available).length
-  return availableCount > 0 ? "insufficient_evidence" : "insufficient_evidence"
+  return "insufficient_evidence"
 }
 
 export async function gatherExternalExpansionCorroboration(company: string, newNiceClasses: number[], eventDate: string | null): Promise<ExternalCorroborationResult> {
@@ -87,19 +90,9 @@ export async function gatherExternalExpansionCorroboration(company: string, newN
     for (const item of news.value) {
       const classified = classifyCommercialTitle(item.title, company, domainTerms)
       if (!classified) continue
-      evidence.push({
-        source: item.source,
-        sourceRecordId: item.sourceRecordId,
-        title: item.title,
-        date: item.date,
-        url: item.url,
-        activity: classified.activity,
-        directness: "direct",
-        matchedTerms: classified.matchedTerms,
-      })
+      evidence.push({ source: item.source, sourceRecordId: item.sourceRecordId, title: item.title, date: item.date, url: item.url, activity: classified.activity, directness: "direct", matchedTerms: classified.matchedTerms })
     }
   }
-
   if (openalex.ok) {
     for (const item of openalex.value) {
       const matchedTerms = matchDomainTerms(item.title, domainTerms)
@@ -107,7 +100,6 @@ export async function gatherExternalExpansionCorroboration(company: string, newN
       evidence.push({ source: item.source, sourceRecordId: item.sourceRecordId, title: item.title, date: item.date, url: item.url, activity: "research", directness: "indirect", matchedTerms })
     }
   }
-
   if (crossref.ok) {
     for (const item of crossref.value) {
       const matchedTerms = matchDomainTerms(item.title, domainTerms)
@@ -123,12 +115,7 @@ export async function gatherExternalExpansionCorroboration(company: string, newN
       openalex: { available: openalex.ok, evidence_count: openalex.ok ? openalex.value.length : 0 },
       crossref: { available: crossref.ok, evidence_count: crossref.ok ? crossref.value.length : 0 },
     },
-    queryContext: {
-      company,
-      new_nice_classes: newNiceClasses,
-      domain_terms: domainTerms,
-      queries: [webQuery, researchQuery],
-    },
+    queryContext: { company, new_nice_classes: newNiceClasses, domain_terms: domainTerms, queries: [webQuery, researchQuery] },
   }
 }
 
@@ -149,7 +136,7 @@ export function matchDomainTerms(text: string, domainTerms: string[]) {
 }
 
 export function matchesCompany(text: string, company: string) {
-  const companyTerms = significantTerms(company).filter(term => term.length >= 3)
+  const companyTerms = significantTerms(company).filter(term => term.length >= 3 && !LEGAL_SUFFIXES.has(term))
   if (!companyTerms.length) return false
   const normalized = normalize(text)
   const required = companyTerms.length === 1 ? 1 : Math.min(2, companyTerms.length)
