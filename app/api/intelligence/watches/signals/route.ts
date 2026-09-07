@@ -10,6 +10,8 @@ import { createAdminClient } from "@/lib/supabase/admin"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
+const CLASS_EXPANSION_PREFIX = "Expansión competitiva Nice:"
+
 type RegulatoryTimeline = {
   canonicalCompanyName: string | null
   expediente: string
@@ -82,7 +84,21 @@ export async function GET() {
       const watch = brandWatches.get(row.watch_id)
       if (!watch?.is_active) return []
       const isNew = Boolean(watch.last_reviewed_at && Date.parse(row.first_seen_at) > Date.parse(watch.last_reviewed_at))
-      return [{ key: `brand:${row.id}`, watchKey: `brand:${row.watch_id}`, type: "brand" as const, watchQuery: watch.query, source: row.source, title: row.mark_name, detail: row.reason || row.applicant_name || row.application_number, occurredAt: row.event_date, firstSeenAt: row.first_seen_at, relevance: normalizeRelevance(row.relevance), isNew, href: row.source_url || "/monitorear" }]
+      const isClassExpansion = typeof row.reason === "string" && row.reason.startsWith(CLASS_EXPANSION_PREFIX)
+      return [{
+        key: `brand:${row.id}`,
+        watchKey: `brand:${row.watch_id}`,
+        type: "brand" as const,
+        watchQuery: watch.query,
+        source: isClassExpansion ? "INAPI · Expansión competitiva" : row.source,
+        title: isClassExpansion ? `Expansión competitiva · ${row.mark_name}` : row.mark_name,
+        detail: row.reason || row.applicant_name || row.application_number,
+        occurredAt: row.event_date,
+        firstSeenAt: row.first_seen_at,
+        relevance: normalizeRelevance(row.relevance),
+        isNew,
+        href: row.source_url || "/monitorear",
+      }]
     }),
     ...(patentEventsResult.data ?? []).flatMap(row => {
       const watch = patentWatches.get(row.watch_id)
