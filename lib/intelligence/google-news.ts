@@ -25,9 +25,15 @@ export async function searchGoogleNews(
   const normalized = query.replace(/[\u0000-\u001f]/g, " ").trim()
   if (!normalized) return []
 
-  const days = Math.max(1, Math.min(30, Math.ceil((to.getTime() - from.getTime()) / 86400000)))
+  const days = Math.max(1, Math.ceil((to.getTime() - from.getTime()) / 86400000))
+  const boundedFrom = isoDay(from)
+  const boundedToExclusive = isoDay(new Date(to.getTime() + 86400000))
+  const temporalQuery = days <= 30
+    ? `when:${days}d`
+    : `after:${boundedFrom} before:${boundedToExclusive}`
+
   const url = new URL(GOOGLE_NEWS_RSS)
-  url.searchParams.set("q", `${normalized} when:${days}d`)
+  url.searchParams.set("q", `${normalized} ${temporalQuery}`)
 
   if (market === "chile") {
     url.searchParams.set("hl", "es-419")
@@ -69,6 +75,10 @@ export async function searchGoogleNews(
     if (rows.length >= Math.min(Math.max(limit, 1), 25)) break
   }
   return rows
+}
+
+function isoDay(value: Date) {
+  return value.toISOString().slice(0, 10)
 }
 
 function xmlText(xml: string, tag: string) {

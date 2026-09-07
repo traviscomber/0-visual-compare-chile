@@ -9,6 +9,10 @@
       "schedule": "30 8 * * *"
     },
     {
+      "path": "/api/cron/trademark-expansion-corroboration",
+      "schedule": "50 8 * * *"
+    },
+    {
       "path": "/api/cron/case-automation",
       "schedule": "0 * * * *"
     },
