@@ -1,4 +1,5 @@
 import "server-only"
+import type { SupabaseClient } from "@supabase/supabase-js"
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
 import { searchGoogleNews } from "@/lib/intelligence/google-news"
 import { searchOpenAlexWorks } from "@/lib/intelligence/openalex"
@@ -29,6 +30,17 @@ export type ExternalCorroborationResult = {
     domain_terms: string[]
     queries: string[]
   }
+}
+
+type PatentRecord = {
+  id: string
+  source: string
+  source_record_id: string
+  title: string
+  applicants: string | null
+  filing_date: string | null
+  publication_date: string | null
+  source_url: string | null
 }
 
 const ACTION_TERMS: Record<Exclude<CorroborationActivity, "patent" | "research">, string[]> = {
@@ -117,6 +129,49 @@ export async function gatherExternalExpansionCorroboration(company: string, newN
     },
     queryContext: { company, new_nice_classes: newNiceClasses, domain_terms: domainTerms, queries: [webQuery, researchQuery] },
   }
+}
+
+export async function gatherLocalPatentCorroboration(client: SupabaseClient, company: string, niceClasses: number[], eventDate: string | null) {
+  const escaped = company.replace(/[\\%_]/g, "\\$&")
+  let query = client
+    .from("patent_records")
+    .select("id,source,source_record_id,title,applicants,filing_date,publication_date,source_url")
+    .ilike("applicants", `%${escaped}%`)
+    .order("filing_date", { ascending: false, nullsFirst: false })
+    .limit(120)
+
+  if (eventDate) {
+    const from = new Date(`${eventDate}T12:00:00Z`)
+    if (Number.isFinite(from.getTime())) {
+      from.setUTCFullYear(from.getUTCFullYear() - 1)
+      query = query.gte("filing_date", from.toISOString().slice(0, 10))
+    }
+  }
+
+  const { data, error } = await query
+  if (error) {
+    console.warn("[competitive-expansion-corroboration] patent source unavailable", error)
+    return { evidence: [] as CorroborationEvidence[], coverage: { available: false, evidence_count: 0 } }
+  }
+
+  const domainTerms = buildDomainTerms(niceClasses)
+  const evidence = ((data ?? []) as PatentRecord[]).flatMap(row => {
+    if (!matchesCompany(String(row.applicants ?? ""), company)) return []
+    const matchedTerms = matchDomainTerms(row.title, domainTerms)
+    if (!matchedTerms.length) return []
+    return [{
+      source: row.source === "INAPI" ? "inapi_patents" : `patent:${row.source}`,
+      sourceRecordId: row.source_record_id || row.id,
+      title: row.title,
+      date: row.filing_date ?? row.publication_date,
+      url: row.source_url,
+      activity: "patent" as const,
+      directness: "indirect" as const,
+      matchedTerms,
+    }]
+  }).slice(0, 12)
+
+  return { evidence, coverage: { available: true, evidence_count: evidence.length } }
 }
 
 export function classifyCommercialTitle(title: string, company: string, domainTerms: string[]) {
