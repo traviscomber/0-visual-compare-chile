@@ -24,27 +24,11 @@ create index if not exists competitive_hypotheses_corroboration_idx
 
 alter table public.competitive_hypotheses enable row level security;
 
+-- Hypotheses are intentionally server-only. Authenticated clients must go through
+-- the scoped API so source evidence and decision lineage remain immutable.
 revoke all on table public.competitive_hypotheses from anon, authenticated;
-grant select, insert, update on table public.competitive_hypotheses to authenticated;
 
-create policy "competitive hypotheses select own"
+create policy "competitive hypotheses own rows"
   on public.competitive_hypotheses for select
   to authenticated
   using ((select auth.uid()) = user_id);
-
-create policy "competitive hypotheses insert own"
-  on public.competitive_hypotheses for insert
-  to authenticated
-  with check ((select auth.uid()) = user_id and status = 'draft' and decided_by is null and decided_at is null);
-
-create policy "competitive hypotheses update own"
-  on public.competitive_hypotheses for update
-  to authenticated
-  using ((select auth.uid()) = user_id)
-  with check (
-    (select auth.uid()) = user_id
-    and (
-      (status = 'draft' and decided_by is null and decided_at is null)
-      or (status in ('accepted','rejected') and decided_by = (select auth.uid()) and decided_at is not null)
-    )
-  );
