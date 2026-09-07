@@ -13,7 +13,7 @@ for(const needle of [
   "RegulatoryTimelineDetails",
   "Ver línea regulatoria",
   "Evidencia SMA",
-  "hitos SMA",
+  "signal.timeline.milestones.length} hitos",
 ])requireText(page,needle,"monitoring UI")
 if(!page.includes("timeline?: RegulatoryTimeline | null")&&!page.includes("timeline?:RegulatoryTimeline|null"))fail("monitoring UI missing typed regulatory timeline")
 
@@ -31,4 +31,4 @@ for(const forbidden of [
   "canonical_company_name_in_official_holder",
 ])if(page.includes(forbidden))fail(`UI must not invent source identity matching semantics: ${forbidden}`)
 
-console.log("SNIFA regulatory timeline UI regression PASS: collapsed official SMA timelines expose typed milestones and render as an expandable chronological evidence path in /monitorear without changing raw event persistence or identity matching.")
+console.log("SNIFA regulatory timeline UI regression PASS: collapsed official SMA timelines expose typed milestones, visible hit counts and an expandable chronological evidence path in /monitorear without changing raw event persistence or identity matching.")
