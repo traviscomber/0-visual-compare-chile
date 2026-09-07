@@ -4,13 +4,15 @@ import type { ReactNode } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-const ITEMS = [
+type MonitoringNavigationItem = { href: string; label: string; exact?: boolean }
+
+const ITEMS: readonly MonitoringNavigationItem[] = [
   { href: "/monitorear", label: "Tareas", exact: true },
   { href: "/monitorear/atencion", label: "Atención" },
   { href: "/monitorear/situaciones", label: "Situaciones" },
   { href: "/monitorear/estrategico", label: "Estratégico" },
   { href: "/monitorear/hipotesis", label: "Hipótesis" },
-] as const
+]
 
 export default function MonitoringLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
