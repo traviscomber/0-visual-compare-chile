@@ -4,8 +4,9 @@ function fail(message:string):never{console.error(`Assistant action proposals re
 function requireText(source:string,needle:string,label:string){if(!source.includes(needle))fail(`${label} missing ${needle}`)}
 function forbid(source:string,needle:string,label:string){if(source.includes(needle))fail(`${label} must not contain ${needle}`)}
 
-const [assistant, page, route] = await Promise.all([
+const [assistant, launcher, page, route] = await Promise.all([
   readFile("lib/assistant/videntia-assistant.ts", "utf8"),
+  readFile("components/app/videntia-assistant-launcher.tsx", "utf8"),
   readFile("app/(app)/asistente/page.tsx", "utf8"),
   readFile("app/api/intelligence/actions/route.ts", "utf8"),
 ])
@@ -34,6 +35,14 @@ for (const forbidden of [
 ]) forbid(assistant, forbidden, "assistant")
 
 for (const needle of [
+  '"use client"',
+  'const [open, setOpen] = useState(false)',
+  'aria-label="Abrir Asistente VIDENTIA"',
+  'role="dialog"',
+  'aria-modal="false"',
+  'fixed inset-x-2 bottom-2 top-[72px]',
+  'md:w-[min(440px,calc(100vw-40px))]',
+  'params.get("assistant") === "open"',
   'async function createAction',
   'fetch("/api/intelligence/actions"',
   'method: "POST"',
@@ -41,16 +50,28 @@ for (const needle of [
   'actionProposals',
   'requieren aprobación',
   'humanApprovalRequired',
-  'Sólo se crea la acción que confirmes.',
-  'Sin soporte académico suficiente. Esto no se interpreta como evidencia negativa.',
-]) requireText(page, needle, "assistant page")
+  'Sin soporte académico suficiente; no se interpreta como evidencia negativa.',
+]) requireText(launcher, needle, "floating assistant")
 
-const createActionIndex = page.indexOf("async function createAction")
-const actionPostIndex = page.indexOf('fetch("/api/intelligence/actions"', createActionIndex)
-const actionClickIndex = page.indexOf('onClick={() => void createAction(message.id, proposal)}')
+for (const forbidden of [
+  'href="/asistente"',
+  'hidden items-center',
+]) forbid(launcher, forbidden, "floating assistant")
+
+const createActionIndex = launcher.indexOf("async function createAction")
+const actionPostIndex = launcher.indexOf('fetch("/api/intelligence/actions"', createActionIndex)
+const actionClickIndex = launcher.indexOf('onClick={() => void createAction(message.id, proposal)}')
 if (createActionIndex < 0 || actionPostIndex < createActionIndex || actionClickIndex < 0) {
   fail("canonical action mutation is not contained inside the explicit user create-action flow")
 }
+
+for (const needle of [
+  'redirect("/dashboard?assistant=open")',
+]) requireText(page, needle, "assistant compatibility route")
+for (const forbidden of [
+  "OperationalPage",
+  "async function createAction",
+]) forbid(page, forbidden, "assistant compatibility route")
 
 for (const needle of [
   "requireUser()",
@@ -60,4 +81,4 @@ for (const needle of [
 ]) requireText(route, needle, "canonical action API")
 if (route.includes("createAdminClient")) fail("canonical action API must remain authenticated-user/RLS scoped")
 
-console.log("Assistant action proposals regression PASS: VIDENTIA structures evidence-backed action proposals without writing canonical data, validates paper references against retrieved research, and creates a case action only after an explicit user click through the existing authenticated RLS action bridge.")
+console.log("Assistant action proposals regression PASS: VIDENTIA keeps the assistant as a persistent floating chat, preserves evidence-backed proposals, and creates a canonical case action only after an explicit user click through the authenticated RLS action bridge.")
