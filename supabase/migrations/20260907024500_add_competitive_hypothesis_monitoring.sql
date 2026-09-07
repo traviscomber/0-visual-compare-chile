@@ -8,7 +8,7 @@ create table if not exists public.competitive_hypothesis_monitoring_events (
   evidence_contradictory jsonb not null default '[]'::jsonb,
   source_coverage jsonb not null default '{}'::jsonb,
   query_context jsonb not null default '{}'::jsonb,
-  review_status text not null default 'pending' check (review_status in ('pending','reviewed','dismissed')),
+  review_status text not null default 'pending' check (review_status in ('pending','reviewed','dismissed','not_required')),
   review_reason text null check (review_reason is null or char_length(review_reason) <= 1200),
   reviewed_by uuid null references auth.users(id) on delete set null,
   reviewed_at timestamptz null,
