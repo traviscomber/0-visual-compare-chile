@@ -16,6 +16,7 @@ export const dynamic = "force-dynamic"
 export const maxDuration = 120
 
 const BATCH_SIZE = 12
+const PAGE_SIZE = 200
 const MAX_ATTEMPTS = 3
 
 type ExpansionEvent = {
@@ -53,38 +54,16 @@ export async function GET(request: Request) {
 
   const admin = createAdminClient()
   const startedAt = Date.now()
-  const { data: eventData, error: eventError } = await admin
-    .from("trademark_watch_signal_events")
-    .select("id,user_id,watch_id,signal_key,applicant_name,event_date,reason")
-    .eq("source", "INAPI")
-    .like("reason", `${CLASS_EXPANSION_PREFIX}%`)
-    .order("first_seen_at", { ascending: false })
-    .limit(500)
-
-  if (eventError) return NextResponse.json({ ok: false, error: eventError.message }, { status: 500 })
-  const events = (eventData ?? []) as ExpansionEvent[]
-  if (!events.length) return NextResponse.json({ ok: true, discovered: 0, processed: 0, durationMs: Date.now() - startedAt })
-
-  const eventIds = events.map(item => item.id)
-  const { data: runData, error: runError } = await admin
-    .from("trademark_expansion_corroborations")
-    .select("signal_event_id,status,attempts")
-    .in("signal_event_id", eventIds)
-
-  if (runError) return NextResponse.json({ ok: false, error: runError.message }, { status: 500 })
-  const existing = new Map(((runData ?? []) as ExistingRun[]).map(item => [item.signal_event_id, item]))
-  const pending = events.filter(event => {
-    const run = existing.get(event.id)
-    if (!run) return true
-    if (run.status === "completed") return false
-    return run.attempts < MAX_ATTEMPTS
-  }).slice(0, BATCH_SIZE)
+  const queue = await findRetryableExpansionEvents(admin)
+  if (queue.error) return NextResponse.json({ ok: false, error: queue.error }, { status: 500 })
+  if (!queue.pending.length) {
+    return NextResponse.json({ ok: true, scanned: queue.scanned, queued: 0, processed: 0, durationMs: Date.now() - startedAt })
+  }
 
   let processed = 0
   let partial = 0
   let failed = 0
-  for (const event of pending) {
-    const previous = existing.get(event.id)
+  for (const { event, previous } of queue.pending) {
     const attempts = (previous?.attempts ?? 0) + 1
     const company = String(event.applicant_name ?? "").trim()
     const newNiceClasses = parseExpansionClasses(event.reason)
@@ -148,13 +127,56 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     ok: failed === 0,
-    discovered: events.length,
-    queued: pending.length,
+    scanned: queue.scanned,
+    queued: queue.pending.length,
     processed,
     partial,
     failed,
     durationMs: Date.now() - startedAt,
-  }, { status: failed === pending.length && pending.length > 0 ? 500 : 200 })
+  }, { status: failed === queue.pending.length && queue.pending.length > 0 ? 500 : 200 })
+}
+
+async function findRetryableExpansionEvents(admin: ReturnType<typeof createAdminClient>) {
+  const pending: Array<{ event: ExpansionEvent; previous: ExistingRun | null }> = []
+  let offset = 0
+  let scanned = 0
+
+  while (pending.length < BATCH_SIZE) {
+    const { data: eventData, error: eventError } = await admin
+      .from("trademark_watch_signal_events")
+      .select("id,user_id,watch_id,signal_key,applicant_name,event_date,reason")
+      .eq("source", "INAPI")
+      .like("reason", `${CLASS_EXPANSION_PREFIX}%`)
+      .order("first_seen_at", { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1)
+
+    if (eventError) return { pending, scanned, error: eventError.message }
+    const events = (eventData ?? []) as ExpansionEvent[]
+    scanned += events.length
+    if (!events.length) break
+
+    const eventIds = events.map(item => item.id)
+    const { data: runData, error: runError } = await admin
+      .from("trademark_expansion_corroborations")
+      .select("signal_event_id,status,attempts")
+      .in("signal_event_id", eventIds)
+
+    if (runError) return { pending, scanned, error: runError.message }
+    const existing = new Map(((runData ?? []) as ExistingRun[]).map(item => [item.signal_event_id, item]))
+
+    for (const event of events) {
+      const previous = existing.get(event.id) ?? null
+      if (previous?.status === "completed") continue
+      if ((previous?.attempts ?? 0) >= MAX_ATTEMPTS) continue
+      pending.push({ event, previous })
+      if (pending.length >= BATCH_SIZE) break
+    }
+
+    if (events.length < PAGE_SIZE) break
+    offset += PAGE_SIZE
+  }
+
+  return { pending, scanned, error: null as string | null }
 }
 
 async function gatherLocalPatentCorroboration(admin: ReturnType<typeof createAdminClient>, company: string, niceClasses: number[], eventDate: string | null) {
