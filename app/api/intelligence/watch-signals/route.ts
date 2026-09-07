@@ -51,7 +51,19 @@ type StoredSignal = {
   last_seen_at: string
 }
 
+type TrademarkRecord = {
+  id: string
+  nombre: string
+  solicitante: string | null
+  numero_solicitud: string | null
+  estado: string | null
+  fecha_presentacion: string | null
+  source_url: string | null
+  trademark_record_niza: Array<{ code: string }> | null
+}
+
 const ReviewSchema = z.object({ watchId: z.string().uuid().optional() })
+const CLASS_EXPANSION_PREFIX = "Expansión competitiva Nice:"
 
 export async function GET() {
   const auth = await requireUser()
@@ -86,29 +98,66 @@ export async function GET() {
     const column = watch.watch_type === "owner" ? "solicitante" : "nombre"
     const tdpiColumn = watch.watch_type === "owner" ? "applicant_name" : "mark_name"
 
-    const [inapiResult, tdpiResult] = await Promise.all([
+    const [inapiResult, tdpiResult, ownerBaselineResult] = await Promise.all([
       admin
         .from("trademark_records")
         .select("id,nombre,solicitante,numero_solicitud,estado,fecha_presentacion,source_url,trademark_record_niza(code)")
         .ilike(column, `%${escaped}%`)
         .gte("fecha_presentacion", sinceDate)
         .order("fecha_presentacion", { ascending: false })
-        .limit(12),
+        .limit(watch.watch_type === "owner" ? 120 : 12),
       admin
         .from("tdpi_case_signals")
         .select("id,mark_name,applicant_name,application_number,nice_classes,source_date,procedural_state,source_url,confidence")
         .ilike(tdpiColumn, `%${escaped}%`)
         .order("source_date", { ascending: false, nullsFirst: false })
         .limit(12),
+      watch.watch_type === "owner"
+        ? admin
+            .from("trademark_records")
+            .select("id,trademark_record_niza(code)")
+            .ilike("solicitante", `%${escaped}%`)
+            .lt("fecha_presentacion", sinceDate)
+            .order("fecha_presentacion", { ascending: false })
+            .limit(1000)
+        : Promise.resolve({ data: [], error: null }),
     ])
+
+    const historicalNiceClasses = new Set<number>()
+    let hasPriorOwnerFootprint = false
+    if (watch.watch_type === "owner") {
+      if (ownerBaselineResult.error) {
+        console.error("[trademark-watch-signals:owner-baseline]", { watchId: watch.id, error: ownerBaselineResult.error })
+      } else {
+        for (const row of ownerBaselineResult.data ?? []) {
+          const classes = extractNiceClasses((row.trademark_record_niza ?? []) as Array<{ code: string }>)
+          if (classes.length) hasPriorOwnerFootprint = true
+          for (const niceClass of classes) historicalNiceClasses.add(niceClass)
+        }
+      }
+    }
 
     if (inapiResult.error) {
       console.error("[trademark-watch-signals:inapi]", { watchId: watch.id, error: inapiResult.error })
     } else {
-      for (const row of inapiResult.data ?? []) {
-        const classes = Array.from(new Set(((row.trademark_record_niza ?? []) as Array<{ code: string }>).map(item => Number(item.code)).filter(Number.isFinite)))
-        if (watch.nice_classes.length && classes.length && !classes.some(item => watch.nice_classes.includes(item))) continue
+      const rows = [...((inapiResult.data ?? []) as TrademarkRecord[])]
+        .sort((a, b) => String(a.fecha_presentacion ?? "").localeCompare(String(b.fecha_presentacion ?? "")))
+
+      for (const row of rows) {
+        const classes = extractNiceClasses(row.trademark_record_niza ?? [])
+        const expansionClasses = watch.watch_type === "owner" && hasPriorOwnerFootprint
+          ? classes.filter(niceClass => !historicalNiceClasses.has(niceClass))
+          : []
+        const matchesConfiguredClasses = !watch.nice_classes.length || !classes.length || classes.some(item => watch.nice_classes.includes(item))
+        if (!matchesConfiguredClasses && !expansionClasses.length) {
+          for (const niceClass of classes) historicalNiceClasses.add(niceClass)
+          if (classes.length) hasPriorOwnerFootprint = true
+          continue
+        }
+
         const exact = normalize(row.nombre) === normalize(watch.query) || normalize(row.solicitante ?? "") === normalize(watch.query)
+        const previousClasses = [...historicalNiceClasses].sort((a, b) => a - b)
+        const isClassExpansion = expansionClasses.length > 0
         candidates.push({
           signal_key: `INAPI:${row.id}`,
           source: "INAPI",
@@ -121,13 +170,18 @@ export async function GET() {
           event_date: row.fecha_presentacion,
           state: row.estado,
           source_url: row.source_url,
-          relevance: exact ? "alta" : "media",
-          reason: watch.watch_type === "owner"
-            ? `Nueva actividad asociada al titular vigilado ${watch.query}.`
-            : exact
-              ? "La denominación coincide con la marca vigilada."
-              : `La denominación contiene el término vigilado ${watch.query}.`,
+          relevance: isClassExpansion || exact ? "alta" : "media",
+          reason: isClassExpansion
+            ? `${CLASS_EXPANSION_PREFIX} ${watch.query} incorpora por primera vez ${formatNiceClasses(expansionClasses)}. Historial previo observado: ${previousClasses.length ? formatNiceClasses(previousClasses) : "sin clases previas comparables"}.`
+            : watch.watch_type === "owner"
+              ? `Nueva actividad asociada al titular vigilado ${watch.query}.`
+              : exact
+                ? "La denominación coincide con la marca vigilada."
+                : `La denominación contiene el término vigilado ${watch.query}.`,
         })
+
+        for (const niceClass of classes) historicalNiceClasses.add(niceClass)
+        if (classes.length) hasPriorOwnerFootprint = true
       }
     }
 
@@ -227,10 +281,12 @@ export async function GET() {
     return {
       ...row,
       watch_query: watch?.query ?? "Vigilancia",
+      signal_type: isClassExpansionReason(row.reason) ? "class_expansion" : "activity",
       is_new: reviewedAt ? new Date(row.first_seen_at).getTime() > new Date(reviewedAt).getTime() : true,
     }
   }).sort((a, b) => {
     if (a.is_new !== b.is_new) return a.is_new ? -1 : 1
+    if (a.signal_type !== b.signal_type) return a.signal_type === "class_expansion" ? -1 : 1
     if (a.relevance !== b.relevance) return a.relevance === "alta" ? -1 : 1
     return new Date(b.first_seen_at).getTime() - new Date(a.first_seen_at).getTime()
   })
@@ -239,6 +295,7 @@ export async function GET() {
   const summary = {
     new_count: newSignals.length,
     high_new_count: newSignals.filter(item => item.relevance === "alta").length,
+    class_expansion_new_count: newSignals.filter(item => item.signal_type === "class_expansion").length,
     total_history: signals.length,
     inapi_new_count: newSignals.filter(item => item.source === "INAPI").length,
     tdpi_new_count: newSignals.filter(item => item.source === "TDPI").length,
@@ -269,8 +326,20 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true, reviewed_at: reviewedAt }, { headers: PRIVATE_NO_STORE_HEADERS })
 }
 
+function extractNiceClasses(rows: Array<{ code: string }>) {
+  return Array.from(new Set(rows.map(item => Number(item.code)).filter(Number.isFinite))).sort((a, b) => a - b)
+}
+
+function formatNiceClasses(classes: number[]) {
+  return `clase${classes.length === 1 ? "" : "s"} Nice ${[...classes].sort((a, b) => a - b).join(", ")}`
+}
+
+function isClassExpansionReason(reason: string) {
+  return reason.startsWith(CLASS_EXPANSION_PREFIX)
+}
+
 function emptySummary() {
-  return { new_count: 0, high_new_count: 0, total_history: 0, inapi_new_count: 0, tdpi_new_count: 0 }
+  return { new_count: 0, high_new_count: 0, class_expansion_new_count: 0, total_history: 0, inapi_new_count: 0, tdpi_new_count: 0 }
 }
 
 function normalize(value: string) {
