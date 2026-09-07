@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     .eq("source", "INAPI")
     .like("reason", `${CLASS_EXPANSION_PREFIX}%`)
     .order("first_seen_at", { ascending: false })
-    .limit(120)
+    .limit(500)
 
   if (eventError) return NextResponse.json({ ok: false, error: eventError.message }, { status: 500 })
   const events = (eventData ?? []) as ExpansionEvent[]
@@ -158,7 +158,7 @@ export async function GET(request: Request) {
 }
 
 async function gatherLocalPatentCorroboration(admin: ReturnType<typeof createAdminClient>, company: string, niceClasses: number[], eventDate: string | null) {
-  const escaped = company.replace(/[%_]/g, "\\$&")
+  const escaped = company.replace(/[\\%_]/g, "\\$&")
   let query = admin
     .from("patent_records")
     .select("id,source,source_record_id,title,applicants,filing_date,publication_date,source_url")
