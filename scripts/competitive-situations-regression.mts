@@ -32,7 +32,18 @@ for (const needle of [
   "La agrupación es una proyección de lectura",
   "no aumenta conviction",
   '/api/intelligence/watches/signals',
+  '/api/intelligence/actions?',
+  "Responsable",
+  "Acciones",
+  "Próxima revisión",
+  "Decisión pendiente",
+  "Sin responsable",
+  "Sin acción",
+  "Revisar cambio de hipótesis:",
+  "Resolver atención regulatoria:",
+  "Revisar señal ejecutiva:",
 ]) requireText(page, needle, "situations page")
+for (const forbidden of ["assignedTo:null", "defaultDueAt(", "createAction(", 'method:"POST"', 'method: "POST"']) forbid(page, forbidden, "situations page")
 for (const needle of ["Tareas", "Atención", "Situaciones", "Estratégico", "Hipótesis", '/monitorear/situaciones']) requireText(layout, needle, "monitoring navigation")
 
 const sample = buildCompetitiveSituations([
@@ -46,4 +57,4 @@ if (sample[0].signalCount !== 2) fail(`opportunity conviction leaked into compet
 if (sample[0].competitiveExpansions !== 1 || sample[0].externalSignals !== 1) fail("cross-signal counts are wrong")
 if (!sample[0].decisionQuestion.includes("expansión registral")) fail("decision question does not reflect combined evidence")
 
-console.log("Competitive situations regression PASS: Executive Attention can be projected into one conservative company-level situation without merging source records, opportunity conviction, or human decision state.")
+console.log("Competitive situations regression PASS: one conservative company-level situation now reuses canonical Executive Attention accountability while keeping source evidence, opportunity conviction and human decisions separate.")
