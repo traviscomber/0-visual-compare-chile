@@ -76,6 +76,30 @@ type CorroborationRow = {
   completed_at: string | null
 }
 
+type HypothesisMonitoringRow = {
+  id: string
+  hypothesis_id: string
+  assessment: string
+  summary: string
+  observed_at: string
+}
+
+type CompetitiveHypothesisRow = {
+  id: string
+  signal_event_id: string
+  status: string
+  hypothesis: string
+  decided_at: string | null
+}
+
+type HypothesisSignalRow = {
+  id: string
+  watch_id: string
+  mark_name: string | null
+  applicant_name: string | null
+  source_url: string | null
+}
+
 export async function GET() {
   const auth = await requireUser()
   if (!auth.ok) return auth.response
@@ -183,10 +207,14 @@ export async function GET() {
   const signals: CommonSignal[] = [...triage.tasks, ...informational, ...historical]
     .sort((a, b) => Number(b.isNew) - Number(a.isNew) || relevanceRank(b.relevance) - relevanceRank(a.relevance) || Date.parse(b.firstSeenAt) - Date.parse(a.firstSeenAt))
 
-  const opportunityAttention = await loadOpportunityAttention(admin, portfolioOrganizations.map(item => item.id))
+  const [opportunityAttention, hypothesisAttention] = await Promise.all([
+    loadOpportunityAttention(admin, portfolioOrganizations.map(item => item.id)),
+    loadCompetitiveHypothesisAttention(admin, auth.user.id),
+  ])
   const baseAttentionQueue = sortExecutiveAttentionItems([
     ...buildExecutiveAttentionQueue(signals),
     ...opportunityAttention,
+    ...hypothesisAttention,
   ])
   const corroborations = await loadExpansionCorroborations(admin, auth.user.id, baseAttentionQueue)
   const attentionQueue = baseAttentionQueue.map(item => item.kind === "competitive_expansion"
@@ -202,6 +230,7 @@ export async function GET() {
       high: attentionQueue.filter(item => item.priority === "alta").length,
       medium: attentionQueue.filter(item => item.priority === "media").length,
       opportunity: opportunityAttention.length,
+      hypothesisReview: hypothesisAttention.length,
     },
     triage: {
       rawPending: triage.rawPendingCount,
@@ -232,6 +261,100 @@ export async function POST() {
   const failed = [brandResult.error, technologyResult.error, patentResult.error].find(Boolean)
   if (failed) { console.error("[common-watch-signals:review]", failed); return NextResponse.json({ error: "No pudimos registrar la revisión completa." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS }) }
   return NextResponse.json({ ok: true, reviewedAt }, { headers: PRIVATE_NO_STORE_HEADERS })
+}
+
+async function loadCompetitiveHypothesisAttention(admin: ReturnType<typeof createAdminClient>, userId: string): Promise<ExecutiveAttentionItem[]> {
+  const { data: monitoringData, error: monitoringError } = await admin
+    .from("competitive_hypothesis_monitoring_events")
+    .select("id,hypothesis_id,assessment,summary,observed_at")
+    .eq("user_id", userId)
+    .eq("review_status", "pending")
+    .neq("assessment", "no_material_change")
+    .order("observed_at", { ascending: false })
+    .limit(100)
+  if (monitoringError) {
+    console.error("[common-watch-signals:hypothesis-monitoring]", monitoringError)
+    return []
+  }
+
+  const monitoringRows = (monitoringData ?? []) as HypothesisMonitoringRow[]
+  const hypothesisIds = Array.from(new Set(monitoringRows.map(row => row.hypothesis_id).filter(Boolean)))
+  if (!hypothesisIds.length) return []
+
+  const { data: hypothesisData, error: hypothesisError } = await admin
+    .from("competitive_hypotheses")
+    .select("id,signal_event_id,status,hypothesis,decided_at")
+    .eq("user_id", userId)
+    .in("id", hypothesisIds)
+    .eq("status", "accepted")
+  if (hypothesisError) {
+    console.error("[common-watch-signals:competitive-hypotheses]", hypothesisError)
+    return []
+  }
+
+  const hypotheses = (hypothesisData ?? []) as CompetitiveHypothesisRow[]
+  const hypothesesById = new Map(hypotheses.map(row => [row.id, row]))
+  const signalIds = Array.from(new Set(hypotheses.map(row => row.signal_event_id).filter(Boolean)))
+  if (!signalIds.length) return []
+
+  const { data: signalData, error: signalError } = await admin
+    .from("trademark_watch_signal_events")
+    .select("id,watch_id,mark_name,applicant_name,source_url")
+    .eq("user_id", userId)
+    .in("id", signalIds)
+  if (signalError) {
+    console.error("[common-watch-signals:hypothesis-signals]", signalError)
+    return []
+  }
+
+  const signalsById = new Map(((signalData ?? []) as HypothesisSignalRow[]).map(row => [row.id, row]))
+  return monitoringRows.flatMap(row => {
+    const hypothesis = hypothesesById.get(row.hypothesis_id)
+    if (!hypothesis) return []
+    const signal = signalsById.get(hypothesis.signal_event_id)
+    if (!signal) return []
+    const priority = hypothesisMonitoringPriority(row.assessment)
+    const subject = signal.applicant_name || signal.mark_name || "Hipótesis competitiva"
+    const label = hypothesisMonitoringLabel(row.assessment)
+    const acceptedAt = hypothesis.decided_at ? ` Aceptada por una persona el ${formatDateForReason(hypothesis.decided_at)}.` : ""
+    const reason = `${row.summary}${acceptedAt} Hipótesis vigente: ${truncateReason(hypothesis.hypothesis, 220)} Revisar la evidencia y registrar criterio humano; este seguimiento no modifica conviction ni la aceptación original.`
+
+    return [{
+      key: `attention:hypothesis-monitoring:${row.id}`,
+      signalKey: `hypothesis-monitoring:${row.id}`,
+      watchKey: `brand:${signal.watch_id}`,
+      title: `${label} · ${subject}`,
+      subject,
+      source: "VIDENTIA · Seguimiento de hipótesis",
+      href: "/monitorear/hipotesis",
+      priority,
+      reason,
+      occurredAt: row.observed_at,
+      isNew: true,
+      kind: "new_high_signal" as const,
+    }]
+  })
+}
+
+function hypothesisMonitoringPriority(assessment: string): "alta" | "media" {
+  return assessment === "strengthening_signal" || assessment === "contradictory_signal" ? "alta" : "media"
+}
+
+function hypothesisMonitoringLabel(assessment: string) {
+  if (assessment === "strengthening_signal") return "Hipótesis gana evidencia"
+  if (assessment === "contradictory_signal") return "Hipótesis recibe señal contradictoria"
+  if (assessment === "source_degradation") return "Cobertura degradada"
+  return "Hipótesis requiere revalidación"
+}
+
+function truncateReason(value: string, max: number) {
+  const normalized = value.replace(/\s+/g, " ").trim()
+  return normalized.length <= max ? normalized : `${normalized.slice(0, max - 1).trimEnd()}…`
+}
+
+function formatDateForReason(value: string) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("es-CL", { dateStyle: "medium" }).format(date)
 }
 
 async function loadExpansionCorroborations(admin: ReturnType<typeof createAdminClient>, userId: string, attentionQueue: ExecutiveAttentionItem[]) {

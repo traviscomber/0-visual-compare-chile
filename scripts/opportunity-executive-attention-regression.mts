@@ -62,10 +62,11 @@ for (const needle of [
 for (const needle of [
   '"opportunity_conviction"',
   '"Cambio de convicción"',
-  'Cambios de tesis',
-  'Convicción material sin revisión humana posterior',
-  'fetch("/api/intelligence/actions"',
+  'summary.opportunity',
   'Revisar cambio de convicción:',
+  'fetch("/api/intelligence/actions"',
+  'Hipótesis en revisión',
+  'summary.hypothesisReview',
 ]) requireText(page, needle, "executive attention UI")
 
-console.log("Opportunity executive attention regression PASS: only material post-baseline conviction changes enter the shared executive queue, competitive Nice expansions remain a separate attention kind, weakening/degradation outrank strengthening, a later human_review resolves thesis attention, organization membership scopes all server-only thesis reads, research preserves decision lineage, and opportunity attention reuses the attributable action layer without scoring news volume.")
+console.log("Opportunity executive attention regression PASS: material post-baseline conviction changes remain visible and actionable in the shared executive queue, while competitive hypothesis reviews have a separate metric and identity; weakening/degradation outrank strengthening, a later human_review resolves thesis attention, organization membership scopes all server-only thesis reads, research preserves decision lineage, and neither domain scores news volume.")

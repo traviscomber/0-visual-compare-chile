@@ -7,10 +7,10 @@ for (const needle of [
   'type AccountabilityState = "checking" | "none" | "overdue" | "unassigned" | "open" | "resolved"',
   'ACCOUNTABILITY_RANK',
   'PRIORITY_RANK',
-  'Accountability → materialidad / convicción → recencia',
+  'Accountability → materialidad / hipótesis / convicción → recencia',
   'label="Para actuar"',
   'label="Abiertas"',
-  'label="Cambios de tesis"',
+  'label="Hipótesis en revisión"',
   'label="Resueltas"',
   'currentAccountabilityState(action,checking)',
   'onAccountabilityChange(item.key,accountabilityState)',
@@ -34,4 +34,4 @@ assert.match(page, /Date\.parse\(value\.action\.due_at\)<Date\.now\(\)\)return "
 assert.match(page, /if\(!value\.action\.assigned_to\)return "unassigned"/)
 assert.match(page, /return "open"/)
 
-console.log("Executive accountability ranking regression PASS: overdue and unassigned work outrank other attention while external materiality and conviction remain secondary ordering signals, and shared operational metrics cover the mounted attention items.")
+console.log("Executive accountability ranking regression PASS: overdue and unassigned work outrank other attention while external materiality, competitive-hypothesis review and opportunity conviction remain secondary ordering signals, and shared operational metrics cover the mounted attention items.")
