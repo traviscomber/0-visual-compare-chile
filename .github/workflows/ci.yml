@@ -85,6 +85,8 @@ jobs:
         run: node scripts/competitive-hypothesis-regression.mts
       - name: Competitive hypothesis Executive Attention regression
         run: node scripts/competitive-hypothesis-executive-attention-regression.mts
+      - name: Competitive situations regression
+        run: node scripts/competitive-situations-regression.mts
       - name: Opportunity conviction notification regression
         run: node scripts/opportunity-conviction-notification-regression.mts
       - name: Opportunity prototype execution regression
@@ -155,8 +157,8 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
-          run_install: false
+          node-version: 22
+          cache: pnpm
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
