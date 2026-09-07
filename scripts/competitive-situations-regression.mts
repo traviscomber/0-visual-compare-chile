@@ -20,7 +20,6 @@ for (const needle of [
   "regulatoryCases",
   "externalSignals",
   "decisionQuestion",
-  "La agrupación",
 ]) requireText(projection, needle, "projection")
 for (const forbidden of ["conviction_delta", "confidence_delta", ".update(", ".insert(", "service_role"]) forbid(projection, forbidden, "projection")
 
@@ -30,6 +29,7 @@ for (const needle of [
   "Qué cambió",
   "Señales cruzadas",
   "Hipótesis en revisión",
+  "La agrupación es una proyección de lectura",
   "no aumenta conviction",
   '/api/intelligence/watches/signals',
 ]) requireText(page, needle, "situations page")
