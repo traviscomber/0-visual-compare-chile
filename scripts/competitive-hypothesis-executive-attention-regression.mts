@@ -33,10 +33,15 @@ for(const forbidden of [
 ])forbid(route,forbidden,"watch signals API")
 
 for(const needle of [
+  'HYPOTHESIS_REVIEW_SOURCE="VIDENTIA · Seguimiento de hipótesis"',
+  'label="Hipótesis en revisión"',
+  'Cambio material detectado después de aceptación humana',
+  'kindLabel=item.source===HYPOTHESIS_REVIEW_SOURCE?"Hipótesis en revisión"',
+  'Revisar cambio de hipótesis:',
   'sourceId:item.signalKey',
   'actionTitle:title',
   'suggestedDueAt:dueAt',
   'reason:item.reason',
-])requireText(page,needle,"Executive Attention action provenance")
+])requireText(page,needle,"Executive Attention hypothesis review UI")
 
-console.log("Competitive hypothesis Executive Attention regression PASS: only material pending reviews for accepted hypotheses are escalated, every item has stable action identity and SLA provenance, and monitoring cannot mutate conviction or the human hypothesis decision.")
+console.log("Competitive hypothesis Executive Attention regression PASS: only material pending reviews for accepted hypotheses are escalated, the UI distinguishes them from generic external signals, every item has stable action identity and SLA provenance, and monitoring cannot mutate conviction or the human hypothesis decision.")
