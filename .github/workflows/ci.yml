@@ -81,6 +81,8 @@ jobs:
         run: node scripts/opportunity-human-decision-regression.mts
       - name: Opportunity executive attention regression
         run: node scripts/opportunity-executive-attention-regression.mts
+      - name: Competitive hypothesis regression
+        run: node scripts/competitive-hypothesis-regression.mts
       - name: Opportunity conviction notification regression
         run: node scripts/opportunity-conviction-notification-regression.mts
       - name: Opportunity prototype execution regression
