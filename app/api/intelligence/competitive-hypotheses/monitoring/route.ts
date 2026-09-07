@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import type { SupabaseClient } from "@supabase/supabase-js"
 import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 
@@ -75,7 +76,7 @@ export async function PATCH(request: Request) {
 }
 
 async function resolveLinkedExecutiveAction(
-  supabase: Awaited<ReturnType<typeof requireUser>> extends { ok: true; supabase: infer T } ? T : never,
+  supabase: SupabaseClient,
   userId: string,
   eventId: string,
   decision: string,
