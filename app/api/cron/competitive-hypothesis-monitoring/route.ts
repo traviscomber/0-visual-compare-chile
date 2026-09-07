@@ -30,6 +30,8 @@ type MonitoringRow = {
   hypothesis_id: string
   evidence_new: Array<{ source?: unknown; title?: unknown }> | null
   evidence_contradictory: Array<{ source?: unknown; title?: unknown }> | null
+  review_status: string
+  next_review_at: string | null
   observed_at: string
 }
 
@@ -66,7 +68,7 @@ export async function GET(request: Request) {
   const ids = hypotheses.map(item => item.id)
   const { data: monitoringData, error: monitoringError } = await admin
     .from("competitive_hypothesis_monitoring_events")
-    .select("hypothesis_id,evidence_new,evidence_contradictory,observed_at")
+    .select("hypothesis_id,evidence_new,evidence_contradictory,review_status,next_review_at,observed_at")
     .in("hypothesis_id", ids)
     .order("observed_at", { ascending: false })
     .limit(1200)
@@ -108,6 +110,7 @@ export async function GET(request: Request) {
         ...(Array.isArray(hypothesis.evidence_for) ? hypothesis.evidence_for : []),
         ...historical.flatMap(row => [...(Array.isArray(row.evidence_new) ? row.evidence_new : []), ...(Array.isArray(row.evidence_contradictory) ? row.evidence_contradictory : [])]),
       ]
+      const latestReviewed = historical.find(row => (row.review_status === "reviewed" || row.review_status === "dismissed") && Boolean(row.next_review_at))
       const observedAt = new Date().toISOString()
       const assessment = assessHypothesisMonitoring({
         freshEvidence,
@@ -115,6 +118,7 @@ export async function GET(request: Request) {
         baselineEvidence,
         sourceCoverage,
         acceptedAt: hypothesis.decided_at,
+        nextReviewAt: latestReviewed?.next_review_at ?? null,
         observedAt,
       })
       const material = assessment.assessment !== "no_material_change"
@@ -130,8 +134,10 @@ export async function GET(request: Request) {
           company,
           new_nice_classes: niceClasses,
           accepted_at: hypothesis.decided_at,
+          next_review_at: latestReviewed?.next_review_at ?? null,
           unavailable_sources: assessment.unavailableSources,
           age_days: assessment.ageDays,
+          scheduled_review_due: assessment.scheduledReviewDue,
           external_queries: external.queryContext.queries,
         },
         review_status: material ? "pending" : "not_required",

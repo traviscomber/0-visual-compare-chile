@@ -20,7 +20,7 @@ export async function GET() {
 
   const ids = hypotheses.map(item => item.id)
   const { data: events, error: eventsError } = await admin.from("competitive_hypothesis_monitoring_events")
-    .select("id,hypothesis_id,assessment,summary,evidence_new,evidence_contradictory,source_coverage,review_status,review_reason,reviewed_at,observed_at")
+    .select("id,hypothesis_id,assessment,summary,evidence_new,evidence_contradictory,source_coverage,review_status,review_reason,reviewed_at,next_review_at,observed_at")
     .eq("user_id", auth.user.id)
     .in("hypothesis_id", ids)
     .order("observed_at", { ascending: false })
@@ -65,6 +65,7 @@ function normalizeEvent(row: Record<string, unknown>) {
     reviewStatus: String(row.review_status ?? "pending"),
     reviewReason: typeof row.review_reason === "string" ? row.review_reason : null,
     reviewedAt: typeof row.reviewed_at === "string" ? row.reviewed_at : null,
+    nextReviewAt: typeof row.next_review_at === "string" ? row.next_review_at : null,
     observedAt: typeof row.observed_at === "string" ? row.observed_at : null,
   }
 }
