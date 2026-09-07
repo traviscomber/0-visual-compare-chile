@@ -159,7 +159,7 @@ export default function SourcesHealthPage() {
           <h1 className="mt-3 max-w-3xl text-[clamp(2.1rem,4vw,4rem)] font-light leading-[0.98] tracking-[-0.045em] text-[#E7DFCE]">Qué información puede usar VIDENTIA.</h1>
         </div>
         <div className="xl:pb-1">
-          <p className="max-w-xl text-sm leading-6 text-muted-foreground">Ve en segundos qué fuentes están disponibles y cuáles necesitan acción. El detalle técnico queda separado para administración.</p>
+          <p className="max-w-xl text-sm leading-6 text-muted-foreground">Saber qué fuente está fresca antes de decidir. Ve en segundos qué fuentes están disponibles y cuáles necesitan acción. El detalle técnico queda separado para administración.</p>
           <Button className="mt-4" variant="outline" onClick={() => void load()} disabled={loading}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             Actualizar
@@ -215,7 +215,7 @@ export default function SourcesHealthPage() {
           <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
         </summary>
         <div className="pt-7">
-          <OperationalSectionHeader eyebrow="Administración" title="Validaciones, corridas y controles" meta={`${health.recent_runs.length} corridas recientes`} />
+          <OperationalSectionHeader eyebrow="Administración" title="Bitácora de corridas y reconciliación" meta={`${health.recent_runs.length} corridas recientes`} />
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Esta sección sirve para soporte y auditoría. No es necesaria para saber si VIDENTIA puede usar una fuente.</p>
 
           <div className="mt-6 divide-y divide-border/80 border-y border-border/80">
