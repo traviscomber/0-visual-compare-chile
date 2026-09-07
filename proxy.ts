@@ -51,7 +51,6 @@ export async function proxy(request: NextRequest) {
   const localeSegment = pathname.split("/")[1]
   const requestHeaders = new Headers(request.headers)
   const localized = localeSegment === "es" || localeSegment === "en"
-  requestHeaders.set("x-videntia-pathname", pathname)
 
   if (localized) requestHeaders.set("x-videntia-locale", localeSegment)
   else if (CANONICAL_ENGLISH_PATHS.has(pathname)) requestHeaders.set("x-videntia-locale", "en")
