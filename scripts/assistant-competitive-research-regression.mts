@@ -179,12 +179,13 @@ for (const needle of [
   'No cambies la aceptación original.',
   'actionTarget: situation.acceptedHypotheses[0]?.hypothesis || situation.company',
   'researchQueryHint: buildCompetitiveResearchQueryHint(situation)',
+  'subsectionResearch contiene papers externos encontrados a partir de subsecciones activas',
+  'esta capa tiene conviction_delta=0',
 ]) requireText(assistantRoute, needle, "assistant route")
 for (const forbidden of [
   '.from("competitive_hypotheses").update',
   '.from("competitive_hypothesis_monitoring_events").update',
   '.from("case_actions").update',
-  'conviction_delta',
   'confidence_delta',
   'auto_promote',
 ]) forbid(assistantRoute, forbidden, "assistant route")
@@ -208,4 +209,4 @@ for (const needle of [
   'role="dialog"',
 ]) requireText(launcher, needle, "floating assistant")
 
-console.log("Assistant competitive research regression PASS: patent activity is a dedicated evidence family, product evolution uses exact VIDENTIA patent records, Chile adoption evidence excludes INAPI patent/trademark watch events, and full refresh rebuilds base evidence before Chile/frontier layers without changing human decisions.")
+console.log("Assistant competitive research regression PASS: patent activity is a dedicated evidence family, product evolution uses exact VIDENTIA patent records, Chile adoption evidence excludes INAPI patent/trademark watch events, subsection paper discovery may declare an explicit zero-delta boundary without mutating conviction, and full refresh rebuilds base evidence before Chile/frontier layers without changing human decisions.")
