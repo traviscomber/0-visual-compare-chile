@@ -4,11 +4,13 @@ function fail(message:string):never{console.error(`Juan executive workspace regr
 function requireText(source:string,needle:string,label:string){if(!source.includes(needle))fail(`${label} missing ${needle}`)}
 function forbid(source:string,needle:string,label:string){if(source.includes(needle))fail(`${label} must not contain ${needle}`)}
 
-const [layout, nav, page, workspace, subsectionUi, handoffs, evolution, assistantWorkspace, assistantRoute, githubActivity, githubCron, subsectionTopics, subsectionCron, vercel] = await Promise.all([
+const [layout, nav, page, workspace, improvementUi, improvementModel, subsectionUi, handoffs, evolution, assistantWorkspace, assistantRoute, githubActivity, githubCron, subsectionTopics, subsectionCron, vercel] = await Promise.all([
   readFile("app/(app)/layout.tsx", "utf8"),
   readFile("components/app/app-nav.tsx", "utf8"),
   readFile("app/(app)/mi-espacio/page.tsx", "utf8"),
   readFile("components/app/juan-executive-workspace.tsx", "utf8"),
+  readFile("components/app/juan-videntia-improvement-radar.tsx", "utf8"),
+  readFile("lib/intelligence/videntia-improvement-radar.ts", "utf8"),
   readFile("components/app/juan-subsection-research.tsx", "utf8"),
   readFile("app/api/cron/juan-project-handoffs/route.ts", "utf8"),
   readFile("app/api/cron/juan-product-evolution/route.ts", "utf8"),
@@ -38,6 +40,8 @@ for (const needle of [
   'const JUAN_EMAIL = "juan@n3uralia.com"',
   'if (user.email?.trim().toLowerCase() !== JUAN_EMAIL) redirect("/dashboard")',
   '<JuanExecutiveWorkspace userId={user.id} />',
+  'import { JuanVidentiaImprovementRadar } from "@/components/app/juan-videntia-improvement-radar"',
+  '<JuanVidentiaImprovementRadar userId={user.id} />',
   'id="oportunidades-institucionales"',
   'id="evolucion-productos"',
 ]) requireText(page, needle, "private Juan route")
@@ -59,6 +63,54 @@ for (const needle of [
   'import { JuanSubsectionResearch } from "@/components/app/juan-subsection-research"',
   '<JuanSubsectionResearch snapshot={product.evidence_snapshot} productKey={product.product_key} productName={product.product_name} />',
 ]) requireText(workspace, needle, "Juan command center")
+
+for (const needle of [
+  'id="mejorar-videntia"',
+  "Cómo mejorar VIDENTIA",
+  "Mejora continua · producto interno",
+  "Hallazgo",
+  "Mejora propuesta",
+  "Impacto esperado",
+  "Cómo validarla",
+  "Auto-decisión",
+  "Analizar con VIDENTIA",
+  "confianza de recomendación",
+  "señal canónica interna",
+  "observabilidad",
+  "no puntúa oportunidades, no modifica conviction y no ejecuta cambios automáticamente",
+]) requireText(improvementUi, needle, "VIDENTIA improvement UI")
+for (const forbidden of [
+  "dangerouslySetInnerHTML",
+  ".update(",
+  ".insert(",
+  ".upsert(",
+  ".delete(",
+]) forbid(improvementUi, forbidden, "VIDENTIA improvement UI")
+
+for (const needle of [
+  "buildVidentiaImprovementRadar",
+  "pendingDecisions",
+  "overdueActions",
+  "researchingHandoffs",
+  "acceptedProducts",
+  "subsectionNewPapersObserved",
+  "repoActivity?.status !== \"ok\"",
+  "assistant-effectiveness",
+  "DIRECT / CANONICAL_LOOKUP / AGENTIC_RESEARCH",
+  "sin almacenar el texto de las consultas",
+  "humanDecisionRequired: true",
+  "convictionDelta: 0",
+  "GitHub, telemetría y operación interna son señales de producto, no evidencia del mercado.",
+]) requireText(improvementModel, needle, "VIDENTIA improvement model")
+for (const forbidden of [
+  '.from(',
+  '.insert(',
+  '.update(',
+  '.upsert(',
+  '.delete(',
+  'convictionDelta: 1',
+  'humanDecisionRequired: false',
+]) forbid(improvementModel, forbidden, "VIDENTIA improvement model")
 
 for (const needle of [
   "Investigación activa · discovery externo",
@@ -222,4 +274,4 @@ for (const forbidden of [
   'auto_promote',
 ]) forbid(assistantRoute, forbidden, "Juan assistant route")
 
-console.log("Juan executive workspace regression PASS: Juan intelligence is isolated in a private command center; GitHub activity refreshes as execution context; active subsections dynamically steer OpenAlex/Crossref paper discovery and are surfaced per product with direct paper access and non-scoring next-step guidance; the floating assistant reads the same canonical priorities without mutating them; patent activity cannot masquerade as market adoption, and malformed evidence titles are rejected.")
+console.log("Juan executive workspace regression PASS: Juan intelligence is isolated in a private command center; VIDENTIA now has a read-only self-improvement radar grounded in canonical internal friction and privacy-safe product observability; GitHub activity refreshes as execution context; active subsections dynamically steer OpenAlex/Crossref paper discovery and are surfaced per product with direct paper access and non-scoring next-step guidance; the floating assistant reads the same canonical priorities without mutating them; patent activity cannot masquerade as market adoption, and malformed evidence titles are rejected.")
