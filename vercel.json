@@ -29,6 +29,10 @@
       "schedule": "7,22,37,52 * * * *"
     },
     {
+      "path": "/api/cron/juan-github-portfolio",
+      "schedule": "18 * * * *"
+    },
+    {
       "path": "/api/cron/strategic-watches",
       "schedule": "40 * * * *"
     },
