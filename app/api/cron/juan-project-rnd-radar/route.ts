@@ -52,6 +52,7 @@ export async function GET(request: Request) {
   if (!target) return NextResponse.json({ ok: true, refreshed: false, reason: "all_project_radars_fresh" })
 
   const snapshot = { ...(target.evidence_snapshot ?? {}) }
+  const previousRadar = isRecord(snapshot.rnd_radar) ? snapshot.rnd_radar : null
   const repoActivity = isRecord(snapshot.repo_activity) ? snapshot.repo_activity : {}
   const subsectionResearch = isRecord(snapshot.subsection_research) ? snapshot.subsection_research : {}
   const context = {
@@ -67,9 +68,10 @@ export async function GET(request: Request) {
   }
   const query = `Latest AI, agentic systems, multimodal, retrieval, MCP, automation, evaluation and domain-specific technical documentation applicable to ${target.product_name}: ${target.title}`
 
+  const model = process.env.OPENAI_ASSISTANT_MODEL || modelForTier("terra")
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   const response = await client.responses.create({
-    model: process.env.OPENAI_ASSISTANT_MODEL || modelForTier("terra"),
+    model,
     tools: [{ type: "web_search" }],
     input: [
       "Actúa como radar senior de I+D aplicado para N3uralia.",
@@ -83,14 +85,34 @@ export async function GET(request: Request) {
   })
 
   const generatedAt = new Date().toISOString()
+  const currentText = response.output_text?.trim() || "Sin hallazgos utilizables en esta pasada."
+  const currentSources = extractSources(response.output)
+  const previousText = previousRadar ? stringOrNull(previousRadar.text) : null
+  const previousGeneratedAt = previousRadar ? stringOrNull(previousRadar.generated_at) : null
+  const previousSources = previousRadar ? normalizeSources(previousRadar.sources) : []
+  const sourceDelta = compareSources(previousSources, currentSources)
+  const deltaSummary = previousText && previousGeneratedAt
+    ? await summarizeDelta(client, model, target.product_name, previousText, currentText, sourceDelta)
+    : null
+
   const rndRadar = {
     generated_at: generatedAt,
     query,
-    text: response.output_text?.trim() || "Sin hallazgos utilizables en esta pasada.",
-    sources: extractSources(response.output),
+    text: currentText,
+    sources: currentSources,
     conviction_delta: 0,
     decision_boundary: "Radar de I+D derivado. No modifica evidencia de mercado, score, conviction, lifecycle ni decisiones humanas.",
     model: response.model,
+    delta: previousText && previousGeneratedAt ? {
+      previous_generated_at: previousGeneratedAt,
+      summary: deltaSummary,
+      new_sources: sourceDelta.newSources,
+      removed_sources: sourceDelta.removedSources,
+      retained_source_count: sourceDelta.retainedCount,
+      source_set_changed: sourceDelta.newSources.length > 0 || sourceDelta.removedSources.length > 0,
+      conviction_delta: 0,
+      decision_boundary: "Comparación derivada entre dos lecturas de I+D. No modifica score, conviction ni decisiones humanas.",
+    } : null,
   }
 
   const { error: updateError } = await admin
@@ -105,8 +127,34 @@ export async function GET(request: Request) {
     productKey: target.product_key,
     generatedAt,
     sources: rndRadar.sources.length,
+    newSources: sourceDelta.newSources.length,
+    hasPriorPass: Boolean(previousText && previousGeneratedAt),
     convictionDelta: 0,
   })
+}
+
+async function summarizeDelta(
+  client: OpenAI,
+  model: string,
+  productName: string,
+  previousText: string,
+  currentText: string,
+  sourceDelta: { newSources: Source[]; removedSources: Source[]; retainedCount: number },
+) {
+  const response = await client.responses.create({
+    model,
+    input: [
+      `Compara dos lecturas sucesivas del Radar I+D de ${productName}.`,
+      "No investigues nada adicional y no inventes cambios. Usa sólo los dos textos y el delta de fuentes entregado.",
+      "Resume en máximo 3 viñetas únicamente cambios técnicos materiales para implementación. Si no hay cambios materiales, responde exactamente: Sin cambios materiales detectados.",
+      "No conviertas novedades técnicas en evidencia de mercado ni cambies conviction, score o decisiones humanas.",
+      `Fuentes nuevas: ${JSON.stringify(sourceDelta.newSources)}`,
+      `Fuentes que ya no aparecen: ${JSON.stringify(sourceDelta.removedSources)}`,
+      `Lectura anterior:\n${previousText.slice(0, 18000)}`,
+      `Lectura actual:\n${currentText.slice(0, 18000)}`,
+    ].join("\n\n"),
+  })
+  return response.output_text?.trim() || "Sin cambios materiales detectados."
 }
 
 function radarGeneratedAt(snapshot: Record<string, unknown> | null) {
@@ -115,6 +163,38 @@ function radarGeneratedAt(snapshot: Record<string, unknown> | null) {
   if (!raw) return null
   const timestamp = Date.parse(raw)
   return Number.isFinite(timestamp) ? timestamp : null
+}
+
+function compareSources(previousSources: Source[], currentSources: Source[]) {
+  const previousByUrl = new Map(previousSources.map((source) => [canonicalUrl(source.url), source]))
+  const currentByUrl = new Map(currentSources.map((source) => [canonicalUrl(source.url), source]))
+  const newSources = currentSources.filter((source) => !previousByUrl.has(canonicalUrl(source.url)))
+  const removedSources = previousSources.filter((source) => !currentByUrl.has(canonicalUrl(source.url)))
+  const retainedCount = currentSources.filter((source) => previousByUrl.has(canonicalUrl(source.url))).length
+  return { newSources, removedSources, retainedCount }
+}
+
+function normalizeSources(value: unknown): Source[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((source) => {
+    if (!isRecord(source)) return []
+    const title = stringOrNull(source.title)
+    const url = stringOrNull(source.url)
+    return title && url ? [{ title, url }] : []
+  }).slice(0, 12)
+}
+
+function canonicalUrl(raw: string) {
+  try {
+    const url = new URL(raw)
+    for (const key of Array.from(url.searchParams.keys())) {
+      if (key.startsWith("utm_") || key === "ref" || key === "source") url.searchParams.delete(key)
+    }
+    url.hash = ""
+    return url.toString().replace(/\/$/, "")
+  } catch {
+    return raw.trim()
+  }
 }
 
 function extractSources(output: unknown): Source[] {
@@ -128,8 +208,10 @@ function extractSources(output: unknown): Source[] {
       for (const annotation of content.annotations) {
         if (!isRecord(annotation) || annotation.type !== "url_citation") continue
         const url = stringOrNull(annotation.url)
-        if (!url || seen.has(url)) continue
-        seen.add(url)
+        if (!url) continue
+        const key = canonicalUrl(url)
+        if (seen.has(key)) continue
+        seen.add(key)
         sources.push({ title: stringOrNull(annotation.title) ?? safeHostname(url), url })
       }
     }
