@@ -77,7 +77,6 @@ for (const needle of [
   "confianza de recomendación",
   "señal canónica interna",
   "observabilidad",
-  "no puntúa oportunidades, no modifica conviction y no ejecuta cambios automáticamente",
 ]) requireText(improvementUi, needle, "VIDENTIA improvement UI")
 for (const forbidden of [
   "dangerouslySetInnerHTML",
@@ -100,6 +99,7 @@ for (const needle of [
   "sin almacenar el texto de las consultas",
   "humanDecisionRequired: true",
   "convictionDelta: 0",
+  "Este radar mejora VIDENTIA; no puntúa oportunidades, no modifica conviction y no ejecuta cambios automáticamente.",
   "GitHub, telemetría y operación interna son señales de producto, no evidencia del mercado.",
 ]) requireText(improvementModel, needle, "VIDENTIA improvement model")
 for (const forbidden of [
