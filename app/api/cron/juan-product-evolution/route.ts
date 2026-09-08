@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
 import { searchOpenAlexWorks } from "@/lib/intelligence/openalex"
 import { listPortfolioOrganizations } from "@/lib/intelligence/portfolio-access"
+import { inapiPatentEvidenceUrl, inapiPatentEvidenceUrlFromSourceRecord } from "@/lib/inapi/patent-evidence-url"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 export const runtime = "nodejs"
@@ -34,6 +35,7 @@ type SignalRow = {
   title: string
   summary: string | null
   source_key: string
+  event_type: string
   relevance: string
   source_url: string | null
   occurred_at: string | null
@@ -41,6 +43,9 @@ type SignalRow = {
 }
 
 type PatentRow = {
+  source: string
+  source_record_id: string
+  application_number: string | null
   title: string
   applicants: string | null
   publication_date: string | null
@@ -204,13 +209,13 @@ export async function GET(request: Request) {
 
   const [signalsResult, patentsResult, existingResult] = await Promise.all([
     admin.from("intelligence_watch_events")
-      .select("title,summary,source_key,relevance,source_url,occurred_at,last_seen_at")
+      .select("title,summary,source_key,event_type,relevance,source_url,occurred_at,last_seen_at")
       .eq("user_id", juan.id)
       .in("relevance", ["alta", "media"])
       .order("last_seen_at", { ascending: false })
       .limit(600),
     admin.from("patent_records")
-      .select("title,applicants,publication_date,filing_date,source_url")
+      .select("source,source_record_id,application_number,title,applicants,publication_date,filing_date,source_url")
       .order("publication_date", { ascending: false, nullsFirst: false })
       .limit(1800),
     admin.from("intelligence_product_evolution_recommendations")
@@ -356,7 +361,16 @@ function findPatent(rows: PatentRow[], terms: string[]) {
     const normalizedTitle = normalize(title)
     const hits = normalizedTerms.filter(term => normalizedTitle.includes(term))
     if (hits.length < 2) return []
-    return [{ score: hits.reduce((sum, term) => sum + term.split(" ").length, 0), title, applicants: row.applicants, date: row.publication_date ?? row.filing_date, url: row.source_url }]
+    const exactInapiUrl = normalize(row.source) === "inapi"
+      ? inapiPatentEvidenceUrl(row.application_number) ?? inapiPatentEvidenceUrlFromSourceRecord(row.source_record_id)
+      : null
+    return [{
+      score: hits.reduce((sum, term) => sum + term.split(" ").length, 0),
+      title,
+      applicants: row.applicants,
+      date: row.publication_date ?? row.filing_date,
+      url: exactInapiUrl ?? row.source_url,
+    }]
   })
   return matches.sort((a, b) => b.score - a.score || String(b.date ?? "").localeCompare(String(a.date ?? "")))[0] ?? null
 }
@@ -365,10 +379,13 @@ function findSignals(rows: SignalRow[], terms: string[], chileOnly: boolean, lim
   const normalizedTerms = terms.map(normalize).filter(Boolean)
   const matches = rows.flatMap(row => {
     const source = normalize(row.source_key ?? "")
+    const eventType = normalize(row.event_type ?? "")
+    if (source === "inapi_open_data" && (eventType === "patent" || eventType === "trademark")) return []
+
     const haystack = normalize([row.title, row.summary, row.source_key].filter(Boolean).join(" "))
     const hits = normalizedTerms.filter(term => haystack.includes(term))
     if (!hits.length) return []
-    const chileSource = /sea|seia|sma|snifa|bcn|fne|tdlc|inapi|chile|sernageomin|sernapesca|dt/.test(source)
+    const chileSource = /sea|seia|sma|snifa|bcn|fne|tdlc|chile|sernageomin|sernapesca|dt/.test(source)
     const chileText = /chile|chileno|chilena|codelco|sernageomin|sernapesca|valdivia|los rios|los lagos/.test(haystack)
     if (chileOnly && !chileSource && !chileText) return []
     if (!chileOnly && (chileSource || chileText)) return []

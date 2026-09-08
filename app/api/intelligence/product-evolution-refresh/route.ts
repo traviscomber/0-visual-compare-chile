@@ -20,6 +20,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "El motor de investigación no está configurado." }, { status: 503, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
+  const baseTarget = new URL("/api/cron/juan-product-evolution", request.url)
+  const baseResponse = await fetch(baseTarget, {
+    method: "GET",
+    headers: { authorization: `Bearer ${secret}` },
+    cache: "no-store",
+  })
+  const basePayload = await baseResponse.json().catch(() => null)
+
+  if (!baseResponse.ok || !basePayload?.ok) {
+    console.error("[product-evolution-refresh:base]", basePayload)
+    return NextResponse.json({ error: basePayload?.error || "No pudimos reconstruir la evidencia base de productos." }, { status: baseResponse.status || 500, headers: PRIVATE_NO_STORE_HEADERS })
+  }
+
   const chileTarget = new URL("/api/cron/juan-chile-evidence", request.url)
   const chileResponse = await fetch(chileTarget, {
     method: "GET",
@@ -48,6 +61,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
+    base: basePayload,
     chile: chilePayload,
     frontier: frontierPayload,
   }, { headers: PRIVATE_NO_STORE_HEADERS })

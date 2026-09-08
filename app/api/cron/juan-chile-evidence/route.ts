@@ -24,6 +24,7 @@ type EventRow = {
   title: string
   summary: string | null
   source_key: string
+  event_type: string
   relevance: string
   source_url: string | null
   occurred_at: string | null
@@ -119,7 +120,7 @@ export async function GET(request: Request) {
   const events: EventRow[] = []
   if (allWatchIds.length) {
     const { data, error } = await admin.from("intelligence_watch_events")
-      .select("id,watch_id,title,summary,source_key,relevance,source_url,occurred_at,last_seen_at,payload")
+      .select("id,watch_id,title,summary,source_key,event_type,relevance,source_url,occurred_at,last_seen_at,payload")
       .eq("user_id", juan.id)
       .in("watch_id", allWatchIds)
       .order("last_seen_at", { ascending: false })
@@ -163,7 +164,7 @@ export async function GET(request: Request) {
       contradiction_count: contradicting.length,
       neutral_count: neutral.length,
       items: candidates,
-      quality_gate: "Only product-specific Chile-watch events with explicit Chile geography/institution markers are eligible. Events marked context_only remain visible but can never change conviction.",
+      quality_gate: "Only product-specific Chile-watch events with explicit Chile geography/institution markers are eligible. INAPI patent/trademark records are excluded here because patent activity is tracked separately and is not evidence of Chilean adoption or demand. Events marked context_only remain visible but can never change conviction.",
       note: "Context-only public news is non-scoring regardless of directional wording. Only non-context evidence with stronger provenance may strengthen or weaken conviction. Absence of Chile evidence remains neutral, never negative.",
       generated_at: new Date().toISOString(),
     }
@@ -205,7 +206,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    scoreModel: "chile_evidence_v3.3.1",
+    scoreModel: "chile_evidence_v3.3.2",
     recommendations: results,
     durationMs: Date.now() - startedAt,
   })
@@ -217,12 +218,18 @@ function classifyEvent(event: EventRow, terms: string[]): ChileEvidenceItem | nu
   const searchScope = typeof payload.search_scope === "string" ? payload.search_scope : null
   if (searchScope !== "chile") return null
 
+  // INAPI records are a dedicated patent/trademark evidence family. A filing observed in Chile
+  // is not, by itself, evidence that Chile is adopting, buying, deploying or demanding the product.
+  // Keeping it out of this layer also prevents synthetic watch-query summaries from becoming
+  // self-confirming Chile evidence and avoids showing patent links as market-source links.
+  if (event.source_key === "inapi_open_data" && ["patent", "trademark"].includes(event.event_type)) return null
+
   const text = normalize([event.title, event.summary].filter(Boolean).join(" "))
   const termHits = terms.filter(term => contains(text, term))
   if (!termHits.length) return null
 
   const chileMarkers = CHILE_MARKERS.filter(marker => contains(text, marker))
-  const officialSource = Boolean(payload.official_source) || /inapi|bcn|cmf|diario_oficial|mercado_publico|snifa|sma|sernageomin|sernapesca/.test(normalize(event.source_key))
+  const officialSource = Boolean(payload.official_source) || /bcn|cmf|diario_oficial|mercado_publico|snifa|sma|sernageomin|sernapesca/.test(normalize(event.source_key))
   if (!officialSource && !chileMarkers.length) return null
 
   const role = typeof payload.role === "string" ? payload.role : null
