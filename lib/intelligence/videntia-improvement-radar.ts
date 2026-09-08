@@ -1,5 +1,6 @@
 import type { AssistantExecutionMetricsSummary } from "@/lib/intelligence/assistant-execution-metrics"
 import type { loadAssistantJuanWorkspace } from "@/lib/intelligence/assistant-juan-workspace"
+import type { AssistantResponseQualitySummary } from "@/lib/intelligence/assistant-response-feedback"
 
 type JuanWorkspaceSnapshot = Awaited<ReturnType<typeof loadAssistantJuanWorkspace>>
 
@@ -30,7 +31,7 @@ export type VidentiaImprovementRadar = {
 
 const PRIORITY_ORDER: Record<VidentiaImprovementPriority, number> = { alta: 0, media: 1, baja: 2 }
 
-export function buildVidentiaImprovementRadar(snapshot: JuanWorkspaceSnapshot, assistant?: AssistantExecutionMetricsSummary): VidentiaImprovementRadar {
+export function buildVidentiaImprovementRadar(snapshot: JuanWorkspaceSnapshot, assistant?: AssistantExecutionMetricsSummary, assistantQuality?: AssistantResponseQualitySummary): VidentiaImprovementRadar {
   const candidates: VidentiaImprovementCandidate[] = []
   const summary = snapshot.summary
 
@@ -104,20 +105,23 @@ export function buildVidentiaImprovementRadar(snapshot: JuanWorkspaceSnapshot, a
   const direct = assistant?.modes.find(item => item.mode === "direct")
   const canonical = assistant?.modes.find(item => item.mode === "canonical_lookup")
   const agentic = assistant?.modes.find(item => item.mode === "agentic_research")
+  const qualityNote = assistantQuality && assistantQuality.feedbackSampleSize > 0
+    ? ` Feedback explícito: ${assistantQuality.feedbackSampleSize} respuesta${assistantQuality.feedbackSampleSize === 1 ? "" : "s"}, cobertura ${formatPercent(assistantQuality.feedbackCoverage)}, resueltas ${formatPercent(assistantQuality.resolvedRate)}, parciales ${formatPercent(assistantQuality.partialRate)}, no resueltas ${formatPercent(assistantQuality.notResolvedRate)}.`
+    : " Feedback explícito: todavía sin muestra; la ausencia de evaluación no se interpreta como calidad positiva ni negativa."
   const assistantFinding = assistant && assistant.sampleSize > 0
-    ? `El Assistant ya tiene ${assistant.sampleSize} ejecuciones observadas en ${assistant.windowDays}d: DIRECT ${direct?.requests ?? 0}, CANONICAL_LOOKUP ${canonical?.requests ?? 0}, AGENTIC_RESEARCH ${agentic?.requests ?? 0}; p50 ${formatMs(assistant.p50DurationMs)}, p95 ${formatMs(assistant.p95DurationMs)}, ${formatNumber(assistant.averageToolCalls)} tool calls promedio y ${formatNumber(assistant.averageTotalTokens)} tokens promedio cuando usage está disponible.`
-    : "El Assistant ya enruta DIRECT / CANONICAL_LOOKUP / AGENTIC_RESEARCH, pero todavía no existe una muestra persistida suficiente para evaluar su efectividad en producción."
+    ? `El Assistant ya tiene ${assistant.sampleSize} ejecuciones observadas en ${assistant.windowDays}d: DIRECT ${direct?.requests ?? 0}, CANONICAL_LOOKUP ${canonical?.requests ?? 0}, AGENTIC_RESEARCH ${agentic?.requests ?? 0}; p50 ${formatMs(assistant.p50DurationMs)}, p95 ${formatMs(assistant.p95DurationMs)}, ${formatNumber(assistant.averageToolCalls)} tool calls promedio y ${formatNumber(assistant.averageTotalTokens)} tokens promedio cuando usage está disponible.${qualityNote}`
+    : `El Assistant ya enruta DIRECT / CANONICAL_LOOKUP / AGENTIC_RESEARCH, pero todavía no existe una muestra persistida suficiente para evaluar su efectividad en producción.${qualityNote}`
 
   candidates.push(candidate({
     id: "assistant-effectiveness",
     priority: "media",
-    confidence: assistant && assistant.sampleSize >= 5 ? "alta" : "media",
+    confidence: assistant && assistant.sampleSize >= 5 && (assistantQuality?.feedbackSampleSize ?? 0) >= 5 ? "alta" : "media",
     sourceKind: "product_observability",
     finding: assistantFinding,
-    proposal: "Comparar por modo la latencia p50/p95, tool calls y tokens; optimizar sólo después de una baseline estable y sin degradar grounding ni seguridad.",
-    expectedImpact: "Saber dónde VIDENTIA está gastando complejidad de más y reducir latencia/costo con evidencia real del propio producto.",
-    validation: "Fijar baseline con al menos 5 ejecuciones y comparar la misma familia de métricas después de la implementación; medir no equivale a declarar éxito.",
-    source: "intelligence_assistant_execution_metrics · observabilidad privada sin prompts ni rutas crudas",
+    proposal: "Mantener separadas dos capas: eficiencia técnica por modo y calidad explícita de la respuesta. Optimizar sólo después de una baseline estable y sin degradar grounding ni seguridad.",
+    expectedImpact: "Saber dónde VIDENTIA gasta complejidad de más y si la respuesta realmente resolvió la consulta, sin convertir satisfacción en score de evidencia.",
+    validation: "Fijar baseline de eficiencia con ≥5 ejecuciones y baseline de calidad con ≥5 feedbacks, reportando además cobertura para evitar sesgo de selección. Medir no equivale a declarar éxito.",
+    source: "intelligence_assistant_execution_metrics + intelligence_assistant_response_feedback · observabilidad privada sin prompts ni rutas crudas",
   }))
 
   const sorted = candidates
@@ -128,7 +132,7 @@ export function buildVidentiaImprovementRadar(snapshot: JuanWorkspaceSnapshot, a
     generatedAt: snapshot.generatedAt,
     observedSignalCount: sorted.filter(item => item.sourceKind === "canonical_internal").length,
     candidates: sorted,
-    boundary: "Este radar mejora VIDENTIA; no puntúa oportunidades, no modifica conviction y no ejecuta cambios automáticamente. GitHub, telemetría y operación interna son señales de producto, no evidencia del mercado.",
+    boundary: "Este radar mejora VIDENTIA; no puntúa oportunidades, no modifica conviction y no ejecuta cambios automáticamente. GitHub, telemetría y operación interna son señales de producto, no evidencia del mercado. El feedback explícito del Assistant también es una señal de producto y no evidencia de mercado.",
   }
 }
 
@@ -143,3 +147,4 @@ function candidate(input: Omit<VidentiaImprovementCandidate, "humanDecisionRequi
 
 function formatMs(value: number | null | undefined) { return typeof value === "number" ? `${Math.round(value)} ms` : "n/d" }
 function formatNumber(value: number | null | undefined) { return typeof value === "number" ? String(Math.round(value * 100) / 100) : "n/d" }
+function formatPercent(value: number | null | undefined) { return typeof value === "number" ? `${Math.round(value * 100)}%` : "n/d" }

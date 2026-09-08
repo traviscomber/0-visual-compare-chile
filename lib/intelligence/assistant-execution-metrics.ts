@@ -54,9 +54,9 @@ export type AssistantExecutionMetricsSummary = {
 
 const MODES: AssistantExecutionMetricInput["mode"][] = ["direct", "canonical_lookup", "agentic_research"]
 
-export async function recordAssistantExecutionMetric(input: AssistantExecutionMetricInput) {
+export async function recordAssistantExecutionMetric(input: AssistantExecutionMetricInput): Promise<string | null> {
   const admin = createAdminClient()
-  const { error } = await admin.from("intelligence_assistant_execution_metrics").insert({
+  const { data, error } = await admin.from("intelligence_assistant_execution_metrics").insert({
     user_id: input.userId,
     mode: input.mode,
     reason: input.reason.slice(0, 160),
@@ -75,8 +75,12 @@ export async function recordAssistantExecutionMetric(input: AssistantExecutionMe
     output_tokens: nullableNonNegativeInteger(input.outputTokens),
     total_tokens: nullableNonNegativeInteger(input.totalTokens),
     cached_input_tokens: nullableNonNegativeInteger(input.cachedInputTokens),
-  })
-  if (error) console.warn("[assistant-execution-metrics] insert failed", error.message)
+  }).select("id").single()
+  if (error) {
+    console.warn("[assistant-execution-metrics] insert failed", error.message)
+    return null
+  }
+  return typeof data?.id === "string" ? data.id : null
 }
 
 export async function loadAssistantExecutionMetricsSummary(userId: string, windowDays = 7): Promise<AssistantExecutionMetricsSummary> {

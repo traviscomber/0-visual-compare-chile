@@ -1,0 +1,2 @@
+create index intelligence_assistant_response_feedback_execution_owner_idx
+  on public.intelligence_assistant_response_feedback (execution_metric_id, user_id);
