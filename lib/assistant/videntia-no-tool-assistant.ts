@@ -38,5 +38,11 @@ export async function runVidentiaNoToolAssistant(params: {
     model: response.model,
     trace: [],
     actionProposals: [],
+    observability: {
+      inputTokens: response.usage?.prompt_tokens ?? null,
+      outputTokens: response.usage?.completion_tokens ?? null,
+      totalTokens: response.usage?.total_tokens ?? null,
+      cachedInputTokens: response.usage?.prompt_tokens_details?.cached_tokens ?? null,
+    },
   }
 }
