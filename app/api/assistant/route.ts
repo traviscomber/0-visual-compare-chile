@@ -51,6 +51,12 @@ type AssistantMessage = z.infer<typeof MessageSchema>
 type PageContext = z.infer<typeof PageContextSchema>
 type CompetitiveSnapshot = Awaited<ReturnType<typeof attachCompetitiveActionOutcomes>>
 type JuanWorkspaceSnapshot = Awaited<ReturnType<typeof loadAssistantJuanWorkspace>>
+type AssistantObservability = {
+  inputTokens: number | null
+  outputTokens: number | null
+  totalTokens: number | null
+  cachedInputTokens: number | null
+}
 
 export async function POST(request: Request) {
   const auth = await requireUser()
@@ -99,7 +105,9 @@ export async function POST(request: Request) {
     const result = execution.mode === "agentic_research"
       ? await runVidentiaAssistant({ messages: assistantMessages, context })
       : await runVidentiaNoToolAssistant({ messages: assistantMessages, mode: execution.mode })
-    const observability = "observability" in result ? result.observability : null
+    const observability: AssistantObservability | null = "observability" in result
+      ? (result.observability as AssistantObservability)
+      : null
 
     console.info("[assistant-routing]", JSON.stringify({
       version: 1,
