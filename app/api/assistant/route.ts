@@ -5,6 +5,7 @@ import { classifyAssistantExecution } from "@/lib/assistant/assistant-execution-
 import { runVidentiaNoToolAssistant } from "@/lib/assistant/videntia-no-tool-assistant"
 import { runVidentiaAssistant } from "@/lib/assistant/videntia-assistant"
 import { attachCompetitiveActionOutcomes } from "@/lib/intelligence/assistant-competitive-action-outcomes"
+import { recordAssistantExecutionMetric } from "@/lib/intelligence/assistant-execution-metrics"
 import { loadAssistantCompetitiveSituations } from "@/lib/intelligence/assistant-competitive-situations"
 import { loadAssistantJuanWorkspace } from "@/lib/intelligence/assistant-juan-workspace"
 
@@ -108,17 +109,16 @@ export async function POST(request: Request) {
     const observability: AssistantObservability | null = "observability" in result
       ? (result.observability as AssistantObservability)
       : null
-
-    console.info("[assistant-routing]", JSON.stringify({
-      version: 1,
+    const workspace = getWorkspaceLabel(parsed.data.pageContext?.pathname ?? "/")
+    const durationMs = Date.now() - executionStartedAt
+    const metric = {
+      userId: auth.user.id,
       mode: execution.mode,
       reason: execution.reason,
-      workspace: getWorkspaceLabel(parsed.data.pageContext?.pathname ?? "/"),
-      hasPageFocus: Boolean(parsed.data.pageContext?.focus.length),
+      workspace,
       canonicalContextAvailable: execution.canonicalContextAvailable,
       requiresFreshExternalEvidence: execution.requiresFreshExternalEvidence,
-      maxAgentSteps: execution.maxAgentSteps,
-      durationMs: Date.now() - executionStartedAt,
+      durationMs,
       toolCalls: result.trace.length,
       actionProposalCount: result.actionProposals.length,
       responseCharacters: result.text.length,
@@ -130,7 +130,31 @@ export async function POST(request: Request) {
       outputTokens: observability?.outputTokens ?? null,
       totalTokens: observability?.totalTokens ?? null,
       cachedInputTokens: observability?.cachedInputTokens ?? null,
+    }
+
+    console.info("[assistant-routing]", JSON.stringify({
+      version: 1,
+      mode: metric.mode,
+      reason: metric.reason,
+      workspace: metric.workspace,
+      hasPageFocus: Boolean(parsed.data.pageContext?.focus.length),
+      canonicalContextAvailable: metric.canonicalContextAvailable,
+      requiresFreshExternalEvidence: metric.requiresFreshExternalEvidence,
+      maxAgentSteps: execution.maxAgentSteps,
+      durationMs: metric.durationMs,
+      toolCalls: metric.toolCalls,
+      actionProposalCount: metric.actionProposalCount,
+      responseCharacters: metric.responseCharacters,
+      inputMessageCount: metric.inputMessageCount,
+      injectedContextMessageCount: metric.injectedContextMessageCount,
+      model: metric.model,
+      usageAvailable: metric.usageAvailable,
+      inputTokens: metric.inputTokens,
+      outputTokens: metric.outputTokens,
+      totalTokens: metric.totalTokens,
+      cachedInputTokens: metric.cachedInputTokens,
     }))
+    await recordAssistantExecutionMetric(metric)
 
     return NextResponse.json({
       text: result.text,
