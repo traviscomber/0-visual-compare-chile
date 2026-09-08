@@ -4,12 +4,13 @@ function fail(message:string):never{console.error(`Assistant competitive researc
 function requireText(source:string,needle:string,label:string){if(!source.includes(needle))fail(`${label} missing ${needle}`)}
 function forbid(source:string,needle:string,label:string){if(source.includes(needle))fail(`${label} must not contain ${needle}`)}
 
-const [assistant, corroboration, situations, outcomes, assistantRoute, cron, launcher] = await Promise.all([
+const [assistant, corroboration, situations, outcomes, assistantRoute, patentEvidencePage, cron, launcher] = await Promise.all([
   readFile("lib/assistant/videntia-assistant.ts", "utf8"),
   readFile("lib/intelligence/competitive-expansion-corroboration.ts", "utf8"),
   readFile("lib/intelligence/assistant-competitive-situations.ts", "utf8"),
   readFile("lib/intelligence/assistant-competitive-action-outcomes.ts", "utf8"),
   readFile("app/api/assistant/route.ts", "utf8"),
+  readFile("app/(app)/patentes/registro/[applicationNumber]/page.tsx", "utf8"),
   readFile("app/api/cron/trademark-expansion-corroboration/route.ts", "utf8"),
   readFile("components/app/videntia-assistant-launcher.tsx", "utf8"),
 ])
@@ -50,7 +51,28 @@ for (const needle of [
   '.from("patent_records")',
   'gatherExternalExpansionCorroboration',
   'sourceCoverage',
+  'const inapi = normalize(row.source) === "inapi"',
+  'source: inapi ? "inapi_patents" : `patent:${row.source}`',
+  'url: inapi ? inapiPatentEvidenceUrl(row.source_record_id) : row.source_url',
+  'return `https://videntia.app/patentes/registro/${encodeURIComponent(applicationNumber)}`',
 ]) requireText(corroboration, needle, "shared corroboration")
+for (const forbidden of [
+  'source: row.source === "INAPI" ? "inapi_patents"',
+  'url: row.source_url,\n      activity: "patent"',
+]) forbid(corroboration, forbidden, "shared corroboration")
+
+for (const needle of [
+  '.from("patent_records")',
+  '.eq("source", "inapi")',
+  '.eq("application_number", applicationNumber)',
+  '.from("patent_record_ipc")',
+  'Fuente de datos INAPI',
+  'no se presenta como si fuera un deep link oficial a esta patente',
+]) requireText(patentEvidencePage, needle, "patent evidence detail")
+for (const forbidden of [
+  'MainSearch.aspx?id=',
+  'buscadorpatentes.inapi.cl/UI/MainSearch.aspx?id=',
+]) forbid(patentEvidencePage, forbidden, "patent evidence detail")
 
 for (const needle of [
   'export async function loadAssistantCompetitiveSituations',
@@ -145,4 +167,4 @@ for (const needle of [
   'role="dialog"',
 ]) requireText(launcher, needle, "floating assistant")
 
-console.log("Assistant competitive research regression PASS: the floating assistant closes the competitive loop from canonical situation to papers/actions and back to attributable human action outcomes, while treating outcomes as untrusted internal execution context rather than independent market evidence or automatic conviction/decision updates.")
+console.log("Assistant competitive research regression PASS: the floating assistant closes the competitive loop from canonical situation to papers/actions and back to attributable human action outcomes; INAPI patent evidence opens an exact VIDENTIA record while the official dataset remains provenance, and no opaque INAPI deep link is fabricated.")
