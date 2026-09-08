@@ -39,7 +39,26 @@ type HandoffSnapshot = {
   evidence_gaps?: string[]
 }
 
+type RepoActivity = {
+  source?: string
+  status?: "ok" | "degraded"
+  repoFullName?: string
+  repoUrl?: string
+  observedAt?: string
+  lastAttemptAt?: string
+  commits7d?: number
+  commits24h?: number
+  commits24hLowerBound?: boolean
+  sampledCommits?: number
+  sampleComplete?: boolean
+  scopeActivity?: Array<{ scope?: string; count?: number }>
+  latestCommit?: { sha?: string; message?: string; committedAt?: string | null; url?: string | null } | null
+  decisionEffect?: "none"
+}
+
 type ProductSnapshot = {
+  repo?: string
+  repo_activity?: RepoActivity
   chile_evidence?: { state?: string; delta?: number; items?: unknown[] }
   world_frontier?: { state?: string; paper_count?: number }
   patent?: { title?: string; url?: string | null } | null
@@ -107,7 +126,17 @@ export async function JuanExecutiveWorkspace({ userId }: { userId: string }) {
     const state = snapshot.chile_evidence?.state
     return state === "not_observed" || state === "insufficient_evidence" || !state
   }).length
-  const latestUpdate = latestDate([...products.map(item => item.updated_at), ...handoffs.map(item => item.updated_at)])
+  const repoActivities = products
+    .map(item => asProductSnapshot(item.evidence_snapshot).repo_activity)
+    .filter((activity): activity is RepoActivity => Boolean(activity))
+  const expectedGitHubRepos = products.filter(item => Boolean(asProductSnapshot(item.evidence_snapshot).repo?.includes("github.com/"))).length
+  const freshGitHubRepos = repoActivities.filter(activity => activity.status === "ok" && isFresh(activity.observedAt, now, 2 * 60 * 60 * 1000)).length
+  const latestGitHubUpdate = latestDate(repoActivities.map(activity => activity.observedAt ?? activity.lastAttemptAt ?? ""))
+  const latestUpdate = latestDate([
+    ...products.map(item => item.updated_at),
+    ...handoffs.map(item => item.updated_at),
+    ...(latestGitHubUpdate ? [latestGitHubUpdate] : []),
+  ])
 
   return (
     <section className="mx-auto w-[calc(100%-2rem)] max-w-[1480px] pt-6 sm:w-[calc(100%-3rem)] lg:pt-8">
@@ -153,14 +182,15 @@ export async function JuanExecutiveWorkspace({ userId }: { userId: string }) {
           <div className="divide-y divide-[#294047]">
             <HealthRow label="Evidencia Chile" value={`${neutralChile}/${products.length || 0} direcciones sin señal concluyente`} detail="Se mantienen neutrales hasta que aparezca evidencia independiente de adopción, demanda, rechazo o contracción." />
             <HealthRow label="Patentes" value="Canal separado del mercado" detail="Una solicitud o registro patentario no se interpreta como adopción comercial ni como demanda en Chile." />
-            <HealthRow label="Decisión humana" value={`${acceptedProducts.length} direcciones preservadas`} detail="Los refresh de evidencia pueden cambiar el soporte, pero no reescriben una aprobación o rechazo humano." />
+            <HealthRow label="GitHub" value={`${freshGitHubRepos}/${expectedGitHubRepos || 0} repos al día`} detail={`Actividad de desarrollo sincronizada cada hora como contexto institucional, nunca como evidencia de mercado.${latestGitHubUpdate ? ` Última lectura ${formatDateTime(latestGitHubUpdate)}.` : ""}`} />
+            <HealthRow label="Decisión humana" value={`${acceptedProducts.length} direcciones preservadas`} detail="Los refresh de evidencia o de actividad GitHub pueden actualizar el contexto, pero no reescriben una aprobación o rechazo humano." />
             <HealthRow label="Operación" value={overdueActions.length ? `${overdueActions.length} acción vencida${overdueActions.length === 1 ? "" : "s"}` : "Sin acciones vencidas"} detail={overdueActions.length ? "Conviene revisar la bandeja de casos y eliminar ruido de QA o reasignar trabajo real." : "No hay trabajo operacional vencido en casos abiertos."} />
           </div>
         </div>
       </div>
 
       <div className="border border-[#294047] bg-[#0B2025]">
-        <SectionHeader icon={Radar} eyebrow="Después" title="Recomendaciones de ejecución" note="Ordenadas por convicción de evidencia. La preparación institucional se muestra aparte y no aumenta ese score." />
+        <SectionHeader icon={Radar} eyebrow="Después" title="Recomendaciones de ejecución" note="Ordenadas por convicción de evidencia. La preparación institucional y la actividad GitHub se muestran aparte y no aumentan ese score." />
         <div className="divide-y divide-[#294047]">
           {acceptedProducts.map(product => <ProductRecommendationRow key={product.product_key} product={product} />)}
         </div>
@@ -199,8 +229,9 @@ function ProductRecommendationRow({ product }: { product: ProductRow }) {
   const integration = numberOrNull(dimensions.integration_leverage ?? dimensions.integration_feasibility)
   const reuse = numberOrNull(dimensions.reuse_advantage)
   const frontierState = snapshot.world_frontier?.state ?? "not_observed"
+  const repoActivity = snapshot.repo_activity
   const recommendation = PRODUCT_RECOMMENDATIONS[product.product_key] ?? product.outcome
-  return <article className="grid gap-4 px-4 py-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)_auto] lg:items-center"><div><p className="text-[9px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">{product.product_name}</p><h3 className="mt-1 text-[12px] font-medium leading-5 text-[#E7DFCE]">{product.title}</h3></div><div><p className="text-[9px] uppercase tracking-[0.1em] text-[#748481]">Recomendación operativa · no modifica convicción</p><p className="mt-1 text-[11px] leading-5 text-[#D2D8D6]">{recommendation}</p></div><div className="flex min-w-[172px] flex-wrap gap-2 lg:justify-end"><DataChip label="Evidencia" value={`${product.score}/100`} /><DataChip label="Integración" value={integration === null ? "n/d" : `${integration}/100`} /><DataChip label="Reuso" value={reuse === null ? "n/d" : `${reuse}/100`} /><DataChip label="Frontera" value={frontierLabel(frontierState)} /></div></article>
+  return <article className="grid gap-4 px-4 py-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)_auto] lg:items-center"><div><p className="text-[9px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">{product.product_name}</p><h3 className="mt-1 text-[12px] font-medium leading-5 text-[#E7DFCE]">{product.title}</h3>{repoActivity ? <p className="mt-1.5 text-[9px] leading-4 text-[#83908F]">{repoActivity.repoUrl ? <a href={repoActivity.repoUrl} target="_blank" rel="noreferrer" className="text-[#96B5A6] hover:text-white">GitHub</a> : "GitHub"} · {githubActivityLabel(repoActivity)}</p> : <p className="mt-1.5 text-[9px] leading-4 text-[#748481]">GitHub · esperando primer sync horario</p>}</div><div><p className="text-[9px] uppercase tracking-[0.1em] text-[#748481]">Recomendación operativa · no modifica convicción</p><p className="mt-1 text-[11px] leading-5 text-[#D2D8D6]">{recommendation}</p></div><div className="flex min-w-[172px] flex-wrap gap-2 lg:justify-end"><DataChip label="Evidencia" value={`${product.score}/100`} /><DataChip label="Integración" value={integration === null ? "n/d" : `${integration}/100`} /><DataChip label="Reuso" value={reuse === null ? "n/d" : `${reuse}/100`} /><DataChip label="Frontera" value={frontierLabel(frontierState)} /><DataChip label="GitHub" value={repoActivity?.status === "ok" ? `${repoActivity.commits7d ?? 0}/7d` : repoActivity ? "degradado" : "pendiente"} /></div></article>
 }
 
 function ResearchRow({ item }: { item: HandoffRow }) {
@@ -223,5 +254,13 @@ function asHandoffSnapshot(value: Record<string, unknown> | null) { return (valu
 function asProductSnapshot(value: Record<string, unknown> | null) { return (value ?? {}) as ProductSnapshot }
 function numberOrNull(value: unknown) { return typeof value === "number" && Number.isFinite(value) ? Math.round(value) : null }
 function latestDate(values: string[]) { return values.filter(Boolean).sort((a, b) => Date.parse(b) - Date.parse(a))[0] ?? null }
+function isFresh(value: string | undefined, now: number, maxAgeMs: number) { if (!value) return false; const timestamp = Date.parse(value); return Number.isFinite(timestamp) && now - timestamp <= maxAgeMs }
 function formatDateTime(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? "sin fecha" : new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(date) }
 function frontierLabel(value: string) { return ({ converging: "convergente", early_convergence: "convergencia temprana", emerging: "emergente", single_signal: "señal única", not_observed: "sin señal" } as Record<string, string>)[value] ?? value }
+function githubActivityLabel(activity: RepoActivity) {
+  if (activity.status !== "ok") return `sync degradado${activity.lastAttemptAt ? ` · intento ${formatDateTime(activity.lastAttemptAt)}` : ""}`
+  const commits24h = `${activity.commits24hLowerBound ? "≥" : ""}${activity.commits24h ?? 0} commits/24h`
+  const scopes = (activity.scopeActivity ?? []).slice(0, 3).flatMap(item => item.scope && typeof item.count === "number" ? [`${item.scope} ${item.count}`] : [])
+  const latest = activity.latestCommit?.committedAt ? ` · último ${formatDateTime(activity.latestCommit.committedAt)}` : ""
+  return `${activity.commits7d ?? 0} commits/7d · ${commits24h}${scopes.length ? ` · focos ${scopes.join(", ")}` : ""}${latest}`
+}
