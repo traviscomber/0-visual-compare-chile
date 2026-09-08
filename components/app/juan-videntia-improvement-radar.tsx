@@ -4,6 +4,7 @@ import { JuanVidentiaImprovementActions } from "@/components/app/juan-videntia-i
 import { loadAssistantExecutionMetricsSummary } from "@/lib/intelligence/assistant-execution-metrics"
 import { loadAssistantJuanWorkspace } from "@/lib/intelligence/assistant-juan-workspace"
 import { syncVidentiaImprovementLifecycle, type VidentiaImprovementLifecycleRow, type VidentiaImprovementStatus } from "@/lib/intelligence/videntia-improvement-lifecycle"
+import { assessVidentiaImprovementOutcome, type VidentiaImprovementOutcomeAssessment } from "@/lib/intelligence/videntia-improvement-outcome"
 import { buildVidentiaImprovementRadar, type VidentiaImprovementCandidate } from "@/lib/intelligence/videntia-improvement-radar"
 
 export async function JuanVidentiaImprovementRadar({ userId }: { userId: string }) {
@@ -29,7 +30,7 @@ export async function JuanVidentiaImprovementRadar({ userId }: { userId: string 
             Mejora continua · producto interno
           </div>
           <h2 className="mt-2 text-xl font-normal tracking-[-0.02em] text-[#E7DFCE] sm:text-2xl">Cómo mejorar VIDENTIA</h2>
-          <p className="mt-2 max-w-3xl text-[12px] leading-5 text-[#AEB6B4]">Cada mejora sigue un ciclo verificable: detectada → investigando → propuesta → aprobada → implementada → medida. Aprobar fija una baseline canónica; medir registra el estado posterior, pero no declara éxito automáticamente.</p>
+          <p className="mt-2 max-w-3xl text-[12px] leading-5 text-[#AEB6B4]">Cada mejora sigue un ciclo verificable: detectada → investigando → propuesta → aprobada → implementada → medida. Aprobar fija una baseline canónica; medir registra el estado posterior y no declara éxito automáticamente. VIDENTIA compara ambos snapshots con reglas deterministas, pero la interpretación final sigue siendo humana.</p>
         </div>
         <div className="grid min-w-[380px] grid-cols-4 border-t border-[#294047] lg:border-l lg:border-t-0">
           <MiniMetric label="Señales" value={String(radar.observedSignalCount)} note="internas observadas" />
@@ -81,7 +82,7 @@ export async function JuanVidentiaImprovementRadar({ userId }: { userId: string 
       <div className="flex flex-col gap-3 border-t border-[#294047] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <div className="flex max-w-4xl items-start gap-2 text-[10px] leading-4 text-[#83908F]">
           <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#719B8D]" />
-          <span>{radar.boundary} Las métricas del Assistant almacenan sólo categorías y números agregables; no prompts, contenido de conversación ni rutas crudas.</span>
+          <span>{radar.boundary} Las métricas del Assistant almacenan sólo categorías y números agregables; no prompts, contenido de conversación ni rutas crudas. La evaluación posterior tiene decisionEffect=none y convictionDelta=0.</span>
         </div>
         <Link href="/mi-espacio?assistant=open" className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-[#173B37] px-3 text-xs font-medium text-[#DCE8E2] ring-1 ring-inset ring-[#31534D] hover:bg-[#1A4540]">
           Analizar con VIDENTIA <ArrowRight className="h-3.5 w-3.5" />
@@ -125,11 +126,38 @@ function HistoricalRow({ row, organizationId }: { row: VidentiaImprovementLifecy
 function LifecycleEvidence({ row }: { row: VidentiaImprovementLifecycleRow }) {
   const baseline = summarySnapshot(row.baseline_snapshot)
   const result = summarySnapshot(row.result_snapshot)
+  const outcome = row.status === "measured" && baseline && result
+    ? assessVidentiaImprovementOutcome({ candidateKey: row.candidate_key, baseline: row.baseline_snapshot, result: row.result_snapshot })
+    : null
   if (!baseline && !row.implementation_ref && !result) return null
   return <div className="mt-3 grid gap-1.5 text-[9px] leading-4 text-[#83908F]">
     {baseline ? <p><span className="text-[#96B5A6]">Baseline:</span> {baseline}{row.baseline_recorded_at ? ` · ${formatDate(row.baseline_recorded_at)}` : ""}</p> : null}
     {row.implementation_ref ? <p><span className="text-[#96B5A6]">Implementación:</span> {row.implementation_ref}</p> : null}
     {result ? <p><span className="text-[#96B5A6]">Después:</span> {result}{row.measured_at ? ` · ${formatDate(row.measured_at)}` : ""}</p> : null}
+    {outcome ? <OutcomeAssessment assessment={outcome} /> : null}
+  </div>
+}
+
+function OutcomeAssessment({ assessment }: { assessment: VidentiaImprovementOutcomeAssessment }) {
+  const labels = {
+    improved: "mejoró",
+    neutral: "neutral",
+    worsened: "empeoró",
+    insufficient_evidence: "evidencia insuficiente",
+  } as const
+  const scope = assessment.scope === "assistant_efficiency" ? "eficiencia técnica" : assessment.scope === "operational_outcome" ? "resultado operacional" : "medición"
+  const className = assessment.verdict === "improved"
+    ? "text-[#96B5A6] ring-[#31534D]"
+    : assessment.verdict === "worsened"
+      ? "text-[#D8C99D] ring-[#5A4A35]"
+      : "text-[#AEB6B4] ring-[#294047]"
+  return <div className="mt-1 border-l border-[#294047] pl-2.5">
+    <div className="flex flex-wrap items-center gap-2">
+      <span className={`rounded-[5px] bg-[#102A2E] px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.1em] ring-1 ring-inset ${className}`}>{labels[assessment.verdict]}</span>
+      <span className="text-[8px] uppercase tracking-[0.1em] text-[#748481]">{scope} · confianza {confidenceLabel(assessment.confidence)} · regla {assessment.version}</span>
+    </div>
+    <p className="mt-1 text-[9px] leading-4 text-[#AEB6B4]">{assessment.reason}</p>
+    <p className="mt-1 text-[8px] leading-3 text-[#667572]">Evaluación reproducible · no aprueba, rechaza ni modifica convicción.</p>
   </div>
 }
 
@@ -156,4 +184,5 @@ function summarySnapshot(snapshot: Record<string, unknown>) {
   return entries.length ? entries.map(([key, value]) => `${labelKey(key)} ${String(value)}`).join(" · ") : null
 }
 function labelKey(key: string) { return ({ pendingDecisions: "decisiones", overdueActions: "vencidas", researchingHandoffs: "investigaciones", githubReposObserved: "repos", acceptedProducts: "productos", subsectionNewPapersObserved: "papers nuevos", subsectionProductsWithFreshPapers: "productos", sampleSize: "muestra", p50DurationMs: "p50 ms", p95DurationMs: "p95 ms", averageToolCalls: "tools prom.", averageTotalTokens: "tokens prom." } as Record<string, string>)[key] ?? key }
+function confidenceLabel(value: VidentiaImprovementOutcomeAssessment["confidence"]) { return value === "high" ? "alta" : value === "medium" ? "media" : "baja" }
 function formatDate(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? "sin fecha" : new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(date) }

@@ -95,6 +95,8 @@ jobs:
         run: node scripts/assistant-route-focus-regression.mts
       - name: Juan executive workspace regression
         run: node scripts/juan-executive-workspace-regression.mts
+      - name: VIDENTIA improvement outcome regression
+        run: node scripts/videntia-improvement-outcome-regression.mts
       - name: Juan subsection delta regression
         run: node scripts/juan-subsection-delta-regression.mts
       - name: Opportunity conviction notification regression
