@@ -1,3 +1,4 @@
+import type { AssistantExecutionMetricsSummary } from "@/lib/intelligence/assistant-execution-metrics"
 import type { loadAssistantJuanWorkspace } from "@/lib/intelligence/assistant-juan-workspace"
 
 type JuanWorkspaceSnapshot = Awaited<ReturnType<typeof loadAssistantJuanWorkspace>>
@@ -29,7 +30,7 @@ export type VidentiaImprovementRadar = {
 
 const PRIORITY_ORDER: Record<VidentiaImprovementPriority, number> = { alta: 0, media: 1, baja: 2 }
 
-export function buildVidentiaImprovementRadar(snapshot: JuanWorkspaceSnapshot): VidentiaImprovementRadar {
+export function buildVidentiaImprovementRadar(snapshot: JuanWorkspaceSnapshot, assistant?: AssistantExecutionMetricsSummary): VidentiaImprovementRadar {
   const candidates: VidentiaImprovementCandidate[] = []
   const summary = snapshot.summary
 
@@ -100,16 +101,23 @@ export function buildVidentiaImprovementRadar(snapshot: JuanWorkspaceSnapshot): 
     }))
   }
 
+  const direct = assistant?.modes.find(item => item.mode === "direct")
+  const canonical = assistant?.modes.find(item => item.mode === "canonical_lookup")
+  const agentic = assistant?.modes.find(item => item.mode === "agentic_research")
+  const assistantFinding = assistant && assistant.sampleSize > 0
+    ? `El Assistant ya tiene ${assistant.sampleSize} ejecuciones observadas en ${assistant.windowDays}d: DIRECT ${direct?.requests ?? 0}, CANONICAL_LOOKUP ${canonical?.requests ?? 0}, AGENTIC_RESEARCH ${agentic?.requests ?? 0}; p50 ${formatMs(assistant.p50DurationMs)}, p95 ${formatMs(assistant.p95DurationMs)}, ${formatNumber(assistant.averageToolCalls)} tool calls promedio y ${formatNumber(assistant.averageTotalTokens)} tokens promedio cuando usage está disponible.`
+    : "El Assistant ya enruta DIRECT / CANONICAL_LOOKUP / AGENTIC_RESEARCH, pero todavía no existe una muestra persistida suficiente para evaluar su efectividad en producción."
+
   candidates.push(candidate({
     id: "assistant-effectiveness",
     priority: "media",
-    confidence: "alta",
+    confidence: assistant && assistant.sampleSize >= 5 ? "alta" : "media",
     sourceKind: "product_observability",
-    finding: "El Assistant ya enruta DIRECT / CANONICAL_LOOKUP / AGENTIC_RESEARCH y emite telemetría agregable, pero este command center todavía no consume una serie histórica de efectividad.",
-    proposal: "Incorporar al radar distribución por modo, p50/p95 de latencia, tool calls, tokens y fallbacks, sin almacenar el texto de las consultas.",
-    expectedImpact: "Saber dónde VIDENTIA está gastando complejidad de más y optimizar el Assistant con datos reales.",
-    validation: "Comparar por modo latencia, tokens, tool calls y tasa de fallback con una ventana mínima de tráfico antes de cambiar el router.",
-    source: "assistant-routing · observabilidad de producto; no evidencia de mercado",
+    finding: assistantFinding,
+    proposal: "Comparar por modo la latencia p50/p95, tool calls y tokens; optimizar sólo después de una baseline estable y sin degradar grounding ni seguridad.",
+    expectedImpact: "Saber dónde VIDENTIA está gastando complejidad de más y reducir latencia/costo con evidencia real del propio producto.",
+    validation: "Fijar baseline con al menos 5 ejecuciones y comparar la misma familia de métricas después de la implementación; medir no equivale a declarar éxito.",
+    source: "intelligence_assistant_execution_metrics · observabilidad privada sin prompts ni rutas crudas",
   }))
 
   const sorted = candidates
@@ -132,3 +140,6 @@ function candidate(input: Omit<VidentiaImprovementCandidate, "humanDecisionRequi
     convictionDelta: 0,
   }
 }
+
+function formatMs(value: number | null | undefined) { return typeof value === "number" ? `${Math.round(value)} ms` : "n/d" }
+function formatNumber(value: number | null | undefined) { return typeof value === "number" ? String(Math.round(value * 100) / 100) : "n/d" }
