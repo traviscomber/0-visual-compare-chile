@@ -153,5 +153,8 @@ export function assistantSnapshot(summary: AssistantExecutionMetricsSummary, qua
 }
 
 export function hasMeaningfulAssistantBaseline(snapshot: Record<string, unknown>) {
-  return typeof snapshot.sampleSize === "number" && snapshot.sampleSize >= 5
+  return typeof snapshot.sampleSize === "number"
+    && snapshot.sampleSize >= 5
+    && typeof snapshot.feedbackSampleSize === "number"
+    && snapshot.feedbackSampleSize >= 5
 }
