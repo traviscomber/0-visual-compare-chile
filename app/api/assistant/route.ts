@@ -89,6 +89,15 @@ function needsCompetitiveSituationContext(messages: AssistantMessage[], pageCont
 function withCompetitiveSituationContext(messages: AssistantMessage[], snapshot: CompetitiveSnapshot): AssistantMessage[] {
   const lastUserIndex = messages.findLastIndex((message) => message.role === "user")
   if (lastUserIndex < 0) return messages
+  const actionableSnapshot = {
+    ...snapshot,
+    situations: snapshot.situations.map((situation) => ({
+      ...situation,
+      actionTarget: situation.acceptedHypotheses[0]?.hypothesis || situation.company,
+      actionTargetType: situation.acceptedHypotheses.length ? "accepted_hypothesis" : "company_fallback",
+      researchQueryHint: buildCompetitiveResearchQueryHint(situation),
+    })),
+  }
   const contextNote: AssistantMessage = {
     role: "assistant",
     content: [
@@ -97,7 +106,8 @@ function withCompetitiveSituationContext(messages: AssistantMessage[], snapshot:
       "No conviertas prioridad de atención, corroboración ni monitoreo en conviction, aprobación, rechazo o entrada efectiva al mercado.",
       "Ausencia, indisponibilidad o cobertura parcial de una fuente es neutral, no evidencia negativa.",
       "Si el usuario pregunta qué competidores requieren atención, prioriza el orden del snapshot y explica el motivo con la evidencia y estado humano visibles. No pidas clases Nice ni IDs si ya están presentes aquí.",
-      `Datos canónicos: ${JSON.stringify(snapshot)}`,
+      "Si el usuario pide acciones para una situación, usa exactamente actionTarget como target de prepare_action_research y researchQueryHint como research_query. Si actionTargetType es company_fallback y no existe coincidencia canónica, mantén las acciones como conceptuales; no inventes un anclaje.",
+      `Datos canónicos: ${JSON.stringify(actionableSnapshot)}`,
     ].join("\n"),
   }
   return [
@@ -105,6 +115,17 @@ function withCompetitiveSituationContext(messages: AssistantMessage[], snapshot:
     contextNote,
     ...messages.slice(lastUserIndex),
   ]
+}
+
+function buildCompetitiveResearchQueryHint(situation: CompetitiveSnapshot["situations"][number]) {
+  const classes = Array.from(new Set(situation.expansions.flatMap((expansion) => expansion.corroboration?.newNiceClasses ?? []))).slice(0, 8)
+  const activities = Array.from(new Set(situation.expansions.flatMap((expansion) => expansion.corroboration?.activityTypes ?? []))).slice(0, 6)
+  return [
+    situation.company,
+    classes.length ? `Nice ${classes.join(", ")}` : null,
+    activities.length ? activities.join(", ") : null,
+    "competitive strategy market entry product launch technology",
+  ].filter(Boolean).join(" · ")
 }
 
 function withNavigationContext(messages: AssistantMessage[], pageContext?: PageContext): AssistantMessage[] {
