@@ -51,6 +51,12 @@ type AssistantMessage = z.infer<typeof MessageSchema>
 type PageContext = z.infer<typeof PageContextSchema>
 type CompetitiveSnapshot = Awaited<ReturnType<typeof attachCompetitiveActionOutcomes>>
 type JuanWorkspaceSnapshot = Awaited<ReturnType<typeof loadAssistantJuanWorkspace>>
+type AssistantObservability = {
+  inputTokens: number | null
+  outputTokens: number | null
+  totalTokens: number | null
+  cachedInputTokens: number | null
+}
 
 export async function POST(request: Request) {
   const auth = await requireUser()
@@ -64,6 +70,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "El asistente no está configurado." }, { status: 503, headers: PRIVATE_NO_STORE_HEADERS })
   }
 
+  const executionStartedAt = Date.now()
   try {
     const needsJuanContext = needsJuanWorkspaceContext(auth.user.email, parsed.data.messages, parsed.data.pageContext)
     const needsCompetitiveContext = needsCompetitiveSituationContext(parsed.data.messages, parsed.data.pageContext)
@@ -77,7 +84,9 @@ export async function POST(request: Request) {
       routerEnabled: process.env.VIDENTIA_ASSISTANT_EXECUTION_ROUTER !== "off",
     })
 
-    let assistantMessages = withNavigationContext(parsed.data.messages, parsed.data.pageContext)
+    let assistantMessages = execution.mode === "direct"
+      ? parsed.data.messages
+      : withNavigationContext(parsed.data.messages, parsed.data.pageContext)
     if (execution.mode !== "direct" && needsJuanContext) {
       const snapshot = await loadAssistantJuanWorkspace(auth.user.id)
       assistantMessages = withJuanWorkspaceContext(assistantMessages, snapshot)
@@ -96,19 +105,38 @@ export async function POST(request: Request) {
     const result = execution.mode === "agentic_research"
       ? await runVidentiaAssistant({ messages: assistantMessages, context })
       : await runVidentiaNoToolAssistant({ messages: assistantMessages, mode: execution.mode })
+    const observability: AssistantObservability | null = "observability" in result
+      ? (result.observability as AssistantObservability)
+      : null
 
     console.info("[assistant-routing]", JSON.stringify({
+      version: 1,
       mode: execution.mode,
       reason: execution.reason,
-      pathname: parsed.data.pageContext?.pathname ?? null,
+      workspace: getWorkspaceLabel(parsed.data.pageContext?.pathname ?? "/"),
       hasPageFocus: Boolean(parsed.data.pageContext?.focus.length),
       canonicalContextAvailable: execution.canonicalContextAvailable,
       requiresFreshExternalEvidence: execution.requiresFreshExternalEvidence,
       maxAgentSteps: execution.maxAgentSteps,
+      durationMs: Date.now() - executionStartedAt,
+      toolCalls: result.trace.length,
+      actionProposalCount: result.actionProposals.length,
+      responseCharacters: result.text.length,
+      inputMessageCount: parsed.data.messages.length,
+      injectedContextMessageCount: Math.max(0, assistantMessages.length - parsed.data.messages.length),
+      model: result.model,
+      usageAvailable: observability !== null,
+      inputTokens: observability?.inputTokens ?? null,
+      outputTokens: observability?.outputTokens ?? null,
+      totalTokens: observability?.totalTokens ?? null,
+      cachedInputTokens: observability?.cachedInputTokens ?? null,
     }))
 
     return NextResponse.json({
-      ...result,
+      text: result.text,
+      model: result.model,
+      trace: result.trace,
+      actionProposals: result.actionProposals,
       routing: {
         mode: execution.mode,
         reason: execution.reason,
