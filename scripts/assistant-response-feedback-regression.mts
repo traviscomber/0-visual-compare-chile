@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises"
 import { strict as assert } from "node:assert"
 
 const migration = await readFile("supabase/migrations/20260908140000_create_assistant_response_feedback.sql", "utf8")
+const indexMigration = await readFile("supabase/migrations/20260908140100_index_assistant_response_feedback_owner.sql", "utf8")
 const api = await readFile("app/api/assistant/feedback/route.ts", "utf8")
 const assistantRoute = await readFile("app/api/assistant/route.ts", "utf8")
 const metrics = await readFile("lib/intelligence/assistant-execution-metrics.ts", "utf8")
@@ -20,6 +21,7 @@ assert.match(migration, /for all to service_role using \(true\) with check \(tru
 assert.doesNotMatch(migration, /\b(note|prompt|message|content)\s+text\b/i)
 assert.match(migration, /'resolved','partial','not_resolved'/)
 assert.match(migration, /'incorrect','missing_evidence','incomplete','misunderstood','needed_followup','other'/)
+assert.match(indexMigration, /\(execution_metric_id, user_id\)/)
 
 assert.match(api, /requireUser\(\)/)
 assert.match(api, /executionId: z\.string\(\)\.uuid\(\)/)
