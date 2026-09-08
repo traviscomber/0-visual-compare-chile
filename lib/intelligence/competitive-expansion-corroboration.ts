@@ -159,12 +159,13 @@ export async function gatherLocalPatentCorroboration(client: SupabaseClient, com
     if (!matchesCompany(String(row.applicants ?? ""), company)) return []
     const matchedTerms = matchDomainTerms(row.title, domainTerms)
     if (!matchedTerms.length) return []
+    const inapi = normalize(row.source) === "inapi"
     return [{
-      source: row.source === "INAPI" ? "inapi_patents" : `patent:${row.source}`,
+      source: inapi ? "inapi_patents" : `patent:${row.source}`,
       sourceRecordId: row.source_record_id || row.id,
       title: row.title,
       date: row.filing_date ?? row.publication_date,
-      url: row.source_url,
+      url: inapi ? inapiPatentEvidenceUrl(row.source_record_id) : row.source_url,
       activity: "patent" as const,
       directness: "indirect" as const,
       matchedTerms,
@@ -225,6 +226,12 @@ function dedupeEvidence(rows: CorroborationEvidence[]) {
     seen.add(key)
     return true
   })
+}
+
+function inapiPatentEvidenceUrl(sourceRecordId: string) {
+  const applicationNumber = sourceRecordId.startsWith("sol:") ? sourceRecordId.slice(4).trim() : ""
+  if (!/^[A-Za-z0-9._-]{2,80}$/.test(applicationNumber)) return null
+  return `https://videntia.app/patentes/registro/${encodeURIComponent(applicationNumber)}`
 }
 
 async function capture<T>(operation: () => Promise<T>): Promise<{ ok: true; value: T } | { ok: false; value: T extends Array<unknown> ? [] : never }> {
