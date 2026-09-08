@@ -3,13 +3,25 @@
 import { useMemo, useState } from "react"
 import { ChevronDown, ExternalLink, Loader2, Search, Sparkles } from "lucide-react"
 
+type Source = { title: string; url: string }
+type RadarDelta = {
+  previousGeneratedAt: string
+  summary: string
+  newSources: Source[]
+  removedSources: Source[]
+  retainedSourceCount: number
+  sourceSetChanged: boolean
+  convictionDelta: 0 | null
+  decisionBoundary: string
+}
 type Radar = {
   generatedAt: string
   query: string
   text: string
-  sources: Array<{ title: string; url: string }>
+  sources: Source[]
   convictionDelta: 0 | null
   decisionBoundary: string
+  delta: RadarDelta | null
 }
 
 type Project = {
@@ -24,7 +36,7 @@ type ResearchResult = {
   project: { key: string; name: string; direction: string; intendedOutcome: string; humanStatus: string; repo: string | null; activeResearchTopics: string[] }
   query: string
   text: string
-  sources: Array<{ title: string; url: string }>
+  sources: Source[]
   decisionBoundary: string
 }
 
@@ -68,8 +80,8 @@ export function JuanProjectDocumentationResearchClient({ projects }: { projects:
     <div className="flex flex-col gap-3 border-b border-[#294047] px-4 py-4 lg:flex-row lg:items-start lg:justify-between">
       <div className="max-w-3xl">
         <div className="flex items-center gap-2 text-[9px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]"><Sparkles className="size-3.5" />I+D por proyecto</div>
-        <h2 className="mt-1 text-sm font-medium text-[#E7DFCE]">Buscar documentación aplicable a una vertical</h2>
-        <p className="mt-1 text-xs leading-5 text-[#83908F]">Cruza el contexto real del proyecto con documentación oficial, repositorios, papers, arXiv y benchmarks actuales. La investigación propone; no cambia decisiones ni scores.</p>
+        <h2 className="mt-1 text-sm font-medium text-[#E7DFCE]">Qué cambió y qué podemos aplicar</h2>
+        <p className="mt-1 text-xs leading-5 text-[#83908F]">El radar automático compara cada lectura con la anterior. Destaca cambios técnicos; la investigación propone, pero no cambia decisiones ni scores.</p>
       </div>
       {project ? <div className="max-w-sm text-right text-[10px] leading-4 text-[#748481]">Dirección actual: <span className="text-[#AEB6B4]">{project.direction}</span></div> : null}
     </div>
@@ -95,20 +107,29 @@ export function JuanProjectDocumentationResearchClient({ projects }: { projects:
       {SUGGESTIONS.map((suggestion) => <button key={suggestion} type="button" onClick={() => { setQuery(suggestion); void runResearch(suggestion) }} className="border border-[#294047] px-2.5 py-1.5 text-left text-[10px] leading-4 text-[#AEB6B4] hover:border-[#355C55] hover:text-[#E7DFCE]">{suggestion}</button>)}
     </div> : null}
 
-    {project?.radar ? <details className="group border-t border-[#294047]">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:hidden">
-        <div>
-          <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-[#96B5A6]">Radar I+D automático · {project.name}</p>
-          <p className="mt-1 text-[10px] text-[#748481]">Última pasada {formatRadarDate(project.radar.generatedAt)} · conviction Δ 0</p>
-        </div>
-        <ChevronDown className="size-4 shrink-0 text-[#96B5A6] transition-transform group-open:rotate-180" />
-      </summary>
-      <div className="border-t border-[#294047] px-4 py-4">
-        <p className="text-[10px] leading-4 text-[#748481]">{project.radar.decisionBoundary}</p>
-        <div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#D7DEDA]">{project.radar.text}</div>
-        {project.radar.sources.length ? <SourceGrid sources={project.radar.sources} /> : null}
+    {project?.radar ? <div className="border-t border-[#294047]">
+      <div className="px-4 py-4">
+        <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-[#96B5A6]">Radar I+D automático · {project.name}</p>
+        {project.radar.delta ? <DeltaSummary delta={project.radar.delta} /> : <div className="mt-2 border-l border-[#355C55] pl-3">
+          <p className="text-xs font-medium text-[#E7DFCE]">Primera lectura automática</p>
+          <p className="mt-1 text-[10px] leading-4 text-[#748481]">La próxima pasada comparará esta lectura y mostrará sólo los cambios detectados.</p>
+        </div>}
       </div>
-    </details> : null}
+      <details className="group border-t border-[#294047]">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:hidden">
+          <div>
+            <p className="text-[10px] text-[#AEB6B4]">Ver lectura completa</p>
+            <p className="mt-1 text-[10px] text-[#748481]">Última pasada {formatRadarDate(project.radar.generatedAt)} · conviction Δ 0</p>
+          </div>
+          <ChevronDown className="size-4 shrink-0 text-[#96B5A6] transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="border-t border-[#294047] px-4 py-4">
+          <p className="text-[10px] leading-4 text-[#748481]">{project.radar.decisionBoundary}</p>
+          <div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#D7DEDA]">{project.radar.text}</div>
+          {project.radar.sources.length ? <SourceGrid sources={project.radar.sources} /> : null}
+        </div>
+      </details>
+    </div> : null}
 
     {error ? <div role="alert" className="border-t border-[#294047] px-4 py-4 text-xs text-[#D6A46F]">{error}</div> : null}
 
@@ -126,7 +147,20 @@ export function JuanProjectDocumentationResearchClient({ projects }: { projects:
   </section>
 }
 
-function SourceGrid({ sources }: { sources: Array<{ title: string; url: string }> }) {
+function DeltaSummary({ delta }: { delta: RadarDelta }) {
+  const newCount = delta.newSources.length
+  return <div className="mt-2 border-l border-[#355C55] pl-3">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <p className="text-xs font-medium text-[#E7DFCE]">Qué cambió desde la pasada anterior</p>
+      <span className="text-[9px] uppercase tracking-[0.12em] text-[#96B5A6]">{newCount ? `${newCount} fuente${newCount === 1 ? "" : "s"} nueva${newCount === 1 ? "" : "s"}` : "sin fuentes nuevas"}</span>
+    </div>
+    <div className="mt-2 whitespace-pre-wrap text-xs leading-5 text-[#D7DEDA]">{delta.summary}</div>
+    <p className="mt-2 text-[10px] leading-4 text-[#748481]">Comparado con {formatRadarDate(delta.previousGeneratedAt)} · conviction Δ 0</p>
+    {delta.newSources.length ? <div className="mt-3 flex flex-wrap gap-2">{delta.newSources.slice(0, 4).map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 border border-[#294047] px-2.5 py-1.5 text-[10px] text-[#AEB6B4] hover:border-[#355C55] hover:text-[#E7DFCE]">{source.title}<ExternalLink className="size-3 shrink-0 text-[#96B5A6]" /></a>)}</div> : null}
+  </div>
+}
+
+function SourceGrid({ sources }: { sources: Source[] }) {
   return <div className="mt-4 border-t border-[#294047] pt-3">
     <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-[#748481]">Fuentes</p>
     <div className="mt-2 grid gap-1.5 md:grid-cols-2">
