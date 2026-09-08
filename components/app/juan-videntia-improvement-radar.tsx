@@ -30,7 +30,7 @@ export async function JuanVidentiaImprovementRadar({ userId }: { userId: string 
             Mejora continua · producto interno
           </div>
           <h2 className="mt-2 text-xl font-normal tracking-[-0.02em] text-[#E7DFCE] sm:text-2xl">Cómo mejorar VIDENTIA</h2>
-          <p className="mt-2 max-w-3xl text-[12px] leading-5 text-[#AEB6B4]">Cada mejora sigue un ciclo verificable: detectada → investigando → propuesta → aprobada → implementada → medida. Aprobar fija una baseline canónica; medir registra el estado posterior. VIDENTIA compara ambos snapshots con reglas deterministas, pero la interpretación final sigue siendo humana.</p>
+          <p className="mt-2 max-w-3xl text-[12px] leading-5 text-[#AEB6B4]">Cada mejora sigue un ciclo verificable: detectada → investigando → propuesta → aprobada → implementada → medida. Aprobar fija una baseline canónica; medir registra el estado posterior y no declara éxito automáticamente. VIDENTIA compara ambos snapshots con reglas deterministas, pero la interpretación final sigue siendo humana.</p>
         </div>
         <div className="grid min-w-[380px] grid-cols-4 border-t border-[#294047] lg:border-l lg:border-t-0">
           <MiniMetric label="Señales" value={String(radar.observedSignalCount)} note="internas observadas" />
