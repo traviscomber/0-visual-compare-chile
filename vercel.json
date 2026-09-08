@@ -61,6 +61,10 @@
       "schedule": "5 1,7,13,19 * * *"
     },
     {
+      "path": "/api/cron/juan-subsection-papers",
+      "schedule": "28 1,7,13,19 * * *"
+    },
+    {
       "path": "/api/cron/opportunity-conviction",
       "schedule": "55 */6 * * *"
     }
