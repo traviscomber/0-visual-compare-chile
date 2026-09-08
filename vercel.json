@@ -65,6 +65,10 @@
       "schedule": "28 1,7,13,19 * * *"
     },
     {
+      "path": "/api/cron/juan-project-rnd-radar",
+      "schedule": "12 */4 * * *"
+    },
+    {
       "path": "/api/cron/opportunity-conviction",
       "schedule": "55 */6 * * *"
     }

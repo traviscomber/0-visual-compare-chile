@@ -1,13 +1,23 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { ExternalLink, Loader2, Search, Sparkles } from "lucide-react"
+import { ChevronDown, ExternalLink, Loader2, Search, Sparkles } from "lucide-react"
+
+type Radar = {
+  generatedAt: string
+  query: string
+  text: string
+  sources: Array<{ title: string; url: string }>
+  convictionDelta: 0 | null
+  decisionBoundary: string
+}
 
 type Project = {
   key: string
   name: string
   direction: string
   status: "researching" | "ready_for_review" | "accepted" | "rejected"
+  radar: Radar | null
 }
 
 type ResearchResult = {
@@ -67,7 +77,7 @@ export function JuanProjectDocumentationResearchClient({ projects }: { projects:
     <div className="grid gap-3 px-4 py-4 lg:grid-cols-[240px_minmax(0,1fr)_auto] lg:items-end">
       <label className="grid gap-1.5 text-[10px] uppercase tracking-[0.12em] text-[#748481]">
         Proyecto
-        <select value={projectKey} onChange={(event) => setProjectKey(event.target.value)} className="h-10 border border-[#355C55] bg-[#07181E] px-3 text-xs normal-case tracking-normal text-[#E7DFCE] outline-none focus:border-[#96B5A6]">
+        <select value={projectKey} onChange={(event) => { setProjectKey(event.target.value); setResult(null); setError(null) }} className="h-10 border border-[#355C55] bg-[#07181E] px-3 text-xs normal-case tracking-normal text-[#E7DFCE] outline-none focus:border-[#96B5A6]">
           {projects.map((item) => <option key={item.key} value={item.key}>{item.name}</option>)}
         </select>
       </label>
@@ -85,6 +95,21 @@ export function JuanProjectDocumentationResearchClient({ projects }: { projects:
       {SUGGESTIONS.map((suggestion) => <button key={suggestion} type="button" onClick={() => { setQuery(suggestion); void runResearch(suggestion) }} className="border border-[#294047] px-2.5 py-1.5 text-left text-[10px] leading-4 text-[#AEB6B4] hover:border-[#355C55] hover:text-[#E7DFCE]">{suggestion}</button>)}
     </div> : null}
 
+    {project?.radar ? <details className="group border-t border-[#294047]">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:hidden">
+        <div>
+          <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-[#96B5A6]">Radar I+D automático · {project.name}</p>
+          <p className="mt-1 text-[10px] text-[#748481]">Última pasada {formatRadarDate(project.radar.generatedAt)} · conviction Δ 0</p>
+        </div>
+        <ChevronDown className="size-4 shrink-0 text-[#96B5A6] transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="border-t border-[#294047] px-4 py-4">
+        <p className="text-[10px] leading-4 text-[#748481]">{project.radar.decisionBoundary}</p>
+        <div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#D7DEDA]">{project.radar.text}</div>
+        {project.radar.sources.length ? <SourceGrid sources={project.radar.sources} /> : null}
+      </div>
+    </details> : null}
+
     {error ? <div role="alert" className="border-t border-[#294047] px-4 py-4 text-xs text-[#D6A46F]">{error}</div> : null}
 
     {result ? <div className="border-t border-[#294047] px-4 py-4">
@@ -96,14 +121,24 @@ export function JuanProjectDocumentationResearchClient({ projects }: { projects:
         <p className="max-w-lg text-[10px] leading-4 text-[#748481] lg:text-right">{result.decisionBoundary}</p>
       </div>
       <div className="mt-4 whitespace-pre-wrap text-sm leading-6 text-[#D7DEDA]">{result.text}</div>
-      {result.sources.length ? <div className="mt-4 border-t border-[#294047] pt-3">
-        <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-[#748481]">Fuentes</p>
-        <div className="mt-2 grid gap-1.5 md:grid-cols-2">
-          {result.sources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer" className="flex items-start justify-between gap-2 border border-[#294047] px-3 py-2 text-[10px] leading-4 text-[#AEB6B4] hover:border-[#355C55] hover:text-[#E7DFCE]">
-            <span>{source.title}</span><ExternalLink className="mt-0.5 size-3 shrink-0 text-[#96B5A6]" />
-          </a>)}
-        </div>
-      </div> : null}
+      {result.sources.length ? <SourceGrid sources={result.sources} /> : null}
     </div> : null}
   </section>
+}
+
+function SourceGrid({ sources }: { sources: Array<{ title: string; url: string }> }) {
+  return <div className="mt-4 border-t border-[#294047] pt-3">
+    <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-[#748481]">Fuentes</p>
+    <div className="mt-2 grid gap-1.5 md:grid-cols-2">
+      {sources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer" className="flex items-start justify-between gap-2 border border-[#294047] px-3 py-2 text-[10px] leading-4 text-[#AEB6B4] hover:border-[#355C55] hover:text-[#E7DFCE]">
+        <span>{source.title}</span><ExternalLink className="mt-0.5 size-3 shrink-0 text-[#96B5A6]" />
+      </a>)}
+    </div>
+  </div>
+}
+
+function formatRadarDate(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "sin fecha"
+  return new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(date)
 }
