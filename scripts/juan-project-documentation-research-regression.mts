@@ -11,11 +11,13 @@ function forbid(source: string, needle: string, label: string) {
   if (source.includes(needle)) fail(`${label} must not contain ${needle}`)
 }
 
-const [page, serverUi, clientUi, route] = await Promise.all([
+const [page, serverUi, clientUi, route, cron, vercel] = await Promise.all([
   readFile("app/(app)/mi-espacio/page.tsx", "utf8"),
   readFile("components/app/juan-project-documentation-research.tsx", "utf8"),
   readFile("components/app/juan-project-documentation-research-client.tsx", "utf8"),
   readFile("app/api/intelligence/project-documentation-research/route.ts", "utf8"),
+  readFile("app/api/cron/juan-project-rnd-radar/route.ts", "utf8"),
+  readFile("vercel.json", "utf8"),
 ])
 
 for (const needle of [
@@ -27,6 +29,8 @@ for (const needle of [
   'intelligence_product_evolution_recommendations',
   '.eq("user_id", userId)',
   '.neq("status", "rejected")',
+  'evidence_snapshot',
+  'normalizeRadar',
   'JuanProjectDocumentationResearchClient',
 ]) requireText(serverUi, needle, "project research server UI")
 
@@ -39,6 +43,8 @@ for (const needle of [
   'documentación oficial',
   'papers, arXiv y benchmarks',
   'La investigación propone; no cambia decisiones ni scores.',
+  'Radar I+D automático',
+  'conviction Δ 0',
 ]) requireText(clientUi, needle, "project research client UI")
 for (const forbidden of ['dangerouslySetInnerHTML', '.from(', '.insert(', '.update(', '.upsert(', '.delete(']) forbid(clientUi, forbidden, "project research client UI")
 
@@ -59,5 +65,28 @@ for (const forbidden of [
   '.insert(', '.update(', '.upsert(', '.delete(',
   'conviction_delta', 'confidence_delta', 'auto_promote',
 ]) forbid(route, forbidden, "project documentation research API")
+
+for (const needle of [
+  'request.headers.get("authorization") !== `Bearer ${secret}`',
+  'tools: [{ type: "web_search" }]',
+  'intelligence_product_evolution_recommendations',
+  'rnd_radar',
+  'conviction_delta: 0',
+  '.update({ evidence_snapshot:',
+  'No cambies score, conviction, confidence, estado humano ni lifecycle.',
+]) requireText(cron, needle, "project R&D radar cron")
+for (const forbidden of [
+  'score:',
+  'status:',
+  'decision_at',
+  'decision_note',
+  'confidence_delta',
+  'auto_promote',
+]) forbid(cron, forbidden, "project R&D radar cron")
+
+for (const needle of [
+  '"path": "/api/cron/juan-project-rnd-radar"',
+  '"schedule": "12 */4 * * *"',
+]) requireText(vercel, needle, "Vercel cron schedule")
 
 console.log("Juan project documentation research regression PASS")
