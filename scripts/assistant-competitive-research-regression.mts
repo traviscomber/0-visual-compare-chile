@@ -82,6 +82,11 @@ for (const needle of [
   'señal INAPI observada -> corroboración independiente -> hipótesis aceptada por una persona -> monitoreo posterior -> revisión/acción humana pendiente',
   'Ausencia, indisponibilidad o cobertura parcial de una fuente es neutral',
   'No pidas clases Nice ni IDs si ya están presentes aquí.',
+  'actionTarget: situation.acceptedHypotheses[0]?.hypothesis || situation.company',
+  'actionTargetType: situation.acceptedHypotheses.length ? "accepted_hypothesis" : "company_fallback"',
+  'researchQueryHint: buildCompetitiveResearchQueryHint(situation)',
+  'usa exactamente actionTarget como target de prepare_action_research',
+  'Si actionTargetType es company_fallback y no existe coincidencia canónica, mantén las acciones como conceptuales',
 ]) requireText(assistantRoute, needle, "assistant route")
 for (const forbidden of [
   '.from("competitive_hypotheses").update',
@@ -110,4 +115,4 @@ for (const needle of [
   'role="dialog"',
 ]) requireText(launcher, needle, "floating assistant")
 
-console.log("Assistant competitive research regression PASS: the page-aware floating assistant receives a read-only canonical competitive-situation snapshot when relevant, reuses the existing attention/situation builders, preserves source-unavailability neutrality and human hypothesis decisions, and keeps evidence-backed action research separate from conviction and canonical writes.")
+console.log("Assistant competitive research regression PASS: the page-aware floating assistant receives a read-only canonical competitive-situation snapshot, resolves action requests through canonical hypothesis/company targets plus research hints, reuses the existing attention/situation builders, preserves source-unavailability neutrality and human decisions, and keeps evidence-backed action research separate from conviction and canonical writes.")
