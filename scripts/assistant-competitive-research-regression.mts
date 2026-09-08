@@ -60,11 +60,12 @@ for (const forbidden of [
 ]) forbid(cron, forbidden, "corroboration cron")
 
 for (const needle of [
-  "Genera acciones para mi oportunidad más relevante y busca papers.",
-  "Contexto · papers · acciones",
+  "Genera acciones para esta oportunidad y busca papers.",
+  "Pantalla actual · contexto · papers · acciones",
+  "La pantalla sólo orienta el contexto.",
   "Investigando contexto, papers y evidencia…",
   'fetch("/api/assistant"',
   'role="dialog"',
 ]) requireText(launcher, needle, "floating assistant")
 
-console.log("Assistant competitive research regression PASS: the VIDENTIA floating assistant reuses canonical competitive corroboration, automatically prepares canonical target context plus recent academic papers before proposing actions, preserves source-unavailability neutrality, and remains read-only with respect to canonical actions, hypotheses, opportunities, conviction and human decisions.")
+console.log("Assistant competitive research regression PASS: the VIDENTIA page-aware floating assistant reuses canonical competitive corroboration, automatically prepares canonical target context plus recent academic papers before proposing actions, preserves source-unavailability neutrality, and remains read-only with respect to canonical actions, hypotheses, opportunities, conviction and human decisions.")
