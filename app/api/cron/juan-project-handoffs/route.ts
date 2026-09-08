@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { searchCrossrefWorks } from "@/lib/intelligence/crossref"
 import { searchOpenAlexWorks } from "@/lib/intelligence/openalex"
 import { listPortfolioOrganizations } from "@/lib/intelligence/portfolio-access"
+import { inapiPatentEvidenceUrl, inapiPatentEvidenceUrlFromSourceRecord } from "@/lib/inapi/patent-evidence-url"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 export const runtime = "nodejs"
@@ -33,6 +34,28 @@ type ExistingHandoff = {
   evidence_snapshot: Record<string, unknown> | null
 }
 
+type PatentRow = {
+  source: string
+  source_record_id: string
+  application_number: string | null
+  title: string
+  applicants: string | null
+  filing_date: string | null
+  publication_date: string | null
+  source_url: string | null
+}
+
+type SignalRow = {
+  title: string
+  summary: string | null
+  source_key: string
+  event_type: string
+  relevance: string
+  source_url: string | null
+  occurred_at: string | null
+  last_seen_at: string | null
+}
+
 const PROJECT_IDEAS: ProjectIdea[] = [
   {
     key: "capability:agentic-operations",
@@ -58,7 +81,7 @@ const PROJECT_IDEAS: ProjectIdea[] = [
     strength: 76,
     capability: "Kumplio + ChileFlota + VIDENTIA + agentes",
     researchQuery: "agentic AI regulatory compliance autonomous workflow evidence human oversight",
-    patentSignals: ["consultas jurídicas", "tributarios y contadores", "cumplimiento", "regulación", "control"],
+    patentSignals: ["inteligencia artificial", "automatización", "cumplimiento", "consultas jurídicas", "tributarios y contadores"],
     evidenceAnchorGroups: [
       ["agent", "agents", "agentic", "agente", "agentes", "automation", "autonomous", "automatizacion", "autonomo"],
       ["compliance", "regulatory", "regulation", "audit", "legal", "policy", "governance", "evidence", "cumplimiento", "regulacion", "auditoria", "gobernanza", "evidencia"],
@@ -81,7 +104,11 @@ const PROJECT_IDEAS: ProjectIdea[] = [
       ["computer vision", "multimodal", "embodied", "robot", "robotics", "sensor", "edge ai", "machine vision", "spatial", "vision computacional", "camara"],
       ["industrial", "inspection", "manufacturing", "operations", "physical", "agriculture", "agricultural", "mining", "equipment", "inventory", "quality", "inspeccion", "manufactura", "operaciones", "fisico", "agricultura", "mineria", "equipo", "calidad"],
     ],
-    reuseAssets: [],
+    reuseAssets: [
+      { title: "EdgeVision", url: "https://github.com/traviscomber/edgevision", reuse: "Observación física y visión/edge reutilizable para inspección y eventos operacionales." },
+      { title: "Pescamar", url: "https://github.com/traviscomber/pescamar", reuse: "Calidad, producción e inventario como destino operacional de observaciones visuales." },
+      { title: "MOTIL", url: "https://github.com/traviscomber/v0-erpminia", reuse: "Activos, mantenimiento y geología para conectar observación física con trabajo real." },
+    ],
   },
   {
     key: "capability:industrial-reliability",
@@ -94,7 +121,11 @@ const PROJECT_IDEAS: ProjectIdea[] = [
       ["predictive maintenance", "machine learning", "artificial intelligence", "ai", "condition monitoring", "anomaly detection", "failure prediction", "mantenimiento predictivo", "aprendizaje automatico", "inteligencia artificial", "monitoreo de condicion"],
       ["industrial", "manufacturing", "plant", "equipment", "machinery", "mining", "asset", "process", "factory", "manufactura", "planta", "equipo", "maquinaria", "mineria", "activo", "proceso"],
     ],
-    reuseAssets: [],
+    reuseAssets: [
+      { title: "MOTIL", url: "https://github.com/traviscomber/v0-erpminia", reuse: "OT, activos, mantenimiento y datos operacionales canónicos." },
+      { title: "Black Swan Facility Core", url: "https://github.com/traviscomber/black-swan-facility-core", reuse: "Patrones de facility, mantenimiento e inventario físico." },
+      { title: "EdgeVision", url: "https://github.com/traviscomber/edgevision", reuse: "Señales físicas y detección en edge para alimentar confiabilidad." },
+    ],
   },
   {
     key: "capability:environmental-operations",
@@ -107,7 +138,10 @@ const PROJECT_IDEAS: ProjectIdea[] = [
       ["artificial intelligence", "ai", "machine learning", "automation", "autonomous", "agentic", "inteligencia artificial", "aprendizaje automatico", "automatizacion", "autonomo", "agente"],
       ["environmental", "environment", "emissions", "pollution", "wastewater", "water quality", "air quality", "ecological", "ambiental", "emisiones", "contaminacion", "aguas residuales", "calidad del agua", "calidad del aire", "ecologico"],
     ],
-    reuseAssets: [],
+    reuseAssets: [
+      { title: "VIDENTIA", url: "https://github.com/traviscomber/0-visual-compare-chile", reuse: "Fuentes oficiales, vigilancia, evidencia, señales y trazabilidad." },
+      { title: "Kumplio", url: "https://github.com/traviscomber/kumplio", reuse: "Obligaciones, brechas, responsables y evidencia de cumplimiento." },
+    ],
   },
 ]
 
@@ -136,13 +170,13 @@ export async function GET(request: Request) {
   const [patentsResult, signalsResult, evidenceResult, handoffsResult] = await Promise.all([
     admin
       .from("patent_records")
-      .select("title,applicants,filing_date,publication_date,source_url")
-      .or("title.ilike.%inteligencia artificial%,title.ilike.%aprendizaje automático%,title.ilike.%sistema autónomo%,title.ilike.%multimodal%,title.ilike.%asignación de tareas%,title.ilike.%microscopía%,title.ilike.%gestión de activos%,title.ilike.%monitoreo%,title.ilike.%cumplimiento%,title.ilike.%regulación%")
+      .select("source,source_record_id,application_number,title,applicants,filing_date,publication_date,source_url")
+      .or("title.ilike.%inteligencia artificial%,title.ilike.%aprendizaje automático%,title.ilike.%sistema autónomo%,title.ilike.%multimodal%,title.ilike.%asignación de tareas%,title.ilike.%microscopía%,title.ilike.%gestión de activos%,title.ilike.%monitoreo%,title.ilike.%cumplimiento%,title.ilike.%automatización%")
       .order("publication_date", { ascending: false, nullsFirst: false })
       .limit(240),
     admin
       .from("intelligence_watch_events")
-      .select("title,summary,source_key,relevance,source_url,occurred_at,last_seen_at")
+      .select("title,summary,source_key,event_type,relevance,source_url,occurred_at,last_seen_at")
       .eq("user_id", juan.id)
       .in("relevance", ["alta", "media"])
       .order("last_seen_at", { ascending: false })
@@ -160,8 +194,8 @@ export async function GET(request: Request) {
       .eq("organization_id", organization.id),
   ])
 
-  const patents = patentsResult.error ? [] : patentsResult.data ?? []
-  const signals = signalsResult.error ? [] : signalsResult.data ?? []
+  const patents = (patentsResult.error ? [] : patentsResult.data ?? []) as PatentRow[]
+  const signals = (signalsResult.error ? [] : signalsResult.data ?? []) as SignalRow[]
   const existingEvidence = evidenceResult.error ? [] : evidenceResult.data ?? []
   const existingHandoffs = handoffsResult.error ? [] : (handoffsResult.data ?? []) as ExistingHandoff[]
   const handoffByIdea = new Map(existingHandoffs.map(row => [row.idea_key, row]))
@@ -260,9 +294,11 @@ export async function GET(request: Request) {
     const researchSnapshot = {
       threshold: READY_THRESHOLD,
       rule: "domain-qualified evidence-only research score > 90 enters human decision; institutional capability never changes conviction",
-      research_mode: "deep_auto_v3_domain_evidence",
+      research_mode: "deep_auto_v4_source_separated",
       evidence_quality: {
         paper_signal_gate: "all_domain_anchor_groups_required",
+        patent_market_separation: "INAPI patent/trademark watch events are excluded from market signals; patent activity remains a separate evidence family",
+        patent_link_policy: "INAPI patent evidence points to the exact VIDENTIA record when an application identifier exists",
         max_title_length: MAX_EVIDENCE_TITLE_LENGTH,
         signal_dedupe: "normalized_title",
         anchor_groups: idea.evidenceAnchorGroups,
@@ -290,7 +326,7 @@ export async function GET(request: Request) {
     }
 
     const rationale = liveScore > READY_THRESHOLD
-      ? `VIDENTIA completó un estudio automático basado sólo en evidencia específica de dominio con ${papers.length} papers, ${patentMatches.length} patentes y ${signalMatches.length} señales. Los ${idea.reuseAssets.length} activos N3uralia se muestran sólo como capacidad de ejecución y no aumentan la convicción. La decisión final queda exclusivamente en Juan.`
+      ? `VIDENTIA completó un estudio automático basado sólo en evidencia específica de dominio con ${papers.length} papers, ${patentMatches.length} patentes y ${signalMatches.length} señales independientes. Los ${idea.reuseAssets.length} activos N3uralia se muestran sólo como capacidad de ejecución y no aumentan la convicción. La decisión final queda exclusivamente en Juan.`
       : `VIDENTIA sigue investigando: la convicción basada sólo en evidencia específica de dominio está en ${liveScore}/100 y todavía no alcanza el umbral de decisión. Los activos N3uralia no afectan este score.`
 
     const { error: handoffError } = await admin.from("intelligence_project_handoffs").upsert({
@@ -332,7 +368,7 @@ export async function GET(request: Request) {
   const response = {
     ok: true,
     threshold: READY_THRESHOLD,
-    researchMode: "deep_auto_v3_domain_evidence",
+    researchMode: "deep_auto_v4_source_separated",
     ideas: scored,
     awaitingDecision: scored.filter(item => item.status === "ready_for_n3uralia").length,
     evidenceAdded: insertedEvidence,
@@ -397,28 +433,35 @@ async function findPapers(query: string, anchorGroups: string[][], from: Date, t
     .slice(0, MAX_PER_LAYER)
 }
 
-function findPatents(rows: Array<Record<string, unknown>>, terms: string[]) {
+function findPatents(rows: PatentRow[], terms: string[]) {
   return rows.flatMap(row => {
     const title = text(row.title)
-    if (!title) return []
+    if (!title || !isPlausibleEvidenceTitle(title)) return []
     const normalized = normalizeSearchText(title)
     const score = terms.reduce((total, term) => total + (containsAnchor(normalized, term) ? Math.max(1, normalize(term).split(" ").length) : 0), 0)
-    return score > 0 ? [{
+    if (score <= 0) return []
+    const inapi = normalize(row.source) === "inapi"
+    const exactUrl = inapi
+      ? inapiPatentEvidenceUrl(row.application_number) ?? inapiPatentEvidenceUrlFromSourceRecord(row.source_record_id)
+      : row.source_url
+    return [{
       score,
       title,
       applicants: text(row.applicants),
       date: text(row.publication_date) ?? text(row.filing_date),
-      url: text(row.source_url),
-    }] : []
+      url: exactUrl,
+    }]
   }).sort((a, b) => b.score - a.score || String(b.date ?? "").localeCompare(String(a.date ?? ""))).slice(0, MAX_PER_LAYER)
 }
 
-function findSignals(rows: Array<Record<string, unknown>>, anchorGroups: string[][]) {
+function findSignals(rows: SignalRow[], anchorGroups: string[][]) {
   const seen = new Set<string>()
   return rows.flatMap(row => {
     const title = text(row.title)
     if (!title || !isPlausibleEvidenceTitle(title)) return []
     const sourceKey = text(row.source_key) ?? "external"
+    const eventType = normalize(row.event_type ?? "")
+    if (normalize(sourceKey) === "inapi_open_data" && (eventType === "patent" || eventType === "trademark")) return []
     const evidenceText = [title, text(row.summary)].filter(Boolean).join(" ")
     const anchorHits = matchAnchorGroups(evidenceText, anchorGroups)
     if (!anchorHits) return []

@@ -12,6 +12,7 @@ export const maxDuration = 300
 const JUAN_EMAIL = "juan@n3uralia.com"
 const REVIEW_THRESHOLD = 84
 const CHILE_DELTA_CAP = 10
+const MAX_EVIDENCE_TITLE_LENGTH = 320
 
 type ReuseAsset = { title: string; url: string; reuse: string }
 type ProductEvolution = {
@@ -342,12 +343,12 @@ export async function GET(request: Request) {
 async function findPaper(query: string, from: Date, to: Date) {
   try {
     const works = await searchOpenAlexWorks(query, from, to, 5)
-    const best = [...works].sort((a, b) => b.citedByCount - a.citedByCount)[0]
+    const best = [...works].filter(work => isPlausibleEvidenceTitle(work.title)).sort((a, b) => b.citedByCount - a.citedByCount)[0]
     if (best) return { source: "OpenAlex", title: best.title, date: best.date, url: best.url, citedByCount: best.citedByCount }
   } catch (error) { console.warn("[juan-product-evolution:openalex]", error) }
   try {
     const works = await searchCrossrefWorks(query, from, to, 5)
-    const best = [...works].sort((a, b) => b.citedByCount - a.citedByCount)[0]
+    const best = [...works].filter(work => isPlausibleEvidenceTitle(work.title)).sort((a, b) => b.citedByCount - a.citedByCount)[0]
     if (best) return { source: "Crossref", title: best.title, date: best.date, url: best.url, citedByCount: best.citedByCount }
   } catch (error) { console.warn("[juan-product-evolution:crossref]", error) }
   return null
@@ -357,7 +358,7 @@ function findPatent(rows: PatentRow[], terms: string[]) {
   const normalizedTerms = terms.map(normalize).filter(term => term.length >= 5)
   const matches = rows.flatMap(row => {
     const title = row.title?.trim()
-    if (!title) return []
+    if (!title || !isPlausibleEvidenceTitle(title)) return []
     const normalizedTitle = normalize(title)
     const hits = normalizedTerms.filter(term => normalizedTitle.includes(term))
     if (hits.length < 2) return []
@@ -378,11 +379,13 @@ function findPatent(rows: PatentRow[], terms: string[]) {
 function findSignals(rows: SignalRow[], terms: string[], chileOnly: boolean, limit: number): MatchedSignal[] {
   const normalizedTerms = terms.map(normalize).filter(Boolean)
   const matches = rows.flatMap(row => {
+    const title = row.title?.trim()
+    if (!title || !isPlausibleEvidenceTitle(title)) return []
     const source = normalize(row.source_key ?? "")
     const eventType = normalize(row.event_type ?? "")
     if (source === "inapi_open_data" && (eventType === "patent" || eventType === "trademark")) return []
 
-    const haystack = normalize([row.title, row.summary, row.source_key].filter(Boolean).join(" "))
+    const haystack = normalize([title, row.summary, row.source_key].filter(Boolean).join(" "))
     const hits = normalizedTerms.filter(term => haystack.includes(term))
     if (!hits.length) return []
     const chileSource = /sea|seia|sma|snifa|bcn|fne|tdlc|chile|sernageomin|sernapesca|dt/.test(source)
@@ -406,7 +409,7 @@ function findSignals(rows: SignalRow[], terms: string[], chileOnly: boolean, lim
 
     return [{
       score: hits.length * 2 + relevanceWeight,
-      title: row.title,
+      title,
       summary: row.summary,
       source: row.source_key,
       relevance: row.relevance,
@@ -444,6 +447,11 @@ function classifyChileState(items: MatchedSignal[]) {
   if (support) return "supporting_evidence"
   if (contradiction) return "contradicting_evidence"
   return "insufficient_evidence"
+}
+
+function isPlausibleEvidenceTitle(value: string) {
+  const length = value.trim().length
+  return length >= 12 && length <= MAX_EVIDENCE_TITLE_LENGTH
 }
 
 function clamp(value: number, min: number, max: number) {

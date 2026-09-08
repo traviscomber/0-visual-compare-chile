@@ -4,8 +4,6 @@ import { redirect } from "next/navigation"
 import { tryGetSupabaseUrl, tryGetSupabaseAnonKey } from "@/lib/supabase/env"
 import { AppNav } from "@/components/app/app-nav"
 import { FreePreviewShell } from "@/components/app/free-preview-shell"
-import { JuanProjectIdeasStrip } from "@/components/app/juan-project-ideas-strip"
-import { JuanProductEvolutionStrip } from "@/components/app/juan-product-evolution-strip"
 import { VidentiaAssistantLauncher } from "@/components/app/videntia-assistant-launcher"
 import { isFreeAccessUser } from "@/lib/free-research-quota"
 
@@ -65,7 +63,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const metadataName = typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : null
   const metadataCompany = typeof user.user_metadata?.company_name === "string" ? user.user_metadata.company_name : null
-  const showJuanIntelligence = user.email?.trim().toLowerCase() === "juan@n3uralia.com"
 
   return (
     <AppNav
@@ -79,8 +76,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <p className="mt-1 text-xs leading-5 text-white/58">VIDENTIA ya usa este contexto para orientar investigaciones, señales y oportunidades. Puedes ajustarlo más adelante.</p>
         </div>
       ) : null}
-      {showJuanIntelligence ? <JuanProjectIdeasStrip userId={user.id} /> : null}
-      {showJuanIntelligence ? <JuanProductEvolutionStrip userId={user.id} /> : null}
       {children}
       <VidentiaAssistantLauncher />
     </AppNav>
