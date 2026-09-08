@@ -44,7 +44,7 @@ for (const needle of [
   'Proyecto',
   'Qué quieres investigar',
   'documentación oficial',
-  'papers, arXiv y benchmarks',
+  'El radar automático compara cada lectura con la anterior.',
   'Radar I+D automático',
   'Primera lectura automática',
   'Qué cambió desde la pasada anterior',
