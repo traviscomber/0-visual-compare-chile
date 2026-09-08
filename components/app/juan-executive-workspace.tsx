@@ -129,7 +129,7 @@ export async function JuanExecutiveWorkspace({ userId }: { userId: string }) {
   const repoActivities = products
     .map(item => asProductSnapshot(item.evidence_snapshot).repo_activity)
     .filter((activity): activity is RepoActivity => Boolean(activity))
-  const expectedGitHubRepos = products.filter(item => Boolean(asProductSnapshot(item.evidence_snapshot).repo?.includes("github.com/"))).length
+  const expectedGitHubRepos = products.length
   const freshGitHubRepos = repoActivities.filter(activity => activity.status === "ok" && isFresh(activity.observedAt, now, 2 * 60 * 60 * 1000)).length
   const latestGitHubUpdate = latestDate(repoActivities.map(activity => activity.observedAt ?? activity.lastAttemptAt ?? ""))
   const latestUpdate = latestDate([
