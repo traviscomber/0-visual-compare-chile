@@ -32,7 +32,23 @@ type HandoffSnapshot = {
   evidence_gaps?: string[]
 }
 
+type RepoActivity = {
+  status?: string
+  repoFullName?: string
+  repoUrl?: string
+  observedAt?: string
+  lastAttemptAt?: string
+  commits7d?: number
+  commits24h?: number
+  commits24hLowerBound?: boolean
+  scopeActivity?: Array<{ scope?: string; count?: number }>
+  latestCommit?: { sha?: string; message?: string; committedAt?: string | null; url?: string | null } | null
+  decisionEffect?: string
+}
+
 type ProductSnapshot = {
+  repo?: string
+  repo_activity?: RepoActivity
   chile_evidence?: { state?: string; delta?: number }
   world_frontier?: { state?: string; delta?: number; paper_count?: number }
   conviction?: { effective?: number; base?: number; chile_delta?: number; frontier_delta?: number; paper_delta?: number; patent_delta?: number; global_delta?: number }
@@ -119,6 +135,8 @@ export async function loadAssistantJuanWorkspace(userId: string) {
       humanDecisionAt: item.decision_at,
       humanDecisionNote: item.decision_note,
       intendedOutcome: item.outcome,
+      repository: snapshot.repo ?? null,
+      repoActivity: snapshot.repo_activity ?? null,
       chileEvidence: snapshot.chile_evidence ?? null,
       worldFrontier: snapshot.world_frontier ?? null,
       conviction: snapshot.conviction ?? null,
@@ -145,15 +163,23 @@ export async function loadAssistantJuanWorkspace(userId: string) {
     }]
   })
 
+  const githubReposObserved = acceptedProducts.filter(item => item.repoActivity?.status === "ok").length
+  const githubLatestObservedAt = acceptedProducts
+    .map(item => item.repoActivity?.observedAt ?? item.repoActivity?.lastAttemptAt ?? null)
+    .filter((value): value is string => Boolean(value))
+    .sort((a, b) => Date.parse(b) - Date.parse(a))[0] ?? null
+
   return {
     generatedAt: new Date().toISOString(),
-    decisionBoundary: "Read-only executive context. Evidence scores and execution readiness do not create, approve, reject, reopen or reprioritize human decisions automatically.",
-    evidenceBoundary: "Patent activity is a separate evidence family and is not market adoption. Missing Chile evidence is neutral. Institutional reuse/integration shapes execution only and does not increase conviction.",
+    decisionBoundary: "Read-only executive context. Evidence scores, GitHub activity and execution readiness do not create, approve, reject, reopen or reprioritize human decisions automatically.",
+    evidenceBoundary: "Patent activity is a separate evidence family and is not market adoption. Missing Chile evidence is neutral. GitHub activity and institutional reuse/integration are execution context only and never increase evidence conviction.",
     summary: {
       pendingDecisions: pendingDecisions.length,
       researchingHandoffs: researching.length,
       acceptedProducts: acceptedProducts.length,
       overdueActions: overdueActions.length,
+      githubReposObserved,
+      githubLatestObservedAt,
     },
     pendingDecisions,
     researching,
