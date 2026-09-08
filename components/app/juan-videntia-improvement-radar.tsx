@@ -3,16 +3,18 @@ import { ArrowRight, Gauge, Lightbulb, ShieldCheck } from "lucide-react"
 import { JuanVidentiaImprovementActions } from "@/components/app/juan-videntia-improvement-actions"
 import { loadAssistantExecutionMetricsSummary } from "@/lib/intelligence/assistant-execution-metrics"
 import { loadAssistantJuanWorkspace } from "@/lib/intelligence/assistant-juan-workspace"
+import { loadAssistantResponseQualitySummary } from "@/lib/intelligence/assistant-response-feedback"
 import { syncVidentiaImprovementLifecycle, type VidentiaImprovementLifecycleRow, type VidentiaImprovementStatus } from "@/lib/intelligence/videntia-improvement-lifecycle"
 import { assessVidentiaImprovementOutcome, type VidentiaImprovementOutcomeAssessment } from "@/lib/intelligence/videntia-improvement-outcome"
 import { buildVidentiaImprovementRadar, type VidentiaImprovementCandidate } from "@/lib/intelligence/videntia-improvement-radar"
 
 export async function JuanVidentiaImprovementRadar({ userId }: { userId: string }) {
-  const [snapshot, assistantMetrics] = await Promise.all([
+  const [snapshot, assistantMetrics, assistantQuality] = await Promise.all([
     loadAssistantJuanWorkspace(userId),
     loadAssistantExecutionMetricsSummary(userId, 7),
+    loadAssistantResponseQualitySummary(userId, 7),
   ])
-  const radar = buildVidentiaImprovementRadar(snapshot, assistantMetrics)
+  const radar = buildVidentiaImprovementRadar(snapshot, assistantMetrics, assistantQuality)
   const lifecycle = await syncVidentiaImprovementLifecycle(userId, radar.candidates)
   const lifecycleByKey = new Map(lifecycle.rows.map(row => [row.candidate_key, row]))
   const current = radar.candidates.map(candidate => ({ candidate, lifecycle: lifecycleByKey.get(candidate.id) ?? null }))
@@ -35,7 +37,7 @@ export async function JuanVidentiaImprovementRadar({ userId }: { userId: string 
         <div className="grid min-w-[380px] grid-cols-4 border-t border-[#294047] lg:border-l lg:border-t-0">
           <MiniMetric label="Señales" value={String(radar.observedSignalCount)} note="internas observadas" />
           <MiniMetric label="Mejoras" value={String(lifecycle.rows.length)} note="con historial" />
-          <MiniMetric label="Assistant" value={String(assistantMetrics.sampleSize)} note={`muestra ${assistantMetrics.windowDays}d`} />
+          <MiniMetric label="Assistant" value={String(assistantMetrics.sampleSize)} note={`feedback ${assistantQuality.feedbackSampleSize} · ${Math.round(assistantQuality.feedbackCoverage * 100)}% cobertura`} />
           <MiniMetric label="Auto-decisión" value="0" note="siempre humana" />
         </div>
       </div>
@@ -82,7 +84,7 @@ export async function JuanVidentiaImprovementRadar({ userId }: { userId: string 
       <div className="flex flex-col gap-3 border-t border-[#294047] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <div className="flex max-w-4xl items-start gap-2 text-[10px] leading-4 text-[#83908F]">
           <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#719B8D]" />
-          <span>{radar.boundary} Las métricas del Assistant almacenan sólo categorías y números agregables; no prompts, contenido de conversación ni rutas crudas. La evaluación posterior tiene decisionEffect=none y convictionDelta=0.</span>
+          <span>{radar.boundary} Las métricas y el feedback del Assistant almacenan sólo categorías y números agregables; no prompts, contenido de conversación ni rutas crudas. La evaluación posterior tiene decisionEffect=none y convictionDelta=0.</span>
         </div>
         <Link href="/mi-espacio?assistant=open" className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-[#173B37] px-3 text-xs font-medium text-[#DCE8E2] ring-1 ring-inset ring-[#31534D] hover:bg-[#1A4540]">
           Analizar con VIDENTIA <ArrowRight className="h-3.5 w-3.5" />
@@ -183,6 +185,6 @@ function summarySnapshot(snapshot: Record<string, unknown>) {
   const entries = Object.entries(snapshot).filter(([key, value]) => key !== "generatedAt" && key !== "measuredFrom" && key !== "measuredTo" && (typeof value === "number" || typeof value === "string" || typeof value === "boolean")).slice(0, 4)
   return entries.length ? entries.map(([key, value]) => `${labelKey(key)} ${String(value)}`).join(" · ") : null
 }
-function labelKey(key: string) { return ({ pendingDecisions: "decisiones", overdueActions: "vencidas", researchingHandoffs: "investigaciones", githubReposObserved: "repos", acceptedProducts: "productos", subsectionNewPapersObserved: "papers nuevos", subsectionProductsWithFreshPapers: "productos", sampleSize: "muestra", p50DurationMs: "p50 ms", p95DurationMs: "p95 ms", averageToolCalls: "tools prom.", averageTotalTokens: "tokens prom." } as Record<string, string>)[key] ?? key }
+function labelKey(key: string) { return ({ pendingDecisions: "decisiones", overdueActions: "vencidas", researchingHandoffs: "investigaciones", githubReposObserved: "repos", acceptedProducts: "productos", subsectionNewPapersObserved: "papers nuevos", subsectionProductsWithFreshPapers: "productos", sampleSize: "muestra", p50DurationMs: "p50 ms", p95DurationMs: "p95 ms", averageToolCalls: "tools prom.", averageTotalTokens: "tokens prom.", feedbackSampleSize: "feedback", feedbackCoverage: "cobertura" } as Record<string, string>)[key] ?? key }
 function confidenceLabel(value: VidentiaImprovementOutcomeAssessment["confidence"]) { return value === "high" ? "alta" : value === "medium" ? "media" : "baja" }
 function formatDate(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? "sin fecha" : new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(date) }
