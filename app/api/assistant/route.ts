@@ -154,13 +154,14 @@ export async function POST(request: Request) {
       totalTokens: metric.totalTokens,
       cachedInputTokens: metric.cachedInputTokens,
     }))
-    await recordAssistantExecutionMetric(metric)
+    const executionMetricId = await recordAssistantExecutionMetric(metric)
 
     return NextResponse.json({
       text: result.text,
       model: result.model,
       trace: result.trace,
       actionProposals: result.actionProposals,
+      executionId: executionMetricId,
       routing: {
         mode: execution.mode,
         reason: execution.reason,
