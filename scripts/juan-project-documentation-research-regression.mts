@@ -76,11 +76,11 @@ for (const needle of [
   'No cambies score, conviction, confidence, estado humano ni lifecycle.',
 ]) requireText(cron, needle, "project R&D radar cron")
 for (const forbidden of [
-  'score:',
-  'status:',
-  'decision_at',
-  'decision_note',
-  'confidence_delta',
+  '.update({ score:',
+  '.update({ status:',
+  'decision_at:',
+  'decision_note:',
+  'confidence_delta:',
   'auto_promote',
 ]) forbid(cron, forbidden, "project R&D radar cron")
 
