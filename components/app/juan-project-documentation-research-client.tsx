@@ -1,0 +1,109 @@
+"use client"
+
+import { useMemo, useState } from "react"
+import { ExternalLink, Loader2, Search, Sparkles } from "lucide-react"
+
+type Project = {
+  key: string
+  name: string
+  direction: string
+  status: "researching" | "ready_for_review" | "accepted" | "rejected"
+}
+
+type ResearchResult = {
+  project: { key: string; name: string; direction: string; intendedOutcome: string; humanStatus: string; repo: string | null; activeResearchTopics: string[] }
+  query: string
+  text: string
+  sources: Array<{ title: string; url: string }>
+  decisionBoundary: string
+}
+
+const SUGGESTIONS = [
+  "Qué avances recientes en IA podríamos aplicar aquí y cómo",
+  "Busca documentación oficial sobre agentes, tool use, MCP y automatización aplicable a esta vertical",
+  "Busca papers, benchmarks y repos oficiales que puedan mejorar precisión, costo o velocidad operacional",
+]
+
+export function JuanProjectDocumentationResearchClient({ projects }: { projects: Project[] }) {
+  const [projectKey, setProjectKey] = useState(projects[0]?.key ?? "")
+  const [query, setQuery] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [result, setResult] = useState<ResearchResult | null>(null)
+  const project = useMemo(() => projects.find((item) => item.key === projectKey) ?? projects[0], [projectKey, projects])
+
+  async function runResearch(nextQuery = query) {
+    const cleanQuery = nextQuery.trim()
+    if (!projectKey || cleanQuery.length < 3 || loading) return
+    setLoading(true)
+    setError(null)
+    setResult(null)
+    try {
+      const response = await fetch("/api/intelligence/project-documentation-research", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ projectKey, query: cleanQuery }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload.error || "No pude completar la investigación.")
+      setResult(payload as ResearchResult)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No pude completar la investigación.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return <section className="mx-auto mt-4 w-[calc(100%-2rem)] max-w-[1480px] border border-[#294047] bg-[#0B2025] sm:w-[calc(100%-3rem)]">
+    <div className="flex flex-col gap-3 border-b border-[#294047] px-4 py-4 lg:flex-row lg:items-start lg:justify-between">
+      <div className="max-w-3xl">
+        <div className="flex items-center gap-2 text-[9px] font-medium uppercase tracking-[0.15em] text-[#96B5A6]"><Sparkles className="size-3.5" />I+D por proyecto</div>
+        <h2 className="mt-1 text-sm font-medium text-[#E7DFCE]">Buscar documentación aplicable a una vertical</h2>
+        <p className="mt-1 text-xs leading-5 text-[#83908F]">Cruza el contexto real del proyecto con documentación oficial, repositorios, papers, arXiv y benchmarks actuales. La investigación propone; no cambia decisiones ni scores.</p>
+      </div>
+      {project ? <div className="max-w-sm text-right text-[10px] leading-4 text-[#748481]">Dirección actual: <span className="text-[#AEB6B4]">{project.direction}</span></div> : null}
+    </div>
+
+    <div className="grid gap-3 px-4 py-4 lg:grid-cols-[240px_minmax(0,1fr)_auto] lg:items-end">
+      <label className="grid gap-1.5 text-[10px] uppercase tracking-[0.12em] text-[#748481]">
+        Proyecto
+        <select value={projectKey} onChange={(event) => setProjectKey(event.target.value)} className="h-10 border border-[#355C55] bg-[#07181E] px-3 text-xs normal-case tracking-normal text-[#E7DFCE] outline-none focus:border-[#96B5A6]">
+          {projects.map((item) => <option key={item.key} value={item.key}>{item.name}</option>)}
+        </select>
+      </label>
+      <label className="grid gap-1.5 text-[10px] uppercase tracking-[0.12em] text-[#748481]">
+        Qué quieres investigar
+        <input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void runResearch() }} placeholder="Ej. agentes de IA para mantenimiento predictivo" className="h-10 border border-[#355C55] bg-[#07181E] px-3 text-xs normal-case tracking-normal text-[#E7DFCE] outline-none placeholder:text-[#546561] focus:border-[#96B5A6]" />
+      </label>
+      <button type="button" disabled={loading || query.trim().length < 3} onClick={() => void runResearch()} className="inline-flex h-10 items-center justify-center gap-2 bg-[#173B37] px-4 text-xs font-medium text-[#E7DFCE] ring-1 ring-inset ring-[#31534D] transition-colors hover:bg-[#1A4540] disabled:cursor-not-allowed disabled:opacity-45">
+        {loading ? <Loader2 className="size-3.5 animate-spin" /> : <Search className="size-3.5 text-[#96B5A6]" />}
+        {loading ? "Investigando…" : "Buscar"}
+      </button>
+    </div>
+
+    {!result && !loading ? <div className="flex flex-wrap gap-2 border-t border-[#294047] px-4 py-3">
+      {SUGGESTIONS.map((suggestion) => <button key={suggestion} type="button" onClick={() => { setQuery(suggestion); void runResearch(suggestion) }} className="border border-[#294047] px-2.5 py-1.5 text-left text-[10px] leading-4 text-[#AEB6B4] hover:border-[#355C55] hover:text-[#E7DFCE]">{suggestion}</button>)}
+    </div> : null}
+
+    {error ? <div role="alert" className="border-t border-[#294047] px-4 py-4 text-xs text-[#D6A46F]">{error}</div> : null}
+
+    {result ? <div className="border-t border-[#294047] px-4 py-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-[#96B5A6]">{result.project.name} · investigación externa</p>
+          <p className="mt-1 text-xs text-[#83908F]">{result.query}</p>
+        </div>
+        <p className="max-w-lg text-[10px] leading-4 text-[#748481] lg:text-right">{result.decisionBoundary}</p>
+      </div>
+      <div className="mt-4 whitespace-pre-wrap text-sm leading-6 text-[#D7DEDA]">{result.text}</div>
+      {result.sources.length ? <div className="mt-4 border-t border-[#294047] pt-3">
+        <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-[#748481]">Fuentes</p>
+        <div className="mt-2 grid gap-1.5 md:grid-cols-2">
+          {result.sources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer" className="flex items-start justify-between gap-2 border border-[#294047] px-3 py-2 text-[10px] leading-4 text-[#AEB6B4] hover:border-[#355C55] hover:text-[#E7DFCE]">
+            <span>{source.title}</span><ExternalLink className="mt-0.5 size-3 shrink-0 text-[#96B5A6]" />
+          </a>)}
+        </div>
+      </div> : null}
+    </div> : null}
+  </section>
+}

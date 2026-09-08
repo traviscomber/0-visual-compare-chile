@@ -2,6 +2,7 @@ import Link from "next/link"
 import { ChevronDown, Sparkles } from "lucide-react"
 import { redirect } from "next/navigation"
 import { JuanExecutiveWorkspace } from "@/components/app/juan-executive-workspace"
+import { JuanProjectDocumentationResearch } from "@/components/app/juan-project-documentation-research"
 import { JuanProjectIdeasStrip } from "@/components/app/juan-project-ideas-strip"
 import { JuanProductEvolutionStrip } from "@/components/app/juan-product-evolution-strip"
 import { JuanVidentiaImprovementRadar } from "@/components/app/juan-videntia-improvement-radar"
@@ -32,6 +33,8 @@ export default async function JuanWorkspacePage() {
           Preguntar a VIDENTIA
         </Link>
       </section>
+
+      <JuanProjectDocumentationResearch userId={user.id} />
 
       <details className="group mx-auto mt-4 w-[calc(100%-2rem)] max-w-[1480px] border border-[#294047] bg-[#091F24] sm:w-[calc(100%-3rem)]">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4 text-sm font-medium text-[#E7DFCE] marker:hidden hover:bg-[#0D262B]">
