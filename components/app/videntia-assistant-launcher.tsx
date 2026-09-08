@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { ArrowUp, Bot, Check, ExternalLink, ListChecks, Loader2, Minimize2, Sparkles } from "lucide-react"
+import { AssistantResponseFeedback } from "@/components/app/assistant-response-feedback"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
@@ -38,6 +39,7 @@ type ChatMessage = {
   content: string
   trace?: ToolTrace[]
   actionProposals?: ActionProposal[]
+  executionId?: string
 }
 type ProposalState = {
   status: "creating" | "created" | "error"
@@ -126,6 +128,7 @@ export function VidentiaAssistantLauncher() {
         content: typeof payload.text === "string" ? payload.text : "No recibí una respuesta utilizable.",
         trace: Array.isArray(payload.trace) ? payload.trace : [],
         actionProposals: Array.isArray(payload.actionProposals) ? payload.actionProposals : [],
+        executionId: typeof payload.executionId === "string" ? payload.executionId : undefined,
       }])
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "El asistente no pudo completar la orden.")
@@ -254,6 +257,8 @@ export function VidentiaAssistantLauncher() {
               </section>
             })}
           </div> : null}
+
+          {message.role === "assistant" && message.executionId ? <AssistantResponseFeedback executionId={message.executionId} /> : null}
         </article>)}
 
         {loading ? <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin text-[#96B5A6]" />Investigando contexto, papers y evidencia…</div> : null}
