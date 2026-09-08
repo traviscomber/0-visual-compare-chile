@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { requireUser, PRIVATE_NO_STORE_HEADERS } from "@/lib/auth/server"
+import { classifyAssistantExecution } from "@/lib/assistant/assistant-execution-policy"
+import { runVidentiaNoToolAssistant } from "@/lib/assistant/videntia-no-tool-assistant"
 import { runVidentiaAssistant } from "@/lib/assistant/videntia-assistant"
 import { attachCompetitiveActionOutcomes } from "@/lib/intelligence/assistant-competitive-action-outcomes"
 import { loadAssistantCompetitiveSituations } from "@/lib/intelligence/assistant-competitive-situations"
@@ -63,26 +65,55 @@ export async function POST(request: Request) {
   }
 
   try {
+    const needsJuanContext = needsJuanWorkspaceContext(auth.user.email, parsed.data.messages, parsed.data.pageContext)
+    const needsCompetitiveContext = needsCompetitiveSituationContext(parsed.data.messages, parsed.data.pageContext)
+    const latestUserMessage = [...parsed.data.messages].reverse().find((message) => message.role === "user")?.content ?? ""
+    const execution = classifyAssistantExecution({
+      latestUserMessage,
+      pathname: parsed.data.pageContext?.pathname,
+      hasPageFocus: Boolean(parsed.data.pageContext?.focus.length),
+      hasJuanContext: needsJuanContext,
+      hasCompetitiveContext: needsCompetitiveContext,
+      routerEnabled: process.env.VIDENTIA_ASSISTANT_EXECUTION_ROUTER !== "off",
+    })
+
     let assistantMessages = withNavigationContext(parsed.data.messages, parsed.data.pageContext)
-    if (needsJuanWorkspaceContext(auth.user.email, parsed.data.messages, parsed.data.pageContext)) {
+    if (execution.mode !== "direct" && needsJuanContext) {
       const snapshot = await loadAssistantJuanWorkspace(auth.user.id)
       assistantMessages = withJuanWorkspaceContext(assistantMessages, snapshot)
     }
-    if (needsCompetitiveSituationContext(parsed.data.messages, parsed.data.pageContext)) {
+    if (execution.mode !== "direct" && needsCompetitiveContext) {
       const baseSnapshot = await loadAssistantCompetitiveSituations(auth.user.id, 6)
       const snapshot = await attachCompetitiveActionOutcomes(auth.user.id, baseSnapshot)
       assistantMessages = withCompetitiveSituationContext(assistantMessages, snapshot)
     }
 
-    const result = await runVidentiaAssistant({
-      messages: assistantMessages,
-      context: {
-        userId: auth.user.id,
-        userEmail: auth.user.email ?? "usuario",
-        supabase: auth.supabase,
+    const context = {
+      userId: auth.user.id,
+      userEmail: auth.user.email ?? "usuario",
+      supabase: auth.supabase,
+    }
+    const result = execution.mode === "agentic_research"
+      ? await runVidentiaAssistant({ messages: assistantMessages, context })
+      : await runVidentiaNoToolAssistant({ messages: assistantMessages, mode: execution.mode })
+
+    console.info("[assistant-routing]", JSON.stringify({
+      mode: execution.mode,
+      reason: execution.reason,
+      pathname: parsed.data.pageContext?.pathname ?? null,
+      hasPageFocus: Boolean(parsed.data.pageContext?.focus.length),
+      canonicalContextAvailable: execution.canonicalContextAvailable,
+      requiresFreshExternalEvidence: execution.requiresFreshExternalEvidence,
+      maxAgentSteps: execution.maxAgentSteps,
+    }))
+
+    return NextResponse.json({
+      ...result,
+      routing: {
+        mode: execution.mode,
+        reason: execution.reason,
       },
-    })
-    return NextResponse.json(result, { headers: PRIVATE_NO_STORE_HEADERS })
+    }, { headers: PRIVATE_NO_STORE_HEADERS })
   } catch (error) {
     console.error("[assistant] request failed", error instanceof Error ? error.message : error)
     return NextResponse.json({ error: "No pude completar la orden con la evidencia disponible." }, { status: 500, headers: PRIVATE_NO_STORE_HEADERS })
