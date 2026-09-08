@@ -93,6 +93,8 @@ jobs:
         run: node scripts/assistant-action-proposals-regression.mts
       - name: Assistant route focus regression
         run: node scripts/assistant-route-focus-regression.mts
+      - name: Juan executive workspace regression
+        run: node scripts/juan-executive-workspace-regression.mts
       - name: Opportunity conviction notification regression
         run: node scripts/opportunity-conviction-notification-regression.mts
       - name: Opportunity prototype execution regression
