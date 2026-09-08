@@ -4,11 +4,12 @@ function fail(message:string):never{console.error(`Juan executive workspace regr
 function requireText(source:string,needle:string,label:string){if(!source.includes(needle))fail(`${label} missing ${needle}`)}
 function forbid(source:string,needle:string,label:string){if(source.includes(needle))fail(`${label} must not contain ${needle}`)}
 
-const [layout, nav, page, workspace, handoffs, evolution, assistantWorkspace, assistantRoute, githubActivity, githubCron, subsectionTopics, subsectionCron, vercel] = await Promise.all([
+const [layout, nav, page, workspace, subsectionUi, handoffs, evolution, assistantWorkspace, assistantRoute, githubActivity, githubCron, subsectionTopics, subsectionCron, vercel] = await Promise.all([
   readFile("app/(app)/layout.tsx", "utf8"),
   readFile("components/app/app-nav.tsx", "utf8"),
   readFile("app/(app)/mi-espacio/page.tsx", "utf8"),
   readFile("components/app/juan-executive-workspace.tsx", "utf8"),
+  readFile("components/app/juan-subsection-research.tsx", "utf8"),
   readFile("app/api/cron/juan-project-handoffs/route.ts", "utf8"),
   readFile("app/api/cron/juan-product-evolution/route.ts", "utf8"),
   readFile("lib/intelligence/assistant-juan-workspace.ts", "utf8"),
@@ -55,7 +56,30 @@ for (const needle of [
   "Ausencia de evidencia Chile es neutral, nunca evidencia negativa.",
   "repo_activity",
   "githubActivityLabel",
+  'import { JuanSubsectionResearch } from "@/components/app/juan-subsection-research"',
+  '<JuanSubsectionResearch snapshot={product.evidence_snapshot} productKey={product.product_key} productName={product.product_name} />',
 ]) requireText(workspace, needle, "Juan command center")
+
+for (const needle of [
+  "Investigación activa · discovery externo",
+  "No modifica convicción",
+  "Esperando primera pasada programada",
+  "Analizar con VIDENTIA →",
+  "La actividad de desarrollo sólo decide qué investigar.",
+  "No hay papers que superen todavía el gate dominio + subsección + tecnología.",
+  "La ausencia se mantiene neutral.",
+  "Priorizar revisión técnica",
+  "Investigar más",
+  "safeExternalUrl",
+  'target="_blank" rel="noreferrer"',
+]) requireText(subsectionUi, needle, "subsection research UI")
+for (const forbidden of [
+  "dangerouslySetInnerHTML",
+  ".update(",
+  ".insert(",
+  ".upsert(",
+  ".delete(",
+]) forbid(subsectionUi, forbidden, "subsection research UI")
 
 for (const needle of [
   'inapiPatentEvidenceUrl, inapiPatentEvidenceUrlFromSourceRecord',
@@ -198,4 +222,4 @@ for (const forbidden of [
   'auto_promote',
 ]) forbid(assistantRoute, forbidden, "Juan assistant route")
 
-console.log("Juan executive workspace regression PASS: Juan intelligence is isolated in a private command center; GitHub activity refreshes as execution context; active subsections dynamically steer OpenAlex/Crossref paper discovery without changing evidence conviction or human decisions; the floating assistant reads the same canonical priorities without mutating them; patent activity cannot masquerade as market adoption, and malformed evidence titles are rejected.")
+console.log("Juan executive workspace regression PASS: Juan intelligence is isolated in a private command center; GitHub activity refreshes as execution context; active subsections dynamically steer OpenAlex/Crossref paper discovery and are surfaced per product with direct paper access and non-scoring next-step guidance; the floating assistant reads the same canonical priorities without mutating them; patent activity cannot masquerade as market adoption, and malformed evidence titles are rejected.")
