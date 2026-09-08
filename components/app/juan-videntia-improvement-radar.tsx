@@ -84,7 +84,7 @@ export async function JuanVidentiaImprovementRadar({ userId }: { userId: string 
       <div className="flex flex-col gap-3 border-t border-[#294047] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <div className="flex max-w-4xl items-start gap-2 text-[10px] leading-4 text-[#83908F]">
           <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#719B8D]" />
-          <span>{radar.boundary} Las métricas y el feedback del Assistant almacenan sólo categorías y números agregables; no prompts, contenido de conversación ni rutas crudas. La evaluación posterior tiene decisionEffect=none y convictionDelta=0.</span>
+          <span>{radar.boundary} Las métricas del Assistant almacenan sólo categorías y números agregables; no prompts, contenido de conversación ni rutas crudas. El feedback guarda sólo categorías estructuradas por respuesta, no el texto de la conversación. La evaluación posterior tiene decisionEffect=none y convictionDelta=0.</span>
         </div>
         <Link href="/mi-espacio?assistant=open" className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-[#173B37] px-3 text-xs font-medium text-[#DCE8E2] ring-1 ring-inset ring-[#31534D] hover:bg-[#1A4540]">
           Analizar con VIDENTIA <ArrowRight className="h-3.5 w-3.5" />
