@@ -132,7 +132,7 @@ export function buildVidentiaImprovementRadar(snapshot: JuanWorkspaceSnapshot, a
     generatedAt: snapshot.generatedAt,
     observedSignalCount: sorted.filter(item => item.sourceKind === "canonical_internal").length,
     candidates: sorted,
-    boundary: "Este radar mejora VIDENTIA; no puntúa oportunidades, no modifica conviction y no ejecuta cambios automáticamente. GitHub, telemetría, feedback y operación interna son señales de producto, no evidencia del mercado.",
+    boundary: "Este radar mejora VIDENTIA; no puntúa oportunidades, no modifica conviction y no ejecuta cambios automáticamente. GitHub, telemetría y operación interna son señales de producto, no evidencia del mercado. El feedback explícito del Assistant también es una señal de producto y no evidencia de mercado.",
   }
 }
 
