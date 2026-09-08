@@ -61,7 +61,7 @@ export function JuanVidentiaImprovementActions({
         </div>
       ) : null}
       {status === "implemented" ? <LifecycleButton icon={TestTube2} label="Medir resultado" saving={saving} onClick={() => void transition("measure")} /> : null}
-      {status === "measured" ? <p className="text-[9px] uppercase tracking-[0.1em] text-[#719B8D]">Medición registrada · interpretación humana pendiente o completada fuera del score</p> : null}
+      {status === "measured" ? <p className="text-[9px] uppercase tracking-[0.1em] text-[#719B8D]">Medición registrada · interpretación humana fuera de la evaluación automática</p> : null}
       {error ? <p className="mt-2 text-[10px] leading-4 text-[#D8C99D]">{error}</p> : null}
     </div>
   )
