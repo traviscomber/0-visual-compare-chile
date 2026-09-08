@@ -58,6 +58,18 @@ type SubsectionResearch = {
   decision_effect?: string
   scoring_state?: string
   boundary?: string
+  delta?: {
+    baseline_created?: boolean
+    previous_generated_at?: string | null
+    previous_paper_count?: number | null
+    new_paper_count?: number
+    new_topic_count?: number
+    not_observed_again_count?: number
+    new_topics?: string[]
+    new_papers?: Array<{ source?: string; title?: string; date?: string | null; url?: string; topic_key?: string }>
+    decision_effect?: string
+    boundary?: string
+  }
   topics?: Array<{
     key?: string
     label?: string
@@ -196,11 +208,16 @@ export async function loadAssistantJuanWorkspace(userId: string) {
     .sort((a, b) => Date.parse(b) - Date.parse(a))[0] ?? null
   const subsectionTopicsObserved = acceptedProducts.reduce((total, item) => total + (item.subsectionResearch?.topic_count ?? 0), 0)
   const subsectionPapersObserved = acceptedProducts.reduce((total, item) => total + (item.subsectionResearch?.paper_count ?? 0), 0)
+  const subsectionNewPapersObserved = acceptedProducts.reduce((total, item) => {
+    if (item.subsectionResearch?.delta?.baseline_created) return total
+    return total + (item.subsectionResearch?.delta?.new_paper_count ?? 0)
+  }, 0)
+  const subsectionProductsWithFreshPapers = acceptedProducts.filter(item => !item.subsectionResearch?.delta?.baseline_created && (item.subsectionResearch?.delta?.new_paper_count ?? 0) > 0).length
 
   return {
     generatedAt: new Date().toISOString(),
     decisionBoundary: "Read-only executive context. Evidence scores, GitHub activity, subsection paper discovery and execution readiness do not create, approve, reject, reopen or reprioritize human decisions automatically.",
-    evidenceBoundary: "Patent activity is a separate evidence family and is not market adoption. Missing Chile evidence is neutral. GitHub activity and institutional reuse/integration are execution context only and never increase evidence conviction. subsectionResearch contains external papers discovered from active implementation topics, but is discovery-only with conviction_delta=0 until independent evidence review promotes a paper into a canonical scoring layer.",
+    evidenceBoundary: "Patent activity is a separate evidence family and is not market adoption. Missing Chile evidence is neutral. GitHub activity and institutional reuse/integration are execution context only and never increase evidence conviction. subsectionResearch contains external papers discovered from active implementation topics, but is discovery-only with conviction_delta=0 until independent evidence review promotes a paper into a canonical scoring layer. subsectionResearch.delta measures discovery freshness only: new papers do not prove market movement and papers not observed again are neutral.",
     summary: {
       pendingDecisions: pendingDecisions.length,
       researchingHandoffs: researching.length,
@@ -210,6 +227,8 @@ export async function loadAssistantJuanWorkspace(userId: string) {
       githubLatestObservedAt,
       subsectionTopicsObserved,
       subsectionPapersObserved,
+      subsectionNewPapersObserved,
+      subsectionProductsWithFreshPapers,
     },
     pendingDecisions,
     researching,

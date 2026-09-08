@@ -19,6 +19,19 @@ type SubsectionTopic = {
   source_coverage?: Record<string, string>
 }
 
+type SubsectionResearchDelta = {
+  baseline_created?: boolean
+  previous_generated_at?: string | null
+  previous_paper_count?: number | null
+  new_paper_count?: number
+  new_topic_count?: number
+  not_observed_again_count?: number
+  new_topics?: string[]
+  new_papers?: Array<{ source?: string; title?: string; date?: string | null; url?: string; topic_key?: string }>
+  decision_effect?: string
+  boundary?: string
+}
+
 type SubsectionResearch = {
   generated_at?: string
   topic_count?: number
@@ -26,6 +39,7 @@ type SubsectionResearch = {
   source_count?: number
   independent_institution_count?: number
   topics?: SubsectionTopic[]
+  delta?: SubsectionResearchDelta
   scoring_state?: string
   decision_effect?: string
   boundary?: string
@@ -56,8 +70,11 @@ export function JuanSubsectionResearch({ snapshot, productKey, productName }: Pr
   const paperCount = numberOrZero(research.paper_count)
   const sourceCount = numberOrZero(research.source_count)
   const institutionCount = numberOrZero(research.independent_institution_count)
-  const recommendation = buildRecommendation(topics, paperCount, sourceCount, institutionCount)
-  const assistantQuery = `Analiza la investigación activa de ${productName} (${productKey}). Indica qué conviene incorporar, qué investigar más y qué no deberíamos concluir todavía a partir de estos papers.`
+  const newPaperCount = numberOrZero(research.delta?.new_paper_count)
+  const newTopicCount = numberOrZero(research.delta?.new_topic_count)
+  const recommendation = buildRecommendation(topics, paperCount, sourceCount, institutionCount, research.delta)
+  const freshness = buildFreshnessLabel(research.delta)
+  const assistantQuery = `Analiza la investigación activa de ${productName} (${productKey}). Separa papers nuevos desde la última pasada del total histórico retenido. Indica qué conviene incorporar, qué investigar más y qué no deberíamos concluir todavía. Recuerda que esta capa es discovery-only y no modifica convicción.`
 
   return (
     <div className="border-t border-[#294047] pt-3 lg:col-span-3">
@@ -66,6 +83,7 @@ export function JuanSubsectionResearch({ snapshot, productKey, productName }: Pr
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-[9px] font-medium uppercase tracking-[0.12em] text-[#96B5A6]">Investigación activa · discovery externo</p>
             <span className="text-[8px] uppercase tracking-[0.1em] text-[#748481]">No modifica convicción</span>
+            {research.delta && !research.delta.baseline_created && newPaperCount > 0 ? <span className="rounded-[5px] bg-[#173B37] px-2 py-0.5 text-[8px] font-medium uppercase tracking-[0.09em] text-[#BFD8CC]">{newPaperCount} nuevo{newPaperCount === 1 ? "" : "s"}</span> : null}
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {topics.length ? topics.map(topic => (
@@ -77,6 +95,7 @@ export function JuanSubsectionResearch({ snapshot, productKey, productName }: Pr
           <p className="mt-2 text-[9px] leading-4 text-[#748481]">
             {paperCount} papers retenidos · {sourceCount} fuente{sourceCount === 1 ? "" : "s"} · {institutionCount} instituci{institutionCount === 1 ? "ón" : "ones"}{research.generated_at ? ` · actualizado ${formatDate(research.generated_at)}` : ""}
           </p>
+          <p className="mt-1 text-[9px] leading-4 text-[#8C9B98]">{freshness}{newTopicCount > 0 ? ` · ${newTopicCount} subsecci${newTopicCount === 1 ? "ón nueva" : "ones nuevas"} en la selección` : ""}</p>
         </div>
 
         <div className="border-l border-[#294047] pl-3 xl:pl-4">
@@ -120,10 +139,20 @@ function readResearch(snapshot: Record<string, unknown> | null): SubsectionResea
   return value as SubsectionResearch
 }
 
-function buildRecommendation(topics: SubsectionTopic[], paperCount: number, sourceCount: number, institutionCount: number) {
+function buildFreshnessLabel(delta: SubsectionResearchDelta | undefined) {
+  if (!delta) return "Sin línea base de cambios todavía."
+  if (delta.baseline_created) return "Línea base creada: la próxima pasada podrá distinguir qué papers son realmente nuevos."
+  const newPapers = numberOrZero(delta.new_paper_count)
+  const comparison = delta.previous_generated_at ? ` desde ${formatDate(delta.previous_generated_at)}` : " desde la pasada anterior"
+  return newPapers ? `${newPapers} paper${newPapers === 1 ? " nuevo" : "s nuevos"}${comparison}.` : `Sin papers nuevos${comparison}.`
+}
+
+function buildRecommendation(topics: SubsectionTopic[], paperCount: number, sourceCount: number, institutionCount: number, delta?: SubsectionResearchDelta) {
   const labels = topics.flatMap(topic => topic.label || topic.key ? [topic.label ?? topic.key ?? ""] : []).filter(Boolean)
   const subject = labels.length ? labels.join(" · ") : "las subsecciones activas"
+  const newPapers = delta?.baseline_created ? 0 : numberOrZero(delta?.new_paper_count)
   if (!paperCount) return `Mantener ${subject} en observación. No hay convergencia bibliográfica suficiente para incorporar ni descartar cambios.`
+  if (newPapers > 0) return `Revisar primero los ${newPapers} paper${newPapers === 1 ? " nuevo" : "s nuevos"} de ${subject} y contrastarlos con la implementación actual. La novedad bibliográfica orienta revisión; no demuestra por sí sola un cambio de mercado.`
   if (paperCount >= 4 && sourceCount >= 2 && institutionCount >= 2) return `Priorizar revisión técnica de ${subject}. Hay convergencia en más de una fuente; comparar estos hallazgos con la implementación actual antes de incorporar cambios.`
   return `Investigar más ${subject} antes de incorporar cambios. La señal externa es útil para discovery, pero todavía necesita mayor convergencia o validación independiente.`
 }
