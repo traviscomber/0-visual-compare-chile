@@ -49,7 +49,7 @@ export async function GET(request: Request) {
   for (const product of products) {
     const snapshot = { ...(product.evidence_snapshot ?? {}) } as Record<string, unknown>
     const repoUrl = typeof snapshot.repo === "string" ? snapshot.repo.trim() : ""
-    if (!repoUrl.includes("github.com/")) {
+    if (!repoUrl) {
       results.push({ productKey: product.product_key, ok: false, skipped: true, reason: "missing_github_repo" })
       continue
     }
