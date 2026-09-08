@@ -4,13 +4,17 @@ function fail(message:string):never{console.error(`Assistant competitive researc
 function requireText(source:string,needle:string,label:string){if(!source.includes(needle))fail(`${label} missing ${needle}`)}
 function forbid(source:string,needle:string,label:string){if(source.includes(needle))fail(`${label} must not contain ${needle}`)}
 
-const [assistant, corroboration, situations, outcomes, assistantRoute, patentEvidencePage, cron, launcher] = await Promise.all([
+const [assistant, corroboration, situations, outcomes, assistantRoute, patentEvidencePage, patentUrlHelper, productEvolution, chileEvidence, productRefresh, cron, launcher] = await Promise.all([
   readFile("lib/assistant/videntia-assistant.ts", "utf8"),
   readFile("lib/intelligence/competitive-expansion-corroboration.ts", "utf8"),
   readFile("lib/intelligence/assistant-competitive-situations.ts", "utf8"),
   readFile("lib/intelligence/assistant-competitive-action-outcomes.ts", "utf8"),
   readFile("app/api/assistant/route.ts", "utf8"),
   readFile("app/(app)/patentes/registro/[applicationNumber]/page.tsx", "utf8"),
+  readFile("lib/inapi/patent-evidence-url.ts", "utf8"),
+  readFile("app/api/cron/juan-product-evolution/route.ts", "utf8"),
+  readFile("app/api/cron/juan-chile-evidence/route.ts", "utf8"),
+  readFile("app/api/intelligence/product-evolution-refresh/route.ts", "utf8"),
   readFile("app/api/cron/trademark-expansion-corroboration/route.ts", "utf8"),
   readFile("components/app/videntia-assistant-launcher.tsx", "utf8"),
 ])
@@ -73,6 +77,43 @@ for (const forbidden of [
   'MainSearch.aspx?id=',
   'buscadorpatentes.inapi.cl/UI/MainSearch.aspx?id=',
 ]) forbid(patentEvidencePage, forbidden, "patent evidence detail")
+
+for (const needle of [
+  'export function inapiPatentEvidenceUrl(applicationNumber: unknown)',
+  'export function inapiPatentEvidenceUrlFromSourceRecord(sourceRecordId: unknown)',
+  'return `https://videntia.app/patentes/registro/${encodeURIComponent(value)}`',
+]) requireText(patentUrlHelper, needle, "patent URL helper")
+
+for (const needle of [
+  'inapiPatentEvidenceUrl, inapiPatentEvidenceUrlFromSourceRecord',
+  '.select("title,summary,source_key,event_type,relevance,source_url,occurred_at,last_seen_at")',
+  '.select("source,source_record_id,application_number,title,applicants,publication_date,filing_date,source_url")',
+  'const exactInapiUrl = normalize(row.source) === "inapi"',
+  'inapiPatentEvidenceUrl(row.application_number) ?? inapiPatentEvidenceUrlFromSourceRecord(row.source_record_id)',
+  'if (source === "inapi_open_data" && (eventType === "patent" || eventType === "trademark")) return []',
+]) requireText(productEvolution, needle, "product evolution")
+for (const forbidden of [
+  '.select("title,applicants,publication_date,filing_date,source_url")',
+  'return [{ score: hits.reduce((sum, term) => sum + term.split(" ").length, 0), title, applicants: row.applicants, date: row.publication_date ?? row.filing_date, url: row.source_url }]',
+]) forbid(productEvolution, forbidden, "product evolution")
+
+for (const needle of [
+  '.select("id,watch_id,title,summary,source_key,event_type,relevance,source_url,occurred_at,last_seen_at,payload")',
+  'if (event.source_key === "inapi_open_data" && ["patent", "trademark"].includes(event.event_type)) return null',
+  'scoreModel: "chile_evidence_v3.3.2"',
+  'patent activity is tracked separately and is not evidence of Chilean adoption or demand',
+]) requireText(chileEvidence, needle, "Chile evidence")
+
+for (const needle of [
+  'const baseTarget = new URL("/api/cron/juan-product-evolution", request.url)',
+  'console.error("[product-evolution-refresh:base]", basePayload)',
+  'const chileTarget = new URL("/api/cron/juan-chile-evidence", request.url)',
+  'const frontierTarget = new URL("/api/cron/juan-research-frontier", request.url)',
+  'base: basePayload',
+]) requireText(productRefresh, needle, "product evolution refresh")
+if (!(productRefresh.indexOf('const baseTarget = new URL("/api/cron/juan-product-evolution"') < productRefresh.indexOf('const chileTarget = new URL("/api/cron/juan-chile-evidence"'))) {
+  fail("product evolution refresh must rebuild base evidence before Chile evidence")
+}
 
 for (const needle of [
   'export async function loadAssistantCompetitiveSituations',
@@ -167,4 +208,4 @@ for (const needle of [
   'role="dialog"',
 ]) requireText(launcher, needle, "floating assistant")
 
-console.log("Assistant competitive research regression PASS: the floating assistant closes the competitive loop from canonical situation to papers/actions and back to attributable human action outcomes; INAPI patent evidence opens an exact VIDENTIA record while the official dataset remains provenance, and no opaque INAPI deep link is fabricated.")
+console.log("Assistant competitive research regression PASS: patent activity is a dedicated evidence family, product evolution uses exact VIDENTIA patent records, Chile adoption evidence excludes INAPI patent/trademark watch events, and full refresh rebuilds base evidence before Chile/frontier layers without changing human decisions.")
