@@ -5,37 +5,25 @@ function fail(message:string):never{console.error(`Assistant route focus regress
 function requireText(source:string,needle:string,label:string){if(!source.includes(needle))fail(`${label} missing ${needle}`)}
 function forbid(source:string,needle:string,label:string){if(source.includes(needle))fail(`${label} must not contain ${needle}`)}
 
-const [proxy, layout, page, launcher, route, noToolAssistant] = await Promise.all([
+const [proxy, layout, page, launcher, route, noToolAssistant, metrics, metricsMigration] = await Promise.all([
   readFile("proxy.ts", "utf8"),
   readFile("app/(app)/layout.tsx", "utf8"),
   readFile("app/(app)/asistente/page.tsx", "utf8"),
   readFile("components/app/videntia-assistant-launcher.tsx", "utf8"),
   readFile("app/api/assistant/route.ts", "utf8"),
   readFile("lib/assistant/videntia-no-tool-assistant.ts", "utf8"),
+  readFile("lib/intelligence/assistant-execution-metrics.ts", "utf8"),
+  readFile("supabase/migrations/20260908130200_create_assistant_execution_metrics.sql", "utf8"),
 ])
 
-for (const needle of [
-  'updateSession(request, requestHeaders)',
-]) requireText(proxy, needle, "proxy")
+for (const needle of ['updateSession(request, requestHeaders)']) requireText(proxy, needle, "proxy")
 forbid(proxy, 'x-videntia-pathname', "proxy")
 
-for (const needle of [
-  '{children}',
-  '<VidentiaAssistantLauncher />',
-]) requireText(layout, needle, "app layout")
-for (const forbidden of [
-  'import { headers } from "next/headers"',
-  'pathname !== "/asistente"',
-  'JuanProjectIdeasStrip',
-  'JuanProductEvolutionStrip',
-  'showJuanIntelligence',
-]) forbid(layout, forbidden, "app layout")
+for (const needle of ['{children}', '<VidentiaAssistantLauncher />']) requireText(layout, needle, "app layout")
+for (const forbidden of ['import { headers } from "next/headers"', 'pathname !== "/asistente"', 'JuanProjectIdeasStrip', 'JuanProductEvolutionStrip', 'showJuanIntelligence']) forbid(layout, forbidden, "app layout")
 
 requireText(page, 'redirect("/dashboard?assistant=open")', "assistant compatibility route")
-for (const forbidden of [
-  'OperationalPage',
-  'Pregunta, investiga y aplica.',
-]) forbid(page, forbidden, "assistant compatibility route")
+for (const forbidden of ['OperationalPage', 'Pregunta, investiga y aplica.']) forbid(page, forbidden, "assistant compatibility route")
 
 for (const needle of [
   'aria-label="Abrir Asistente VIDENTIA"',
@@ -51,11 +39,7 @@ for (const needle of [
   'buildAssistantPageContext()',
   'getWorkspaceLabel(pathname)',
 ]) requireText(launcher, needle, "floating assistant")
-for (const forbidden of [
-  'search: window.location.search',
-  'query: window.location.search',
-  'Object.fromEntries(new URLSearchParams(window.location.search))',
-]) forbid(launcher, forbidden, "floating assistant")
+for (const forbidden of ['search: window.location.search', 'query: window.location.search', 'Object.fromEntries(new URLSearchParams(window.location.search))']) forbid(launcher, forbidden, "floating assistant")
 
 for (const needle of [
   'const PageFocusKeySchema = z.enum([',
@@ -78,8 +62,9 @@ for (const needle of [
   'runVidentiaNoToolAssistant({ messages: assistantMessages, mode: execution.mode })',
   'console.info("[assistant-routing]"',
   'version: 1',
-  'workspace: getWorkspaceLabel(parsed.data.pageContext?.pathname ?? "/")',
-  'durationMs: Date.now() - executionStartedAt',
+  'const workspace = getWorkspaceLabel(parsed.data.pageContext?.pathname ?? "/")',
+  'const durationMs = Date.now() - executionStartedAt',
+  'const metric = {',
   'toolCalls: result.trace.length',
   'actionProposalCount: result.actionProposals.length',
   'inputMessageCount: parsed.data.messages.length',
@@ -89,6 +74,7 @@ for (const needle of [
   'outputTokens: observability?.outputTokens ?? null',
   'totalTokens: observability?.totalTokens ?? null',
   'cachedInputTokens: observability?.cachedInputTokens ?? null',
+  'await recordAssistantExecutionMetric(metric)',
   'text: result.text',
   'routing: {',
 ]) requireText(route, needle, "assistant API")
@@ -105,6 +91,39 @@ for (const forbidden of [
 ]) forbid(route, forbidden, "assistant API")
 
 for (const needle of [
+  'recordAssistantExecutionMetric',
+  'intelligence_assistant_execution_metrics',
+  'reason: input.reason.slice(0, 160)',
+  'workspace: input.workspace.slice(0, 160)',
+  'loadAssistantExecutionMetricsSummary',
+  '.eq("user_id", userId)',
+  '.limit(1000)',
+  'p50DurationMs',
+  'p95DurationMs',
+  'averageToolCalls',
+  'averageTotalTokens',
+]) requireText(metrics, needle, "assistant metrics persistence")
+for (const forbidden of [
+  'latestUserMessage',
+  'pathname',
+  'messages:',
+  'prompt:',
+  'content:',
+]) forbid(metrics, forbidden, "assistant metrics persistence")
+
+for (const needle of [
+  'create table public.intelligence_assistant_execution_metrics',
+  'mode text not null check',
+  'duration_ms integer not null',
+  'tool_calls smallint not null',
+  'total_tokens integer',
+  'alter table public.intelligence_assistant_execution_metrics enable row level security',
+  'revoke all on table public.intelligence_assistant_execution_metrics from anon, authenticated',
+  'to service_role using (true) with check (true)',
+]) requireText(metricsMigration, needle, "assistant metrics migration")
+for (const forbidden of ['prompt', 'message_content', 'raw_path', 'pathname']) forbid(metricsMigration, forbidden, "assistant metrics migration")
+
+for (const needle of [
   'modo DIRECT',
   'modo CANONICAL_LOOKUP',
   'No tienes herramientas ni datos vivos en este modo.',
@@ -118,12 +137,7 @@ for (const needle of [
   'totalTokens: response.usage?.total_tokens ?? null',
   'cachedInputTokens: response.usage?.prompt_tokens_details?.cached_tokens ?? null',
 ]) requireText(noToolAssistant, needle, "no-tool assistant")
-for (const forbidden of [
-  'tools:',
-  'tool_choice',
-  'prepare_action_research',
-  'research_competitive_expansion',
-]) forbid(noToolAssistant, forbidden, "no-tool assistant")
+for (const forbidden of ['tools:', 'tool_choice', 'prepare_action_research', 'research_competitive_expansion']) forbid(noToolAssistant, forbidden, "no-tool assistant")
 
 function assertMode(message:string, expected:AssistantExecutionMode, options:Partial<Parameters<typeof classifyAssistantExecution>[0]> = {}) {
   const result = classifyAssistantExecution({ latestUserMessage: message, ...options })
@@ -143,4 +157,4 @@ assertMode("¿Cuál es el estado de esta marca?", "agentic_research", { hasPageF
 const disabled = assertMode("¿Qué significa clase Nice 42?", "agentic_research", { routerEnabled: false })
 if (disabled.reason !== "router_disabled") fail("disabled router must expose a bounded rollback reason")
 
-console.log("Assistant route focus regression PASS: VIDENTIA keeps the floating assistant page-aware, routes clear generic concepts to no-tool DIRECT without navigation injection, uses already-loaded canonical snapshots without an agent loop, preserves agentic research for fresh evidence/actions/ambiguous current state, emits privacy-safe execution metrics without query text or raw paths, and retains an environment rollback to the legacy agentic path.")
+console.log("Assistant route focus regression PASS: VIDENTIA keeps the floating assistant page-aware, routes clear generic concepts to no-tool DIRECT without navigation injection, uses already-loaded canonical snapshots without an agent loop, preserves agentic research for fresh evidence/actions/ambiguous current state, persists privacy-safe numeric execution metrics without prompt text or raw paths, and retains an environment rollback to the legacy agentic path.")
