@@ -1,5 +1,6 @@
 import { loadAssistantExecutionMetricsSummary, type AssistantExecutionMetricsSummary } from "@/lib/intelligence/assistant-execution-metrics"
 import { loadAssistantJuanWorkspace } from "@/lib/intelligence/assistant-juan-workspace"
+import { loadAssistantResponseQualitySummary, type AssistantResponseQualitySummary } from "@/lib/intelligence/assistant-response-feedback"
 import { listPortfolioOrganizations } from "@/lib/intelligence/portfolio-access"
 import type { VidentiaImprovementCandidate } from "@/lib/intelligence/videntia-improvement-radar"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -93,14 +94,15 @@ export async function syncVidentiaImprovementLifecycle(userId: string, candidate
 }
 
 export async function buildVidentiaImprovementSnapshot(userId: string, candidateKey: string) {
-  const [workspace, assistant] = await Promise.all([
+  const [workspace, assistant, assistantQuality] = await Promise.all([
     loadAssistantJuanWorkspace(userId),
     loadAssistantExecutionMetricsSummary(userId, 7),
+    loadAssistantResponseQualitySummary(userId, 7),
   ])
-  return snapshotForCandidate(candidateKey, workspace, assistant)
+  return snapshotForCandidate(candidateKey, workspace, assistant, assistantQuality)
 }
 
-export function snapshotForCandidate(candidateKey: string, workspace: JuanWorkspaceSnapshot, assistant: AssistantExecutionMetricsSummary): Record<string, unknown> {
+export function snapshotForCandidate(candidateKey: string, workspace: JuanWorkspaceSnapshot, assistant: AssistantExecutionMetricsSummary, assistantQuality?: AssistantResponseQualitySummary): Record<string, unknown> {
   const summary = workspace.summary
   switch (candidateKey) {
     case "decision-cycle":
@@ -114,13 +116,13 @@ export function snapshotForCandidate(candidateKey: string, workspace: JuanWorksp
     case "paper-review-loop":
       return { subsectionNewPapersObserved: summary.subsectionNewPapersObserved, subsectionProductsWithFreshPapers: summary.subsectionProductsWithFreshPapers, subsectionPapersObserved: summary.subsectionPapersObserved, generatedAt: workspace.generatedAt }
     case "assistant-effectiveness":
-      return assistantSnapshot(assistant)
+      return assistantSnapshot(assistant, assistantQuality)
     default:
       return { generatedAt: workspace.generatedAt, state: "candidate_not_in_current_measurement_map" }
   }
 }
 
-export function assistantSnapshot(summary: AssistantExecutionMetricsSummary) {
+export function assistantSnapshot(summary: AssistantExecutionMetricsSummary, quality?: AssistantResponseQualitySummary) {
   return {
     windowDays: summary.windowDays,
     sampleSize: summary.sampleSize,
@@ -131,6 +133,14 @@ export function assistantSnapshot(summary: AssistantExecutionMetricsSummary) {
     averageToolCalls: summary.averageToolCalls,
     averageTotalTokens: summary.averageTotalTokens,
     usageCoverage: summary.usageCoverage,
+    feedbackSampleSize: quality?.feedbackSampleSize ?? 0,
+    feedbackCoverage: quality?.feedbackCoverage ?? 0,
+    resolvedRate: quality?.resolvedRate ?? null,
+    partialRate: quality?.partialRate ?? null,
+    notResolvedRate: quality?.notResolvedRate ?? null,
+    incorrectRate: quality?.incorrectRate ?? null,
+    neededFollowupRate: quality?.neededFollowupRate ?? null,
+    qualityDecisionEffect: "none",
     modes: summary.modes.map(item => ({
       mode: item.mode,
       requests: item.requests,
