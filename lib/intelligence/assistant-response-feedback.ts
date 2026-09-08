@@ -18,8 +18,14 @@ export type AssistantResponseQualitySummary = {
 }
 
 type FeedbackRow = {
+  execution_metric_id: string
   outcome: AssistantResponseOutcome
   issue_reason: AssistantResponseIssueReason | null
+  created_at: string
+}
+
+type ExecutionRow = {
+  id: string
   created_at: string
 }
 
@@ -60,49 +66,54 @@ export async function recordAssistantResponseFeedback(input: {
   return { ok: true as const }
 }
 
-export async function loadAssistantResponseQualitySummary(userId: string, windowDays = 7, executionSampleSize?: number): Promise<AssistantResponseQualitySummary> {
+export async function loadAssistantResponseQualitySummary(userId: string, windowDays = 7): Promise<AssistantResponseQualitySummary> {
   const safeWindowDays = Math.max(1, Math.min(30, Math.round(windowDays)))
   const since = new Date(Date.now() - safeWindowDays * 86_400_000).toISOString()
   const admin = createAdminClient()
   const [feedbackResult, executionResult] = await Promise.all([
     admin
       .from("intelligence_assistant_response_feedback")
-      .select("outcome,issue_reason,created_at")
+      .select("execution_metric_id,outcome,issue_reason,created_at")
       .eq("user_id", userId)
       .gte("created_at", since)
       .order("created_at", { ascending: false })
       .limit(1000),
-    typeof executionSampleSize === "number"
-      ? Promise.resolve({ count: executionSampleSize, error: null })
-      : admin
-          .from("intelligence_assistant_execution_metrics")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", userId)
-          .gte("created_at", since),
+    admin
+      .from("intelligence_assistant_execution_metrics")
+      .select("id,created_at")
+      .eq("user_id", userId)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(1000),
   ])
 
+  if (executionResult.error) {
+    console.warn("[assistant-response-feedback] execution cohort failed", executionResult.error.message)
+    return emptyQualitySummary(safeWindowDays, 0)
+  }
+  const executions = (executionResult.data ?? []) as ExecutionRow[]
   if (feedbackResult.error) {
     console.warn("[assistant-response-feedback] summary failed", feedbackResult.error.message)
-    return emptyQualitySummary(safeWindowDays, typeof executionSampleSize === "number" ? executionSampleSize : executionResult.count ?? 0)
+    return emptyQualitySummary(safeWindowDays, executions.length)
   }
 
-  const rows = (feedbackResult.data ?? []) as FeedbackRow[]
-  const executions = typeof executionSampleSize === "number" ? executionSampleSize : executionResult.count ?? 0
+  const executionIds = new Set(executions.map(row => row.id))
+  const rows = ((feedbackResult.data ?? []) as FeedbackRow[]).filter(row => executionIds.has(row.execution_metric_id))
   const feedbackCount = rows.length
   const rate = (count: number) => feedbackCount ? round2(count / feedbackCount) : null
 
   return {
     windowDays: safeWindowDays,
-    executionSampleSize: executions,
+    executionSampleSize: executions.length,
     feedbackSampleSize: feedbackCount,
-    feedbackCoverage: executions ? round2(feedbackCount / executions) : 0,
+    feedbackCoverage: executions.length ? round2(feedbackCount / executions.length) : 0,
     resolvedRate: rate(rows.filter(row => row.outcome === "resolved").length),
     partialRate: rate(rows.filter(row => row.outcome === "partial").length),
     notResolvedRate: rate(rows.filter(row => row.outcome === "not_resolved").length),
     incorrectRate: rate(rows.filter(row => row.issue_reason === "incorrect").length),
     neededFollowupRate: rate(rows.filter(row => row.issue_reason === "needed_followup").length),
-    measuredFrom: rows.length ? rows[rows.length - 1]?.created_at ?? null : null,
-    measuredTo: rows[0]?.created_at ?? null,
+    measuredFrom: executions.length ? executions[executions.length - 1]?.created_at ?? null : null,
+    measuredTo: executions[0]?.created_at ?? null,
   }
 }
 
