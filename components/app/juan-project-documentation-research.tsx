@@ -9,13 +9,25 @@ type ProductRow = {
   evidence_snapshot: Record<string, unknown> | null
 }
 
+type Source = { title?: string; url?: string }
+type RadarDelta = {
+  previous_generated_at?: string
+  summary?: string
+  new_sources?: Source[]
+  removed_sources?: Source[]
+  retained_source_count?: number
+  source_set_changed?: boolean
+  conviction_delta?: number
+  decision_boundary?: string
+}
 type Radar = {
   generated_at?: string
   query?: string
   text?: string
-  sources?: Array<{ title?: string; url?: string }>
+  sources?: Source[]
   conviction_delta?: number
   decision_boundary?: string
+  delta?: RadarDelta | null
 }
 
 type NormalizedRadar = {
@@ -25,6 +37,16 @@ type NormalizedRadar = {
   sources: Array<{ title: string; url: string }>
   convictionDelta: 0 | null
   decisionBoundary: string
+  delta: {
+    previousGeneratedAt: string
+    summary: string
+    newSources: Array<{ title: string; url: string }>
+    removedSources: Array<{ title: string; url: string }>
+    retainedSourceCount: number
+    sourceSetChanged: boolean
+    convictionDelta: 0 | null
+    decisionBoundary: string
+  } | null
 }
 
 export async function JuanProjectDocumentationResearch({ userId }: { userId: string }) {
@@ -58,10 +80,29 @@ function normalizeRadar(snapshot: Record<string, unknown> | null): NormalizedRad
     generatedAt: radar.generated_at,
     query: radar.query ?? "Radar automático de I+D",
     text: radar.text,
-    sources: Array.isArray(radar.sources)
-      ? radar.sources.flatMap((source) => source?.title && source?.url ? [{ title: source.title, url: source.url }] : []).slice(0, 12)
-      : [],
+    sources: normalizeSources(radar.sources),
     convictionDelta: radar.conviction_delta === 0 ? 0 : null,
     decisionBoundary: radar.decision_boundary ?? "Radar de I+D derivado. No modifica decisiones ni score.",
+    delta: normalizeDelta(radar.delta),
   }
+}
+
+function normalizeDelta(delta: RadarDelta | null | undefined): NormalizedRadar["delta"] {
+  if (!delta?.previous_generated_at || !delta.summary) return null
+  return {
+    previousGeneratedAt: delta.previous_generated_at,
+    summary: delta.summary,
+    newSources: normalizeSources(delta.new_sources),
+    removedSources: normalizeSources(delta.removed_sources),
+    retainedSourceCount: typeof delta.retained_source_count === "number" ? delta.retained_source_count : 0,
+    sourceSetChanged: delta.source_set_changed === true,
+    convictionDelta: delta.conviction_delta === 0 ? 0 : null,
+    decisionBoundary: delta.decision_boundary ?? "Comparación derivada entre dos lecturas de I+D. No modifica decisiones ni score.",
+  }
+}
+
+function normalizeSources(sources: Source[] | undefined) {
+  return Array.isArray(sources)
+    ? sources.flatMap((source) => source?.title && source?.url ? [{ title: source.title, url: source.url }] : []).slice(0, 12)
+    : []
 }
