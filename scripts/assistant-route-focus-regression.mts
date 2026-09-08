@@ -18,14 +18,15 @@ for (const needle of [
 forbid(proxy, 'x-videntia-pathname', "proxy")
 
 for (const needle of [
-  'showJuanIntelligence ? <JuanProjectIdeasStrip',
-  'showJuanIntelligence ? <JuanProductEvolutionStrip',
   '{children}',
   '<VidentiaAssistantLauncher />',
 ]) requireText(layout, needle, "app layout")
 for (const forbidden of [
   'import { headers } from "next/headers"',
   'pathname !== "/asistente"',
+  'JuanProjectIdeasStrip',
+  'JuanProductEvolutionStrip',
+  'showJuanIntelligence',
 ]) forbid(layout, forbidden, "app layout")
 
 requireText(page, 'redirect("/dashboard?assistant=open")', "assistant compatibility route")
@@ -72,4 +73,4 @@ for (const forbidden of [
   'auto_promote',
 ]) forbid(route, forbidden, "assistant API")
 
-console.log("Assistant route focus regression PASS: VIDENTIA keeps a persistent floating chat, sends only allowlisted current-page metadata, treats navigation as non-evidence, and requires canonical tool context before factual conclusions about the current object.")
+console.log("Assistant route focus regression PASS: VIDENTIA keeps a persistent floating chat without injecting owner-only intelligence into every route, sends only allowlisted current-page metadata, treats navigation as non-evidence, and requires canonical tool context before factual conclusions about the current object.")
