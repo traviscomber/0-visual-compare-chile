@@ -18,7 +18,9 @@ const JUAN_EMAIL = "juan@n3uralia.com"
 const TOPIC_LIMIT = 3
 const PAPERS_PER_TOPIC = 4
 const WINDOW_DAYS = 720
+const MAX_DELTA_PAPERS = 8
 const BOUNDARY = "Subsection papers are external discovery evidence selected from current product activity. GitHub only chooses what to investigate; it never contributes evidence conviction. These papers remain non-scoring until an independent evidence review promotes them into a canonical scoring layer."
+const DELTA_BOUNDARY = "Subsection deltas describe discovery freshness only. A new paper is not proof of market movement, and a previously retained paper that is not observed again is neutral rather than negative evidence."
 
 type ProductRow = {
   id: string
@@ -45,6 +47,21 @@ type TopicPaper = {
   technologyHits: string[]
   rankScore: number
   earlySignal: boolean
+}
+
+type StoredTopicPaper = Partial<Pick<TopicPaper, "source" | "sourceRecordId" | "title" | "date" | "url" | "doi">>
+type StoredSubsectionResearch = {
+  generated_at?: string
+  paper_count?: number
+  topics?: Array<{ key?: string; label?: string; papers?: StoredTopicPaper[] }>
+}
+
+type DeltaPaper = {
+  source: string
+  title: string
+  date: string | null
+  url: string
+  topic_key: string
 }
 
 export async function GET(request: Request) {
@@ -87,6 +104,7 @@ export async function GET(request: Request) {
     }
 
     const snapshot = { ...(row.evidence_snapshot ?? {}) } as Record<string, any>
+    const previousResearch = readStoredSubsectionResearch(snapshot.subsection_research)
     const topics = deriveProductResearchTopics(row.product_key, snapshot.repo_activity, TOPIC_LIMIT)
     const topicResults = await Promise.all(topics.map(topic => researchTopic(row.product_key, domain.query, domain.anchors, topic, from, to)))
     const allPapers = dedupePapers(topicResults.flatMap(item => item.papers))
@@ -94,6 +112,7 @@ export async function GET(request: Request) {
     const institutions = unique(allPapers.flatMap(item => item.institutions)).slice(0, 20)
     const selectionSources = unique(topics.map(topic => topic.source))
     const generatedAt = new Date().toISOString()
+    const delta = buildDiscoveryDelta(previousResearch, topicResults)
 
     const subsectionResearch = {
       generated_at: generatedAt,
@@ -107,6 +126,7 @@ export async function GET(request: Request) {
       independent_institution_count: institutions.length,
       sources: [...sourceSet],
       institutions,
+      delta,
       conviction_delta: 0,
       decision_effect: "none",
       scoring_state: "discovery_only",
@@ -136,6 +156,9 @@ export async function GET(request: Request) {
       ok: true,
       topics: topicResults.map(item => ({ key: item.key, source: item.selectionSource, papers: item.paper_count })),
       papers: allPapers.length,
+      newPapers: delta.new_paper_count,
+      newTopics: delta.new_topic_count,
+      baselineCreated: delta.baseline_created,
       sources: sourceSet.size,
       institutions: institutions.length,
       scoreBefore: row.score,
@@ -148,8 +171,9 @@ export async function GET(request: Request) {
 
   const response = {
     ok: results.some(item => item.ok === true),
-    mode: "dynamic_subsection_papers_v1",
+    mode: "dynamic_subsection_papers_v2_delta",
     boundary: BOUNDARY,
+    deltaBoundary: DELTA_BOUNDARY,
     products: results,
     durationMs: Date.now() - startedAt,
   }
@@ -196,6 +220,83 @@ async function researchTopic(
     },
     papers,
   }
+}
+
+function buildDiscoveryDelta(previous: StoredSubsectionResearch | null, currentTopics: Array<Awaited<ReturnType<typeof researchTopic>>>) {
+  if (!previous) {
+    return {
+      baseline_created: true,
+      previous_generated_at: null,
+      previous_paper_count: null,
+      new_paper_count: 0,
+      new_topic_count: 0,
+      not_observed_again_count: 0,
+      new_topics: [] as string[],
+      new_papers: [] as DeltaPaper[],
+      decision_effect: "none",
+      boundary: DELTA_BOUNDARY,
+    }
+  }
+
+  const previousPapers = flattenStoredPapers(previous.topics ?? [])
+  const currentPapers = flattenCurrentPapers(currentTopics)
+  const previousIds = new Set(previousPapers.map(item => paperIdentity(item.paper)).filter(Boolean))
+  const currentIds = new Set(currentPapers.map(item => paperIdentity(item.paper)).filter(Boolean))
+  const previousTopicKeys = new Set((previous.topics ?? []).flatMap(topic => asString(topic.key) ? [asString(topic.key)!] : []))
+  const currentTopicKeys = new Set(currentTopics.map(topic => topic.key))
+
+  const newPapers = currentPapers.flatMap(item => {
+    const identity = paperIdentity(item.paper)
+    if (!identity || previousIds.has(identity)) return []
+    return [{
+      source: item.paper.source,
+      title: item.paper.title,
+      date: item.paper.date,
+      url: item.paper.url,
+      topic_key: item.topicKey,
+    }]
+  }).slice(0, MAX_DELTA_PAPERS)
+
+  const newTopics = [...currentTopicKeys].filter(key => !previousTopicKeys.has(key)).slice(0, TOPIC_LIMIT)
+  const notObservedAgain = [...previousIds].filter(identity => !currentIds.has(identity)).length
+
+  return {
+    baseline_created: false,
+    previous_generated_at: asString(previous.generated_at),
+    previous_paper_count: typeof previous.paper_count === "number" ? previous.paper_count : previousIds.size,
+    new_paper_count: [...currentIds].filter(identity => !previousIds.has(identity)).length,
+    new_topic_count: newTopics.length,
+    not_observed_again_count: notObservedAgain,
+    new_topics: newTopics,
+    new_papers: newPapers,
+    decision_effect: "none",
+    boundary: DELTA_BOUNDARY,
+  }
+}
+
+function flattenStoredPapers(topics: NonNullable<StoredSubsectionResearch["topics"]>) {
+  return topics.flatMap(topic => (topic.papers ?? []).map(paper => ({ topicKey: asString(topic.key) ?? "unknown", paper })))
+}
+
+function flattenCurrentPapers(topics: Array<Awaited<ReturnType<typeof researchTopic>>>) {
+  return topics.flatMap(topic => topic.papers.map(paper => ({ topicKey: topic.key, paper })))
+}
+
+function paperIdentity(paper: StoredTopicPaper | TopicPaper) {
+  const doi = asString(paper.doi)
+  if (doi) return `doi:${normalize(doi.replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, ""))}`
+  const sourceRecordId = asString(paper.sourceRecordId)
+  if (sourceRecordId) return `record:${normalize(asString(paper.source) ?? "paper")}:${normalize(sourceRecordId)}`
+  const url = asString(paper.url)
+  if (url) return `url:${url.toLowerCase()}`
+  const title = asString(paper.title)
+  return title ? `title:${normalize(title)}` : ""
+}
+
+function readStoredSubsectionResearch(value: unknown): StoredSubsectionResearch | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null
+  const row = value as StoredSubsectionResearch
+  return asString(row.generated_at) || Array.isArray(row.topics) ? row : null
 }
 
 function normalizeOpenAlex(item: OpenAlexWorkSignal, domainAnchors: string[], topicAnchors: string[]): TopicPaper | null {
