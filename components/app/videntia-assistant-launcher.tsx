@@ -44,11 +44,31 @@ type ProposalState = {
   href?: string
   error?: string
 }
+type AssistantPageContext = {
+  pathname: string
+  workspace: string
+  focus: Array<{ key: string; value: string }>
+}
+
+const PAGE_CONTEXT_KEYS = [
+  "ideaKey",
+  "ideaTitle",
+  "company",
+  "companyId",
+  "brand",
+  "brandId",
+  "caseId",
+  "watchId",
+  "technology",
+  "technologyId",
+  "target",
+  "q",
+] as const
 
 const STARTERS = [
-  "¿Qué requiere mi atención hoy?",
-  "Genera acciones para mi oportunidad más relevante y busca papers.",
-  "¿Qué evidencia falta para mis hipótesis competitivas?",
+  "Explícame esta pantalla y qué requiere atención.",
+  "Genera acciones para esta oportunidad y busca papers.",
+  "¿Qué evidencia falta para lo que estoy viendo?",
 ]
 const PRIORITY_LABELS = { low: "Baja", normal: "Normal", high: "Alta" } as const
 const CONFIDENCE_LABELS = { low: "Baja", medium: "Media", high: "Alta" } as const
@@ -84,6 +104,7 @@ export function VidentiaAssistantLauncher() {
     if (!content || loading) return
     const userMessage: ChatMessage = { id: crypto.randomUUID(), role: "user", content }
     const nextMessages = [...messages, userMessage]
+    const pageContext = buildAssistantPageContext()
     setMessages(nextMessages)
     setInput("")
     setError(null)
@@ -92,7 +113,10 @@ export function VidentiaAssistantLauncher() {
       const response = await fetch("/api/assistant", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ messages: nextMessages.map(({ role, content: messageContent }) => ({ role, content: messageContent })) }),
+        body: JSON.stringify({
+          messages: nextMessages.map(({ role, content: messageContent }) => ({ role, content: messageContent })),
+          pageContext,
+        }),
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.error || "El asistente no pudo completar la orden.")
@@ -159,7 +183,7 @@ export function VidentiaAssistantLauncher() {
         <span className="inline-flex size-8 shrink-0 items-center justify-center border border-[#355C55] text-[#96B5A6]"><Bot className="size-4" /></span>
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-[#E7DFCE]">Asistente VIDENTIA</p>
-          <p className="truncate text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Contexto · papers · acciones</p>
+          <p className="truncate text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Pantalla actual · contexto · papers · acciones</p>
         </div>
       </div>
       <button
@@ -175,8 +199,8 @@ export function VidentiaAssistantLauncher() {
     <div ref={scrollRef} aria-live="polite" className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
       {!messages.length ? <div className="grid gap-4">
         <div className="border-l border-[#355C55] pl-3">
-          <p className="text-sm leading-6 text-[#E7DFCE]">Pregunta sobre cualquier señal, oportunidad, competidor, caso o tecnología mientras sigues trabajando en VIDENTIA.</p>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">Las acciones propuestas requieren tu aprobación antes de convertirse en tareas canónicas.</p>
+          <p className="text-sm leading-6 text-[#E7DFCE]">Pregunta sobre la pantalla actual, una señal, oportunidad, competidor, caso o tecnología mientras sigues trabajando en VIDENTIA.</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">La pantalla sólo orienta el contexto. La evidencia se recupera desde fuentes canónicas y las acciones requieren tu aprobación.</p>
         </div>
         <div className="grid gap-2">
           {STARTERS.map((starter) => <button
@@ -249,7 +273,7 @@ export function VidentiaAssistantLauncher() {
         }}
         rows={2}
         maxLength={8000}
-        placeholder="Pregunta o da una orden…"
+        placeholder="Pregunta por esta pantalla o da una orden…"
         className="w-full resize-none bg-transparent px-1 py-1 text-sm leading-5 text-[#E7DFCE] outline-none placeholder:text-muted-foreground"
       />
       <div className="mt-2 flex items-center justify-between gap-3 border-t border-border/60 pt-2">
@@ -258,6 +282,42 @@ export function VidentiaAssistantLauncher() {
       </div>
     </form>
   </aside>
+}
+
+function buildAssistantPageContext(): AssistantPageContext {
+  const pathname = window.location.pathname.slice(0, 240)
+  const params = new URLSearchParams(window.location.search)
+  const focus = PAGE_CONTEXT_KEYS.flatMap((key) => {
+    const value = params.get(key)?.trim()
+    return value ? [{ key, value: value.slice(0, 160) }] : []
+  }).slice(0, 6)
+
+  if (pathname.startsWith("/marca/") && !focus.some((item) => item.key === "brandId")) {
+    const brandId = decodeURIComponent(pathname.split("/")[2] ?? "").trim().slice(0, 160)
+    if (brandId) focus.push({ key: "brandId", value: brandId })
+  }
+
+  return {
+    pathname,
+    workspace: getWorkspaceLabel(pathname),
+    focus,
+  }
+}
+
+function getWorkspaceLabel(pathname: string) {
+  if (pathname.startsWith("/oportunidades")) return "Oportunidades"
+  if (pathname.startsWith("/monitorear/situaciones")) return "Situaciones competitivas"
+  if (pathname.startsWith("/monitorear/hipotesis")) return "Hipótesis competitivas"
+  if (pathname.startsWith("/monitorear")) return "Monitoreo"
+  if (pathname.startsWith("/marca/")) return "Marca"
+  if (pathname.startsWith("/patentes")) return "Patentes"
+  if (pathname.startsWith("/tecnologias")) return "Tecnologías"
+  if (pathname.startsWith("/portfolio")) return "Portfolio"
+  if (pathname.startsWith("/reportes")) return "Reportes"
+  if (pathname.startsWith("/fuentes")) return "Fuentes"
+  if (pathname.startsWith("/investigar")) return "Investigación"
+  if (pathname.startsWith("/dashboard") || pathname.startsWith("/panel")) return "Resumen ejecutivo"
+  return "Workspace VIDENTIA"
 }
 
 function formatDueDate(value: string) {
