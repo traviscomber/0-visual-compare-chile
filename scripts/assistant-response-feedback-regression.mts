@@ -58,6 +58,7 @@ assert.match(lifecycle, /feedbackSampleSize/)
 assert.match(lifecycle, /feedbackCoverage/)
 assert.match(lifecycle, /qualityDecisionEffect: "none"/)
 assert.match(radar, /calidad explícita de la respuesta/)
-assert.match(radar, /feedback y operación interna son señales de producto, no evidencia del mercado/)
+assert.match(radar, /GitHub, telemetría y operación interna son señales de producto, no evidencia del mercado/)
+assert.match(radar, /feedback explícito del Assistant también es una señal de producto y no evidencia de mercado/)
 
 console.log("Assistant response feedback regression PASS: structured private feedback is execution-bound, ownership-scoped, no-text, coverage-aware and separated from evidence conviction.")
