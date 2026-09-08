@@ -18,6 +18,15 @@ type Radar = {
   decision_boundary?: string
 }
 
+type NormalizedRadar = {
+  generatedAt: string
+  query: string
+  text: string
+  sources: Array<{ title: string; url: string }>
+  convictionDelta: 0 | null
+  decisionBoundary: string
+}
+
 export async function JuanProjectDocumentationResearch({ userId }: { userId: string }) {
   const admin = createAdminClient()
   const { data, error } = await admin
@@ -41,7 +50,7 @@ export async function JuanProjectDocumentationResearch({ userId }: { userId: str
   />
 }
 
-function normalizeRadar(snapshot: Record<string, unknown> | null) {
+function normalizeRadar(snapshot: Record<string, unknown> | null): NormalizedRadar | null {
   if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null
   const radar = snapshot.rnd_radar as Radar | undefined
   if (!radar || typeof radar !== "object" || !radar.generated_at || !radar.text) return null
