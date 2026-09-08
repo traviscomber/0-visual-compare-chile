@@ -4,11 +4,11 @@ function fail(message:string):never{console.error(`Assistant competitive researc
 function requireText(source:string,needle:string,label:string){if(!source.includes(needle))fail(`${label} missing ${needle}`)}
 function forbid(source:string,needle:string,label:string){if(source.includes(needle))fail(`${label} must not contain ${needle}`)}
 
-const [assistant, corroboration, cron, page] = await Promise.all([
+const [assistant, corroboration, cron, launcher] = await Promise.all([
   readFile("lib/assistant/videntia-assistant.ts", "utf8"),
   readFile("lib/intelligence/competitive-expansion-corroboration.ts", "utf8"),
   readFile("app/api/cron/trademark-expansion-corroboration/route.ts", "utf8"),
-  readFile("app/(app)/asistente/page.tsx", "utf8"),
+  readFile("components/app/videntia-assistant-launcher.tsx", "utf8"),
 ])
 
 for (const needle of [
@@ -60,10 +60,11 @@ for (const forbidden of [
 ]) forbid(cron, forbidden, "corroboration cron")
 
 for (const needle of [
-  "Genera acciones para mi oportunidad más relevante y busca papers recientes que las respalden.",
-  "fundamenta las acciones propuestas con evidencia académica",
-  "Ej: genera acciones para XXX y busca papers recientes que las respalden",
+  "Genera acciones para mi oportunidad más relevante y busca papers.",
+  "Contexto · papers · acciones",
   "Investigando contexto, papers y evidencia…",
-]) requireText(page, needle, "assistant page")
+  'fetch("/api/assistant"',
+  'role="dialog"',
+]) requireText(launcher, needle, "floating assistant")
 
-console.log("Assistant competitive research regression PASS: the VIDENTIA assistant reuses canonical competitive corroboration, automatically prepares canonical target context plus recent academic papers before proposing actions, preserves source-unavailability neutrality, and remains read-only with respect to canonical actions, hypotheses, opportunities, conviction and human decisions.")
+console.log("Assistant competitive research regression PASS: the VIDENTIA floating assistant reuses canonical competitive corroboration, automatically prepares canonical target context plus recent academic papers before proposing actions, preserves source-unavailability neutrality, and remains read-only with respect to canonical actions, hypotheses, opportunities, conviction and human decisions.")
