@@ -72,8 +72,24 @@ for (const needle of [
   'process.env.VIDENTIA_ASSISTANT_EXECUTION_ROUTER !== "off"',
   'execution.mode !== "direct"',
   'execution.mode === "agentic_research"',
+  'execution.mode === "direct"',
+  '? parsed.data.messages',
+  ': withNavigationContext(parsed.data.messages, parsed.data.pageContext)',
   'runVidentiaNoToolAssistant({ messages: assistantMessages, mode: execution.mode })',
   'console.info("[assistant-routing]"',
+  'version: 1',
+  'workspace: getWorkspaceLabel(parsed.data.pageContext?.pathname ?? "/")',
+  'durationMs: Date.now() - executionStartedAt',
+  'toolCalls: result.trace.length',
+  'actionProposalCount: result.actionProposals.length',
+  'inputMessageCount: parsed.data.messages.length',
+  'injectedContextMessageCount: Math.max(0, assistantMessages.length - parsed.data.messages.length)',
+  'usageAvailable: observability !== null',
+  'inputTokens: observability?.inputTokens ?? null',
+  'outputTokens: observability?.outputTokens ?? null',
+  'totalTokens: observability?.totalTokens ?? null',
+  'cachedInputTokens: observability?.cachedInputTokens ?? null',
+  'text: result.text',
   'routing: {',
 ]) requireText(route, needle, "assistant API")
 for (const forbidden of [
@@ -83,6 +99,9 @@ for (const forbidden of [
   '.from("intelligence_product_evolution_recommendations").update',
   '.from("innovation_opportunity_theses").update',
   '.from("competitive_hypotheses").update',
+  'pathname: parsed.data.pageContext?.pathname ?? null',
+  'query: latestUserMessage',
+  'message: latestUserMessage',
 ]) forbid(route, forbidden, "assistant API")
 
 for (const needle of [
@@ -93,6 +112,11 @@ for (const needle of [
   'OPENAI_ASSISTANT_MODEL || modelForTier("sol")',
   'trace: []',
   'actionProposals: []',
+  'observability: {',
+  'inputTokens: response.usage?.prompt_tokens ?? null',
+  'outputTokens: response.usage?.completion_tokens ?? null',
+  'totalTokens: response.usage?.total_tokens ?? null',
+  'cachedInputTokens: response.usage?.prompt_tokens_details?.cached_tokens ?? null',
 ]) requireText(noToolAssistant, needle, "no-tool assistant")
 for (const forbidden of [
   'tools:',
@@ -119,4 +143,4 @@ assertMode("¿Cuál es el estado de esta marca?", "agentic_research", { hasPageF
 const disabled = assertMode("¿Qué significa clase Nice 42?", "agentic_research", { routerEnabled: false })
 if (disabled.reason !== "router_disabled") fail("disabled router must expose a bounded rollback reason")
 
-console.log("Assistant route focus regression PASS: VIDENTIA keeps the floating assistant page-aware, routes clear generic concepts to no-tool DIRECT, uses already-loaded canonical snapshots without an agent loop, preserves agentic research for fresh evidence/actions/ambiguous current state, and retains an environment rollback to the legacy agentic path.")
+console.log("Assistant route focus regression PASS: VIDENTIA keeps the floating assistant page-aware, routes clear generic concepts to no-tool DIRECT without navigation injection, uses already-loaded canonical snapshots without an agent loop, preserves agentic research for fresh evidence/actions/ambiguous current state, emits privacy-safe execution metrics without query text or raw paths, and retains an environment rollback to the legacy agentic path.")
