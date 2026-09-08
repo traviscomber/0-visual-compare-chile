@@ -46,9 +46,34 @@ type RepoActivity = {
   decisionEffect?: string
 }
 
+type SubsectionResearch = {
+  generated_at?: string
+  selection_context?: string[]
+  github_observed_at?: string | null
+  topic_count?: number
+  paper_count?: number
+  source_count?: number
+  independent_institution_count?: number
+  conviction_delta?: number
+  decision_effect?: string
+  scoring_state?: string
+  boundary?: string
+  topics?: Array<{
+    key?: string
+    label?: string
+    query?: string
+    selectionSource?: string
+    activityWeight?: number
+    paper_count?: number
+    source_coverage?: Record<string, string>
+    papers?: Array<{ source?: string; title?: string; date?: string | null; url?: string; citedByCount?: number }>
+  }>
+}
+
 type ProductSnapshot = {
   repo?: string
   repo_activity?: RepoActivity
+  subsection_research?: SubsectionResearch
   chile_evidence?: { state?: string; delta?: number }
   world_frontier?: { state?: string; delta?: number; paper_count?: number }
   conviction?: { effective?: number; base?: number; chile_delta?: number; frontier_delta?: number; paper_delta?: number; patent_delta?: number; global_delta?: number }
@@ -137,6 +162,7 @@ export async function loadAssistantJuanWorkspace(userId: string) {
       intendedOutcome: item.outcome,
       repository: snapshot.repo ?? null,
       repoActivity: snapshot.repo_activity ?? null,
+      subsectionResearch: snapshot.subsection_research ?? null,
       chileEvidence: snapshot.chile_evidence ?? null,
       worldFrontier: snapshot.world_frontier ?? null,
       conviction: snapshot.conviction ?? null,
@@ -168,11 +194,13 @@ export async function loadAssistantJuanWorkspace(userId: string) {
     .map(item => item.repoActivity?.observedAt ?? item.repoActivity?.lastAttemptAt ?? null)
     .filter((value): value is string => Boolean(value))
     .sort((a, b) => Date.parse(b) - Date.parse(a))[0] ?? null
+  const subsectionTopicsObserved = acceptedProducts.reduce((total, item) => total + (item.subsectionResearch?.topic_count ?? 0), 0)
+  const subsectionPapersObserved = acceptedProducts.reduce((total, item) => total + (item.subsectionResearch?.paper_count ?? 0), 0)
 
   return {
     generatedAt: new Date().toISOString(),
-    decisionBoundary: "Read-only executive context. Evidence scores, GitHub activity and execution readiness do not create, approve, reject, reopen or reprioritize human decisions automatically.",
-    evidenceBoundary: "Patent activity is a separate evidence family and is not market adoption. Missing Chile evidence is neutral. GitHub activity and institutional reuse/integration are execution context only and never increase evidence conviction.",
+    decisionBoundary: "Read-only executive context. Evidence scores, GitHub activity, subsection paper discovery and execution readiness do not create, approve, reject, reopen or reprioritize human decisions automatically.",
+    evidenceBoundary: "Patent activity is a separate evidence family and is not market adoption. Missing Chile evidence is neutral. GitHub activity and institutional reuse/integration are execution context only and never increase evidence conviction. subsectionResearch contains external papers discovered from active implementation topics, but is discovery-only with conviction_delta=0 until independent evidence review promotes a paper into a canonical scoring layer.",
     summary: {
       pendingDecisions: pendingDecisions.length,
       researchingHandoffs: researching.length,
@@ -180,6 +208,8 @@ export async function loadAssistantJuanWorkspace(userId: string) {
       overdueActions: overdueActions.length,
       githubReposObserved,
       githubLatestObservedAt,
+      subsectionTopicsObserved,
+      subsectionPapersObserved,
     },
     pendingDecisions,
     researching,
