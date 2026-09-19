@@ -76,7 +76,7 @@ export function PublicPlatformFooter({ locale = "en" }: { locale?: PublicLocale 
               </span>
             </Link>
             <p className="mt-6 max-w-md text-[14px] leading-7 text-[#9EAAA8]">{t.body}</p>
-            <p className="mt-7 text-[10px] font-medium tracking-[0.13em] text-[#96B5A6]">{t.powered}</p>
+            <a href="https://www.n3uralia.com" target="_blank" rel="noopener noreferrer" className="mt-7 inline-flex text-[10px] font-medium tracking-[0.13em] text-[#96B5A6] transition hover:text-white">{t.powered}</a>
           </div>
 
           <FooterColumn title={t.intelligence} links={[[t.trademarks, paths.trademarks], [t.patents, paths.patents], [t.technologies, paths.technologies]]} />
