@@ -8,7 +8,7 @@ export function SiteFooter() {
         <Logo />
         <div className="flex flex-col gap-2 text-xs text-muted-foreground md:items-end">
           <p>&copy; {new Date().getFullYear()} Visual Compare Chile. Todos los derechos reservados.</p>
-          <p className="font-medium">Powered by N3uralia</p>
+          <a href="https://www.n3uralia.com" target="_blank" rel="noopener noreferrer" className="font-medium hover:underline">Powered by N3uralia</a>
           <BuildStamp />
         </div>
       </div>
