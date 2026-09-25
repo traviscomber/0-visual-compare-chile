@@ -12,7 +12,7 @@ export const maxDuration = 300
 type NonBlockingStage = {
   ok: false
   skipped?: boolean
-  reason: "bundle_not_ready" | "post_processing_unavailable"
+  reason: "bundle_not_ready" | "post_processing_unavailable" | "no_new_evidence"
   error: string
 }
 
@@ -43,13 +43,25 @@ export async function GET(request: Request) {
     }
 
     let watchFusion: Awaited<ReturnType<typeof fuseGdeltIntoStrategicWatches>> | NonBlockingStage
-    try {
-      watchFusion = await fuseGdeltIntoStrategicWatches(admin, reference)
-    } catch (error) {
-      const message = errorMessage(error)
-      partial = true
-      watchFusion = { ok: false, reason: "post_processing_unavailable", error: message }
-      console.warn("[cron/gdelt-raw-feed] watch fusion deferred; canonical source corpus remains valid", { error: message })
+    const hasNewContext = context.ok === true && (!context.mentions.skipped || !context.gkg.skipped)
+    const hasNewEvidence = !events.skipped || hasNewContext
+
+    if (!hasNewEvidence) {
+      watchFusion = {
+        ok: false,
+        skipped: true,
+        reason: "no_new_evidence",
+        error: "Canonical GDELT artifacts are unchanged; watch fusion skipped.",
+      }
+    } else {
+      try {
+        watchFusion = await fuseGdeltIntoStrategicWatches(admin, reference)
+      } catch (error) {
+        const message = errorMessage(error)
+        partial = true
+        watchFusion = { ok: false, reason: "post_processing_unavailable", error: message }
+        console.warn("[cron/gdelt-raw-feed] watch fusion deferred; canonical source corpus remains valid", { error: message })
+      }
     }
 
     return NextResponse.json({
